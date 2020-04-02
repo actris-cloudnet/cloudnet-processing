@@ -3,7 +3,7 @@ Scripts to run operational CloudnetPy processing
 
 # Installation
 ```
-$ git clone https://github.com/actris-cloudnet/operational-processing
+$ git clone git@github.com:actris-cloudnet/operational-processing.git
 $ cd operational-processing
 $ python3 -m venv venv
 $ source venv/bin/activate
