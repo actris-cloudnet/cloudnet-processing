@@ -36,12 +36,14 @@ def main():
 
 
 def _print_info(days, year, month):
-    if ARGS.folder_update_limit:
+    if ARGS.limit:
         print('Finding active folders..')
-        def fun(x): return x
+
+        def fun(x):
+            return x
     else:
         fun = tqdm
-    if len(days) > 0 and not ARGS.folder_update_limit:
+    if len(days) > 0 and not ARGS.limit:
         print(f"Concatenating year {year}, month {month}")
     return fun
 
@@ -57,15 +59,13 @@ def _concat(full_input_dir, output_dir, date):
 
     file_new_name = _prepare_output(output_dir, date)
 
-    if os.path.isfile(file_new_name) and not ARGS.overwrite and not ARGS.folder_update_limit:
+    if os.path.isfile(file_new_name) and not ARGS.overwrite and not ARGS.limit:
         return
 
-    active = _is_active_folder(full_input_dir)
-    if ARGS.folder_update_limit:
-        if not active:
+    if ARGS.limit:
+        if not _is_active_folder(full_input_dir):
             return
-        else:
-            print(f"Concatenating from active folder: {full_input_dir}")
+        print(f"Concatenating from active folder: {full_input_dir}")
 
     file_new = netCDF4.Dataset(file_new_name, 'w', format='NETCDF4_CLASSIC')
 
@@ -85,7 +85,7 @@ def _concat(full_input_dir, output_dir, date):
 
 def _is_active_folder(input_dir):
     last_modified = time.time() - os.path.getmtime(input_dir)
-    return (last_modified / 3600) < ARGS.folder_update_limit
+    return (last_modified / 3600) < ARGS.limit
 
 
 def _prepare_output(output_dir, date):
@@ -141,7 +141,6 @@ if __name__ == "__main__":
     parser.add_argument('--year', type=int, help='Limit to certain year only.')
     parser.add_argument('--month', type=int, choices=np.arange(1, 13), help='Limit to certain month only.')
     parser.add_argument('--day', type=int, choices=np.arange(1, 32), help='Limit to certain day only.')
-    parser.add_argument('-l', '--folder_update_limit', metavar='N', type=int,
-                        help='Operate only on folders updated within N hours.')
+    parser.add_argument('-l', '--limit', metavar='N', type=int, help='Run only on folders modified within N hours.')
     ARGS = parser.parse_args()
     main()
