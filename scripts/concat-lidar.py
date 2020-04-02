@@ -27,12 +27,23 @@ def main():
         for month in months:
             day_range = _get_range('day')
             days = lib.get_good_dirs('/'.join((input_dir, year, month)), day_range)
-            if len(days) > 0:
-                print(f"Concatenating year {year}, month {month}")
-            for day in tqdm(days):
+            fun = _print_info(days, year, month)
+            for day in fun(days):
                 date = (year, month, day)
                 full_input_dir = lib.get_full_input_path(input_dir, date)
                 _concat(full_input_dir, output_dir, date)
+    print('..done')
+
+
+def _print_info(days, year, month):
+    if ARGS.folder_update_limit:
+        print('Finding active folders..')
+        def fun(x): return x
+    else:
+        fun = tqdm
+    if len(days) > 0 and not ARGS.folder_update_limit:
+        print(f"Concatenating year {year}, month {month}")
+    return fun
 
 
 def _get_range(period):
@@ -47,11 +58,14 @@ def _concat(full_input_dir, output_dir, date):
     file_new_name = _prepare_output(output_dir, date)
 
     if os.path.isfile(file_new_name) and not ARGS.overwrite and not ARGS.folder_update_limit:
-        print('Abort: daily file already exists and overwriting is off.')
         return
 
-    if ARGS.folder_update_limit and not _is_active_folder(full_input_dir):
-        return
+    active = _is_active_folder(full_input_dir)
+    if ARGS.folder_update_limit:
+        if not active:
+            return
+        else:
+            print(f"Concatenating from active folder: {full_input_dir}")
 
     file_new = netCDF4.Dataset(file_new_name, 'w', format='NETCDF4_CLASSIC')
 
