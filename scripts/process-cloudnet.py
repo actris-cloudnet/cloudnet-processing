@@ -16,7 +16,7 @@ def main():
     conf = {'main': _read_config('main'),
             'site': _read_config(site_name)}
 
-    site_data = _read_site_info(conf, site_name)
+    site_info = _read_site_info(conf, site_name)
 
     paths_to_listen = _build_paths_to_listen(conf, site_name)
 
@@ -69,11 +69,25 @@ def _add_watcher(path):
 class _Sniffer(FileSystemEventHandler):
     def __init__(self, path):
         self.path = path
+        self._last_target = None
+        self._timestamp = time.time()
 
     def on_any_event(self, event):
+
         if event.is_directory or event.event_type == 'deleted':
             return
+
+        if self._is_fake_event(event):
+            self._timestamp = time.time()
+            return
+
+        self._last_target = event.src_path
+        self._timestamp = time.time()
         date = lib.find_date(event.src_path)
+
+    def _is_fake_event(self, event):
+        time_difference = time.time() - self._timestamp
+        return time_difference < 3 and self._last_target == event.src_path
 
 
 if __name__ == "__main__":
