@@ -4,7 +4,7 @@ import time
 import argparse
 import configparser
 import yaml
-from watchdog.observers import Observer
+from watchdog.observers.polling import PollingObserver as Observer
 from watchdog.events import FileSystemEventHandler
 
 lib = __import__('operational-processing').concat_lib
@@ -19,6 +19,7 @@ def main():
     site_data = _read_site_info(conf, site_name)
 
     paths_to_listen = _build_paths_to_listen(conf, site_name)
+
     observers = [_add_watcher(path) for path in paths_to_listen]
 
     try:
@@ -68,19 +69,11 @@ def _add_watcher(path):
 class _Sniffer(FileSystemEventHandler):
     def __init__(self, path):
         self.path = path
-        self._timestamp = time.time()
 
-    def on_modified(self, event):
-        """Actually seems to track both NEW and MODIFIED files."""
-        if event.is_directory:
+    def on_any_event(self, event):
+        if event.is_directory or event.event_type == 'deleted':
             return
-        # Hack to prevent watchdog bug that spawns multiple events.
-        # See: https://github.com/gorakhargosh/watchdog/issues/93
-        time.sleep(1)
-        if (time.time() - self._timestamp) > 1.5:
-            date = lib.find_date(event.src_path)
-            print(date)
-        self._timestamp = time.time()
+        date = lib.find_date(event.src_path)
 
 
 if __name__ == "__main__":
