@@ -1,6 +1,7 @@
 import numpy as np
 from numpy.testing import assert_array_equal
 import netCDF4
+import pytest
 
 
 lib = __import__('operational-processing').concat_lib
@@ -60,3 +61,18 @@ def test_get_dim(nc_file):
     assert lib.get_dim(f, np.zeros((10, ))) == ('time', )
     assert lib.get_dim(f, np.zeros((100,))) == ('time', )
     assert lib.get_dim(f, np.zeros((3, 1000))) == ('other', 'time')
+
+
+@pytest.mark.parametrize("input, result", [
+    ('/foo/bar/Y2020/M01/D01/file.nc', ('2020', '01', '01')),
+    ('/foo/bar/2020/01/01/file.nc', ('2020', '01', '01')),
+    ('/foo/bar/2020/M12/01/file.nc', ('2020', '12', '01')),
+    ('/foo/bar/Y2020/M01/01/file.nc', ('2020', '01', '01')),
+    ('/foo/bar/Y2020/M13/01/file.nc', None),
+    ('/foo/bar/Y2020/M01/D32/file.nc', None),
+    ('/foo/bar/Y0000/M01/01/file.nc', None),
+    ('/foo/bar/sfksdlsf20200101asdfadf.nc', ('2020', '01', '01')),
+    ('/foo/bar/2020/20201231.nc', ('2020', '12', '31')),
+])
+def test_find_date(input, result):
+    assert lib.find_date(input) == result

@@ -1,4 +1,5 @@
 import os
+import re
 from datetime import datetime
 import numpy as np
 from cloudnetpy import utils
@@ -59,3 +60,47 @@ def get_dim(file, array):
             dim = 'time'
         variable_size = variable_size + (dim,)
     return variable_size
+
+
+def find_date(file):
+    folders = file.split('/')
+    date = (_parse_year(folders[-4]),
+            _parse_month(folders[-3]),
+            _parse_day(folders[-2]))
+    if all(date):
+        return date
+    return _search_date_from_filename(folders[-1])
+
+
+def _search_date_from_filename(name):
+    for i, _ in enumerate(name):
+        part = name[i:i+8]
+        date = (_parse_year(part[:4]),
+                _parse_month(part[4:6]),
+                _parse_day(part[6:8]))
+        if all(date):
+            return date
+
+
+def _parse_year(string):
+    if len(string) == 5:
+        string = string[1:]
+    if re.compile(r'[1-2][0-9]{3}').match(string) is not None:
+        return string
+    return None
+
+
+def _parse_month(string):
+    if len(string) == 3:
+        string = string[1:]
+    if re.compile(r'^(0?[1-9]|1[012])$').match(string) is not None:
+        return string
+    return None
+
+
+def _parse_day(string):
+    if len(string) == 3:
+        string = string[1:]
+    if re.compile(r'(0[1-9]|[12]\d|3[01])').match(string) is not None:
+        return string
+    return None

@@ -6,7 +6,8 @@ import configparser
 import yaml
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
-import numpy as np
+
+lib = __import__('operational-processing').concat_lib
 
 
 def main():
@@ -65,8 +66,8 @@ def _add_watcher(path):
 
 
 class _Sniffer(FileSystemEventHandler):
-    def __init__(self, paths):
-        self._paths = paths
+    def __init__(self, path):
+        self.path = path
         self._timestamp = time.time()
 
     def on_modified(self, event):
@@ -77,7 +78,7 @@ class _Sniffer(FileSystemEventHandler):
         # See: https://github.com/gorakhargosh/watchdog/issues/93
         time.sleep(1)
         if (time.time() - self._timestamp) > 1.5:
-            print(event.src_path)
+            date = lib.find_date(event.src_path)
         self._timestamp = time.time()
 
 
