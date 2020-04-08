@@ -136,8 +136,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Concatenate multiple CHM15k files into daily files.')
     parser.add_argument('input_dir', metavar='/path/to/data/', nargs='+', help='Input directory')
     parser.add_argument('-d', '--dir', metavar='/path/to/', help='Output directory')
-    parser.add_argument('-o', '--overwrite', metavar='True', default=False, choices=['True', 'False'],
-                        help='Overwrites any existing daily files')
+    parser.add_argument('-o', '--overwrite', dest='overwrite', action='store_true',
+                        help='Overwrites any existing daily files', default=False)
     parser.add_argument('--year', type=int, help='Limit to certain year only.')
     parser.add_argument('--month', type=int, choices=np.arange(1, 13), help='Limit to certain month only.')
     parser.add_argument('--day', type=int, choices=np.arange(1, 32), help='Limit to certain day only.')

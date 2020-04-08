@@ -24,7 +24,7 @@ where ```<input_folder> ``` is the root level folder storing the original ceilom
 
 Optional arguments:
 *  ```-d, --dir <dir_name> ``` Separate folder for the daily files.
-* ``` -o, --overwrite True``` Overwrite any existing daily files.
+* ``` -o, --overwrite``` Overwrite any existing daily files.
 * ``` --year YYYY``` Limit to certain year only.
 * ``` --month MM``` Limit to certain month only.
 * ``` --day DD``` Limit to certain day only.
