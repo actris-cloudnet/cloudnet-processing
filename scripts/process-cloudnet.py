@@ -47,15 +47,15 @@ def _read_site_info(conf, site_name):
 
 
 def _build_paths_to_listen(conf, site_name):
-    def _get_root(key):
+    def _get_root(key, file_type):
         target = 'uncalibrated' if key == 'input' else 'calibrated'
-        return '/'.join((conf['main']['PATH'][key], site_name, target))
+        path = conf['main']['PATH'][key]
+        return '/'.join((path, site_name, target, instruments[file_type]))
 
     instruments = conf['site']['INSTRUMENTS']
-    lidar_path = '/'.join((_get_root('input'), instruments['lidar']))
-    radar_path = '/'.join((_get_root('input'), instruments['radar']))
-    model_path = '/'.join((_get_root('output'), instruments['model']))
-    return lidar_path, radar_path, model_path
+    return (_get_root('input', 'lidar'),
+            _get_root('input', 'radar'),
+            _get_root('output', 'model'))
 
 
 def _add_watcher(path):
@@ -79,6 +79,7 @@ class _Sniffer(FileSystemEventHandler):
         time.sleep(1)
         if (time.time() - self._timestamp) > 1.5:
             date = lib.find_date(event.src_path)
+            print(date)
         self._timestamp = time.time()
 
 
