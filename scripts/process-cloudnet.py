@@ -1,14 +1,12 @@
 #!venv/bin/python3
 """Master script for CloudnetPy processing."""
-import time
 import argparse
 import configparser
 import yaml
-from watchdog.observers.polling import PollingObserver as Observer
-from watchdog.events import FileSystemEventHandler
+import importlib
 
-lib = __import__('operational-processing').concat_lib
-
+lib = importlib.import_module("operational-processing").concat_lib
+utils = importlib.import_module("operational-processing").utils
 
 def main():
     site_name = ARGS.site[0]
@@ -16,20 +14,10 @@ def main():
     conf = {'main': _read_config('main'),
             'site': _read_config(site_name)}
 
-    site_info = _read_site_info(conf, site_name)
+    site_info = utils.read_site_info(site_name)
+    data_paths = _get_input_data_paths(conf, site_name)
 
-    paths_to_listen = _build_paths_to_listen(conf, site_name)
 
-    observers = [_add_watcher(path) for path in paths_to_listen]
-
-    try:
-        while True:
-            time.sleep(2)
-    except KeyboardInterrupt:
-        for obs in observers:
-            obs.stop()
-    for obs in observers:
-        obs.join()
 
 
 def _read_config(conf_type):
@@ -47,7 +35,7 @@ def _read_site_info(conf, site_name):
             return item
 
 
-def _build_paths_to_listen(conf, site_name):
+def _get_input_data_paths(conf, site_name):
     def _get_root(key, file_type):
         target = 'uncalibrated' if key == 'input' else 'calibrated'
         path = conf['main']['PATH'][key]
@@ -57,37 +45,6 @@ def _build_paths_to_listen(conf, site_name):
     return (_get_root('input', 'lidar'),
             _get_root('input', 'radar'),
             _get_root('output', 'model'))
-
-
-def _add_watcher(path):
-    observer = Observer()
-    observer.schedule(_Sniffer(path), path=path, recursive=True)
-    observer.start()
-    return observer
-
-
-class _Sniffer(FileSystemEventHandler):
-    def __init__(self, path):
-        self.path = path
-        self._last_target = None
-        self._timestamp = time.time()
-
-    def on_any_event(self, event):
-
-        if event.is_directory or event.event_type == 'deleted':
-            return
-
-        if self._is_fake_event(event):
-            self._timestamp = time.time()
-            return
-
-        self._last_target = event.src_path
-        self._timestamp = time.time()
-        date = lib.find_date(event.src_path)
-
-    def _is_fake_event(self, event):
-        time_difference = time.time() - self._timestamp
-        return time_difference < 3 and self._last_target == event.src_path
 
 
 if __name__ == "__main__":
