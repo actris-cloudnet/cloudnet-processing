@@ -13,10 +13,6 @@ class FilePaths:
         self.site_info = process_utils.read_site_info(self.site_name)
         self.config = self._read_conf()
 
-    def _read_conf(self):
-        return {'main': _read_config('main'),
-                'site': _read_config(self.site_name)}
-
     def build_calibrated_file_name(self, instrument, makedir=True):
         folder = self.build_standard_path('calibrated', instrument)
         if makedir:
@@ -48,6 +44,10 @@ class FilePaths:
         if self.config['site']['INSTRUMENTS']['mwr'] == '':
             return self.build_calibrated_file_name('radar', makedir=False)
         raise NotImplementedError
+
+    def _read_conf(self):
+        return {'main': _read_config('main'),
+                'site': _read_config(self.site_name)}
 
     def _get_nc_name(self, folder, identifier):
         file_name = f"{self.dvec}_{self.site_name}_{identifier}.nc"
