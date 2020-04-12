@@ -48,8 +48,16 @@ making sure they are always up to date (if the script is run daily).
 
 ## Process Cloudnet data
 
+### Prerequisites
+
+* Fix the ```input``` and ```output``` data paths in ```config/main.ini``` 
+* Make sure that the instrument list is correct in ```config/<site>.ini```.
+* Make sure you have ```output/<site>/calibrated/<model>/<year>``` folder containing pre-processed model data. 
+* If you use CHM15k lidar, make sure there are pre-processed daily files in ```input/uncalibrated/chm15k/<year>``` folder.
+
 ### Usage
-Launch from the root folder:
+
+Launch the processing script from the root folder:
 ```
 $ scripts/process-cloudnet.py site
 ```
