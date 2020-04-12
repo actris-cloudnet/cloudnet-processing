@@ -43,5 +43,20 @@ it is usually sufficient to use the ```-l``` switch:
 ```
 $ scripts/concat-lidar.py /data/bucharest/uncalibrated/chm15k/ -l=24
 ```
-Which finds the folders updated within 24 hours and overrides daily files from these folders making sure 
-they are always up to date (if the script is run daily).
+Which finds the folders updated within 24 hours and overrides daily files from these folders 
+making sure they are always up to date (if the script is run daily).
+
+## Process Cloudnet data
+
+### Usage
+Launch from the root folder:
+```
+$ scripts/process-cloudnet.py site
+```
+where ```site``` is one of the ```id```s from ```https://altocumulus.fmi.fi/api/sites/```.
+
+Optional arguments:
+* ``` --start YYYY-MM-DD```First day to process (included). Default value is ```current day - 7```.
+* ``` --stop YYYY-MM-DD``` Last day to process (not included). Default value is ```current day - 2```.
+* ``` -o, --overwrite``` Overwrites data in existing files.
+* ``` -k, --keep_uuid``` Keeps UUID of old file even when ```--overwrite``` is used.

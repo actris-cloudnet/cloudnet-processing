@@ -2,6 +2,7 @@ import os
 import fnmatch
 import requests
 import datetime
+from cloudnetpy.utils import get_time
 
 
 def read_site_info(site_name):
@@ -39,3 +40,10 @@ def date_string_to_date(date_string):
     """Convert YYYY-MM-DD to Python date."""
     date = [int(x) for x in date_string.split('-')]
     return datetime.date(*date)
+
+
+def get_date_from_past(n):
+    """Return date N-days ago."""
+    now = get_time().split()[0]
+    now = date_string_to_date(now) - datetime.timedelta(n)
+    return str(now)

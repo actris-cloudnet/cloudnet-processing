@@ -4,6 +4,7 @@ import os
 import argparse
 import importlib
 import configparser
+import datetime
 from cloudnetpy.categorize import generate_categorize
 from cloudnetpy.instruments import rpg2nc, ceilo2nc
 from cloudnetpy import utils
@@ -16,10 +17,10 @@ def main():
     config = _read_conf(site_name)
     site_info = process_utils.read_site_info(site_name)
 
-    start_date = process_utils.date_string_to_date(ARGS.start[0])
-    end_date = process_utils.date_string_to_date(ARGS.stop[0])
+    start_date = process_utils.date_string_to_date(ARGS.start)
+    stop_date = process_utils.date_string_to_date(ARGS.stop)
 
-    for date in utils.date_range(start_date, end_date):
+    for date in utils.date_range(start_date, stop_date):
         dvec = date.strftime("%Y%m%d")
         print('Date: ', dvec)
         obj = file_paths.FilePaths(dvec, config, site_info)
@@ -131,8 +132,10 @@ class CategorizeFileMissing(Exception):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Process Cloudnet data.')
     parser.add_argument('site', nargs='+', help='Site Name', choices=['bucharest'])
-    parser.add_argument('start', nargs='+', type=str, metavar='YYYY-MM-DD', help='Starting date.')
-    parser.add_argument('stop', nargs='+', type=str, metavar='YYYY-MM-DD', help='Stopping date.')
+    parser.add_argument('--start', type=str, metavar='YYYY-MM-DD', help='Starting date. Default is current day - 7.',
+                        default=process_utils.get_date_from_past(7))
+    parser.add_argument('--stop', type=str, metavar='YYYY-MM-DD', help='Stopping date. Default is current day - 2.',
+                        default=process_utils.get_date_from_past(2))
     parser.add_argument('-o', '--overwrite', dest='overwrite', action='store_true',
                         help='Overwrites data in existing files', default=False)
     parser.add_argument('-k', '--keep_uuid', dest='keep_uuid', action='store_true',
