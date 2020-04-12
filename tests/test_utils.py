@@ -3,12 +3,14 @@ import pytest
 
 utils = __import__('operational-processing').utils
 
-
+"""
+This needs altocumulus.fmi.fi to be visible outside FMI
 def test_read_site_info():
     site = 'bucharest'
     site_info = utils.read_site_info(site)
     assert site_info['id'] == site
     assert site_info['name'] == 'Bucharest'
+"""
 
 
 def test_find_file(tmpdir):

@@ -22,9 +22,14 @@ def file_paths_bucharest():
     conf_site.set(section, 'model', 'ecmwf')
     conf_site.set(section, 'mwr', '')
     config = {'main': conf_main, 'site': conf_site}
-    site_name = 'bucharest'
     dvec = '20200101'
-    site_info = utils.read_site_info(site_name)
+    # API not public yet
+    # site_info = utils.read_site_info('bucharest')
+    site_info = {
+        'id': 'bucharest',
+        'name': 'Bucharest',
+    }
+
     return FilePaths(dvec, config, site_info)
 
 
