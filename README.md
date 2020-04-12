@@ -68,3 +68,11 @@ Optional arguments:
 * ``` --stop YYYY-MM-DD``` Last day to process (not included). Default value is ```current day - 2```.
 * ``` -o, --overwrite``` Overwrites data in existing files.
 * ``` -k, --keep_uuid``` Keeps UUID of old file even when ```--overwrite``` is used.
+
+## Tests
+Run all unit tests:
+```
+$ pytest tests
+```
+
+
