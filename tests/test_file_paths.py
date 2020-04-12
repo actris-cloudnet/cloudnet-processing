@@ -36,7 +36,7 @@ def file_paths_bucharest():
 class TestBucharestPaths:
 
     @pytest.fixture(autouse=True)
-    def _request_google_page(self, file_paths_bucharest):
+    def _fetch_file_paths(self, file_paths_bucharest):
         self.obj = file_paths_bucharest
 
     def test_build_calibrated_file_name(self):
