@@ -42,8 +42,8 @@ def date_string_to_date(date_string):
     return datetime.date(*date)
 
 
-def get_date_from_past(n):
+def get_date_from_past(n, reference_date=None):
     """Return date N-days ago."""
-    now = get_time().split()[0]
-    now = date_string_to_date(now) - datetime.timedelta(n)
-    return str(now)
+    reference = reference_date or get_time().split()[0]
+    date = date_string_to_date(reference) - datetime.timedelta(n)
+    return str(date)
