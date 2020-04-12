@@ -4,7 +4,6 @@ import os
 import argparse
 import importlib
 import configparser
-import datetime
 from cloudnetpy.categorize import generate_categorize
 from cloudnetpy.instruments import rpg2nc, ceilo2nc
 from cloudnetpy import utils
@@ -13,6 +12,10 @@ file_paths = importlib.import_module("operational-processing").file_paths
 
 
 def main():
+
+    if ARGS.keep_uuid:
+        raise NotImplementedError
+
     site_name = ARGS.site[0]
     config = _read_conf(site_name)
     site_info = process_utils.read_site_info(site_name)
@@ -57,7 +60,7 @@ def _process_radar(obj):
         _ = _find_input_file(rpg_path, '*.LV1')
         if _is_good_to_process(output_file):
             print(f"Calibrating rpg-fmcw-94 cloud radar..")
-            rpg2nc(rpg_path, output_file, obj.site_info, ARGS.keep_uuid)
+            rpg2nc(rpg_path, output_file, obj.site_info)
 
 
 def _process_lidar(obj):
@@ -67,7 +70,7 @@ def _process_lidar(obj):
     if _is_good_to_process(output_file):
         print(f"Calibrating {obj.config['site']['INSTRUMENTS']['lidar']} lidar..")
         try:
-            ceilo2nc(input_file, output_file, obj.site_info, ARGS.keep_uuid)
+            ceilo2nc(input_file, output_file, obj.site_info)
         except RuntimeError as error:
             raise error
 
@@ -90,7 +93,7 @@ def _process_categorize(obj):
     if _is_good_to_process(output_file):
         try:
             print(f"Processing categorize file..")
-            generate_categorize(input_files, output_file, ARGS.keep_uuid)
+            generate_categorize(input_files, output_file)
         except RuntimeError as error:
             raise error
 
@@ -105,8 +108,7 @@ def _process_level2(product, obj):
     if _is_good_to_process(output_file):
         try:
             print(f"Processing {product} product..")
-            getattr(module, f"generate_{product_prefix}")(categorize_file, output_file,
-                                                          ARGS.keep_uuid)
+            getattr(module, f"generate_{product_prefix}")(categorize_file, output_file)
         except ValueError:
             raise RuntimeError(f"Something went wrong with {product} processing.")
 
