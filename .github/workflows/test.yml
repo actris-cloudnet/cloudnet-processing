@@ -26,7 +26,7 @@ jobs:
     - name: Lint with pylint
       run: |
         pip install pylint
-        pylint scripts src/operational-processing/
+        pylint **/*.py --errors-only --ignored-modules=netCDF4
     - name: Test with pytest
       run: |
         pip install pytest
