@@ -19,14 +19,14 @@ def main():
     output_dir = ARGS.dir or input_dir
 
     year_range = _get_range('year')
-    years = lib.get_good_dirs(input_dir, year_range)
+    years = lib.get_dirs_in_range(input_dir, year_range)
 
     for year in years:
         month_range = _get_range('month')
-        months = lib.get_good_dirs('/'.join((input_dir, year)), month_range)
+        months = lib.get_dirs_in_range('/'.join((input_dir, year)), month_range)
         for month in months:
             day_range = _get_range('day')
-            days = lib.get_good_dirs('/'.join((input_dir, year, month)), day_range)
+            days = lib.get_dirs_in_range('/'.join((input_dir, year, month)), day_range)
             fun = _print_info(days, year, month)
             for day in fun(days):
                 date = (year, month, day)
@@ -57,7 +57,7 @@ def _get_range(period):
 
 def _concat(full_input_dir, output_dir, date):
 
-    file_new_name = _prepare_output(output_dir, date)
+    file_new_name = _prepare_output_path(output_dir, date)
 
     if os.path.isfile(file_new_name) and not ARGS.overwrite and not ARGS.limit:
         return
@@ -69,7 +69,7 @@ def _concat(full_input_dir, output_dir, date):
 
     file_new = netCDF4.Dataset(file_new_name, 'w', format='NETCDF4_CLASSIC')
 
-    files = lib.get_files_for_day(full_input_dir)
+    files = lib.get_list_of_nc_files(full_input_dir)
     first_file_of_day = netCDF4.Dataset(files[0])
 
     _create_dimensions(file_new, first_file_of_day)
@@ -88,7 +88,7 @@ def _is_active_folder(input_dir):
     return (last_modified / 3600) < ARGS.limit
 
 
-def _prepare_output(output_dir, date):
+def _prepare_output_path(output_dir, date):
     the_dir = '/'.join((output_dir, date[0]))
     os.makedirs(the_dir, exist_ok=True)
     yyyymmdd = f"{date[0]}{date[1].zfill(2)}{date[2].zfill(2)}"

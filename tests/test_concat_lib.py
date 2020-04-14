@@ -10,7 +10,7 @@ lib = __import__('operational-processing').concat_lib
 def test_get_files_by_suffix():
     files = ['abc.nc', 'ggg.txt', 'sfsdfs.nc', 'bbbb.ncn', 'ffffnc']
     expected = ['abc.nc', 'sfsdfs.nc']
-    assert_array_equal(lib.get_files_by_suffix(files), expected)
+    assert_array_equal(lib.get_only_nc_files(files), expected)
 
 
 def test_get_dtype():
@@ -37,7 +37,7 @@ def test_get_default_range():
 def test_get_good_dirs(tmpdir):
     for y in ['2016', '2017', '2019', '2020', '2021', 'kissa']:
         tmpdir.mkdir(y)
-    res = lib.get_good_dirs(str(tmpdir), [2017, 2020])
+    res = lib.get_dirs_in_range(str(tmpdir), [2017, 2020])
     for y in ['2017', '2019', '2020']:
         assert y in res
 
@@ -47,7 +47,7 @@ def test_get_files_for_day(tmpdir):
     tmpdir.mkdir('aaa_234.nc')
     tmpdir.mkdir('aaa_534.nc')
     tmpdir.mkdir('aaa_123.nc')
-    res = lib.get_files_for_day(fpath)
+    res = lib.get_list_of_nc_files(fpath)
     assert_array_equal(res, ['/'.join((fpath, 'aaa_123.nc')),
                              '/'.join((fpath, 'aaa_234.nc')),
                              '/'.join((fpath, 'aaa_534.nc'))])

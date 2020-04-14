@@ -14,7 +14,7 @@ def get_default_range(period):
         return [1, 31]
 
 
-def get_good_dirs(the_path, the_range):
+def get_dirs_in_range(the_path, the_range):
     ind0, ind1 = the_range
     dirs = os.listdir(the_path)
     return [d for d in dirs if os.path.isdir('/'.join((the_path, d)))
@@ -25,14 +25,14 @@ def get_full_input_path(input_dir, date):
     return '/'.join((input_dir, *date))
 
 
-def get_files_for_day(full_input_dir):
+def get_list_of_nc_files(directory):
     """Returns sorted list of .nc-files."""
-    files = os.listdir(full_input_dir)
-    files = np.sort(get_files_by_suffix(files))
-    return ['/'.join((full_input_dir, f)) for f in files]
+    files = os.listdir(directory)
+    files = np.sort(get_only_nc_files(files))
+    return ['/'.join((directory, f)) for f in files]
 
 
-def get_files_by_suffix(files):
+def get_only_nc_files(files):
     """Returns only .nc files"""
     return [f for f in files if f.endswith('.nc')]
 

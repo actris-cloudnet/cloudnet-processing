@@ -58,7 +58,7 @@ def _process_radar(obj):
     if obj.config['site']['INSTRUMENTS']['radar'] == 'rpg-fmcw-94':
         rpg_path = obj.build_rpg_path()
         _ = _find_input_file(rpg_path, '*.LV1')
-        if _is_good_to_process(output_file):
+        if _is_writable(output_file):
             print(f"Calibrating rpg-fmcw-94 cloud radar..")
             rpg2nc(rpg_path, output_file, obj.site_info)
 
@@ -67,7 +67,7 @@ def _process_lidar(obj):
     input_path = obj.build_standard_path('uncalibrated', 'lidar')
     input_file = _find_input_file(input_path, f"*{obj.dvec[3:]}*")
     output_file = obj.build_calibrated_file_name('lidar')
-    if _is_good_to_process(output_file):
+    if _is_writable(output_file):
         print(f"Calibrating {obj.config['site']['INSTRUMENTS']['lidar']} lidar..")
         try:
             ceilo2nc(input_file, output_file, obj.site_info)
@@ -90,7 +90,7 @@ def _process_categorize(obj):
         if not os.path.isfile(file):
             raise CalibratedFileMissing
     output_file = obj.build_standard_output_file_name()
-    if _is_good_to_process(output_file):
+    if _is_writable(output_file):
         try:
             print(f"Processing categorize file..")
             generate_categorize(input_files, output_file)
@@ -105,7 +105,7 @@ def _process_level2(product, obj):
     output_file = obj.build_standard_output_file_name(product=product)
     product_prefix = product.split('-')[0]
     module = importlib.import_module(f"cloudnetpy.products.{product_prefix}")
-    if _is_good_to_process(output_file):
+    if _is_writable(output_file):
         try:
             print(f"Processing {product} product..")
             getattr(module, f"generate_{product_prefix}")(categorize_file, output_file)
@@ -113,7 +113,7 @@ def _process_level2(product, obj):
             raise RuntimeError(f"Something went wrong with {product} processing.")
 
 
-def _is_good_to_process(output_file):
+def _is_writable(output_file):
     if ARGS.overwrite or not os.path.isfile(output_file):
         return True
     return False
