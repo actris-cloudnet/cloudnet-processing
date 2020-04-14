@@ -66,6 +66,8 @@ where ```site``` is one of the ```id```s from ```https://altocumulus.fmi.fi/api/
 Optional arguments:
 * ``` --start YYYY-MM-DD```First day to process (included). Default value is ```current day - 7```.
 * ``` --stop YYYY-MM-DD``` Last day to process (not included). Default value is ```current day - 2```.
+* ``` --input FOO/BAR```Input folder path. Overwrites ```config/main.ini``` value.
+* ``` --output FOO/BAR```Output folder path. Overwrites ```config/main.ini``` value.
 * ``` -o, --overwrite``` Overwrites data in existing files.
 * ``` -k, --keep_uuid``` Keeps UUID of old file even when ```--overwrite``` is used.
 

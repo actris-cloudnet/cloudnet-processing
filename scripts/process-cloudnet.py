@@ -44,7 +44,12 @@ def _read_conf(site_name):
         config.read(f"config/{conf_type}.ini")
         return config
 
-    return {'main': _read('main'),
+    main_conf = _read('main')
+    if ARGS.input:
+        main_conf['PATH']['input'] = ARGS.input
+    if ARGS.output:
+        main_conf['PATH']['output'] = ARGS.output
+    return {'main': main_conf,
             'site': _read(site_name)}
 
 
@@ -138,6 +143,10 @@ if __name__ == "__main__":
                         default=process_utils.get_date_from_past(7))
     parser.add_argument('--stop', type=str, metavar='YYYY-MM-DD', help='Stopping date. Default is current day - 2.',
                         default=process_utils.get_date_from_past(2))
+    parser.add_argument('--input', type=str, metavar='/FOO/BAR', help='Input folder path. '
+                                                                      'Overrides config/main.ini value.')
+    parser.add_argument('--output', type=str, metavar='/FOO/BAR', help='Output folder path. '
+                                                                       'Overrides config/main.ini value.')
     parser.add_argument('-o', '--overwrite', dest='overwrite', action='store_true',
                         help='Overwrites data in existing files', default=False)
     parser.add_argument('-k', '--keep_uuid', dest='keep_uuid', action='store_true',
