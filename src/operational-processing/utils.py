@@ -8,7 +8,7 @@ from cloudnetpy.utils import get_time
 def read_site_info(site_name):
     """Read site information from Cloudnet http API."""
     url = f"https://altocumulus.fmi.fi/api/sites/"
-    sites = requests.get(url=url, verify=False).json()
+    sites = requests.get(url=url).json()
     for site in sites:
         if site['id'] == site_name:
             site['name'] = site.pop('humanReadableName')
