@@ -46,7 +46,7 @@ def main():
 
     pytest.main(['-s', '-v', 'tests/e2e/tests.py',
                  '--site', site,
-                    '--date', start,
+                 '--date', start,
                  '--input', input_folder,
                  '--output', output_folder])
 

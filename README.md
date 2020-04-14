@@ -72,9 +72,13 @@ Optional arguments:
 * ``` -k, --keep_uuid``` Keeps UUID of old file even when ```--overwrite``` is used.
 
 ## Tests
-Run all unit tests:
+Run unit tests
 ```
-$ pytest tests
+$ pytest tests/unit/
 ```
 
+Run end-to-end tests:
+```
+$ tests/e2e/e2e.py
+```
 
