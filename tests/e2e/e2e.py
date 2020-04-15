@@ -37,14 +37,14 @@ def main():
         return
 
     if not ARGS.skip_processing:
-        subprocess.call(['venv/bin/python3', 'scripts/concat-lidar.py', f"{lidar_root}"])
-        subprocess.call(['venv/bin/python3', 'scripts/process-cloudnet.py', site,
+        subprocess.call(['scripts/concat-lidar.py', f"{lidar_root}"])
+        subprocess.call(['scripts/process-cloudnet.py', site,
                          f"--input={input_folder}",
                          f"--output={output_folder}",
                          f"--start={start}",
                          f"--stop={stop}"])
 
-    pytest.main(['-s', '-v', 'tests/e2e/tests.py',
+    pytest.main(['-v', 'tests/e2e/tests.py',
                  '--site', site,
                  '--date', start,
                  '--input', input_folder,
