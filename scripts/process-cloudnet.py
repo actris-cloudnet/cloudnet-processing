@@ -141,8 +141,8 @@ if __name__ == "__main__":
     parser.add_argument('site', nargs='+', help='Site Name', choices=['bucharest'])
     parser.add_argument('--start', type=str, metavar='YYYY-MM-DD', help='Starting date. Default is current day - 7.',
                         default=process_utils.get_date_from_past(7))
-    parser.add_argument('--stop', type=str, metavar='YYYY-MM-DD', help='Stopping date. Default is current day - 2.',
-                        default=process_utils.get_date_from_past(2))
+    parser.add_argument('--stop', type=str, metavar='YYYY-MM-DD', help='Stopping date. Default is current day - 1.',
+                        default=process_utils.get_date_from_past(1))
     parser.add_argument('--input', type=str, metavar='/FOO/BAR', help='Input folder path. '
                                                                       'Overrides config/main.ini value.')
     parser.add_argument('--output', type=str, metavar='/FOO/BAR', help='Output folder path. '
