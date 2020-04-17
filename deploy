@@ -9,7 +9,7 @@ trans_dir="transition-scripts"
 cnetpy_dir="cloudnetpy"
 git_dir="git-for-deploy"
 hook="hooks/post-receive"
-prod_server="cloudnet@altocumulus.fmi.fi"
+prod_server="cloudnet@devcloudnet.fmi.fi"
 
 read -p "Are all tests passing? (y/N, answering y will start the deployment): " answer
 if [ "$answer" != "y" ]; then
@@ -36,33 +36,21 @@ do
     git remote add production $prod_server:$git_dir/$DIR.git
     git push production master
     git remote rm production
-    echo
-    echo "Installing ..."
-    $ssh_cmd $prod_server << EOF
-cd $DIR
-python3 -m venv venv
-source venv/bin/activate
-pip3 install --upgrade pip
-pip3 install --force-reinstall .
-deactivate
-EOF
-
     cd ../$oper_dir
 done
 
 echo
-echo "Make sure operational-processing uses up-to-date CloudnetPy"
+echo "Installing..."
 $ssh_cmd $prod_server << EOF
-source $oper_dir/venv/bin/activate
+rm -rf prod_venv
+python3 -m venv prod_venv
+source prod_venv/bin/activate
 pip3 install --upgrade pip
-cd $cnetpy_dir
-pip3 install . --force-reinstall
-deactivate
+cd $cnetpy_dir && pip3 install .
+cd ../$trans_dir && pip3 install .
+cd ../$oper_dir && pip3 install .
 EOF
 
 echo
 echo "Deployed!"
 exit 0
-
-
-
