@@ -3,13 +3,12 @@ set -e
 set -o pipefail
 
 ssh_cmd="ssh -T"
-scp_cmd="scp"
 
 oper_dir="operational-processing"
 trans_dir="transition-scripts"
 cnetpy_dir="cloudnetpy"
 git_dir="git-for-deploy"
-hook="post-receive"
+hook="hooks/post-receive"
 prod_server="cloudnet@altocumulus.fmi.fi"
 
 read -p "Are all tests passing? (y/N, answering y will start the deployment): " answer
@@ -26,11 +25,13 @@ git init --bare $trans_dir.git
 git init --bare $cnetpy_dir.git
 EOF
 
-for DIR in $cnetpy_dir $oper_dir $trans_dir
+for DIR in $cnetpy_dir $trans_dir $oper_dir
 do
+    sed -i 's/FOO/'$DIR'/g' $hook
     echo
     echo "Pushing " $DIR " to production..."
-    $scp_cmd hooks/$hook-$DIR $prod_server:~/$git_dir/$DIR.git/hooks/$hook
+    scp $hook $prod_server:~/$git_dir/$DIR.git/hooks
+    sed -i 's/'$DIR'/FOO/g' $hook
     cd ../$DIR
     git remote add production $prod_server:$git_dir/$DIR.git
     git push production master

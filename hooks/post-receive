@@ -1,6 +1,7 @@
 #!/bin/bash
-TARGET="/home/cloudnet/operational-processing"
-GIT_DIR="/home/cloudnet/git-for-deploy/operational-processing.git"
+REPOSITORY="FOO"
+TARGET="/home/cloudnet/"$REPOSITORY
+GIT_DIR="/home/cloudnet/git-for-deploy/"$REPOSITORY".git"
 BRANCH="master"
 
 while read oldrev newrev ref
