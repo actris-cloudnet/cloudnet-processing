@@ -7,15 +7,14 @@ ssh_cmd="ssh -T"
 oper_dir="operational-processing"
 trans_dir="transition-scripts"
 cnetpy_dir="cloudnetpy"
-venv_dir="prod_venv"
-git_dir="git-for-deploy"
+git_dir="bare-repos"
 prod_server="cloudnet@altocumulus.fmi.fi"
+prod_venv="prod_venv"
 
 read -p "Are all tests passing? (y/N, answering y will start the deployment): " answer
 if [ "$answer" != "y" ]; then
     exit 4
 fi
-echo
 
 $ssh_cmd $prod_server << EOF
 rm -rf $git_dir
@@ -47,9 +46,9 @@ echo "----"
 echo "Installing..."
 echo "----"
 $ssh_cmd $prod_server << EOF
-rm -rf $venv_dir
-python3 -m venv $venv_dir
-source $venv_dir/bin/activate
+rm -rf $prod_venv
+python3 -m venv $prod_venv
+source $prod_venv/bin/activate
 pip3 install --upgrade pip
 cd $cnetpy_dir && pip3 install .
 cd ../$trans_dir && pip3 install .
