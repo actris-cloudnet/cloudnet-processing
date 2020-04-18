@@ -70,6 +70,8 @@ def _concat(full_input_dir, output_dir, date):
     file_new = netCDF4.Dataset(file_new_name, 'w', format='NETCDF4_CLASSIC')
 
     files = lib.get_list_of_nc_files(full_input_dir)
+    files = lib.remove_files_with_wrong_date(files, date)
+
     first_file_of_day = netCDF4.Dataset(files[0])
 
     _create_dimensions(file_new, first_file_of_day)

@@ -2,6 +2,7 @@ import os
 import re
 from datetime import datetime
 import numpy as np
+import netCDF4
 from cloudnetpy import utils
 
 
@@ -30,6 +31,17 @@ def get_list_of_nc_files(directory):
     files = os.listdir(directory)
     files = np.sort(get_only_nc_files(files))
     return ['/'.join((directory, f)) for f in files]
+
+
+def remove_files_with_wrong_date(files, date):
+    year, month, day = [int(x) for x in date]
+    valid_files = []
+    for file in files:
+        nc = netCDF4.Dataset(file)
+        if nc.year == year and nc.month == month and nc.day == day:
+            valid_files.append(file)
+        nc.close()
+    return valid_files
 
 
 def get_only_nc_files(files):
