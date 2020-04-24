@@ -11,16 +11,7 @@ file_paths = importlib.import_module("operational-processing").file_paths
 
 
 def main():
-
-    if ARGS.output:
-        root = ARGS.output
-    else:
-        config = process_utils.read_conf(ARGS)
-        root = config['main']['PATH']['output']
-
-    site_name = ARGS.site[0]
-    root = '/'.join((root, site_name))
-
+    root = _get_root_path()
     for file in Path(root).rglob('*.nc'):
         if not _is_date_in_range(file):
             continue
@@ -28,13 +19,22 @@ def main():
         image_name = nc_file_name.replace('nc', 'png')
         file_type = _get_file_type(nc_file_name)
         try:
-            vars, max_alt = _variables_to_plot(file_type)
+            fields, max_alt = _get_fields_for_plot(file_type)
         except NotImplementedError:
             continue
         if _is_plottable(image_name):
             print(f"Plotting: {image_name}")
-            generate_figure(nc_file_name, vars, show=False,
+            generate_figure(nc_file_name, fields, show=False,
                             image_name=image_name, max_y=max_alt)
+
+
+def _get_root_path():
+    if ARGS.output:
+        root = ARGS.output
+    else:
+        config = process_utils.read_conf(ARGS)
+        root = config['main']['PATH']['output']
+    return '/'.join((root, ARGS.site[0]))
 
 
 def _is_plottable(image_name):
@@ -57,16 +57,20 @@ def _is_date_in_range(path):
     return start <= date_in_file < stop
 
 
-def _variables_to_plot(cloudnet_file_type):
+def _get_fields_for_plot(cloudnet_file_type):
+    max_alt = 10
     if cloudnet_file_type == 'categorize':
-        return ['v'], 10
-    if cloudnet_file_type == 'classification':
-        return ['target_classification'], 10
+        fields = ['v']
+    elif cloudnet_file_type == 'classification':
+        fields = ['target_classification']
     elif cloudnet_file_type == 'iwc':
-        return ['iwc'], 10
+        fields = ['iwc']
     elif cloudnet_file_type == 'lwc':
-        return ['lwc'], 6
-    raise NotImplementedError
+        fields = ['lwc']
+        max_alt = 6
+    else:
+        raise NotImplementedError
+    return fields, max_alt
 
 
 if __name__ == "__main__":
@@ -76,8 +80,6 @@ if __name__ == "__main__":
                         default=process_utils.get_date_from_past(7))
     parser.add_argument('--stop', type=str, metavar='YYYY-MM-DD', help='Stopping date. Default is current day - 1.',
                         default=process_utils.get_date_from_past(1))
-    parser.add_argument('--input', type=str, metavar='/FOO/BAR', help='Input folder path. '
-                                                                      'Overrides config/main.ini value.')
     parser.add_argument('--output', type=str, metavar='/FOO/BAR', help='Output folder path. '
                                                                        'Overrides config/main.ini value.')
     parser.add_argument('-o', '--overwrite', dest='overwrite', action='store_true',
