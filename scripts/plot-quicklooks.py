@@ -1,5 +1,6 @@
 #!venv/bin/python3
 """Script for plotting CloudnetPy images."""
+import os
 from pathlib import Path
 import argparse
 import importlib
@@ -21,7 +22,7 @@ def main():
     root = '/'.join((root, site_name))
 
     for file in Path(root).rglob('*.nc'):
-        if not _date_in_range(file):
+        if not _is_date_in_range(file):
             continue
         nc_file_name = str(file)
         image_name = nc_file_name.replace('nc', 'png')
@@ -30,7 +31,16 @@ def main():
             vars, max_alt = _variables_to_plot(file_type)
         except NotImplementedError:
             continue
-        generate_figure(nc_file_name, vars, show=False, image_name=image_name, max_y=max_alt)
+        if _is_plottable(image_name):
+            print(f"Plotting: {image_name}")
+            generate_figure(nc_file_name, vars, show=False,
+                            image_name=image_name, max_y=max_alt)
+
+
+def _is_plottable(image_name):
+    if os.path.isfile(image_name) and not ARGS.overwrite:
+        return False
+    return True
 
 
 def _get_file_type(nc_file_name):
@@ -40,7 +50,7 @@ def _get_file_type(nc_file_name):
     return file_type
 
 
-def _date_in_range(path):
+def _is_date_in_range(path):
     date_in_file = int(path.name[:8])
     start = int(ARGS.start.replace('-', ''))
     stop = int(ARGS.stop.replace('-', ''))
