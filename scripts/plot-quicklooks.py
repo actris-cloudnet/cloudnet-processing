@@ -3,7 +3,6 @@
 from pathlib import Path
 import argparse
 import importlib
-import configparser
 from cloudnetpy.plotting import generate_figure
 import netCDF4
 process_utils = importlib.import_module("operational-processing").utils
@@ -12,13 +11,13 @@ file_paths = importlib.import_module("operational-processing").file_paths
 
 def main():
 
-    site_name = ARGS.site[0]
-    config = _read_conf(site_name)
-
     if ARGS.output:
         root = ARGS.output
     else:
+        config = process_utils.read_conf(ARGS)
         root = config['main']['PATH']['output']
+
+    site_name = ARGS.site[0]
     root = '/'.join((root, site_name))
 
     for file in Path(root).rglob('*.nc'):
@@ -58,21 +57,6 @@ def _variables_to_plot(cloudnet_file_type):
     elif cloudnet_file_type == 'lwc':
         return ['lwc'], 6
     raise NotImplementedError
-
-
-def _read_conf(site_name):
-    def _read(conf_type):
-        config = configparser.ConfigParser()
-        config.read(f"config/{conf_type}.ini")
-        return config
-
-    main_conf = _read('main')
-    if ARGS.input:
-        main_conf['PATH']['input'] = ARGS.input
-    if ARGS.output:
-        main_conf['PATH']['output'] = ARGS.output
-    return {'main': main_conf,
-            'site': _read(site_name)}
 
 
 if __name__ == "__main__":

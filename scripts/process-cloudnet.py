@@ -3,7 +3,6 @@
 import os
 import argparse
 import importlib
-import configparser
 from cloudnetpy.categorize import generate_categorize
 from cloudnetpy.instruments import rpg2nc, ceilo2nc
 from cloudnetpy import utils
@@ -16,8 +15,8 @@ def main():
     if ARGS.keep_uuid:
         raise NotImplementedError
 
+    config = process_utils.read_conf(ARGS)
     site_name = ARGS.site[0]
-    config = _read_conf(site_name)
     site_info = process_utils.read_site_info(site_name)
 
     start_date = process_utils.date_string_to_date(ARGS.start)
@@ -36,21 +35,6 @@ def main():
         except (UncalibratedFileMissing, CalibratedFileMissing, RuntimeError) as error:
             print(error)
         print(' ')
-
-
-def _read_conf(site_name):
-    def _read(conf_type):
-        config = configparser.ConfigParser()
-        config.read(f"config/{conf_type}.ini")
-        return config
-
-    main_conf = _read('main')
-    if ARGS.input:
-        main_conf['PATH']['input'] = ARGS.input
-    if ARGS.output:
-        main_conf['PATH']['output'] = ARGS.output
-    return {'main': main_conf,
-            'site': _read(site_name)}
 
 
 def _process_level1(process_type, obj):

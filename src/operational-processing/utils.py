@@ -2,6 +2,7 @@ import os
 import fnmatch
 import requests
 import datetime
+import configparser
 from cloudnetpy.utils import get_time
 
 
@@ -47,3 +48,19 @@ def get_date_from_past(n, reference_date=None):
     reference = reference_date or get_time().split()[0]
     date = date_string_to_date(reference) - datetime.timedelta(n)
     return str(date)
+
+
+def read_conf(args):
+    def _read(conf_type):
+        config = configparser.ConfigParser()
+        config.read(f"config/{conf_type}.ini")
+        return config
+
+    site_name = args.site[0]
+    main_conf = _read('main')
+    if args.input:
+        main_conf['PATH']['input'] = args.input
+    if args.output:
+        main_conf['PATH']['output'] = args.output
+    return {'main': main_conf,
+            'site': _read(site_name)}
