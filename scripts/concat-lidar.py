@@ -1,4 +1,4 @@
-#!venv/bin/python3
+#!../prod_venv/bin/python3
 """Script for concatenating individual chm15k-files into daily files."""
 import os
 import time
@@ -15,8 +15,8 @@ VARIABLES = ['time', 'beta_raw', 'stddev', 'nn1', 'nn2', 'nn3']
 
 def main():
 
-    input_dir = ARGS.input_dir[0]
-    output_dir = ARGS.dir or input_dir
+    input_dir = ARGS.input[0]
+    output_dir = ARGS.output or input_dir
 
     year_range = _get_range('year')
     years = lib.get_dirs_in_range(input_dir, year_range)
@@ -136,8 +136,8 @@ def _append_data(file_base, file):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Concatenate multiple CHM15k files into daily files.')
-    parser.add_argument('input_dir', metavar='/path/to/data/', nargs='+', help='Input directory')
-    parser.add_argument('-d', '--dir', metavar='/path/to/', help='Output directory')
+    parser.add_argument('input', metavar='/path/to/data/', nargs='+', help='Input directory')
+    parser.add_argument('--output', metavar='/path/to/', help='Output directory')
     parser.add_argument('-o', '--overwrite', dest='overwrite', action='store_true',
                         help='Overwrites any existing daily files', default=False)
     parser.add_argument('--year', type=int, help='Limit to certain year only.')
