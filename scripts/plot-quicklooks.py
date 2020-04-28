@@ -1,4 +1,4 @@
-#!venv/bin/python3
+#!../prod_venv/bin/python3
 """Script for plotting CloudnetPy images."""
 import os
 from pathlib import Path

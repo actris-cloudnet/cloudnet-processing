@@ -1,4 +1,4 @@
-#!venv/bin/python3
+#!../prod_venv/bin/python3
 """Master script for CloudnetPy backward processing."""
 import os
 import argparse
