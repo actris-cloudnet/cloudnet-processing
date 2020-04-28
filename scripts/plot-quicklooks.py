@@ -24,7 +24,8 @@ def main():
         if _is_plottable(image_name):
             print(f"Plotting: {image_name}")
             generate_figure(nc_file_name, fields, show=False,
-                            image_name=image_name, max_y=max_alt)
+                            image_name=image_name, max_y=max_alt,
+                            sub_title=False)
 
 
 def _is_date_in_range(path):
@@ -58,6 +59,10 @@ def _get_fields_for_plot(cloudnet_file_type):
     elif cloudnet_file_type == 'lwc':
         fields = ['lwc']
         max_alt = 6
+    elif cloudnet_file_type == 'model':
+        fields = ['temperature']
+    elif cloudnet_file_type == 'lidar':
+        fields = ['beta']
     else:
         raise NotImplementedError
     return fields, max_alt
