@@ -56,11 +56,15 @@ def read_conf(args):
         config.read(f"config/{conf_type}.ini")
         return config
 
+    def _overwrite_path(name):
+        if hasattr(args, name):
+            value = getattr(args, name)
+            if value:
+                main_conf['PATH'][name] = value
+
     site_name = args.site[0]
     main_conf = _read('main')
-    if args.input:
-        main_conf['PATH']['input'] = args.input
-    if args.output:
-        main_conf['PATH']['output'] = args.output
+    _overwrite_path('input')
+    _overwrite_path('output')
     return {'main': main_conf,
             'site': _read(site_name)}
