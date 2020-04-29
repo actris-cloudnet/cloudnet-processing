@@ -84,8 +84,8 @@ if __name__ == "__main__":
     parser.add_argument('data_path', nargs='+', help='Data path.')
     parser.add_argument('--start', type=str, metavar='YYYY-MM-DD', help='Starting date. Default is current day - 7.',
                         default=process_utils.get_date_from_past(7))
-    parser.add_argument('--stop', type=str, metavar='YYYY-MM-DD', help='Stopping date. Default is current day - 1.',
-                        default=process_utils.get_date_from_past(1))
+    parser.add_argument('--stop', type=str, metavar='YYYY-MM-DD', help='Stopping date. Default is the current day.',
+                        default=process_utils.get_date_from_past(0))
     parser.add_argument('-o', '--overwrite', dest='overwrite', action='store_true',
                         help='Overwrites existing images', default=False)
     ARGS = parser.parse_args()
