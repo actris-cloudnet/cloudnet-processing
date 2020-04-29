@@ -32,7 +32,8 @@ def main():
             for product in ('classification', 'iwc-Z-T-method',
                             'lwc-scaled-adiabatic', 'drizzle'):
                 _process_level2(product, obj)
-        except (UncalibratedFileMissing, CalibratedFileMissing, RuntimeError) as error:
+        except (UncalibratedFileMissing, CalibratedFileMissing, RuntimeError,
+                ValueError, IndexError) as error:
             print(error)
         print(' ')
 
