@@ -60,7 +60,7 @@ def _get_fields_for_plot(cloudnet_file_type):
         fields = ['lwc']
         max_alt = 6
     elif cloudnet_file_type == 'model':
-        fields = ['temperature']
+        fields = ['cloud_fraction']
     elif cloudnet_file_type == 'lidar':
         fields = ['beta']
     elif cloudnet_file_type == 'radar':
