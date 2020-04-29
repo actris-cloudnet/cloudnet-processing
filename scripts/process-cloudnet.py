@@ -122,7 +122,7 @@ class CategorizeFileMissing(Exception):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Process Cloudnet data.')
-    parser.add_argument('site', nargs='+', help='Site Name', choices=['bucharest'])
+    parser.add_argument('site', nargs='+', help='Site Name', choices=['bucharest', 'norunda'])
     parser.add_argument('--start', type=str, metavar='YYYY-MM-DD', help='Starting date. Default is current day - 7.',
                         default=process_utils.get_date_from_past(7))
     parser.add_argument('--stop', type=str, metavar='YYYY-MM-DD', help='Stopping date. Default is current day - 1.',

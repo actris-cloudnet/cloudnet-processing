@@ -36,8 +36,12 @@ class FilePaths:
     def build_rpg_path(self):
         year, month, day = _split_date(self.dvec)
         root = self.config['main']['PATH']['input']
-        return '/'.join((root, self.site_name, 'uncalibrated', 'rpg-fmcw-94',
-                         f"Y{year}", f"M{month}", f"D{day}"))
+        prefix = '/'.join((root, self.site_name, 'uncalibrated', 'rpg-fmcw-94'))
+        path_option1 = '/'.join((prefix, year, month, day))
+        path_option2 = '/'.join((prefix, f"Y{year}", f"M{month}", f"D{day}"))
+        if os.path.isdir(path_option1):
+            return path_option1
+        return path_option2
 
     def build_mwr_file_name(self):
         if self.config['site']['INSTRUMENTS']['mwr'] == '':
