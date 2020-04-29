@@ -23,9 +23,12 @@ def main():
             continue
         if _is_plottable(image_name):
             print(f"Plotting: {image_name}")
-            generate_figure(nc_file_name, fields, show=False,
-                            image_name=image_name, max_y=max_alt,
-                            sub_title=False)
+            try:
+                generate_figure(nc_file_name, fields, show=False, 
+                                image_name=image_name, max_y=max_alt,
+                                sub_title=False, dpi=100)
+            except (ValueError, KeyError, AttributeError):
+                continue
 
 
 def _is_date_in_range(path):
