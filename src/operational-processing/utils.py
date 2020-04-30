@@ -11,7 +11,8 @@ def read_site_info(site_name):
     url = f"https://altocumulus.fmi.fi/api/sites/"
     sites = requests.get(url=url).json()
     for site in sites:
-        if site['id'] == site_name:
+        if site['id'] == site_name.replace('-', ''):
+            site['id'] = site_name
             site['name'] = site.pop('humanReadableName')
             return site
 
