@@ -26,15 +26,20 @@ def main():
         dvec = date.strftime("%Y%m%d")
         print('Date: ', dvec)
         obj = file_paths.FilePaths(dvec, config, site_info)
-        try:
-            for processing_type in ('radar', 'lidar', 'categorize'):
+
+        for processing_type in ('lidar', 'radar', 'categorize'):
+            try:
                 _process_level1(processing_type, obj)
-            for product in ('classification', 'iwc-Z-T-method',
-                            'lwc-scaled-adiabatic', 'drizzle'):
+            except (UncalibratedFileMissing, CalibratedFileMissing, RuntimeError, ValueError, IndexError) as error:
+                print(error)
+                continue
+
+        for product in ('classification', 'iwc-Z-T-method', 'lwc-scaled-adiabatic', 'drizzle'):
+            try:
                 _process_level2(product, obj)
-        except (UncalibratedFileMissing, CalibratedFileMissing, RuntimeError,
-                ValueError, IndexError) as error:
-            print(error)
+            except (CategorizeFileMissing, RuntimeError, ValueError, IndexError) as error:
+                print(error)
+                continue
         print(' ')
 
 
