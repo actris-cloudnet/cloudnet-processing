@@ -30,7 +30,8 @@ def main():
         for processing_type in ('lidar', 'radar', 'categorize'):
             try:
                 _process_level1(processing_type, obj)
-            except (UncalibratedFileMissing, CalibratedFileMissing, RuntimeError, ValueError, IndexError) as error:
+            except (UncalibratedFileMissing, CalibratedFileMissing, RuntimeError,
+                    ValueError, IndexError, TypeError) as error:
                 print(error)
                 continue
 
