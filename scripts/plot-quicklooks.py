@@ -68,6 +68,9 @@ def _get_fields_for_plot(cloudnet_file_type):
         fields = ['beta']
     elif cloudnet_file_type == 'radar':
         fields = ['Ze']
+    elif cloudnet_file_type == 'drizzle':
+        fields = ['Do']
+        max_alt = 4
     else:
         raise NotImplementedError
     return fields, max_alt
