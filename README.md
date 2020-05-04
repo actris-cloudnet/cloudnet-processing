@@ -1,4 +1,6 @@
 # operational-processing
+![](https://github.com/actris-cloudnet/operational-processing/workflows/Cloudnet%20processing%20CI/badge.svg)
+
 Scripts to run operational CloudnetPy processing
 
 # Installation
