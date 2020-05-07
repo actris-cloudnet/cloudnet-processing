@@ -4,6 +4,7 @@ import time
 import argparse
 import configparser
 import yaml
+import importlib
 from watchdog.observers.polling import PollingObserver as Observer
 from watchdog.events import FileSystemEventHandler
 process_utils = importlib.import_module("operational-processing").utils
