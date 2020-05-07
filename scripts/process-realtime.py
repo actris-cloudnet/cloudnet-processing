@@ -6,6 +6,7 @@ import configparser
 import yaml
 from watchdog.observers.polling import PollingObserver as Observer
 from watchdog.events import FileSystemEventHandler
+process_utils = importlib.import_module("operational-processing").utils
 
 lib = __import__('operational-processing').concat_lib
 
@@ -13,8 +14,7 @@ lib = __import__('operational-processing').concat_lib
 def main():
     site_name = ARGS.site[0]
 
-    conf = {'main': _read_config('main'),
-            'site': _read_config(site_name)}
+    conf = process_utils.read_conf()
 
     site_info = _read_site_info(conf, site_name)
 
@@ -34,12 +34,6 @@ def main():
             obs.stop()
     for obs in observers:
         obs.join()
-
-
-def _read_config(conf_type):
-    config = configparser.ConfigParser()
-    config.read(f"config/{conf_type}.ini")
-    return config
 
 
 def _read_site_info(conf, site_name):
