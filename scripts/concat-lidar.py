@@ -1,4 +1,4 @@
-#!../prod_venv/bin/python3
+#!python3
 """Script for concatenating individual chm15k-files into daily files."""
 import os
 import time

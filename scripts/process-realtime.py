@@ -1,4 +1,4 @@
-#!../prod_venv/bin/python3
+#!python3
 """Master script for CloudnetPy processing."""
 import time
 import argparse
