@@ -15,7 +15,7 @@ lib = __import__('operational-processing').concat_lib
 def main():
     site_name = ARGS.site[0]
 
-    conf = process_utils.read_conf()
+    conf = process_utils.read_conf(ARGS)
 
     site_info = _read_site_info(conf, site_name)
 
@@ -94,5 +94,8 @@ class _Sniffer(FileSystemEventHandler):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Process Cloudnet data.')
     parser.add_argument('site', nargs='+', help='Site Name', choices=['bucharest'])
+    parser.add_argument('--config-dir', type=str, metavar='/FOO/BAR',
+                        help='Path to directory containing config files. Default: ./config.',
+                        default='./config')
     ARGS = parser.parse_args()
     main()

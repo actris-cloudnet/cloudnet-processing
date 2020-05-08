@@ -52,9 +52,11 @@ def get_date_from_past(n, reference_date=None):
 
 
 def read_conf(args):
+    conf_dir = args.config_dir
     def _read(conf_type):
+        config_path = f'{conf_dir}/{conf_type}.ini'
         config = configparser.ConfigParser()
-        config.read(f"config/{conf_type}.ini")
+        config.readfp(open(config_path, 'r'))
         return config
 
     def _overwrite_path(name):
