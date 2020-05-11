@@ -31,4 +31,7 @@ jobs:
       run: |
         pip install pytest
         pytest
+    - name: Run e2e test
+      run: |
+        python3 tests/e2e/e2e.py
 
