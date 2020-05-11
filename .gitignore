@@ -2,3 +2,4 @@ venv/
 .idea/
 *egg-info/
 *pycache*
+processed-data/
