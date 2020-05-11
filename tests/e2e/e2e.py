@@ -37,8 +37,8 @@ def main():
         return
 
     if not ARGS.skip_processing:
-        subprocess.call(['scripts/concat-lidar.py', f"{lidar_root}"])
-        subprocess.call(['scripts/process-cloudnet.py', site,
+        subprocess.call(['python3', 'scripts/concat-lidar.py', f"{lidar_root}"])
+        subprocess.call(['python3', 'scripts/process-cloudnet.py', site,
                          f"--input={input_folder}",
                          f"--output={output_folder}",
                          f"--start={start}",
