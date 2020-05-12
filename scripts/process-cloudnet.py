@@ -8,6 +8,7 @@ from cloudnetpy.instruments import rpg2nc, ceilo2nc
 from cloudnetpy import utils
 process_utils = importlib.import_module("operational-processing").utils
 file_paths = importlib.import_module("operational-processing").file_paths
+metadata_api = importlib.import_module("operational-processing").metadata_api
 
 
 def main():
@@ -22,6 +23,8 @@ def main():
     start_date = process_utils.date_string_to_date(ARGS.start)
     stop_date = process_utils.date_string_to_date(ARGS.stop)
 
+    md_api = metadata_api.MetadataSender(config['main']['METADATASERVER']['url'])
+
     for date in utils.date_range(start_date, stop_date):
         dvec = date.strftime("%Y%m%d")
         print('Date: ', dvec)
@@ -29,7 +32,10 @@ def main():
 
         for processing_type in ('lidar', 'radar', 'categorize'):
             try:
-                _process_level1(processing_type, obj)
+                res = _process_level1(processing_type, obj)
+                if res and len(res) > 1:
+                    output_file, uuid = res
+                    md_api.put(uuid, output_file)
             except (UncalibratedFileMissing, CalibratedFileMissing, RuntimeError,
                     ValueError, IndexError, TypeError) as error:
                 print(error)
@@ -37,7 +43,10 @@ def main():
 
         for product in ('classification', 'iwc-Z-T-method', 'lwc-scaled-adiabatic', 'drizzle'):
             try:
-                _process_level2(product, obj)
+                res = _process_level2(product, obj)
+                if res and len(res) > 1:
+                    output_file, uuid = res
+                    md_api.put(uuid, output_file)
             except (CategorizeFileMissing, RuntimeError, ValueError, IndexError) as error:
                 print(error)
                 continue
@@ -46,7 +55,7 @@ def main():
 
 def _process_level1(process_type, obj):
     module = importlib.import_module(__name__)
-    getattr(module, f"_process_{process_type}")(obj)
+    return getattr(module, f"_process_{process_type}")(obj)
 
 
 def _process_radar(obj):
@@ -56,7 +65,7 @@ def _process_radar(obj):
         _ = _find_input_file(rpg_path, '*.LV1')
         if _is_writable(output_file):
             print(f"Calibrating rpg-fmcw-94 cloud radar..")
-            rpg2nc(rpg_path, output_file, obj.site_info)
+            return (output_file, rpg2nc(rpg_path, output_file, obj.site_info))
 
 
 def _process_lidar(obj):
@@ -66,7 +75,7 @@ def _process_lidar(obj):
     if _is_writable(output_file):
         print(f"Calibrating {obj.config['site']['INSTRUMENTS']['lidar']} lidar..")
         try:
-            ceilo2nc(input_file, output_file, obj.site_info)
+            return (output_file, ceilo2nc(input_file, output_file, obj.site_info))
         except RuntimeError as error:
             raise error
 
@@ -89,7 +98,7 @@ def _process_categorize(obj):
     if _is_writable(output_file):
         try:
             print(f"Processing categorize file..")
-            generate_categorize(input_files, output_file)
+            return (output_file, generate_categorize(input_files, output_file))
         except RuntimeError as error:
             raise error
 
@@ -104,7 +113,7 @@ def _process_level2(product, obj):
     if _is_writable(output_file):
         try:
             print(f"Processing {product} product..")
-            getattr(module, f"generate_{product_prefix}")(categorize_file, output_file)
+            return (output_file, getattr(module, f"generate_{product_prefix}")(categorize_file, output_file))
         except ValueError:
             raise RuntimeError(f"Something went wrong with {product} processing.")
 
