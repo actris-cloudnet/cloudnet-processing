@@ -65,9 +65,14 @@ def read_conf(args):
             if value:
                 main_conf['PATH'][name] = value
 
-    site_name = args.site[0]
     main_conf = _read('main')
     _overwrite_path('input')
     _overwrite_path('output')
-    return {'main': main_conf,
-            'site': _read(site_name)}
+    if 'site' in args:
+        site_name = args.site[0]
+        return {'main': main_conf,
+                'site': _read(site_name)}
+    return {'main': main_conf}
+
+def str2bool(s):
+    return False if s == 'False' else True if s == 'True' else s
