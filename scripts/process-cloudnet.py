@@ -23,7 +23,7 @@ def main():
     start_date = process_utils.date_string_to_date(ARGS.start)
     stop_date = process_utils.date_string_to_date(ARGS.stop)
 
-    md_api = metadata_api.MetadataSender(config['main']['METADATASERVER']['url'])
+    md_api = metadata_api.MetadataApi(config['main']['METADATASERVER']['url'])
 
     for date in utils.date_range(start_date, stop_date):
         dvec = date.strftime("%Y%m%d")
