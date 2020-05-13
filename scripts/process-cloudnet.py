@@ -33,7 +33,7 @@ def main():
         for processing_type in ('lidar', 'radar', 'categorize'):
             try:
                 res = _process_level1(processing_type, obj)
-                if res and len(res) > 1:
+                if not ARGS.no_api and res and len(res) > 1:
                     output_file, uuid = res
                     md_api.put(uuid, output_file)
             except (UncalibratedFileMissing, CalibratedFileMissing, RuntimeError,
@@ -44,7 +44,7 @@ def main():
         for product in ('classification', 'iwc-Z-T-method', 'lwc-scaled-adiabatic', 'drizzle'):
             try:
                 res = _process_level2(product, obj)
-                if res and len(res) > 1:
+                if not ARGS.no_api and res and len(res) > 1:
                     output_file, uuid = res
                     md_api.put(uuid, output_file)
             except (CategorizeFileMissing, RuntimeError, ValueError, IndexError) as error:
@@ -154,5 +154,7 @@ if __name__ == "__main__":
                         help='Overwrites data in existing files', default=False)
     parser.add_argument('-k', '--keep_uuid', dest='keep_uuid', action='store_true',
                         help='Keeps ID of old file even if the data is overwritten', default=False)
+    parser.add_argument('-na', '--no-api', dest='no_api', action='store_true',
+                        help='Disable API calls. Useful for testing.', default=False)
     ARGS = parser.parse_args()
     main()
