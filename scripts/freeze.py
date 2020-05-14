@@ -1,10 +1,7 @@
 #!python3
-from sys import argv
 import argparse
 from netCDF4 import Dataset
-from operational_processing import generate_pid
-from operational_processing import metadata_api
-from operational_processing import utils as process_utils
+from operational_processing import generate_pid, metadata_api, utils as process_utils
 
 md_api = metadata_api.MetadataApi({})
 metadata_api.MetadataApi()

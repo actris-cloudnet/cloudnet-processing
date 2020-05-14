@@ -6,9 +6,7 @@ import importlib
 from cloudnetpy.categorize import generate_categorize
 from cloudnetpy.instruments import rpg2nc, ceilo2nc
 from cloudnetpy import utils
-from operational_processing import utils as process_utils
-from operational_processing import file_paths
-from operational_processing import metadata_api
+from operational_processing import utils as process_utils, metadata_api, file_paths
 
 
 def main():
