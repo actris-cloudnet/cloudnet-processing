@@ -1,11 +1,13 @@
 #!python3
 from sys import argv
-import importlib
 import argparse
 from netCDF4 import Dataset
-metadata_api = importlib.import_module("operational-processing").metadata_api
-generate_pid = importlib.import_module("operational-processing").generate_pid
-process_utils = importlib.import_module("operational-processing").utils
+from operational_processing import generate_pid
+from operational_processing import metadata_api
+from operational_processing import utils as process_utils
+
+md_api = metadata_api.MetadataApi({})
+metadata_api.MetadataApi()
 
 def main():
     config = process_utils.read_conf(ARGS)
@@ -28,7 +30,6 @@ def main():
             md_api.put(uuid, filepath, freeze=True)
 
     del pid_gen
-
 
 
 if __name__ == "__main__":

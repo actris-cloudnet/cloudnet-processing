@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 
-setup(name='operational-processing',
+setup(name='operational_processing',
       description='Software for running operational CloudnetPy processing.',
       author='Finnish Meteorological Institute',
       license='MIT License',

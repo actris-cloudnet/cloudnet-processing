@@ -1,7 +1,7 @@
 import datetime
 import pytest
 
-utils = __import__('operational-processing').utils
+utils = __import__('operational_processing').utils
 
 """
 This needs altocumulus.fmi.fi to be visible outside FMI

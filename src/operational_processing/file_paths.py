@@ -1,7 +1,4 @@
 import os
-import importlib
-
-process_utils = importlib.import_module("operational-processing").utils
 
 
 class FilePaths:

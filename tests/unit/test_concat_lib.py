@@ -4,7 +4,7 @@ import netCDF4
 import pytest
 
 
-lib = __import__('operational-processing').concat_lib
+lib = __import__('operational_processing').concat_lib
 
 
 def test_get_files_by_suffix():

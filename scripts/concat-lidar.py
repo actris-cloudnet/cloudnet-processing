@@ -7,7 +7,7 @@ import numpy as np
 import netCDF4
 from tqdm import tqdm
 
-lib = __import__('operational-processing').concat_lib
+lib = __import__('operational_processing').concat_lib
 
 CONSTANTS = ['range', 'wavelength', 'scaling', 'zenith']
 VARIABLES = ['time', 'beta_raw', 'stddev', 'nn1', 'nn2', 'nn3']

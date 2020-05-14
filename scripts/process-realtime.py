@@ -2,14 +2,12 @@
 """Master script for CloudnetPy processing."""
 import time
 import argparse
-import configparser
 import yaml
-import importlib
 from watchdog.observers.polling import PollingObserver as Observer
 from watchdog.events import FileSystemEventHandler
-process_utils = importlib.import_module("operational-processing").utils
+from operational_processing import utils as process_utils
 
-lib = __import__('operational-processing').concat_lib
+lib = __import__('operational_processing').concat_lib
 
 
 def main():

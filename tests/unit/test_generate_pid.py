@@ -2,7 +2,7 @@ import pytest
 import requests
 import requests_mock
 
-generate_pid = __import__('operational-processing').generate_pid
+generate_pid = __import__('operational_processing').generate_pid
 adapter = requests_mock.Adapter()
 session = requests.Session()
 session.mount('mock://', adapter)

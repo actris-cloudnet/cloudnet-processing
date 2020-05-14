@@ -3,7 +3,7 @@ import pytest
 import requests
 import requests_mock
 
-metadata_api = __import__('operational-processing').metadata_api
+metadata_api = __import__('operational_processing').metadata_api
 adapter = requests_mock.Adapter()
 session = requests.Session()
 session.mount('mock://', adapter)

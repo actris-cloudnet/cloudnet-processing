@@ -1,8 +1,6 @@
 import sys
-import importlib
-import uuid
 import requests
-process_utils = importlib.import_module("operational-processing").utils
+from operational_processing import utils as process_utils
 
 
 class PidGenerator:

@@ -3,11 +3,9 @@
 import os
 from pathlib import Path
 import argparse
-import importlib
 from cloudnetpy.plotting import generate_figure
 import netCDF4
-process_utils = importlib.import_module("operational-processing").utils
-file_paths = importlib.import_module("operational-processing").file_paths
+from operational_processing import utils as process_utils
 
 
 def main():
