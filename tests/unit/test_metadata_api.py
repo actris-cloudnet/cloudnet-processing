@@ -13,7 +13,7 @@ class TestMetadataApi:
     def test_put_metadata(self):
         adapter.register_uri('PUT', 'mock://test/file/uuid', additional_matcher=self.__is_valid_xml, text='resp')
         md_api = metadata_api.MetadataApi('mock://test/', session)
-        r = md_api.put('uuid', 'tests/data/output/bucharest/calibrated/chm15k/2020/20200118_bucharest_chm15k.nc')
+        r = md_api.put('uuid', 'tests/data/output_fixed/bucharest/calibrated/chm15k/2020/20200118_bucharest_chm15k.nc')
             
         assert r.text == 'resp'
 
@@ -25,7 +25,7 @@ class TestMetadataApi:
 
         adapter.register_uri('PUT', 'mock://test/file/uuid', additional_matcher=has_freeze_in_header, text='resp')
         md_api = metadata_api.MetadataApi('mock://test/', session)
-        r = md_api.put('uuid', 'tests/data/output/bucharest/calibrated/chm15k/2020/20200118_bucharest_chm15k.nc', freeze=True)
+        r = md_api.put('uuid', 'tests/data/output_fixed/bucharest/calibrated/chm15k/2020/20200118_bucharest_chm15k.nc', freeze=True)
             
         assert r.text == 'resp'
 
