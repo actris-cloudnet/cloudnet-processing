@@ -4,3 +4,4 @@ venv/
 *pycache*
 processed_data/
 .vscode/
+*.log
