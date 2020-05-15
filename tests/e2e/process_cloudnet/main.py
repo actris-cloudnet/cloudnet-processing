@@ -5,7 +5,7 @@ import os
 import shutil
 import pytest
 import argparse
-from operational_processing.utils import wait_for_port
+from ...lib.utils import wait_for_port
 
 script_path = os.path.dirname(os.path.realpath(__file__))
 
