@@ -9,3 +9,4 @@ processed_data/*
 tests/data/public/*
 !tests/data/public/touch
 tests/data/output
+build/
