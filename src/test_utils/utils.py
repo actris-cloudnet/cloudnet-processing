@@ -1,3 +1,7 @@
+import atexit
+import os
+import shutil
+import subprocess
 import time
 import socket
 
@@ -21,3 +25,26 @@ def wait_for_port(port, host='localhost', timeout=10.0):
             if time.perf_counter() - start_time >= timeout:
                 raise TimeoutError('Waited too long for the port {} on host {} to start accepting '
                                    'connections.'.format(port, host)) from ex
+
+
+def remove_dirs(target, keep=()):
+    for item in os.listdir(target):
+        if item not in keep:
+            shutil.rmtree('/'.join((target, item)))
+
+
+def remove_files(target):
+    for file in os.listdir(target):
+        full_path = '/'.join((target, file))
+        if os.path.isfile(full_path):
+            os.remove(full_path)
+
+
+def start_server(port, document_root, log_path):
+    logfile = open(log_path, 'w')
+    md_server = subprocess.Popen(['python3', '-u', 'src/test_utils/server.py', document_root, str(port)],
+                                 stderr=logfile)
+    atexit.register(md_server.terminate)
+    wait_for_port(port)
+
+    return md_server

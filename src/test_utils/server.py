@@ -16,9 +16,13 @@ class Server(BaseHTTPRequestHandler):
     def do_POST(self, code=200):
         self.root = argv[1]
 
+        # Ignore params
+        self.path = self.path.split('?')[0]
+
         # Connection refused if request not read
-        content_length = int(self.headers['Content-Length'])
-        self.rfile.read(content_length)
+        if 'Content-Length' in self.headers:
+            content_length = int(self.headers['Content-Length'])
+            self.rfile.read(content_length)
 
         try:
             file = open(f'{self.root}{self.path}', 'rb')

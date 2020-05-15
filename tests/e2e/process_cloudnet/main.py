@@ -1,11 +1,10 @@
 #!venv/bin/python3
-import atexit
 import subprocess
 import os
 import shutil
 import pytest
 import argparse
-from ...lib.utils import wait_for_port
+from test_utils.utils import start_server
 
 script_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -40,12 +39,7 @@ def main():
         return
 
     if not ARGS.skip_processing:
-        # Start metadata server
-        logfile = open(f'{script_path}/md.log', 'w')
-        md_server = subprocess.Popen(['python3', '-u', 'tests/e2e/server.py', 'tests/data/server/metadata', '5000'],
-                                     stderr=logfile)
-        atexit.register(md_server.terminate)
-        wait_for_port(5000)
+        start_server(5000, 'tests/data/server/metadata', f'{script_path}/md.log')
 
         subprocess.check_call(['python3', 'scripts/concat-lidar.py', f"{lidar_root}"])
         subprocess.check_call(['python3', 'scripts/process-cloudnet.py', site,
