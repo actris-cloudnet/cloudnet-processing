@@ -32,6 +32,15 @@ class TestMetadataApi:
             
         assert r.text == 'resp'
 
+    def test_raises_error_on_failed_request(self):
+        adapter.register_uri('PUT', f'{mock_addr}file/uuid_fail', status_code=500)
+
+        md_api = metadata_api.MetadataApi(mock_addr, session)
+
+        with pytest.raises(requests.exceptions.HTTPError):
+            md_api.put('uuid_fail',
+                       'tests/data/output_fixed/bucharest/calibrated/chm15k/2020/20200118_bucharest_chm15k.nc')
+
     def __is_valid_xml(self, request):
         try:
             minidom.parseString(request.text)
