@@ -32,7 +32,7 @@ jobs:
       run: |
         pip install pytest
         pytest
-    - name: Run e2e test
+    - name: Run e2e tests
       run: |
-        python3 tests/e2e/e2e.py
+        for f in tests/e2e/*/main.py; do $f; done
 

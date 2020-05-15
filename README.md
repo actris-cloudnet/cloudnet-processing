@@ -81,6 +81,6 @@ $ pytest tests/unit/
 
 Run end-to-end tests:
 ```
-$ tests/e2e/e2e.py
+$ for f in tests/e2e/*/main.py; do $f; done
 ```
 
