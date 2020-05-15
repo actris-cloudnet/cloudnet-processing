@@ -1,4 +1,4 @@
-#!venv/bin/python3
+#!python3
 import subprocess
 import os
 import shutil
