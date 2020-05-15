@@ -2,6 +2,9 @@ venv/
 .idea/
 *egg-info/
 *pycache*
-processed_data/
 .vscode/
 *.log
+processed_data/*
+!processed_data/touch
+tests/data/public/*
+!tests/data/public/touch
