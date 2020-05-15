@@ -40,6 +40,14 @@ def remove_files(target):
             os.remove(full_path)
 
 
+def copy_files(source, target):
+    for file in os.listdir(source):
+        full_src_path = '/'.join((source, file))
+        full_trg_path = '/'.join((target, file))
+        if os.path.isfile(full_src_path):
+            shutil.copy(full_src_path, full_trg_path)
+
+
 def start_server(port, document_root, log_path):
     logfile = open(log_path, 'w')
     md_server = subprocess.Popen(['python3', '-u', 'src/test_utils/server.py', document_root, str(port)],
