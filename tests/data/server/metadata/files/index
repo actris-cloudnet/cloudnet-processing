@@ -1,0 +1,152 @@
+[
+  {
+    "uuid": "9337c790-f133-4d52-ba27-1a77aea2a944",
+    "title": "Model file from Granada",
+    "measurementDate": "2020-05-14",
+    "history": "2020-05-15 04:04:56 - global attributes fixed using attribute_modifier 0.0.1\nThu May 14 21:36:04 EEST 2020 - NetCDF generated from original data by Ewan O'Connor <ewan.oconnor@fmi.fi> using cnmodel2nc on cloudnet.fmi.fi",
+    "publicity": "public",
+    "cloudnetpyVersion": null,
+    "releasedAt": "2020-05-15T04:04:58.147Z",
+    "filename": "20200514_granada_ecmwf.nc",
+    "checksum": "984a768e6513c528c0fc0d453cc313313b83fa1c38d408533a9c1a58f54ada82",
+    "size": 501460,
+    "format": "NetCDF3",
+    "site": {
+      "id": "granada",
+      "humanReadableName": "Granada",
+      "latitude": 37.164,
+      "longitude": -3.605,
+      "altitude": 680,
+      "gaw": "UGR",
+      "country": "Spain",
+      "isTestSite": false
+    },
+    "product": {
+      "id": "model",
+      "humanReadableName": "Model",
+      "level": "1"
+    },
+    "volatile": true,
+    "url": "https://altocumulus.fmi.fi/download/20200514_granada_ecmwf.nc"
+  },
+  {
+    "uuid": "66c20095-d827-4346-981d-c2254dad3199",
+    "title": "Model file from Bucharest",
+    "measurementDate": "2020-05-14",
+    "history": "2020-05-15 04:00:42 - global attributes fixed using attribute_modifier 0.0.1\nThu May 14 21:34:24 EEST 2020 - NetCDF generated from original data by Ewan O'Connor <ewan.oconnor@fmi.fi> using cnmodel2nc on cloudnet.fmi.fi",
+    "publicity": "public",
+    "cloudnetpyVersion": null,
+    "releasedAt": "2020-05-15T04:00:43.620Z",
+    "filename": "20200514_bucharest_ecmwf.nc",
+    "checksum": "673bb1ffed593ffb17e7724c600b0106cf370afddaca715044e1aeedf15a6893",
+    "size": 501484,
+    "format": "NetCDF3",
+    "site": {
+      "id": "bucharest",
+      "humanReadableName": "Bucharest",
+      "latitude": 44.348,
+      "longitude": 26.029,
+      "altitude": 93,
+      "gaw": "Unknown",
+      "country": "Romania",
+      "isTestSite": false
+    },
+    "product": {
+      "id": "model",
+      "humanReadableName": "Model",
+      "level": "1"
+    },
+    "volatile": true,
+    "url": "https://altocumulus.fmi.fi/download/20200514_bucharest_ecmwf.nc"
+  },
+  {
+    "uuid": "6d18361c-2902-4d91-9a55-dc6de43655ec",
+    "title": "Model file from Norunda",
+    "measurementDate": "2020-05-14",
+    "history": "2020-05-15 04:04:34 - global attributes fixed using attribute_modifier 0.0.1\nThu May 14 21:40:09 EEST 2020 - NetCDF generated from original data by Ewan O'Connor <ewan.oconnor@fmi.fi> using cnmodel2nc on cloudnet.fmi.fi",
+    "publicity": "public",
+    "cloudnetpyVersion": null,
+    "releasedAt": "2020-05-15T04:04:35.609Z",
+    "filename": "20200514_norunda_ecmwf.nc",
+    "checksum": "564f3271c6cfc14f38a5b64dfd87b4ebee34f466786d990c5e9b0f067132c477",
+    "size": 501460,
+    "format": "NetCDF3",
+    "site": {
+      "id": "norunda",
+      "humanReadableName": "Norunda",
+      "latitude": 60.086,
+      "longitude": 17.479,
+      "altitude": 46,
+      "gaw": "NOR",
+      "country": "Sweden",
+      "isTestSite": false
+    },
+    "product": {
+      "id": "model",
+      "humanReadableName": "Model",
+      "level": "1"
+    },
+    "volatile": true,
+    "url": "https://altocumulus.fmi.fi/download/20200514_norunda_ecmwf.nc"
+  },
+  {
+    "uuid": "6bb09d28-733c-47dd-b64c-dac37f065783",
+    "title": "Ceilometer file from Bucharest",
+    "measurementDate": "2020-05-13",
+    "history": "2020-05-15 05:00:05 - ceilometer file created",
+    "publicity": "public",
+    "cloudnetpyVersion": "1.0.9",
+    "releasedAt": "2020-05-15T05:00:06.181Z",
+    "filename": "20200513_bucharest_chm15k.nc",
+    "checksum": "585b91952a566816113eb3e9f2f6c0a9478361f7a51a95f9e30e2b6472e2273a",
+    "size": 13538035,
+    "format": "HDF5 (NetCDF4)",
+    "site": {
+      "id": "bucharest",
+      "humanReadableName": "Bucharest",
+      "latitude": 44.348,
+      "longitude": 26.029,
+      "altitude": 93,
+      "gaw": "Unknown",
+      "country": "Romania",
+      "isTestSite": false
+    },
+    "product": {
+      "id": "lidar",
+      "humanReadableName": "Lidar",
+      "level": "1"
+    },
+    "volatile": true,
+    "url": "https://altocumulus.fmi.fi/download/20200513_bucharest_chm15k.nc"
+  },
+  {
+    "uuid": "42d523cc-764f-4334-aefc-35a9ca71f342",
+    "title": "Radar file from Granada",
+    "measurementDate": "2020-05-13",
+    "history": "2020-05-15 05:00:26 - radar file created",
+    "publicity": "public",
+    "cloudnetpyVersion": "1.0.9",
+    "releasedAt": "2020-05-15T05:00:27.538Z",
+    "filename": "20200513_granada_rpg-fmcw-94.nc",
+    "checksum": "33727ffe97e96baef0e4c6708a14ceb3b18fbe32ebeef28efe8703434fcceaaa",
+    "size": 19883377,
+    "format": "HDF5 (NetCDF4)",
+    "site": {
+      "id": "granada",
+      "humanReadableName": "Granada",
+      "latitude": 37.164,
+      "longitude": -3.605,
+      "altitude": 680,
+      "gaw": "UGR",
+      "country": "Spain",
+      "isTestSite": false
+    },
+    "product": {
+      "id": "radar",
+      "humanReadableName": "Radar",
+      "level": "1"
+    },
+    "volatile": true,
+    "url": "https://altocumulus.fmi.fi/download/20200513_granada_rpg-fmcw-94.nc"
+  }
+]

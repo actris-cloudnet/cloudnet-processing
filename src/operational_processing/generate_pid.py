@@ -39,7 +39,8 @@ class PidGenerator:
         # Authenticate session
         session_url = f'{options["handle_server_url"]}api/sessions'
         session.headers['Authorization'] = f'Handle clientCert="true"'
-        r = session.post(session_url, cert=(options['certificate_only'], options['private_key']))
+        cert = (str2bool(options['certificate_only']), str2bool(options['private_key']))
+        r = session.post(session_url, cert=cert)
         r.raise_for_status()
         session_id = r.json()['sessionId']
         session.headers['Authorization'] = f'Handle sessionId={session_id}'

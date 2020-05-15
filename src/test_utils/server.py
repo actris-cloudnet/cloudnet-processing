@@ -44,6 +44,9 @@ class Server(BaseHTTPRequestHandler):
     def do_GET(self):
         return self.do_POST()
 
+    def do_DELETE(self):
+        return self.do_POST()
+
     def handle_error(self, request, client_address):
         pass
 
