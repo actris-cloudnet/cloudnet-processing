@@ -1,4 +1,4 @@
-#!python3
+#!/usr/bin/env python3
 """Script for concatenating individual chm15k-files into daily files."""
 import os
 import time

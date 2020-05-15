@@ -1,4 +1,4 @@
-#!python3
+#!/usr/bin/env python3
 import argparse
 import os.path as path
 from netCDF4 import Dataset

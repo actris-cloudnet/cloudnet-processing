@@ -1,4 +1,4 @@
-#!python3
+#!/usr/bin/env python3
 """Master script for CloudnetPy processing."""
 import time
 import argparse

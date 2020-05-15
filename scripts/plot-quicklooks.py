@@ -1,4 +1,4 @@
-#!python3
+#!/usr/bin/env python3
 """Script for plotting CloudnetPy images."""
 import os
 from pathlib import Path
