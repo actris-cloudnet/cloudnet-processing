@@ -1,18 +1,25 @@
 #!python3
 import argparse
+import os.path as path
 from netCDF4 import Dataset
-from operational_processing import generate_pid, metadata_api, utils as process_utils
+from operational_processing import generate_pid, metadata_api
+from operational_processing.utils import read_conf
 
-md_api = metadata_api.MetadataApi({})
-metadata_api.MetadataApi()
 
 def main():
-    config = process_utils.read_conf(ARGS)
+    config = read_conf(ARGS)
 
     md_api = metadata_api.MetadataApi(config['main']['METADATASERVER']['url'])
     pid_gen = generate_pid.PidGenerator(config['main']['PID'])
 
-    for filepath in ARGS.filepath:
+    freeze_after = {k: int(v) for k, v in dict(config['main']['FREEZE_AFTER']).items()}
+    stable_files = md_api.get_volatile_files_updated_before(**freeze_after)
+    print(f'Found {len(stable_files)} files to freeze.')
+
+    public_path = config['main']['PATH']['public']
+    resolved_filepaths = [path.realpath(path.join(public_path, file)) for file in stable_files]
+
+    for filepath in resolved_filepaths:
         rootgrp = Dataset(filepath, 'r+')
         uuid = rootgrp.file_uuid
 
@@ -31,7 +38,6 @@ def main():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Freeze selected files.')
-    parser.add_argument('filepath', nargs='+', help='Paths to files to freeze.')
     parser.add_argument('--config-dir', type=str, metavar='/FOO/BAR',
                         help='Path to directory containing config files. Default: ./config.',
                         default='./config')
