@@ -5,7 +5,7 @@ from pathlib import Path
 import argparse
 from cloudnetpy.plotting import generate_figure
 import netCDF4
-from operational_processing import utils as process_utils
+import operational_processing.utils as process_utils
 
 
 def main():

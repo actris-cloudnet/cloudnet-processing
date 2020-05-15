@@ -1,12 +1,11 @@
 #!venv/bin/python3
 import atexit
-import signal
 import subprocess
 import os
 import shutil
 import pytest
 import argparse
-from operational_processing import utils
+from operational_processing.utils import wait_for_port
 
 script_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -46,7 +45,7 @@ def main():
         md_server = subprocess.Popen(['python3', '-u', 'tests/e2e/server.py', 'tests/data/server/metadata', '5000'],
                                      stderr=logfile)
         atexit.register(md_server.terminate)
-        utils.wait_for_port(5000)
+        wait_for_port(5000)
 
         subprocess.check_call(['python3', 'scripts/concat-lidar.py', f"{lidar_root}"])
         subprocess.check_call(['python3', 'scripts/process-cloudnet.py', site,

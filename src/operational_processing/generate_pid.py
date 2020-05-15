@@ -1,6 +1,6 @@
 import sys
 import requests
-from operational_processing import utils as process_utils
+from operational_processing.utils import str2bool
 
 
 class PidGenerator:
@@ -33,7 +33,7 @@ class PidGenerator:
         return f'https://hdl.handle.net/{r.json()["handle"]}' 
     
     def __init_session(self, options, session):
-        session.verify = process_utils.str2bool(options['ca_verify']) 
+        session.verify = str2bool(options['ca_verify'])
         session.headers['Content-Type'] = 'application/json'
 
         # Authenticate session

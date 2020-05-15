@@ -5,7 +5,7 @@ import argparse
 import yaml
 from watchdog.observers.polling import PollingObserver as Observer
 from watchdog.events import FileSystemEventHandler
-from operational_processing import utils as process_utils
+import operational_processing.utils as process_utils
 
 lib = __import__('operational_processing').concat_lib
 
