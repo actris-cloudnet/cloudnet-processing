@@ -8,3 +8,4 @@ processed_data/*
 !processed_data/touch
 tests/data/public/*
 !tests/data/public/touch
+tests/data/output
