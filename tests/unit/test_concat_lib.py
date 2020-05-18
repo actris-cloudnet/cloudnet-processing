@@ -3,8 +3,7 @@ from numpy.testing import assert_array_equal
 import netCDF4
 import pytest
 
-
-lib = __import__('operational_processing').concat_lib
+from operational_processing import concat_lib as lib
 
 
 def test_get_files_by_suffix():

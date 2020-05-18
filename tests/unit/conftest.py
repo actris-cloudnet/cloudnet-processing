@@ -1,6 +1,7 @@
 import pytest
 import netCDF4
 
+
 @pytest.fixture(scope='session')
 def nc_file(tmpdir_factory):
     file_name = tmpdir_factory.mktemp("data").join("file.nc")

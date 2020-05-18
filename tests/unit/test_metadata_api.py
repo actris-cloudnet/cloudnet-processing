@@ -6,7 +6,8 @@ import pytest
 import requests
 import requests_mock
 
-metadata_api = __import__('operational_processing').metadata_api
+from operational_processing import metadata_api
+
 adapter = requests_mock.Adapter()
 session = requests.Session()
 session.mount('http://', adapter)
@@ -51,7 +52,7 @@ files_response = '''
 class TestMetadataApi:
 
     def test_put_metadata(self):
-        adapter.register_uri('PUT', f'{mock_addr}file/uuid', additional_matcher=self.__is_valid_xml, text='resp')
+        adapter.register_uri('PUT', f'{mock_addr}file/uuid', additional_matcher=is_valid_xml, text='resp')
         md_api = metadata_api.MetadataApi(mock_addr, session)
         r = md_api.put('uuid', 'tests/data/output_fixed/bucharest/calibrated/chm15k/2020/20200118_bucharest_chm15k.nc')
             
@@ -59,7 +60,7 @@ class TestMetadataApi:
 
     def test_put_metadata_freeze(self):
         def has_freeze_in_header(request):
-            if not self.__is_valid_xml(request):
+            if not is_valid_xml(request):
                 return False
             return 'X-Freeze' in request.headers
 
@@ -84,7 +85,7 @@ class TestMetadataApi:
         two_days_ago = now - timedelta(days=2)
 
         adapter.register_uri('GET', f'http://test/files?volatile=True&releasedAtAfter={two_days_ago}',
-        json=json.loads(files_response))
+                             json=json.loads(files_response))
 
         md_api = metadata_api.MetadataApi(mock_addr, session)
         r = md_api.get_volatile_files_updated_before(days=2)
@@ -93,9 +94,9 @@ class TestMetadataApi:
         assert r[0] == '20200513_granada_rpg-fmcw-94.nc'
 
 
-    def __is_valid_xml(self, request):
-        try:
-            minidom.parseString(request.text)
-        except (TypeError, AttributeError):
-            return False
-        return True
+def is_valid_xml(request):
+    try:
+        minidom.parseString(request.text)
+    except (TypeError, AttributeError):
+        return False
+    return True
