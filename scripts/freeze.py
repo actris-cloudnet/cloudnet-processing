@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""A script for assigning PIDs for data files."""
 import argparse
 import os.path as path
 from netCDF4 import Dataset
