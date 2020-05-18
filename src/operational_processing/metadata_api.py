@@ -27,7 +27,7 @@ class MetadataApi:
             'volatile': True,
             'releasedAtAfter': not_updated_before
         }
-        r = requests.get(url, params=payload)
+        r = self.__session.get(url, params=payload)
         r.raise_for_status()
 
         return [file['filename'] for file in r.json()]
