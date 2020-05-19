@@ -84,7 +84,7 @@ class TestMetadataApi:
         now = date.today()
         two_days_ago = now - timedelta(days=2)
 
-        adapter.register_uri('GET', f'http://test/files?volatile=True&releasedAtAfter={two_days_ago}',
+        adapter.register_uri('GET', f'http://test/files?volatile=True&releasedBefore={two_days_ago}',
                              json=json.loads(files_response))
 
         md_api = metadata_api.MetadataApi(mock_addr, session)
