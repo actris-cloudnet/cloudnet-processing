@@ -1,12 +1,9 @@
-from os import path
+import os
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from sys import argv
 
 
 class Server(BaseHTTPRequestHandler):
-
-    def __init(self):
-        self.root = None
 
     def _set_headers(self, code):
         self.send_response(code)
@@ -28,11 +25,11 @@ class Server(BaseHTTPRequestHandler):
             self.rfile.read(content_length)
 
         try:
-            file = open(path.join(self.root, self.path), 'rb')
+            file = open(f'{self.root}{self.path}', 'rb')
         except IsADirectoryError:
-            file = self.try_to_open_file(path.join(self.root, self.path, 'index'))
+            file = self.try_to_open_file(f'{self.root}{self.path}/index')
         except FileNotFoundError:
-            file = self.try_to_open_file(path.join(self.root, path.dirname(self.path), 'any'))
+            file = self.try_to_open_file(f'{self.root}{os.path.dirname(self.path)}/any')
         if not file:
             self._set_headers(404)
             return
