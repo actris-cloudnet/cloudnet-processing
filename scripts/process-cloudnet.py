@@ -74,7 +74,7 @@ def _process_lidar(obj):
     if _is_writable(output_file):
         print(f"Calibrating {obj.config['site']['INSTRUMENTS']['lidar']} lidar..")
         try:
-            return (output_file, ceilo2nc(input_file, output_file, obj.site_info))
+            return output_file, ceilo2nc(input_file, output_file, obj.site_info)
         except RuntimeError as error:
             raise error
 
