@@ -10,9 +10,10 @@ class PidGenerator:
         self._session = self._init_session(options, session)
 
     def __del__(self):
-        session_url = f'{self._options["handle_server_url"]}api/sessions/this'
-        self._session.delete(session_url)
-        self._session.close()
+        if hasattr(self, '_session'):
+            session_url = f'{self._options["handle_server_url"]}api/sessions/this'
+            self._session.delete(session_url)
+            self._session.close()
 
     def generate_pid(self, uuid):
         server_url = f'{self._options["handle_server_url"]}api/handles/'
