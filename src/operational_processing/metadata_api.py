@@ -1,5 +1,7 @@
 import subprocess
 from datetime import date, timedelta
+from os import path
+
 import requests
 
 
@@ -10,7 +12,7 @@ class MetadataApi:
         self._session = session
 
     def put(self, uuid, filepath, freeze=False):
-        payload = subprocess.check_output(['ncdump', '-xh', filepath])
+        payload = subprocess.check_output(['ncdump', '-xh', path.realpath(filepath)])
         url = f'{self._url}file/{uuid}'
         headers = { 'Content-Type': 'application/xml' }
         if freeze:
