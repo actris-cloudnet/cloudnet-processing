@@ -12,9 +12,6 @@ import operational_processing.utils as process_utils
 
 def main():
 
-    if ARGS.keep_uuid:
-        raise NotImplementedError
-
     config = process_utils.read_conf(ARGS)
     site_name = ARGS.site[0]
     site_info = process_utils.read_site_info(site_name)
@@ -64,7 +61,7 @@ def _process_radar(obj):
         _ = _find_input_file(rpg_path, '*.LV1')
         if _is_writable(output_file):
             print(f"Calibrating rpg-fmcw-94 cloud radar..")
-            return (output_file, rpg2nc(rpg_path, output_file, obj.site_info))
+            return (output_file, rpg2nc(rpg_path, output_file, obj.site_info, keep_uuid=ARGS.keep_uuid))
 
 
 def _process_lidar(obj):
@@ -74,7 +71,7 @@ def _process_lidar(obj):
     if _is_writable(output_file):
         print(f"Calibrating {obj.config['site']['INSTRUMENTS']['lidar']} lidar..")
         try:
-            return output_file, ceilo2nc(input_file, output_file, obj.site_info)
+            return output_file, ceilo2nc(input_file, output_file, obj.site_info, keep_uuid=ARGS.keep_uuid)
         except RuntimeError as error:
             raise error
 
@@ -97,7 +94,7 @@ def _process_categorize(obj):
     if _is_writable(output_file):
         try:
             print(f"Processing categorize file..")
-            return (output_file, generate_categorize(input_files, output_file))
+            return (output_file, generate_categorize(input_files, output_file, keep_uuid=ARGS.keep_uuid))
         except RuntimeError as error:
             raise error
 
@@ -112,7 +109,7 @@ def _process_level2(product, obj):
     if _is_writable(output_file):
         try:
             print(f"Processing {product} product..")
-            return (output_file, getattr(module, f"generate_{product_prefix}")(categorize_file, output_file))
+            return (output_file, getattr(module, f"generate_{product_prefix}")(categorize_file, output_file, keep_uuid=ARGS.keep_uuid))
         except ValueError:
             raise RuntimeError(f"Something went wrong with {product} processing.")
 
@@ -152,7 +149,7 @@ if __name__ == "__main__":
     parser.add_argument('-o', '--overwrite', dest='overwrite', action='store_true',
                         help='Overwrites data in existing files', default=False)
     parser.add_argument('-k', '--keep_uuid', dest='keep_uuid', action='store_true',
-                        help='Keeps ID of old file even if the data is overwritten', default=False)
+                        help='Keeps ID of old file even if the data is overwritten', default=True)
     parser.add_argument('-na', '--no-api', dest='no_api', action='store_true',
                         help='Disable API calls. Useful for testing.', default=False)
     ARGS = parser.parse_args()
