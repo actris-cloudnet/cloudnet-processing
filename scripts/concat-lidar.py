@@ -1,4 +1,4 @@
-#!../prod_venv/bin/python3
+#!/usr/bin/env python3
 """Script for concatenating individual chm15k-files into daily files."""
 import os
 import time
@@ -7,7 +7,7 @@ import numpy as np
 import netCDF4
 from tqdm import tqdm
 
-lib = __import__('operational-processing').concat_lib
+from operational_processing import concat_lib as lib
 
 CONSTANTS = ['range', 'wavelength', 'scaling', 'zenith']
 VARIABLES = ['time', 'beta_raw', 'stddev', 'nn1', 'nn2', 'nn3']

@@ -1,20 +1,19 @@
-#!../prod_venv/bin/python3
+#!/usr/bin/env python3
 """Master script for CloudnetPy processing."""
 import time
 import argparse
-import configparser
 import yaml
 from watchdog.observers.polling import PollingObserver as Observer
 from watchdog.events import FileSystemEventHandler
+import operational_processing.utils as process_utils
 
-lib = __import__('operational-processing').concat_lib
+lib = __import__('operational_processing').concat_lib
 
 
 def main():
     site_name = ARGS.site[0]
 
-    conf = {'main': _read_config('main'),
-            'site': _read_config(site_name)}
+    conf = process_utils.read_conf(ARGS)
 
     site_info = _read_site_info(conf, site_name)
 
@@ -34,12 +33,6 @@ def main():
             obs.stop()
     for obs in observers:
         obs.join()
-
-
-def _read_config(conf_type):
-    config = configparser.ConfigParser()
-    config.read(f"config/{conf_type}.ini")
-    return config
 
 
 def _read_site_info(conf, site_name):
@@ -99,5 +92,8 @@ class _Sniffer(FileSystemEventHandler):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Process Cloudnet data.')
     parser.add_argument('site', nargs='+', help='Site Name', choices=['bucharest'])
+    parser.add_argument('--config-dir', type=str, metavar='/FOO/BAR',
+                        help='Path to directory containing config files. Default: ./config.',
+                        default='./config')
     ARGS = parser.parse_args()
     main()

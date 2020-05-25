@@ -2,3 +2,13 @@ venv/
 .idea/
 *egg-info/
 *pycache*
+.vscode/
+*.log
+processed_data/*
+!processed_data/touch
+tests/data/public/*
+!tests/data/public/touch
+tests/data/output
+tests/data/freeze
+build/
+!tests/data/output/bucharest/calibrated/ecmwf/2020/20200402_bucharest_ecmwf.nc

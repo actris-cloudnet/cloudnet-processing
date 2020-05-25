@@ -2,9 +2,11 @@ import pytest
 
 args = ['site', 'date', 'input', 'output']
 
+
 def pytest_addoption(parser):
     for arg in args:
         parser.addoption(f"--{arg}", action='store')
+
 
 @pytest.fixture
 def params(request):

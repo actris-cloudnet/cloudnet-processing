@@ -1,9 +1,8 @@
 import pytest
 import configparser
 
+from operational_processing import file_paths
 
-utils = __import__('operational-processing').utils
-file_paths = __import__('operational-processing').file_paths
 FilePaths = file_paths.FilePaths
 
 

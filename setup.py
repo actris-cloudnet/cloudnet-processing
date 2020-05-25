@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 
-setup(name='operational-processing',
+setup(name='operational_processing',
       description='Software for running operational CloudnetPy processing.',
       author='Finnish Meteorological Institute',
       license='MIT License',
@@ -10,7 +10,10 @@ setup(name='operational-processing',
                         'tqdm',
                         'pytest',
                         'pyyaml',
-                        'pytest'],
+                        'pytest',
+                        'requests',
+                        'requests_mock',
+                        'netCDF4'],
       include_package_data=True,
       package_dir={"": "src"},
       packages=find_packages(where="src"),
