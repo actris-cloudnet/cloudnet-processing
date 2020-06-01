@@ -24,7 +24,7 @@ class MetadataApi:
     def get_volatile_files_updated_before(self, **time_delta):
         updated_before = date.today() - timedelta(**time_delta)
 
-        url = f'{self._url}files'
+        url = f'{self._url}api/files'
         payload = {
             'volatile': True,
             'releasedBefore': updated_before
