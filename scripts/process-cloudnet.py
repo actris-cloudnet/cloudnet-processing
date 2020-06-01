@@ -61,7 +61,7 @@ def _process_radar(obj):
         _ = _find_input_file(rpg_path, '*.LV1')
         if _is_writable(output_file):
             print(f"Calibrating rpg-fmcw-94 cloud radar..")
-            return (output_file, rpg2nc(rpg_path, output_file, obj.site_info, keep_uuid=ARGS.keep_uuid))
+            return output_file, rpg2nc(rpg_path, output_file, obj.site_info, keep_uuid=ARGS.keep_uuid)
 
 
 def _process_lidar(obj):
@@ -94,7 +94,7 @@ def _process_categorize(obj):
     if _is_writable(output_file):
         try:
             print(f"Processing categorize file..")
-            return (output_file, generate_categorize(input_files, output_file, keep_uuid=ARGS.keep_uuid))
+            return output_file, generate_categorize(input_files, output_file, keep_uuid=ARGS.keep_uuid)
         except RuntimeError as error:
             raise error
 
@@ -109,7 +109,8 @@ def _process_level2(product, obj):
     if _is_writable(output_file):
         try:
             print(f"Processing {product} product..")
-            return (output_file, getattr(module, f"generate_{product_prefix}")(categorize_file, output_file, keep_uuid=ARGS.keep_uuid))
+            return output_file, getattr(module, f"generate_{product_prefix}")(categorize_file, output_file,
+                                                                              keep_uuid=ARGS.keep_uuid)
         except ValueError:
             raise RuntimeError(f"Something went wrong with {product} processing.")
 
