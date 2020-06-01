@@ -13,20 +13,23 @@ def main():
         if not _is_date_in_range(file):
             continue
         nc_file_name = str(file)
-        image_name = nc_file_name.replace('nc', 'png')
         try:
             file_type = _get_file_type(nc_file_name)
             fields, max_alt = _get_fields_for_plot(file_type)
-        except NotImplementedError:
+        except NotImplementedError as error:
+            print(error)
             continue
-        if _is_plottable(image_name):
-            print(f"Plotting: {image_name}")
-            try:
-                generate_figure(nc_file_name, fields, show=False, 
-                                image_name=image_name, max_y=max_alt,
-                                sub_title=False, dpi=100)
-            except (ValueError, KeyError, AttributeError):
-                continue
+        for field in fields:
+            image_name = nc_file_name.replace('.nc', f"_{field}.png")
+            if _is_plottable(image_name):
+                print(f"Plotting: {image_name}")
+                try:
+                    generate_figure(nc_file_name, [field], show=False,
+                                    image_name=image_name, max_y=max_alt,
+                                    sub_title=False, dpi=150)
+                except (ValueError, KeyError, AttributeError) as error:
+                    print(f"Error: {error}")
+                    continue
 
 
 def _is_date_in_range(path):
@@ -52,22 +55,22 @@ def _get_file_type(nc_file_name):
 def _get_fields_for_plot(cloudnet_file_type):
     max_alt = 10
     if cloudnet_file_type == 'categorize':
-        fields = ['v']
+        fields = ['v', 'width', 'ldr', 'Z', 'beta', 'lwp', 'Tw', 'radar_gas_atten', 'radar_liquid_atten', 'v_sigma']
     elif cloudnet_file_type == 'classification':
-        fields = ['target_classification']
+        fields = ['target_classification', 'detection_status']
     elif cloudnet_file_type == 'iwc':
-        fields = ['iwc']
+        fields = ['iwc', 'iwc_retrieval_status', 'iwc_error']
     elif cloudnet_file_type == 'lwc':
-        fields = ['lwc']
+        fields = ['lwc', 'lwc_retrieval_status', 'lwc_error']
         max_alt = 6
     elif cloudnet_file_type == 'model':
-        fields = ['cloud_fraction']
+        fields = ['cloud_fraction', 'uwind', 'vwind', 'temperature', 'q', 'pressure']
     elif cloudnet_file_type == 'lidar':
-        fields = ['beta']
+        fields = ['beta', 'beta_raw']
     elif cloudnet_file_type == 'radar':
-        fields = ['Ze']
+        fields = ['Ze', 'v', 'width', 'ldr']
     elif cloudnet_file_type == 'drizzle':
-        fields = ['Do']
+        fields = ['Do', 'mu', 'S', 'drizzle_N', 'drizzle_lwc', 'drizzle_lwf', 'v_drizzle', 'v_air']
         max_alt = 4
     else:
         raise NotImplementedError
