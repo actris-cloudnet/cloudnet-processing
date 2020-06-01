@@ -107,4 +107,4 @@ def get_fields_for_plot(cloudnet_file_type):
 
 def get_plot_ids(cloudnet_file_type):
     fields = get_fields_for_plot(cloudnet_file_type)[0]
-    return {f"{cloudnet_file_type}-{field}": f"{ATTR[field].name}" for field in fields}
+    return {f"{cloudnet_file_type}-{field}": [f"{ATTR[field].name}", i] for i, field in enumerate(fields)}
