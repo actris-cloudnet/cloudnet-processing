@@ -1,12 +1,10 @@
 import os
 import fnmatch
-import socket
-import time
-
 import requests
 import datetime
 import configparser
 from cloudnetpy.utils import get_time
+from cloudnetpy.plotting.plot_meta import ATTRIBUTES as ATTR
 
 
 def read_site_info(site_name):
@@ -80,3 +78,33 @@ def read_conf(args):
 
 def str2bool(s):
     return False if s == 'False' else True if s == 'True' else s
+
+
+def get_fields_for_plot(cloudnet_file_type):
+    max_alt = 10
+    if cloudnet_file_type == 'categorize':
+        fields = ['v', 'width', 'ldr', 'Z', 'beta', 'lwp', 'Tw', 'radar_gas_atten', 'radar_liquid_atten', 'v_sigma']
+    elif cloudnet_file_type == 'classification':
+        fields = ['target_classification', 'detection_status']
+    elif cloudnet_file_type == 'iwc':
+        fields = ['iwc', 'iwc_retrieval_status', 'iwc_error']
+    elif cloudnet_file_type == 'lwc':
+        fields = ['lwc', 'lwc_retrieval_status', 'lwc_error']
+        max_alt = 6
+    elif cloudnet_file_type == 'model':
+        fields = ['cloud_fraction', 'uwind', 'vwind', 'temperature', 'q', 'pressure']
+    elif cloudnet_file_type == 'lidar':
+        fields = ['beta', 'beta_raw']
+    elif cloudnet_file_type == 'radar':
+        fields = ['Ze', 'v', 'width', 'ldr']
+    elif cloudnet_file_type == 'drizzle':
+        fields = ['Do', 'mu', 'S', 'drizzle_N', 'drizzle_lwc', 'drizzle_lwf', 'v_drizzle', 'v_air']
+        max_alt = 4
+    else:
+        raise NotImplementedError
+    return fields, max_alt
+
+
+def get_plot_ids(cloudnet_file_type):
+    fields = get_fields_for_plot(cloudnet_file_type)[0]
+    return {f"{cloudnet_file_type}-{field}": f"{ATTR[field].name}" for field in fields}
