@@ -4,17 +4,22 @@ import os
 from pathlib import Path
 import argparse
 from cloudnetpy.plotting import generate_figure
+from cloudnetpy.plotting.plot_meta import ATTRIBUTES
 import netCDF4
-import operational_processing.utils as process_utils
+from operational_processing import utils, metadata_api
 
 
 def main():
+
+    config = utils.read_conf(ARGS)
+    md_api = metadata_api.MetadataApi(config['main']['METADATASERVER']['url'])
+
     for file in Path(ARGS.data_path[0]).rglob('*.nc'):
         if not _is_date_in_range(file):
             continue
         nc_file_name = str(file)
         try:
-            file_type = _get_file_type(nc_file_name)
+            file_type, uuid = _get_file_info(nc_file_name)
             fields, max_alt = _get_fields_for_plot(file_type)
         except NotImplementedError as error:
             print(error)
@@ -27,9 +32,19 @@ def main():
                     generate_figure(nc_file_name, [field], show=False,
                                     image_name=image_name, max_y=max_alt,
                                     sub_title=False, dpi=150)
+                    variable_info = _get_variable_info(file_type, field)
+                    print(file_type, image_name, uuid, variable_info)
+                    md_api.put_img(image_name, uuid, variable_info)
                 except (ValueError, KeyError, AttributeError) as error:
                     print(f"Error: {error}")
                     continue
+
+
+def _get_variable_info(cloudnet_file_type, field):
+    return {
+        'human_readable_name': ATTRIBUTES[field].name,
+        'id': f"{cloudnet_file_type}-{field}"
+    }
 
 
 def _is_date_in_range(path):
@@ -42,14 +57,15 @@ def _is_date_in_range(path):
     return start <= date_in_file < stop
 
 
-def _get_file_type(nc_file_name):
-    attr_name = 'cloudnet_file_type'
+def _get_file_info(nc_file_name):
+    attr_names = ['cloudnet_file_type', 'file_uuid']
     nc = netCDF4.Dataset(nc_file_name)
-    if not hasattr(nc, attr_name):
-        raise NotImplementedError
-    file_type = getattr(nc, attr_name)
+    for name in attr_names:
+        if not hasattr(nc, name):
+            raise NotImplementedError
+    file_type, uuid = [getattr(nc, name) for name in attr_names]
     nc.close()
-    return file_type
+    return file_type, uuid
 
 
 def _get_fields_for_plot(cloudnet_file_type):
@@ -86,10 +102,12 @@ def _is_plottable(image_name):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Plot quickloks from Cloudnet data.')
     parser.add_argument('data_path', nargs='+', help='Data path.')
+    parser.add_argument('--config-dir', type=str, metavar='/FOO/BAR',
+                        help='Path to directory containing config files. Default: ./config.', default='./config')
     parser.add_argument('--start', type=str, metavar='YYYY-MM-DD', help='Starting date. Default is current day - 7.',
-                        default=process_utils.get_date_from_past(7))
+                        default=utils.get_date_from_past(7))
     parser.add_argument('--stop', type=str, metavar='YYYY-MM-DD', help='Stopping date. Default is the current day.',
-                        default=process_utils.get_date_from_past(0))
+                        default=utils.get_date_from_past(0))
     parser.add_argument('-o', '--overwrite', dest='overwrite', action='store_true',
                         help='Overwrites existing images', default=False)
     ARGS = parser.parse_args()
