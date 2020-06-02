@@ -114,7 +114,22 @@ def get_fields_for_plot(cloudnet_file_type):
     return fields, max_alt
 
 
-def get_plot_ids(cloudnet_file_type):
+def get_plottable_variables_info(cloudnet_file_type):
     """Find variable IDs and corresponding human readable names."""
     fields = get_fields_for_plot(cloudnet_file_type)[0]
-    return {f"{cloudnet_file_type}-{field}": [f"{ATTR[field].name}", i] for i, field in enumerate(fields)}
+    return {_get_var_id(cloudnet_file_type, field): [_get_human_readable_name(field), i]
+            for i, field in enumerate(fields)}
+
+
+def get_var_info(cloudnet_file_type, field):
+    var_id = _get_var_id(cloudnet_file_type, field)
+    human_readable_name = _get_human_readable_name(field)
+    return var_id, human_readable_name
+
+
+def _get_var_id(cloudnet_file_type, field):
+    return f"{cloudnet_file_type}-{field}"
+
+
+def _get_human_readable_name(field):
+    return f"{ATTR[field].name}"

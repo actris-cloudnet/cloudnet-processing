@@ -3,15 +3,15 @@
 import os
 from pathlib import Path
 import argparse
-from cloudnetpy.plotting import generate_figure
-from cloudnetpy.plotting.plot_meta import ATTRIBUTES
 import netCDF4
-from operational_processing import utils, metadata_api
+from cloudnetpy.plotting import generate_figure
+from operational_processing import utils as process_utils
+from operational_processing import metadata_api
 
 
 def main():
 
-    config = utils.read_conf(ARGS)
+    config = process_utils.read_conf(ARGS)
     md_api = metadata_api.MetadataApi(config['main']['METADATASERVER']['url'])
 
     for file in Path(ARGS.data_path[0]).rglob('*.nc'):
@@ -20,9 +20,9 @@ def main():
         nc_file_name = str(file)
         try:
             file_type, uuid = _get_file_info(nc_file_name)
-            fields, max_alt = utils.get_fields_for_plot(file_type)
+            fields, max_alt = process_utils.get_fields_for_plot(file_type)
         except NotImplementedError as error:
-            print(error)
+            print(f"Error: {error}")
             continue
         for field in fields:
             image_name = nc_file_name.replace('.nc', f"_{field}.png")
@@ -41,10 +41,8 @@ def main():
 
 
 def _get_variable_info(cloudnet_file_type, field):
-    return {
-        'human_readable_name': ATTRIBUTES[field].name,
-        'id': f"{cloudnet_file_type}-{field}"
-    }
+    var_id, name = process_utils.get_var_info(cloudnet_file_type, field)
+    return {'human_readable_name': name, 'id': var_id}
 
 
 def _is_date_in_range(path):
@@ -58,12 +56,12 @@ def _is_date_in_range(path):
 
 
 def _get_file_info(nc_file_name):
-    attr_names = ['cloudnet_file_type', 'file_uuid']
     nc = netCDF4.Dataset(nc_file_name)
-    for name in attr_names:
-        if not hasattr(nc, name):
-            raise NotImplementedError
-    file_type, uuid = [getattr(nc, name) for name in attr_names]
+    try:
+        file_type = nc.cloudnet_file_type
+        uuid = nc.file_uuid
+    except AttributeError:
+        raise NotImplementedError('Missing global attribute')
     nc.close()
     return file_type, uuid
 
@@ -80,9 +78,9 @@ if __name__ == "__main__":
     parser.add_argument('--config-dir', type=str, metavar='/FOO/BAR',
                         help='Path to directory containing config files. Default: ./config.', default='./config')
     parser.add_argument('--start', type=str, metavar='YYYY-MM-DD', help='Starting date. Default is current day - 7.',
-                        default=utils.get_date_from_past(7))
+                        default=process_utils.get_date_from_past(7))
     parser.add_argument('--stop', type=str, metavar='YYYY-MM-DD', help='Stopping date. Default is the current day.',
-                        default=utils.get_date_from_past(0))
+                        default=process_utils.get_date_from_past(0))
     parser.add_argument('-o', '--overwrite', dest='overwrite', action='store_true',
                         help='Overwrites existing images', default=False)
     parser.add_argument('-na', '--no-api', dest='no_api', action='store_true',
