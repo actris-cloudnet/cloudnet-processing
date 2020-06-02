@@ -33,7 +33,8 @@ def main():
                                     image_name=image_name, max_y=max_alt,
                                     sub_title=False, dpi=150)
                     variable_info = _get_variable_info(file_type, field)
-                    # md_api.put_img(image_name, uuid, variable_info)
+                    if not ARGS.no_api:
+                        md_api.put_img(image_name, uuid, variable_info)
                 except (ValueError, KeyError, AttributeError) as error:
                     print(f"Error: {error}")
                     continue
@@ -84,5 +85,7 @@ if __name__ == "__main__":
                         default=utils.get_date_from_past(0))
     parser.add_argument('-o', '--overwrite', dest='overwrite', action='store_true',
                         help='Overwrites existing images', default=False)
+    parser.add_argument('-na', '--no-api', dest='no_api', action='store_true',
+                        help='Disable API calls. Useful for testing.', default=False)
     ARGS = parser.parse_args()
     main()
