@@ -81,6 +81,15 @@ def str2bool(s):
 
 
 def get_fields_for_plot(cloudnet_file_type):
+    """Return list of variables and maximum altitude for Cloudnet quicklooks.
+
+    Args:
+        cloudnet_file_type (str): Name of Cloudnet file type, e.g., 'classification'.
+
+    Returns:
+        tuple: 2-element tuple containing feasible variables for plots (list) and maximum altitude (int).
+
+    """
     max_alt = 10
     if cloudnet_file_type == 'categorize':
         fields = ['v', 'width', 'ldr', 'Z', 'beta', 'lwp', 'Tw', 'radar_gas_atten', 'radar_liquid_atten', 'v_sigma']
@@ -106,5 +115,6 @@ def get_fields_for_plot(cloudnet_file_type):
 
 
 def get_plot_ids(cloudnet_file_type):
+    """Find variable IDs and corresponding human readable names."""
     fields = get_fields_for_plot(cloudnet_file_type)[0]
     return {f"{cloudnet_file_type}-{field}": [f"{ATTR[field].name}", i] for i, field in enumerate(fields)}
