@@ -4,10 +4,10 @@ import os
 from pathlib import Path
 import argparse
 import netCDF4
+from importlib import import_module
 from cloudnetpy.plotting import generate_figure
-from operational_processing import utils as process_utils
-from operational_processing import metadata_api
-
+process_utils = import_module("operational_processing").utils
+metadata_api = import_module("operational_processing").metadata_api
 
 def main():
 
