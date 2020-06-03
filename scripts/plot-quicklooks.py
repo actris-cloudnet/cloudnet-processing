@@ -31,7 +31,7 @@ def main():
                 try:
                     generate_figure(nc_file_name, [field], show=False,
                                     image_name=image_name, max_y=max_alt,
-                                    sub_title=False, dpi=150)
+                                    sub_title=False, title=False, dpi=120)
                     variable_info = _get_variable_info(file_type, field)
                     if not ARGS.no_api:
                         md_api.put_img(image_name, uuid, variable_info)
