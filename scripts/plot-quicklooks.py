@@ -9,6 +9,7 @@ from cloudnetpy.plotting import generate_figure
 process_utils = import_module("operational_processing").utils
 metadata_api = import_module("operational_processing").metadata_api
 
+
 def main():
 
     config = process_utils.read_conf(ARGS)
@@ -32,17 +33,12 @@ def main():
                     generate_figure(nc_file_name, [field], show=False,
                                     image_name=image_name, max_y=max_alt,
                                     sub_title=False, title=False, dpi=120)
-                    variable_info = _get_variable_info(file_type, field)
+                    variable_id = process_utils.get_var_id(file_type, field)
                     if not ARGS.no_api:
-                        md_api.put_img(image_name, uuid, variable_info)
+                        md_api.put_img(image_name, uuid, variable_id)
                 except (ValueError, KeyError, AttributeError) as error:
                     print(f"Error: {error}")
                     continue
-
-
-def _get_variable_info(cloudnet_file_type, field):
-    var_id, name = process_utils.get_var_info(cloudnet_file_type, field)
-    return {'human_readable_name': name, 'id': var_id}
 
 
 def _is_date_in_range(path):

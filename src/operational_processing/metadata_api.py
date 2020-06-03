@@ -21,13 +21,12 @@ class MetadataApi:
         r.raise_for_status()
         return r
 
-    def put_img(self, filepath, uuid, variable_info):
+    def put_img(self, filepath, uuid, variableId):
         url = f'{self._url}visualization/{path.basename(filepath)}'
         payload = {
             'fullPath': filepath,
             'sourceFileId': uuid,
-            'variableHumanReadableName': variable_info['human_readable_name'],
-            'variableId': variable_info['id']
+            'variableId': variableId
         }
         r = self._session.put(url, json=payload)
         r.raise_for_status()
