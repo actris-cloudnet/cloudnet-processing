@@ -92,13 +92,13 @@ def get_fields_for_plot(cloudnet_file_type):
     """
     max_alt = 10
     if cloudnet_file_type == 'categorize':
-        fields = ['v', 'width', 'ldr', 'Z', 'beta', 'lwp', 'Tw', 'radar_gas_atten', 'radar_liquid_atten', 'v_sigma']
+        fields = ['Z', 'v', 'width', 'ldr', 'v_sigma', 'beta', 'lwp', 'Tw', 'radar_gas_atten', 'radar_liquid_atten']
     elif cloudnet_file_type == 'classification':
         fields = ['target_classification', 'detection_status']
     elif cloudnet_file_type == 'iwc':
-        fields = ['iwc', 'iwc_retrieval_status', 'iwc_error']
+        fields = ['iwc', 'iwc_error', 'iwc_retrieval_status']
     elif cloudnet_file_type == 'lwc':
-        fields = ['lwc', 'lwc_retrieval_status', 'lwc_error']
+        fields = ['lwc', 'lwc_error', 'lwc_retrieval_status']
         max_alt = 6
     elif cloudnet_file_type == 'model':
         fields = ['cloud_fraction', 'uwind', 'vwind', 'temperature', 'q', 'pressure']
@@ -117,20 +117,10 @@ def get_fields_for_plot(cloudnet_file_type):
 def get_plottable_variables_info(cloudnet_file_type):
     """Find variable IDs and corresponding human readable names."""
     fields = get_fields_for_plot(cloudnet_file_type)[0]
-    return {get_var_id(cloudnet_file_type, field): [_get_human_readable_name(field), i]
+    return {get_var_id(cloudnet_file_type, field): [f"{ATTR[field].name}", i]
             for i, field in enumerate(fields)}
 
 
-def get_var_info(cloudnet_file_type, field):
-    var_id = get_var_id(cloudnet_file_type, field)
-    human_readable_name = _get_human_readable_name(field)
-    return var_id, human_readable_name
-
-
 def get_var_id(cloudnet_file_type, field):
-    """Return identifier for variable in Cloudnet file."""
+    """Return identifier for variable / Cloudnet file combination."""
     return f"{cloudnet_file_type}-{field}"
-
-
-def _get_human_readable_name(field):
-    return f"{ATTR[field].name}"
