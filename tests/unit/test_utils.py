@@ -1,16 +1,17 @@
 import datetime
+from pathlib import Path
+from collections import namedtuple
 import pytest
-
 from operational_processing import utils
 
-"""
-This needs altocumulus.fmi.fi to be visible outside FMI
+test_file_path = Path(__file__).parent.absolute()
+
+
 def test_read_site_info():
     site = 'bucharest'
     site_info = utils.read_site_info(site)
     assert site_info['id'] == site
     assert site_info['name'] == 'Bucharest'
-"""
 
 
 def test_find_file(tmpdir):
@@ -39,3 +40,32 @@ def test_date_string_to_date():
 ])
 def test_get_date_from_past(n, input_date, result):
     assert utils.get_date_from_past(n, input_date) == result
+
+
+def test_get_plottable_variables_info():
+    res = utils.get_plottable_variables_info('lidar')
+    expected = {'lidar-beta': ['Attenuated backscatter coefficient', 0],
+                'lidar-beta_raw': ['Raw attenuated backscatter coefficient', 1]}
+    assert res == expected
+
+
+def test_read_conf_1():
+    Args = namedtuple('args', ['config_dir'])
+    args = Args(config_dir=f"{test_file_path}/../../config")
+    conf = utils.read_conf(args)
+    assert conf['main']['METADATASERVER']['url'] == 'http://localhost:3000/'
+
+
+def test_read_conf_2():
+    Args = namedtuple('args', ['config_dir', 'site'])
+    args = Args(config_dir=f"{test_file_path}/../../config", site=['bucharest'])
+    conf = utils.read_conf(args)
+    assert conf['site']['INSTRUMENTS']['lidar'] == 'chm15k'
+
+
+def test_read_conf_3():
+    Args = namedtuple('args', ['config_dir', 'input', 'output'])
+    args = Args(config_dir=f"{test_file_path}/../../config", input='/my/input', output='/my/output')
+    conf = utils.read_conf(args)
+    assert conf['main']['PATH']['input'] == '/my/input'
+    assert conf['main']['PATH']['output'] == '/my/output'
