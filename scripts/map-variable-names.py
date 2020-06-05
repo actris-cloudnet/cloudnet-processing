@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
-from importlib import import_module
 import json
-process_utils = import_module("operational_processing").utils
+import operational_processing.utils as process_utils
 
 
 def main():
