@@ -14,10 +14,21 @@ class MetadataApi:
     def put(self, uuid, filepath, freeze=False):
         payload = subprocess.check_output(['ncdump', '-xh', path.realpath(filepath)])
         url = f'{self._url}file/{uuid}'
-        headers = { 'Content-Type': 'application/xml' }
+        headers = {'Content-Type': 'application/xml'}
         if freeze:
             headers['X-Freeze'] = 'True'
         r = self._session.put(url, data=payload, headers=headers)
+        r.raise_for_status()
+        return r
+
+    def put_img(self, filepath, uuid, variableId):
+        url = f'{self._url}visualization/{path.basename(filepath)}'
+        payload = {
+            'fullPath': filepath,
+            'sourceFileId': uuid,
+            'variableId': variableId
+        }
+        r = self._session.put(url, json=payload)
         r.raise_for_status()
         return r
 
