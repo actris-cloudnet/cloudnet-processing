@@ -1,7 +1,6 @@
 import subprocess
 from datetime import date, timedelta
 from os import path
-
 import requests
 
 
@@ -10,6 +9,12 @@ class MetadataApi:
     def __init__(self, url, session=requests.Session()):
         self._url = url
         self._session = session
+
+    def exists(self, uuid):
+        """Check if given UUID exists in database."""
+        url = f'{self._url}api/file/{uuid}'
+        r = self._session.get(url)
+        return str(r.status_code) == '200'
 
     def put(self, uuid, filepath, freeze=False):
         payload = subprocess.check_output(['ncdump', '-xh', path.realpath(filepath)])
