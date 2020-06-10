@@ -12,8 +12,9 @@ def fix_attributes(file_name, overwrite=False):
     nc = netCDF4.Dataset(file_name, 'a')
     if hasattr(nc, 'file_uuid') and not overwrite:
         nc.close()
-        return
-    nc.file_uuid = get_uuid()
+        return None
+    uuid = get_uuid()
+    nc.file_uuid = uuid
     nc.cloudnet_file_type = _get_file_type(nc)
     nc.history = _add_history(nc)
     try:
@@ -25,6 +26,7 @@ def fix_attributes(file_name, overwrite=False):
     except AttributeError:
         pass
     nc.close()
+    return uuid
 
 
 def _get_file_type(nc):

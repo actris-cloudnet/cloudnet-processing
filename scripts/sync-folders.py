@@ -1,14 +1,11 @@
-#!../prod_venv/bin/python3
+#!/usr/bin/env python3
 import os
 import glob
 import shutil
 import argparse
 from tqdm import tqdm
-from operational_processing import metadata_api
+from operational_processing import metadata_api, fix_attributes
 import operational_processing.utils as process_utils
-
-
-fix_attributes = __import__('transition_scripts').fix_attributes
 
 
 def main():
@@ -22,7 +19,7 @@ def main():
     files = _get_files(paths)
 
     print('Synchronizing directories:')
-    _sync_dirs(files, paths)
+    _sync_dirs(files, paths, md_api)
 
 
 def _build_data_paths():
@@ -34,25 +31,26 @@ def _get_files(paths):
     return glob.glob(f"{paths['input']}/**/{ARGS.folder}/**/*.nc", recursive=True)
 
 
-def _sync_dirs(files, paths):
+def _sync_dirs(files, paths, md_api):
     for file in tqdm(files):
         target_file = _create_target_name(file, paths)
         if not os.path.isfile(target_file):
             if ARGS.dry_run:
                 print(file, target_file)
             else:
-                _deliver_file(file, target_file)
+                _deliver_file(file, target_file, md_api)
 
 
 def _create_target_name(file, paths):
     return file.replace(paths['input'], paths['output'])
 
 
-def _deliver_file(source_file, target_file):
+def _deliver_file(source_file, target_file, md_api):
     os.makedirs(os.path.dirname(target_file), exist_ok=True)
     shutil.copyfile(source_file, target_file)
     uuid = fix_attributes(target_file, overwrite=False)
-    md_api.put(uuid, target_file)
+    if uuid and not ARGS.no_api:
+        md_api.put(uuid, target_file)
 
 
 if __name__ == "__main__":
@@ -67,7 +65,14 @@ if __name__ == "__main__":
                         help='Output directory. Default is /data/clouddata/sites/',
                         default='/data/clouddata/sites')
     parser.add_argument('-d', '--dry', dest='dry_run', action='store_true',
-                        help='Dry run the script for testing the behaviour without writing any files.', default=False)
+                        help='Dry run the script for testing the behaviour without writing any files.',
+                        default=False)
+    parser.add_argument('--config-dir', type=str, metavar='/FOO/BAR',
+                        help='Path to directory containing config files. Default: ./config.',
+                        default='./config')
+    parser.add_argument('-na', '--no-api', dest='no_api', action='store_true',
+                        help='Disable API calls. Useful for testing.',
+                        default=False)
 
     ARGS = parser.parse_args()
     main()
