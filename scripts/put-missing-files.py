@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import glob
 import argparse
-from tqdm import tqdm
 import netCDF4
 from operational_processing import metadata_api
 import operational_processing.utils as process_utils
@@ -15,20 +14,15 @@ def main():
     print('Reading files...')
     files = _get_files()
 
-    print('Adding missing files to DB...')
-    _check_model_files(files, md_api)
+    for file in files:
+        uuid = _read_uuid(file)
+        if uuid and not md_api.exists(uuid):
+            print(f'Putting: {file} - {uuid}')
+            md_api.put(uuid, file)
 
 
 def _get_files():
     return glob.glob(f"{ARGS.data_path[0]}/**/*.nc", recursive=True)
-
-
-def _check_model_files(files, md_api):
-    for file in files:
-        uuid = _read_uuid(file)
-        if not md_api.exists(uuid):
-            print(f'Putting:{file}, {uuid}')
-            md_api.put(uuid, file)
 
 
 def _read_uuid(file):
