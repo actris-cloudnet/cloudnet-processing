@@ -1,8 +1,8 @@
 import os
 import fnmatch
-import requests
 import datetime
 import configparser
+import requests
 from cloudnetpy.utils import get_time
 from cloudnetpy.plotting.plot_meta import ATTRIBUTES as ATTR
 
@@ -88,12 +88,14 @@ def get_fields_for_plot(cloudnet_file_type):
         cloudnet_file_type (str): Name of Cloudnet file type, e.g., 'classification'.
 
     Returns:
-        tuple: 2-element tuple containing feasible variables for plots (list) and maximum altitude (int).
+        tuple: 2-element tuple containing feasible variables for plots
+        (list) and maximum altitude (int).
 
     """
     max_alt = 10
     if cloudnet_file_type == 'categorize':
-        fields = ['Z', 'v', 'width', 'ldr', 'v_sigma', 'beta', 'lwp', 'Tw', 'radar_gas_atten', 'radar_liquid_atten']
+        fields = ['Z', 'v', 'width', 'ldr', 'v_sigma', 'beta', 'lwp', 'Tw',
+                  'radar_gas_atten', 'radar_liquid_atten']
     elif cloudnet_file_type == 'classification':
         fields = ['target_classification', 'detection_status']
     elif cloudnet_file_type == 'iwc':
