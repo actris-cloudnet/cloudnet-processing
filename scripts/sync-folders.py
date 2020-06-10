@@ -57,7 +57,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Fix model files for data portal. Example: '
                                                  'scripts/sync-folders.py bucharest ecmwf')
     parser.add_argument('site', nargs='+', metavar='SITE', help='Site Name')
-    parser.add_argument('folder', metavar='FOO', help='Name of model folder, e.g., ecmwf')
+    parser.add_argument('--folder', metavar='FOO', help='Model folder name. Default is ecmwf', default='ecmwf')
     parser.add_argument('--input', metavar='/path/to/',
                         help='Input directory. Default is /ibrix/arch/dmz/cloudnet/data',
                         default='/ibrix/arch/dmz/cloudnet/data')
