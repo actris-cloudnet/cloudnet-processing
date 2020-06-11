@@ -13,9 +13,33 @@ $ source venv/bin/activate
 (venv) $ pip3 install .
 ```
 
+## Syncronizing legacy files
+Legacy Cloudnet files lack necessary metadata. Operational-processing offers a script that: 
+- Copies source files into other location 
+- Fixes their metadata
+- Sends metadata to Cloudnet data portal HTTP API
+
+### Usage
+Launch from the root folder:
+```
+$ scripts/sync-folders.py <site_name>
+```
+Optional arguments:
+*  ```--folder FOO ``` Model folder type. Default is ```ecmwf```.
+*  ```--input <dir_name> ``` Input directory. Default is ```/ibrix/arch/dmz/cloudnet/data/```.
+*  ```--output <dir_name> ``` Output folder. Default is ```/data/clouddata/sites/```.
+*  ```-d, --dry ```           Dry run the script for testing the behaviour without writing any files.
+*  ```--config-dir <dir_name> ``` Path to directory containing config files. Default: ./config.
+*  ```-na, --no-api ```       Disable API calls. Useful for testing.
+
+### Notes
+- File type is currently hard coded (```.nc```)
+- Files already synchronized are not overwritten.
+
 ## Concatenating CHM15k ceilometer files
 Some of the CHM15k lidar files come in several files per day while ```cloundetPy``` 
 processing requires daily files. A script can be used to generate these daily files. 
+
 ### Usage
 Launch from the root folder:
 ```
