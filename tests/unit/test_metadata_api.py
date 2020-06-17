@@ -52,7 +52,7 @@ files_response = '''
 class TestMetadataApi:
 
     def test_put_metadata(self):
-        adapter.register_uri('PUT', f'{mock_addr}file/uuid', additional_matcher=is_valid_xml, text='resp')
+        adapter.register_uri('PUT', f'{mock_addr}files/uuid', additional_matcher=is_valid_xml, text='resp')
         md_api = metadata_api.MetadataApi(mock_addr, session)
         r = md_api.put('uuid', 'tests/data/output_fixed/bucharest/calibrated/chm15k/2020/20200118_bucharest_chm15k.nc')
             
@@ -64,7 +64,7 @@ class TestMetadataApi:
                 return False
             return 'X-Freeze' in request.headers
 
-        adapter.register_uri('PUT', f'{mock_addr}file/uuid', additional_matcher=has_freeze_in_header, text='resp')
+        adapter.register_uri('PUT', f'{mock_addr}files/uuid', additional_matcher=has_freeze_in_header, text='resp')
         md_api = metadata_api.MetadataApi(mock_addr, session)
         r = md_api.put('uuid', 'tests/data/output_fixed/bucharest/calibrated/chm15k/2020/20200118_bucharest_chm15k.nc',
                        freeze=True)
@@ -72,7 +72,7 @@ class TestMetadataApi:
         assert r.text == 'resp'
 
     def test_raises_error_on_failed_request(self):
-        adapter.register_uri('PUT', f'{mock_addr}file/uuid_fail', status_code=500)
+        adapter.register_uri('PUT', f'{mock_addr}files/uuid_fail', status_code=500)
 
         md_api = metadata_api.MetadataApi(mock_addr, session)
 
