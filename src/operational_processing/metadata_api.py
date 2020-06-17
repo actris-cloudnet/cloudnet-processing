@@ -14,14 +14,14 @@ class MetadataApi:
 
     def exists(self, uuid):
         """Check if given UUID exists in database."""
-        url = path.join(self._url, 'api', 'file', uuid)
+        url = path.join(self._url, 'api', 'files', uuid)
         res = self._session.get(url)
         return str(res.status_code) == '200'
 
     def put(self, uuid, filepath, freeze=False):
         """Put Cloudnet file to database."""
         payload = subprocess.check_output(['ncdump', '-xh', path.realpath(filepath)])
-        url = path.join(self._url, 'file', uuid)
+        url = path.join(self._url, 'files', uuid)
         headers = {'Content-Type': 'application/xml'}
         if freeze:
             headers['X-Freeze'] = 'True'
@@ -32,7 +32,7 @@ class MetadataApi:
     def put_img(self, filepath, uuid, variable_id):
         """Put Cloudnet quicklook file to database."""
         basename = path.basename(filepath)
-        url = path.join(self._url, 'visualization', basename)
+        url = path.join(self._url, 'visualizations', basename)
         payload = {
             'fullPath': filepath,
             'sourceFileId': uuid,
