@@ -1,7 +1,6 @@
 import pytest
 import configparser
-
-from operational_processing import file_paths
+from data_processing import file_paths
 
 FilePaths = file_paths.FilePaths
 

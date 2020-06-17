@@ -1,12 +1,12 @@
-# operational-processing
-![](https://github.com/actris-cloudnet/operational-processing/workflows/Cloudnet%20processing%20CI/badge.svg)
+# Actris-cloudnet data-processing
+![](https://github.com/actris-cloudnet/data-processing/workflows/Cloudnet%20processing%20CI/badge.svg)
 
-Scripts to run operational CloudnetPy processing
+Scripts to run Cloudnet data processing
 
 # Installation
 ```
-$ git clone git@github.com:actris-cloudnet/operational-processing.git
-$ cd operational-processing
+$ git clone git@github.com:actris-cloudnet/data-processing.git
+$ cd data-processing
 $ python3 -m venv venv
 $ source venv/bin/activate
 (venv) $ pip3 install --upgrade pip
@@ -87,7 +87,7 @@ Launch the processing script from the root folder:
 ```
 $ scripts/process-cloudnet.py site
 ```
-where ```site``` is one of the ```id```s from ```https://altocumulus.fmi.fi/api/sites/```.
+where ```site``` is one of the ```id```s from ```https://cloudnet.fmi.fi/api/sites/```.
 
 Optional arguments:
 * ``` --start YYYY-MM-DD```First day to process (included). Default value is ```current day - 7```.

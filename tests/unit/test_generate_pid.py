@@ -1,8 +1,7 @@
 import pytest
 import requests
 import requests_mock
-
-from operational_processing import generate_pid
+from data_processing import generate_pid
 
 
 adapter = requests_mock.Adapter()

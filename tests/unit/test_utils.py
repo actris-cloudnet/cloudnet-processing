@@ -2,7 +2,7 @@ import datetime
 from pathlib import Path
 from collections import namedtuple
 import pytest
-import operational_processing.utils as utils
+import data_processing.utils as utils
 
 test_file_path = Path(__file__).parent.absolute()
 

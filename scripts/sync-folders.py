@@ -4,8 +4,8 @@ import glob
 import shutil
 import argparse
 from tqdm import tqdm
-from operational_processing import metadata_api, fix_attributes
-import operational_processing.utils as process_utils
+from data_processing import metadata_api, fix_attributes
+import data_processing.utils as process_utils
 
 
 def main():

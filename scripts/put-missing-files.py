@@ -2,8 +2,8 @@
 import glob
 import argparse
 import netCDF4
-from operational_processing import metadata_api
-import operational_processing.utils as process_utils
+from data_processing import metadata_api
+import data_processing.utils as process_utils
 
 
 def main():

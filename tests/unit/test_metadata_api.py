@@ -1,12 +1,10 @@
 import json
 from xml.dom import minidom
 from datetime import date, timedelta
-
 import pytest
 import requests
 import requests_mock
-
-from operational_processing import metadata_api
+from data_processing import metadata_api
 
 adapter = requests_mock.Adapter()
 session = requests.Session()

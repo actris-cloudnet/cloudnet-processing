@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import json
-import operational_processing.utils as process_utils
+import data_processing.utils as process_utils
 
 
 def main():

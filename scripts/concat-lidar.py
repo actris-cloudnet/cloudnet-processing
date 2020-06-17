@@ -6,8 +6,7 @@ import argparse
 import numpy as np
 import netCDF4
 from tqdm import tqdm
-
-from operational_processing import concat_lib as lib
+from data_processing import concat_lib as lib
 
 CONSTANTS = ['range', 'wavelength', 'scaling', 'zenith']
 VARIABLES = ['time', 'beta_raw', 'stddev', 'nn1', 'nn2', 'nn3']

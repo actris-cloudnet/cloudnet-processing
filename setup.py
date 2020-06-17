@@ -1,8 +1,8 @@
 from setuptools import setup, find_packages
 
 
-setup(name='operational_processing',
-      description='Software for running operational CloudnetPy processing.',
+setup(name='data_processing',
+      description='Software for running Cloudnet processing.',
       author='Finnish Meteorological Institute',
       license='MIT License',
       install_requires=['cloudnetpy>=1.2.1',

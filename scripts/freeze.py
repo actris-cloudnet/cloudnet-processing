@@ -3,8 +3,8 @@
 import argparse
 import os.path as path
 from netCDF4 import Dataset
-from operational_processing import generate_pid, metadata_api
-from operational_processing.utils import read_conf
+from data_processing import generate_pid, metadata_api
+from data_processing.utils import read_conf
 
 
 def main():

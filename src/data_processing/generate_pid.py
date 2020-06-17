@@ -1,6 +1,6 @@
 import sys
 import requests
-from operational_processing.utils import str2bool
+from data_processing.utils import str2bool
 
 
 class PidGenerator:
