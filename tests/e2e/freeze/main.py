@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 import subprocess
-import pytest
 import os
 from pathlib import Path
+import pytest
 from test_utils.utils import remove_files, start_server, copy_files
 
-script_path = os.path.dirname(os.path.realpath(__file__))
+SCRIPT_PATH = os.path.dirname(os.path.realpath(__file__))
 
 
 def main():
@@ -15,8 +15,8 @@ def main():
     remove_files(test_output)
     copy_files('tests/data/output_fixed', test_output)
 
-    start_server(5000, 'tests/data/server/metadata', f'{script_path}/md.log')
-    start_server(5001, 'tests/data/server/pid', f'{script_path}/pid.log')
+    start_server(5000, 'tests/data/server/metadata', f'{SCRIPT_PATH}/md.log')
+    start_server(5001, 'tests/data/server/pid', f'{SCRIPT_PATH}/pid.log')
 
     subprocess.check_call(['python3', 'scripts/freeze.py',
                            '--config-dir=tests/data/config'

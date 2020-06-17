@@ -27,6 +27,13 @@ def wait_for_port(port, host='localhost', timeout=10.0):
                                    'connections.'.format(port, host)) from ex
 
 
+def remove_dir(target):
+    try:
+        shutil.rmtree(target)
+    except FileNotFoundError:
+        pass
+
+
 def remove_dirs(target, keep=()):
     for item in os.listdir(target):
         if item not in keep:

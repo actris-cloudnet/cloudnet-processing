@@ -1,25 +1,21 @@
 #!/usr/bin/env python3
 import subprocess
 import os
-import shutil
-import pytest
 import argparse
-from test_utils.utils import start_server
+import pytest
+from test_utils.utils import start_server, remove_dir
 
-script_path = os.path.dirname(os.path.realpath(__file__))
+SCRIPT_PATH = os.path.dirname(os.path.realpath(__file__))
 
 
 def main():
     input_folder = 'tests/data/input'
     output_folder = 'tests/data/output_for_model_sync'
     site = 'bucharest'
-    try:
-        shutil.rmtree(output_folder)
-    except FileNotFoundError:
-        pass
+    remove_dir(output_folder)
     os.makedirs(os.path.join(output_folder, site))
 
-    start_server(5000, 'tests/data/server/metadata', f'{script_path}/md.log')
+    start_server(5000, 'tests/data/server/metadata', f'{SCRIPT_PATH}/md.log')
 
     subprocess.check_call(['python3', 'scripts/sync-folders.py', site,
                            f'--input={input_folder}',
@@ -31,7 +27,7 @@ def main():
                  '--input', input_folder,
                  '--output', output_folder])
 
-    shutil.rmtree(output_folder)
+    remove_dir(output_folder)
 
 
 if __name__ == "__main__":

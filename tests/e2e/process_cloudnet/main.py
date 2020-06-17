@@ -1,25 +1,11 @@
 #!/usr/bin/env python3
 import subprocess
 import os
-import shutil
-import pytest
 import argparse
-from test_utils.utils import start_server
+import pytest
+from test_utils.utils import start_server, remove_dirs, remove_files
 
-script_path = os.path.dirname(os.path.realpath(__file__))
-
-
-def _remove_dirs(target, keep=()):
-    for item in os.listdir(target):
-        if item not in keep:
-            shutil.rmtree('/'.join((target, item)))
-
-
-def _remove_files(target):
-    for file in os.listdir(target):
-        full_path = '/'.join((target, file))
-        if os.path.isfile(full_path):
-            os.remove(full_path)
+SCRIPT_PATH = os.path.dirname(os.path.realpath(__file__))
 
 
 def main():
@@ -31,15 +17,15 @@ def main():
     lidar_root = '/'.join((input_folder, site, 'uncalibrated', 'chm15k'))
 
     if ARGS.clean or not ARGS.skip_processing:
-        _remove_files('/'.join((lidar_root, start[:4])))
-        _remove_dirs('/'.join((output_folder, site)), 'calibrated')
-        _remove_dirs('/'.join((output_folder, site, 'calibrated')), 'ecmwf')
+        remove_files('/'.join((lidar_root, start[:4])))
+        remove_dirs('/'.join((output_folder, site)), 'calibrated')
+        remove_dirs('/'.join((output_folder, site, 'calibrated')), 'ecmwf')
 
     if ARGS.clean:
         return
 
     if not ARGS.skip_processing:
-        start_server(5000, 'tests/data/server/metadata', f'{script_path}/md.log')
+        start_server(5000, 'tests/data/server/metadata', f'{SCRIPT_PATH}/md.log')
 
         subprocess.check_call(['python3', 'scripts/concat-lidar.py', f"{lidar_root}"])
         subprocess.check_call(['python3', 'scripts/process-cloudnet.py', site,
