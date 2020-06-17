@@ -43,9 +43,9 @@ def main():
 
         subprocess.check_call(['python3', 'scripts/concat-lidar.py', f"{lidar_root}"])
         subprocess.check_call(['python3', 'scripts/process-cloudnet.py', site,
-                         f"--config-dir=tests/data/config",
-                         f"--start={start}",
-                         f"--stop={stop}"])
+                               f"--config-dir=tests/data/config",
+                               f"--start={start}",
+                               f"--stop={stop}"])
 
     pytest.main(['-v', 'tests/e2e/process_cloudnet/tests.py',
                  '--site', site,

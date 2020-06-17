@@ -14,7 +14,8 @@ class Server(BaseHTTPRequestHandler):
         self._set_headers(200)
 
     def do_POST(self, code=200):
-        self.root = argv[1]
+
+        root = argv[1]
 
         # Ignore params
         self.path = self.path.split('?')[0]
@@ -25,18 +26,17 @@ class Server(BaseHTTPRequestHandler):
             self.rfile.read(content_length)
 
         try:
-            file = open(f'{self.root}{self.path}', 'rb')
+            file = open(f'{root}{self.path}', 'rb')
         except IsADirectoryError:
-            file = self.try_to_open_file(f'{self.root}{self.path}/index')
+            file = self.try_to_open_file(f'{root}{self.path}/index')
         except FileNotFoundError:
-            file = self.try_to_open_file(f'{self.root}{os.path.dirname(self.path)}/any')
+            file = self.try_to_open_file(f'{root}{os.path.dirname(self.path)}/any')
         if not file:
             self._set_headers(404)
             return
 
         self._set_headers(code)
         self.wfile.write(file.read())
-
 
     def do_PUT(self):
         return self.do_POST(code=201)
@@ -50,7 +50,8 @@ class Server(BaseHTTPRequestHandler):
     def handle_error(self, request, client_address):
         pass
 
-    def try_to_open_file(self, path):
+    @staticmethod
+    def try_to_open_file(path):
         try:
             file = open(path, 'rb')
         except FileNotFoundError:
