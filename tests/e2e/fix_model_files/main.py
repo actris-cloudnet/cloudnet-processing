@@ -17,12 +17,12 @@ def main():
 
     start_server(5000, 'tests/data/server/metadata', f'{SCRIPT_PATH}/md.log')
 
-    subprocess.check_call(['python3', 'scripts/sync-folders.py', site,
+    subprocess.check_call(['python3', 'scripts/fix-model-files.py', site,
                            f'--input={input_folder}',
                            f'--output={output_folder}',
                            '--config-dir=tests/data/config'])
 
-    pytest.main(['-v', 'tests/e2e/sync_model/tests.py',
+    pytest.main(['-v', 'tests/e2e/fix_model_files/tests.py',
                  '--site', site,
                  '--input', input_folder,
                  '--output', output_folder])

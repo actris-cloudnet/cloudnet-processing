@@ -12,29 +12,31 @@ $ source venv/bin/activate
 (venv) $ pip3 install --upgrade pip
 (venv) $ pip3 install .
 ```
+# Scripts
 
-## Syncronizing legacy files
-Legacy Cloudnet files lack necessary metadata. Operational-processing offers a script that: 
-- Copies source files into other location 
-- Fixes their metadata
-- Sends metadata to Cloudnet data portal HTTP API
+# fix-model-files.py
+A script that:
+- Copies legacy model files into other destination
+- Fixes metadata of the copied files
+- Sends the metadata to the Cloudnet data portal HTTP API
 
 ### Usage
 Launch from the root folder:
 ```
-$ scripts/sync-folders.py <site_name>
+$ scripts/fix-model-files.py <site_name>
 ```
 Optional arguments:
-*  ```--folder FOO ``` Model folder type. Default is ```ecmwf```.
-*  ```--input <dir_name> ``` Input directory. Default is ```/ibrix/arch/dmz/cloudnet/data/```.
-*  ```--output <dir_name> ``` Output folder. Default is ```/data/clouddata/sites/```.
-*  ```-d, --dry ```           Dry run the script for testing the behaviour without writing any files.
-*  ```--config-dir <dir_name> ``` Path to directory containing config files. Default: ./config.
-*  ```-na, --no-api ```       Disable API calls. Useful for testing.
+*  ```-h, --help ``` Show help and exit.
+*  ```--model-type MODEL ``` Model type name. Default: ```ecmwf```.
+*  ```--config-dir /FOO/BAR ``` Path to directory containing config files. Default: ./config.
+*  ``` --input /FOO/BAR ``` Optional path to input directory (overrides config file value).
+*  ``` --output /FOO/BAR ``` Optional path to output directory (overrides config file value).
+*  ```-d, --dry ```          Try the script without writing any files or calling API. Useful for testing.
+*  ```-na, --no-api ```      Disable API calls. Useful for testing.
 
 ### Notes
 - File type is currently hard coded (```.nc```)
-- Files already synchronized are not overwritten.
+- Files already copied are not overwritten.
 
 ## Concatenating CHM15k ceilometer files
 Some of the CHM15k lidar files come in several files per day while ```cloundetPy``` 
