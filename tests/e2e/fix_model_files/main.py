@@ -17,6 +17,11 @@ def main():
 
     start_server(5000, 'tests/data/server/metadata', f'{SCRIPT_PATH}/md.log')
 
+    subprocess.check_output(['python3',
+                             'scripts/fix-model-files.py', site,
+                             '--config-dir=tests/data/config',
+                             '--dry'])
+
     subprocess.check_call(['python3', 'scripts/fix-model-files.py', site,
                            f'--input={input_folder}',
                            f'--output={output_folder}',

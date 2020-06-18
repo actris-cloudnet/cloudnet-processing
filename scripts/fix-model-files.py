@@ -12,7 +12,7 @@ def main():
 
     config = process_utils.read_conf(ARGS)
     md_api = metadata_api.MetadataApi(config['main']['METADATASERVER']['url'])
-    paths = _build_data_paths()
+    paths = _build_data_paths(config)
 
     print('Reading files...')
     files = _get_files(paths)
@@ -21,8 +21,8 @@ def main():
     _sync_dirs(files, paths, md_api)
 
 
-def _build_data_paths():
-    return {key: '/'.join((getattr(ARGS, key), ARGS.site[0], 'calibrated'))
+def _build_data_paths(config):
+    return {key: os.path.join(config['main']['PATH'][key], ARGS.site[0], 'calibrated')
             for key in ('input', 'output')}
 
 
@@ -70,6 +70,5 @@ if __name__ == "__main__":
     parser.add_argument('-na', '--no-api', dest='no_api', action='store_true',
                         help='Disable API calls. Useful for testing.',
                         default=False)
-
     ARGS = parser.parse_args()
     main()
