@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""Script for putting missing file into database."""
 import glob
 import argparse
 import netCDF4
@@ -7,6 +8,7 @@ import data_processing.utils as process_utils
 
 
 def main():
+    """The main function."""
 
     config = process_utils.read_conf(ARGS)
     md_api = metadata_api.MetadataApi(config['main']['METADATASERVER']['url'])

@@ -1,9 +1,11 @@
+"""Module containing classes / functions for PID generation."""
 import sys
 import requests
 from data_processing.utils import str2bool
 
 
 class PidGenerator:
+    """The PidGenerator class."""
 
     def __init__(self, options, session=requests.Session()):
         self._options = options
@@ -16,6 +18,7 @@ class PidGenerator:
             self._session.close()
 
     def generate_pid(self, uuid):
+        """Generates PID from given UUID."""
         server_url = f'{self._options["handle_server_url"]}api/handles/'
         prefix = self._options['prefix']
 
@@ -26,26 +29,27 @@ class PidGenerator:
         handle = f'{prefix}/{suffix}'
         target = f'{self._options["resolve_to_url"]}{uuid}'
 
-        r = self._session.put(f'{server_url}{handle}',
-                              json=self._get_payload(target))
-        r.raise_for_status()
+        res = self._session.put(f'{server_url}{handle}',
+                                json=self._get_payload(target))
+        res.raise_for_status()
 
-        if r.status_code == 200:
+        if res.status_code == 200:
             print(f'WARN: Handle {handle} already exists, updating handle.', file=sys.stderr)
 
-        return f'https://hdl.handle.net/{r.json()["handle"]}' 
-    
-    def _init_session(self, options, session):
+        return f'https://hdl.handle.net/{res.json()["handle"]}'
+
+    @staticmethod
+    def _init_session(options, session):
         session.verify = str2bool(options['ca_verify'])
         session.headers['Content-Type'] = 'application/json'
 
         # Authenticate session
         session_url = f'{options["handle_server_url"]}api/sessions'
-        session.headers['Authorization'] = f'Handle clientCert="true"'
+        session.headers['Authorization'] = 'Handle clientCert="true"'
         cert = (str2bool(options['certificate_only']), str2bool(options['private_key']))
-        r = session.post(session_url, cert=cert)
-        r.raise_for_status()
-        session_id = r.json()['sessionId']
+        res = session.post(session_url, cert=cert)
+        res.raise_for_status()
+        session_id = res.json()['sessionId']
         session.headers['Authorization'] = f'Handle sessionId={session_id}'
 
         return session
@@ -70,5 +74,5 @@ class PidGenerator:
                         'permissions': '011111110011'
                     }
                 }
-            }
-        ]}
+            }]
+        }

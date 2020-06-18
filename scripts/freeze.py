@@ -22,7 +22,7 @@ def main():
 
     for filepath in resolved_filepaths:
         rootgrp = Dataset(filepath, 'r+')
-        uuid = rootgrp.file_uuid
+        uuid = getattr(rootgrp, 'file_uuid')
 
         pid = pid_gen.generate_pid(uuid)
 

@@ -13,6 +13,7 @@ VARIABLES = ['time', 'beta_raw', 'stddev', 'nn1', 'nn2', 'nn3']
 
 
 def main():
+    """The main function."""
 
     input_dir = ARGS.input[0]
     output_dir = ARGS.output or input_dir
@@ -38,8 +39,8 @@ def _print_info(days, year, month):
     if ARGS.limit:
         print('Finding active folders..')
 
-        def fun(x):
-            return x
+        def fun(arg):
+            return arg
     else:
         fun = tqdm
     if len(days) > 0 and not ARGS.limit:
@@ -134,14 +135,18 @@ def _append_data(file_base, file):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Concatenate multiple CHM15k files into daily files.')
+    parser = argparse.ArgumentParser(description='Concatenate multiple '
+                                                 'CHM15k files into daily files.')
     parser.add_argument('input', metavar='PATH', nargs='+', help='Path to files.')
     parser.add_argument('--output', metavar='/FOO/BAR/', help='Output directory.')
     parser.add_argument('-o', '--overwrite', dest='overwrite', action='store_true',
                         help='Overwrites any existing daily files', default=False)
     parser.add_argument('--year', type=int, help='Limit to certain year only.')
-    parser.add_argument('--month', type=int, choices=np.arange(1, 13), help='Limit to certain month only.')
-    parser.add_argument('--day', type=int, choices=np.arange(1, 32), help='Limit to certain day only.')
-    parser.add_argument('-l', '--limit', metavar='N', type=int, help='Run only on folders modified within N hours.')
+    parser.add_argument('--month', type=int, choices=np.arange(1, 13),
+                        help='Limit to certain month only.')
+    parser.add_argument('--day', type=int, choices=np.arange(1, 32),
+                        help='Limit to certain day only.')
+    parser.add_argument('-l', '--limit', metavar='N', type=int,
+                        help='Run only on folders modified within N hours.')
     ARGS = parser.parse_args()
     main()

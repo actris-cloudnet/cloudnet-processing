@@ -10,6 +10,7 @@ from data_processing import metadata_api
 
 
 def main():
+    """The main function."""
 
     config = process_utils.read_conf(ARGS)
     md_api = metadata_api.MetadataApi(config['main']['METADATASERVER']['url'])
@@ -71,10 +72,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Plot quickloks from Cloudnet data.')
     parser.add_argument('data_path', nargs='+', help='Data path.', metavar='PATH')
     parser.add_argument('--config-dir', type=str, metavar='/FOO/BAR',
-                        help='Path to directory containing config files. Default: ./config.', default='./config')
-    parser.add_argument('--start', type=str, metavar='YYYY-MM-DD', help='Starting date. Default is current day - 7.',
+                        help='Path to directory containing config files. Default: ./config.',
+                        default='./config')
+    parser.add_argument('--start', type=str, metavar='YYYY-MM-DD',
+                        help='Starting date. Default is current day - 7.',
                         default=process_utils.get_date_from_past(7))
-    parser.add_argument('--stop', type=str, metavar='YYYY-MM-DD', help='Stopping date. Default is the current day.',
+    parser.add_argument('--stop', type=str, metavar='YYYY-MM-DD',
+                        help='Stopping date. Default is the current day.',
                         default=process_utils.get_date_from_past(0))
     parser.add_argument('-o', '--overwrite', dest='overwrite', action='store_true',
                         help='Overwrite existing images', default=False)

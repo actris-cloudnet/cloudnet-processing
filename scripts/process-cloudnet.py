@@ -11,6 +11,7 @@ import data_processing.utils as process_utils
 
 
 def main():
+    """The main function."""
 
     config = process_utils.read_conf(ARGS)
     site_name = ARGS.site[0]
@@ -33,7 +34,8 @@ def main():
                     output_file, uuid = res
                     md_api.put(uuid, output_file)
             except (UncalibratedFileMissing, CalibratedFileMissing, RuntimeError,
-                    ValueError, IndexError, TypeError) as error:
+                    ValueError, IndexError, TypeError, NotImplementedError,
+                    NotWritableFile) as error:
                 print(error)
                 continue
 
@@ -43,7 +45,8 @@ def main():
                 if not ARGS.no_api and res and len(res) > 1:
                     output_file, uuid = res
                     md_api.put(uuid, output_file)
-            except (CategorizeFileMissing, RuntimeError, ValueError, IndexError) as error:
+            except (CategorizeFileMissing, RuntimeError, ValueError,
+                    IndexError, NotWritableFile) as error:
                 print(error)
                 continue
         print(' ')
@@ -60,8 +63,10 @@ def _process_radar(obj):
         rpg_path = obj.build_rpg_path()
         _ = _find_input_file(rpg_path, '*.LV1')
         if _is_writable(output_file):
-            print(f"Calibrating rpg-fmcw-94 cloud radar..")
-            return output_file, rpg2nc(rpg_path, output_file, obj.site_info, keep_uuid=ARGS.keep_uuid)
+            print("Calibrating rpg-fmcw-94 cloud radar..")
+            return output_file, rpg2nc(rpg_path, output_file, obj.site_info,
+                                       keep_uuid=ARGS.keep_uuid)
+    raise NotImplementedError
 
 
 def _process_lidar(obj):
@@ -71,9 +76,11 @@ def _process_lidar(obj):
     if _is_writable(output_file):
         print(f"Calibrating {obj.config['site']['INSTRUMENTS']['lidar']} lidar..")
         try:
-            return output_file, ceilo2nc(input_file, output_file, obj.site_info, keep_uuid=ARGS.keep_uuid)
+            return output_file, ceilo2nc(input_file, output_file, obj.site_info,
+                                         keep_uuid=ARGS.keep_uuid)
         except RuntimeError as error:
             raise error
+    raise NotWritableFile
 
 
 def _find_input_file(path, pattern):
@@ -93,10 +100,12 @@ def _process_categorize(obj):
     output_file = obj.build_standard_output_file_name()
     if _is_writable(output_file):
         try:
-            print(f"Processing categorize file..")
-            return output_file, generate_categorize(input_files, output_file, keep_uuid=ARGS.keep_uuid)
+            print("Processing categorize file..")
+            return output_file, generate_categorize(input_files, output_file,
+                                                    keep_uuid=ARGS.keep_uuid)
         except RuntimeError as error:
             raise error
+    raise NotWritableFile
 
 
 def _process_level2(product, obj):
@@ -109,10 +118,12 @@ def _process_level2(product, obj):
     if _is_writable(output_file):
         try:
             print(f"Processing {product} product..")
-            return output_file, getattr(module, f"generate_{product_prefix}")(categorize_file, output_file,
-                                                                              keep_uuid=ARGS.keep_uuid)
+            fun = getattr(module, f"generate_{product_prefix}")
+            return output_file, fun(categorize_file, output_file,
+                                    keep_uuid=ARGS.keep_uuid)
         except ValueError:
             raise RuntimeError(f"Something went wrong with {product} processing.")
+    raise NotWritableFile
 
 
 def _is_writable(output_file):
@@ -122,31 +133,38 @@ def _is_writable(output_file):
 
 
 class UncalibratedFileMissing(Exception):
-    pass
+    """Internal exception class."""
 
 
 class CalibratedFileMissing(Exception):
-    pass
+    """Internal exception class."""
 
 
 class CategorizeFileMissing(Exception):
-    pass
+    """Internal exception class."""
+
+
+class NotWritableFile(Exception):
+    """Internal exception class."""
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Process Cloudnet data.')
-    parser.add_argument('site', nargs='+', help='Site Name', choices=['bucharest', 'norunda', 'granada', 'mace-head'])
+    parser.add_argument('site', nargs='+', help='Site Name',
+                        choices=['bucharest', 'norunda', 'granada', 'mace-head'])
     parser.add_argument('--config-dir', type=str, metavar='/FOO/BAR',
                         help='Path to directory containing config files. Default: ./config.',
                         default='./config')
-    parser.add_argument('--start', type=str, metavar='YYYY-MM-DD', help='Starting date. Default is current day - 7.',
+    parser.add_argument('--start', type=str, metavar='YYYY-MM-DD',
+                        help='Starting date. Default is current day - 7.',
                         default=process_utils.get_date_from_past(7))
-    parser.add_argument('--stop', type=str, metavar='YYYY-MM-DD', help='Stopping date. Default is current day - 1.',
+    parser.add_argument('--stop', type=str, metavar='YYYY-MM-DD',
+                        help='Stopping date. Default is current day - 1.',
                         default=process_utils.get_date_from_past(1))
-    parser.add_argument('--input', type=str, metavar='/FOO/BAR', help='Input folder path. '
-                                                                      'Overrides config/main.ini value.')
-    parser.add_argument('--output', type=str, metavar='/FOO/BAR', help='Output folder path. '
-                                                                       'Overrides config/main.ini value.')
+    parser.add_argument('--input', type=str, metavar='/FOO/BAR',
+                        help='Input folder path. Overrides config/main.ini value.')
+    parser.add_argument('--output', type=str, metavar='/FOO/BAR',
+                        help='Output folder path. Overrides config/main.ini value.')
     parser.add_argument('-o', '--overwrite', dest='overwrite', action='store_true',
                         help='Overwrite data in existing files', default=False)
     parser.add_argument('-k', '--keep_uuid', dest='keep_uuid', action='store_true',

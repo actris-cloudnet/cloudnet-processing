@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""Script for fixing metadata of Cloudnet model files."""
 import os
 import glob
 import shutil
@@ -9,6 +10,7 @@ import data_processing.utils as process_utils
 
 
 def main():
+    """The main function."""
 
     config = process_utils.read_conf(ARGS)
     md_api = metadata_api.MetadataApi(config['main']['METADATASERVER']['url'])
@@ -65,7 +67,8 @@ if __name__ == "__main__":
     parser.add_argument('--output', metavar='/FOO/BAR',
                         help='Optional path to output directory (overrides config file value).')
     parser.add_argument('-d', '--dry', dest='dry_run', action='store_true',
-                        help='Try the script without writing any files or calling API. Useful for testing.',
+                        help='Try the script without writing any files or calling API. '
+                             'Useful for testing.',
                         default=False)
     parser.add_argument('-na', '--no-api', dest='no_api', action='store_true',
                         help='Disable API calls. Useful for testing.',
