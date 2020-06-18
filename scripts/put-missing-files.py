@@ -34,8 +34,9 @@ def _read_uuid(file):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Put missing files to database.')
-    parser.add_argument('data_path', nargs='+', metavar='/PATH/TO',
-                        help='Path to files to be checked.')
+    parser.add_argument('data_path', nargs='+',
+                        metavar='PATH',
+                        help='Path to files to be checked recursively.')
     parser.add_argument('--config-dir', type=str, metavar='/FOO/BAR',
                         help='Path to directory containing config files. Default: ./config.',
                         default='./config')

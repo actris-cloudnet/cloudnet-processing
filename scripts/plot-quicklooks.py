@@ -69,7 +69,7 @@ def _is_plottable(image_name):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Plot quickloks from Cloudnet data.')
-    parser.add_argument('data_path', nargs='+', help='Data path.')
+    parser.add_argument('data_path', nargs='+', help='Data path.', metavar='PATH')
     parser.add_argument('--config-dir', type=str, metavar='/FOO/BAR',
                         help='Path to directory containing config files. Default: ./config.', default='./config')
     parser.add_argument('--start', type=str, metavar='YYYY-MM-DD', help='Starting date. Default is current day - 7.',
@@ -77,7 +77,7 @@ if __name__ == "__main__":
     parser.add_argument('--stop', type=str, metavar='YYYY-MM-DD', help='Stopping date. Default is the current day.',
                         default=process_utils.get_date_from_past(0))
     parser.add_argument('-o', '--overwrite', dest='overwrite', action='store_true',
-                        help='Overwrites existing images', default=False)
+                        help='Overwrite existing images', default=False)
     parser.add_argument('-na', '--no-api', dest='no_api', action='store_true',
                         help='Disable API calls. Useful for testing.', default=False)
     ARGS = parser.parse_args()

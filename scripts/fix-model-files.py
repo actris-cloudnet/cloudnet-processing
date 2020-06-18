@@ -53,8 +53,7 @@ def _deliver_file(source_file, target_file, md_api):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Fix model files for data portal. Example: '
-                                                 'scripts/fix-model-files bucharest')
+    parser = argparse.ArgumentParser(description='Fix model files for data portal')
     parser.add_argument('site', nargs='+', metavar='SITE', help='Site Name')
     parser.add_argument('--model-type', metavar='MODEL', dest='model_type',
                         help='Model type name. Default: ecmwf', default='ecmwf')

@@ -148,9 +148,9 @@ if __name__ == "__main__":
     parser.add_argument('--output', type=str, metavar='/FOO/BAR', help='Output folder path. '
                                                                        'Overrides config/main.ini value.')
     parser.add_argument('-o', '--overwrite', dest='overwrite', action='store_true',
-                        help='Overwrites data in existing files', default=False)
+                        help='Overwrite data in existing files', default=False)
     parser.add_argument('-k', '--keep_uuid', dest='keep_uuid', action='store_true',
-                        help='Keeps ID of old file even if the data is overwritten', default=True)
+                        help='Keep ID of old file even if the data is overwritten', default=True)
     parser.add_argument('-na', '--no-api', dest='no_api', action='store_true',
                         help='Disable API calls. Useful for testing.', default=False)
     ARGS = parser.parse_args()
