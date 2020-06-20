@@ -9,5 +9,8 @@ def nc_file(tmpdir_factory):
     root_grp.createDimension('time', 10)
     root_grp.createDimension('range', 5)
     root_grp.createDimension('other', 3)
+    root_grp.year = '2020'
+    root_grp.month = '05'
+    root_grp.day = '20'
     root_grp.close()
     return file_name

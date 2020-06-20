@@ -5,7 +5,12 @@ import pytest
 from data_processing import concat_lib as lib
 
 
-def test_get_files_by_suffix():
+def test__validate_date_attributes(nc_file):
+    nc = netCDF4.Dataset(nc_file)
+    assert lib._validate_date_attributes(nc, ('2020', '05', '20'))
+
+
+def test_get_only_nc_files():
     files = ['abc.nc', 'ggg.txt', 'sfsdfs.nc', 'bbbb.ncn', 'ffffnc']
     expected = ['abc.nc', 'sfsdfs.nc']
     assert_array_equal(lib.get_only_nc_files(files), expected)

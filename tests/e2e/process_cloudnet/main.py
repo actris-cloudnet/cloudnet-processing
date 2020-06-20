@@ -39,6 +39,8 @@ def main():
                  '--input', input_folder,
                  '--output', output_folder])
 
+    remove_files(f'{lidar_root}/2020')
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Cloudnet processing e2e test.')

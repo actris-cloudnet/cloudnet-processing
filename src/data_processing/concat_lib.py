@@ -1,3 +1,4 @@
+"""Module containing helper functions for CH15k concatenation."""
 import os
 import re
 from datetime import datetime
@@ -7,15 +8,20 @@ from cloudnetpy import utils
 
 
 def get_default_range(period):
+    """Returns default time ranges."""
     if period == 'year':
-        return [2000, datetime.now().year]
+        span = [2000, datetime.now().year]
     elif period == 'month':
-        return [1, 12]
+        span = [1, 12]
     elif period == 'day':
-        return [1, 31]
+        span = [1, 31]
+    else:
+        raise ValueError('Invalid period.')
+    return span
 
 
 def get_dirs_in_range(the_path, the_range):
+    """Finds directories inside given (time) range."""
     ind0, ind1 = the_range
     dirs = os.listdir(the_path)
     return [d for d in dirs if os.path.isdir('/'.join((the_path, d)))
@@ -23,6 +29,7 @@ def get_dirs_in_range(the_path, the_range):
 
 
 def get_full_input_path(input_dir, date):
+    """Builds correct sub folder structure."""
     return '/'.join((input_dir, *date))
 
 
@@ -34,14 +41,22 @@ def get_list_of_nc_files(directory):
 
 
 def remove_files_with_wrong_date(files, date):
-    year, month, day = [int(x) for x in date]
+    """Remove files that contain wrong date and thus are in wrong folder."""
+    date_as_ints = [int(x) for x in date]
     valid_files = []
     for file in files:
         nc = netCDF4.Dataset(file)
-        if nc.year == year and nc.month == month and nc.day == day:
+        if _validate_date_attributes(nc, date_as_ints):
             valid_files.append(file)
         nc.close()
     return valid_files
+
+
+def _validate_date_attributes(obj, date):
+    for ind, attr in enumerate(('year', 'month', 'day')):
+        if getattr(obj, attr) != date[ind]:
+            return False
+    return True
 
 
 def get_only_nc_files(files):
@@ -75,6 +90,7 @@ def get_dim(file, array):
 
 
 def find_date(file):
+    """Finds measurement date."""
     folders = file.split('/')
     date = (_parse_year(folders[-4]),
             _parse_month(folders[-3]),
@@ -92,6 +108,7 @@ def _search_date_from_filename(name):
                 _parse_day(part[6:8]))
         if all(date):
             return date
+    return None
 
 
 def _parse_year(string):
