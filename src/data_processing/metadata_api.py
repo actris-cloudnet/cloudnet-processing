@@ -14,7 +14,7 @@ class MetadataApi:
 
     def exists(self, uuid):
         """Check if given UUID exists in database."""
-        url = path.join(self._url, 'api', 'files', uuid)
+        url = path.join(self._url, 'api/files', uuid)
         res = self._session.get(url)
         return str(res.status_code) == '200'
 
@@ -45,7 +45,7 @@ class MetadataApi:
     def get_volatile_files_updated_before(self, **time_delta):
         """Find volatile files released before given time limit."""
         updated_before = date.today() - timedelta(**time_delta)
-        url = path.join(self._url, 'api', 'files')
+        url = path.join(self._url, 'api/files')
         payload = {
             'volatile': True,
             'releasedBefore': updated_before

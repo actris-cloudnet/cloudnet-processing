@@ -24,20 +24,20 @@ def get_dirs_in_range(the_path, the_range):
     """Finds directories inside given (time) range."""
     ind0, ind1 = the_range
     dirs = os.listdir(the_path)
-    return [d for d in dirs if os.path.isdir('/'.join((the_path, d)))
+    return [d for d in dirs if os.path.isdir(os.path.join(the_path, d))
             and d.isdigit() and int(d) in np.arange(ind0, ind1+1)]
 
 
 def get_full_input_path(input_dir, date):
     """Builds correct sub folder structure."""
-    return '/'.join((input_dir, *date))
+    return os.path.join(input_dir, *date)
 
 
 def get_list_of_nc_files(directory):
     """Returns sorted list of .nc-files."""
     files = os.listdir(directory)
     files = np.sort(get_only_nc_files(files))
-    return ['/'.join((directory, f)) for f in files]
+    return [os.path.join(directory, f) for f in files]
 
 
 def remove_files_with_wrong_date(files, date):

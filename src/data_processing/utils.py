@@ -35,7 +35,7 @@ def find_file(folder, wildcard):
     files = os.listdir(folder)
     for file in files:
         if fnmatch.fnmatch(file, wildcard):
-            return '/'.join((folder, file))
+            return os.path.join(folder, file)
     raise FileNotFoundError(f"No {wildcard} in {folder}")
 
 

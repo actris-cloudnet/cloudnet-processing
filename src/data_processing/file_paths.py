@@ -19,7 +19,7 @@ class FilePaths:
     def build_standard_output_file_name(self, product='categorize', makedir=True):
         folder_id = 'processed' if product == 'categorize' else 'products'
         root = self.config['main']['PATH']['output']
-        folder = '/'.join((root, self.site_name, folder_id, product, self._year))
+        folder = os.path.join(root, self.site_name, folder_id, product, self._year)
         if makedir:
             os.makedirs(folder, exist_ok=True)
         return self._get_nc_name(folder, product)
@@ -28,14 +28,14 @@ class FilePaths:
         direction = 'input' if folder_id == 'uncalibrated' else 'output'
         root = self.config['main']['PATH'][direction]
         instrument = self.config['site']['INSTRUMENTS'][instrument_type]
-        return '/'.join((root, self.site_name, folder_id, instrument, self._year))
+        return os.path.join(root, self.site_name, folder_id, instrument, self._year)
 
     def build_rpg_path(self):
         year, month, day = _split_date(self.dvec)
         root = self.config['main']['PATH']['input']
-        prefix = '/'.join((root, self.site_name, 'uncalibrated', 'rpg-fmcw-94'))
-        path_option1 = '/'.join((prefix, year, month, day))
-        path_option2 = '/'.join((prefix, f"Y{year}", f"M{month}", f"D{day}"))
+        prefix = os.path.join(root, self.site_name, 'uncalibrated', 'rpg-fmcw-94')
+        path_option1 = os.path.join(prefix, year, month, day)
+        path_option2 = os.path.join(prefix, f"Y{year}", f"M{month}", f"D{day}")
         if os.path.isdir(path_option1):
             return path_option1
         return path_option2
@@ -47,7 +47,7 @@ class FilePaths:
 
     def _get_nc_name(self, folder, identifier):
         file_name = f"{self.dvec}_{self.site_name}_{identifier}.nc"
-        return '/'.join((folder, file_name))
+        return os.path.join(folder, file_name)
 
 
 def _split_date(dvec):

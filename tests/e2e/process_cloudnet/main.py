@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 import subprocess
-import os
+from os import path
 import argparse
 import pytest
 from test_utils.utils import start_server, remove_dirs, remove_files
 
-SCRIPT_PATH = os.path.dirname(os.path.realpath(__file__))
+SCRIPT_PATH = path.dirname(path.realpath(__file__))
 
 
 def main():
@@ -14,12 +14,12 @@ def main():
     site = 'bucharest'
     start = '2020-04-02'
     stop = '2020-04-03'
-    lidar_root = '/'.join((input_folder, site, 'uncalibrated', 'chm15k'))
+    lidar_root = path.join(input_folder, site, 'uncalibrated', 'chm15k')
 
     if ARGS.clean or not ARGS.skip_processing:
-        remove_files('/'.join((lidar_root, start[:4])))
-        remove_dirs('/'.join((output_folder, site)), 'calibrated')
-        remove_dirs('/'.join((output_folder, site, 'calibrated')), 'ecmwf')
+        remove_files(path.join(lidar_root, start[:4]))
+        remove_dirs(path.join(output_folder, site), 'calibrated')
+        remove_dirs(path.join(output_folder, site, 'calibrated'), 'ecmwf')
 
     if ARGS.clean:
         return

@@ -28,7 +28,7 @@ def test_get_dtype():
 def test_get_full_input_path():
     root = '/foo/bar/'
     date = ('2020', '01', '15')
-    assert lib.get_full_input_path(root, date) == '/foo/bar//2020/01/15'
+    assert lib.get_full_input_path(root, date) == '/foo/bar/2020/01/15'
 
 
 def test_get_default_range():
