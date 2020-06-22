@@ -1,4 +1,4 @@
-# Actris-cloudnet data-processing
+# ACTRIS Cloudnet data-processing
 ![](https://github.com/actris-cloudnet/data-processing/workflows/Cloudnet%20processing%20CI/badge.svg)
 
 Scripts to perform various pre-processing steps and to run the Cloudnet processing
