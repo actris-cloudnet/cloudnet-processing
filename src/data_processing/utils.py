@@ -2,6 +2,7 @@ import os
 import fnmatch
 import datetime
 import configparser
+import hashlib
 import requests
 from cloudnetpy.utils import get_time
 from cloudnetpy.plotting.plot_meta import ATTRIBUTES as ATTR
@@ -127,3 +128,12 @@ def get_plottable_variables_info(cloudnet_file_type):
 def get_var_id(cloudnet_file_type, field):
     """Return identifier for variable / Cloudnet file combination."""
     return f"{cloudnet_file_type}-{field}"
+
+
+def sha256sum(filename: str) -> str:
+    """Calculates hash of file using sha-256."""
+    hash_sum = hashlib.sha256()
+    with open(filename, "rb") as f:
+        for byte_block in iter(lambda: f.read(4096), b""):
+            hash_sum.update(byte_block)
+    return hash_sum.hexdigest()
