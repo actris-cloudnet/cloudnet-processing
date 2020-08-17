@@ -3,6 +3,7 @@ import shutil
 import requests
 import os
 from os import path
+import subprocess
 from collections import namedtuple
 from fastapi import FastAPI, BackgroundTasks, File, UploadFile, HTTPException
 from . import utils as process_utils
@@ -54,17 +55,24 @@ def _check_hash(hash_sum: str, file_local: str) -> None:
 
 
 def _process(filename: str, metadata: dict):
-    _move_file_to_correct_folder(metadata, filename)
+    info = _move_file_to_correct_folder(metadata, filename)
+    if info['instrument'] == 'chm15k':
+        subprocess.check_call(['python3', 'scripts/concat-lidar.py', info['path']])
+    stop_date = process_utils.get_date_from_past(-1, info['date'])
+    subprocess.check_call(['python3', 'scripts/process-cloudnet.py', info['site'],
+                           f"--start={info['date']}", f"--stop={stop_date}"])
 
 
-def _move_file_to_correct_folder(metadata: dict, filename: str) -> None:
+def _move_file_to_correct_folder(metadata: dict, filename: str) -> dict:
     site = metadata['site']['id']
     product = metadata['product']['id']
     yyyy, mm, dd = metadata['measurementDate'].split('-')
     config = _read_conf(site)
     instrument = config['site']['INSTRUMENTS'][product]
-    root = config['main']['PATH']['output']
-    folder = path.join(root, site, 'uncalibrated', instrument, yyyy, mm, dd)
+    root = path.join(config['main']['PATH']['output'], site, 'uncalibrated', instrument)
+    folder = path.join(root, yyyy, mm, dd)
     os.makedirs(folder, exist_ok=True)
     shutil.move(filename, folder)
-    return folder
+    return {'path': folder,
+            'instrument': instrument,
+            'date': metadata['measurementDate']}
