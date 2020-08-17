@@ -9,7 +9,6 @@ from . import utils as process_utils
 
 
 app = FastAPI()
-CONFIG = process_utils.read_conf(namedtuple('args', 'config_dir')('./config'))
 
 
 @app.post("/data/{hashSum}")
@@ -24,19 +23,27 @@ async def create_upload_file(background_tasks: BackgroundTasks, hashSum: str,
     return {"metadata": metadata}
 
 
-def _save_file_to_disk(file_submitted: str, filename: str) -> None:
+def _save_file_to_disk(file_submitted: UploadFile, filename: str) -> None:
     file = open(filename, 'wb+')
     shutil.copyfileobj(file_submitted.file, file)
     file.close()
 
 
 def _read_metadata(hash_sum: str) -> dict:
-    url = path.join(CONFIG['main']['METADATASERVER']['url'], 'metadata', hash_sum)
-    session = requests.Session()
-    res = session.get(url)
+    config = _read_conf()
+    url = path.join(config['main']['METADATASERVER']['url'], 'metadata', hash_sum)
+    res = requests.get(url)
     if str(res.status_code) != '200':
-        raise HTTPException(status_code=404, detail="Metadata is not found")
+        raise HTTPException(status_code=404, detail="Metadata not found")
     return res.json()
+
+
+def _read_conf(site=None):
+    if site:
+        args = namedtuple('args', 'config_dir site')('./config', (site, ))
+    else:
+        args = namedtuple('args', 'config_dir')('./config')
+    return process_utils.read_conf(args)
 
 
 def _check_hash(hash_sum: str, file_local: str) -> None:
@@ -54,11 +61,10 @@ def _move_file_to_correct_folder(metadata: dict, filename: str) -> None:
     site = metadata['site']['id']
     product = metadata['product']['id']
     yyyy, mm, dd = metadata['measurementDate'].split('-')
-    if product == 'radar':
-        instrument = 'rpg-fmcw-94'
-    elif product == 'lidar':
-        instrument = 'chm15k'
-    root = CONFIG['main']['PATH']['output']
+    config = _read_conf(site)
+    instrument = config['site']['INSTRUMENTS'][product]
+    root = config['main']['PATH']['output']
     folder = path.join(root, site, 'uncalibrated', instrument, yyyy, mm, dd)
     os.makedirs(folder, exist_ok=True)
     shutil.move(filename, folder)
+    return folder
