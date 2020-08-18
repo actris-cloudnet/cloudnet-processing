@@ -4,7 +4,7 @@ from os import path
 import time
 import shutil
 import requests
-from test_utils.utils import start_server, remove_dirs
+from test_utils.utils import start_server, remove_dir
 import signal
 
 SCRIPT_PATH = path.dirname(path.realpath(__file__))
@@ -24,7 +24,7 @@ def main():
     # Example input data for upload
     shutil.copyfile(f"tests/data/input/{test_file['name']}",
                     f"tests/data/api_input/{test_file['name']}")
-    remove_dirs('tests/data/input/granada/')
+    remove_dir('tests/data/input/granada/')
 
     url = f"http://localhost:5700/data/{test_file['hash']}"
     full_path = f"tests/data/api_input/{test_file['name']}"
@@ -38,7 +38,7 @@ def main():
 
     res = requests.post(url, files=files)
     print(res.status_code, res.text)
-    remove_dirs('tests/data/input/granada/')
+    remove_dir('tests/data/input/granada/')
 
     web_server.send_signal(signal.SIGINT)
 
