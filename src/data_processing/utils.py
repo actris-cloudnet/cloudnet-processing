@@ -53,7 +53,7 @@ def get_date_from_past(n, reference_date=None):
     return str(date)
 
 
-def read_conf(args):
+def read_conf(args) -> dict:
     conf_dir = args.config_dir
 
     def _read(conf_type):
