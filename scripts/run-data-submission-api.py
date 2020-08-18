@@ -13,6 +13,12 @@ from data_processing import utils as process_utils
 
 app = FastAPI()
 
+parser = argparse.ArgumentParser(description='Run Cloudnet data submission HTTP API.')
+parser.add_argument('--config-dir', type=str, metavar='/FOO/BAR',
+                    help='Path to directory containing config files. Default: ./config.',
+                    default='./config')
+ARGS = parser.parse_args()
+
 
 @app.post("/data/{hashSum}")
 async def create_upload_file(background_tasks: BackgroundTasks, hashSum: str,
@@ -43,9 +49,9 @@ def _read_metadata(hash_sum: str) -> dict:
 
 def _read_conf(site=None) -> dict:
     if site:
-        args = namedtuple('args', 'config_dir site')('./config', (site, ))
+        args = namedtuple('args', 'config_dir site')(ARGS.config_dir, (site, ))
     else:
-        args = namedtuple('args', 'config_dir')('./config')
+        args = namedtuple('args', 'config_dir')(ARGS.config_dir)
     return process_utils.read_conf(args)
 
 
@@ -83,11 +89,6 @@ def _move_file_to_correct_folder(metadata: dict, filename: str) -> dict:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Run Cloudnet data submission HTTP API.')
-    parser.add_argument('--config-dir', type=str, metavar='/FOO/BAR',
-                        help='Path to directory containing config files. Default: ./config.',
-                        default='./config')
-
     uvicorn.run("run-data-submission-api:app",
                 host='0.0.0.0',
                 port=int(5700),
