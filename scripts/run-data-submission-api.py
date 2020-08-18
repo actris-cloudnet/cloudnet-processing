@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
 import argparse
-import uvicorn
-import shutil
-import requests
 import os
-from os import path
+import shutil
 import subprocess
 from collections import namedtuple
+from os import path
+import requests
+import uvicorn
 from fastapi import FastAPI, BackgroundTasks, File, UploadFile, HTTPException
 from data_processing import utils as process_utils
-
 
 app = FastAPI()
 
