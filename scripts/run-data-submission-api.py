@@ -67,7 +67,7 @@ def _process(filename: str, metadata: dict) -> None:
     if 'chm15k' in info['raw_data_path']:
         subprocess.check_call(['python3', 'scripts/concat-lidar.py', info['raw_data_path']])
     stop_date = process_utils.get_date_from_past(-1, info['date'])
-    subprocess.check_call(['python3', 'scripts/process-cloudnet.py', info['site'],
+    subprocess.check_call(['python3', 'scripts/process-cloudnet.py', metadata['site']['id'],
                            f"--start={info['date']}", f"--stop={stop_date}"])
     output_path = path.join(info['config']['main']['PATH']['output'], metadata['site']['id'])
     subprocess.check_call(['python3', 'scripts/plot-quicklooks.py', output_path])
