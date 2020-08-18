@@ -88,9 +88,10 @@ def _move_file_to_correct_folder(metadata: dict, filename: str) -> dict:
 
 
 if __name__ == "__main__":
+    config = _read_conf()['main']['UVICORN']
     uvicorn.run("run-data-submission-api:app",
-                host='0.0.0.0',
-                port=int(5700),
-                reload=True,
-                debug=False,
-                workers=1)
+                host=config['host'],
+                port=int(config['port']),
+                reload=bool(config['reload']),
+                debug=bool(config['debug']),
+                workers=int(config['workers']))
