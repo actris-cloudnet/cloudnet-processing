@@ -37,6 +37,7 @@ def test_date_string_to_date():
     (0, '2020-05-20', '2020-05-20'),
     (5, '2020-05-20', '2020-05-15'),
     (1, '2020-01-01', '2019-12-31'),
+    (-1, '2020-01-10', '2020-01-11'),
 ])
 def test_get_date_from_past(n, input_date, result):
     assert utils.get_date_from_past(n, input_date) == result
