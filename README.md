@@ -1,7 +1,7 @@
 # ACTRIS Cloudnet data-processing
 ![](https://github.com/actris-cloudnet/data-processing/workflows/Cloudnet%20processing%20CI/badge.svg)
 
-Scripts to perform various pre-processing steps and to run the Cloudnet processing
+Various scripts used in Cloudnet data transfer and processing.
 
 ### Installation
 ```
@@ -20,6 +20,22 @@ The scripts are located in `scripts/` folder and should be run from the root:
 $ scripts/<script_name.py> arg1 --arg2=foo ...
 ```
 The following scripts are provided:
+
+### `run-data-submission-api.py`
+
+Run HTTP API for data submission to Cloudnet data portal.
+
+```
+usage: run-data-submission-api.py [-h] [--config-dir /FOO/BAR]
+```
+
+Optional arguments:
+
+| Short | Long            | Default           | Description         | 
+| :---  | :---            | :---              | :---                |
+| `-h`  | `-help`         |                   | Show help and exit. |
+|       | `--config-dir`  | `./config`        | Path to directory containing config files. |
+
 
 ### `fix-model-files.py`
 
