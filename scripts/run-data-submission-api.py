@@ -37,16 +37,21 @@ def _save_file_to_disk(file_submitted: UploadFile, filename: str) -> None:
 
 
 def _read_metadata(hash_sum: str) -> dict:
-    config = _read_conf()
-    url = path.join(config['main']['METADATASERVER']['url'], 'metadata', hash_sum)
+    root = _read_conf()['main']['METADATASERVER']['url']
+    url = path.join(root, 'metadata', hash_sum)
     res = requests.get(url)
     if str(res.status_code) != '200':
         raise HTTPException(status_code=404, detail="Metadata not found")
     metadata = res.json()
     if metadata['status'] == 'uploaded':
         raise HTTPException(status_code=200, detail="File already exists")
-    requests.post(url)
+    _post_hash(root, hash_sum)
     return metadata
+
+
+def _post_hash(root: str, hash_sum: str) -> None:
+    url = path.join(root, 'protected', 'metadata', hash_sum)
+    requests.post(url, data={'status': 'uploaded'})
 
 
 def _read_conf(site=None) -> dict:
