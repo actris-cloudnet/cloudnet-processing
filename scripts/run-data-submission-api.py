@@ -42,7 +42,11 @@ def _read_metadata(hash_sum: str) -> dict:
     res = requests.get(url)
     if str(res.status_code) != '200':
         raise HTTPException(status_code=404, detail="Metadata not found")
-    return res.json()
+    metadata = res.json()
+    if metadata['status'] == 'uploaded':
+        raise HTTPException(status_code=200, detail="File already exists")
+    requests.post(url)
+    return metadata
 
 
 def _read_conf(site=None) -> dict:
