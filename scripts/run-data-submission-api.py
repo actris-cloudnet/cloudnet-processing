@@ -3,7 +3,6 @@ import argparse
 import os
 import shutil
 import subprocess
-from collections import namedtuple
 from os import path
 import requests
 import uvicorn
@@ -48,10 +47,8 @@ def _read_metadata(hash_sum: str) -> dict:
 
 def _read_conf(site=None) -> dict:
     if site:
-        args = namedtuple('args', 'config_dir site')(ARGS.config_dir, (site, ))
-    else:
-        args = namedtuple('args', 'config_dir')(ARGS.config_dir)
-    return process_utils.read_conf(args)
+        ARGS.site = (site, )
+    return process_utils.read_conf(ARGS)
 
 
 def _check_hash(hash_sum: str, file_local: str) -> None:
@@ -88,10 +85,10 @@ def _move_file_to_correct_folder(metadata: dict, filename: str) -> dict:
 
 
 if __name__ == "__main__":
-    config = _read_conf()['main']['UVICORN']
+    server_config = _read_conf()['main']['UVICORN']
     uvicorn.run("run-data-submission-api:app",
-                host=config['host'],
-                port=int(config['port']),
-                reload=bool(config['reload']),
-                debug=bool(config['debug']),
-                workers=int(config['workers']))
+                host=server_config['host'],
+                port=int(server_config['port']),
+                reload=bool(server_config['reload']),
+                debug=bool(server_config['debug']),
+                workers=int(server_config['workers']))
