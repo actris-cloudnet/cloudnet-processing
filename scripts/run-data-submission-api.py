@@ -18,7 +18,7 @@ parser.add_argument('--config-dir', type=str, metavar='/FOO/BAR',
 ARGS = parser.parse_args()
 
 
-@app.post("/data/{hashSum}")
+@app.put("/data/{hashSum}")
 async def create_upload_file(background_tasks: BackgroundTasks, hashSum: str,
                              file_submitted: UploadFile = File(...)):
     """Submit raw measurement file to Cloudnet data portal."""

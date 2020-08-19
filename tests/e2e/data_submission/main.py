@@ -21,7 +21,6 @@ def main():
                                    f"--config-dir=tests/data/config"])
     time.sleep(3)
 
-    # Example input data for upload
     shutil.copyfile(f"tests/data/input/{test_file['name']}",
                     f"tests/data/api_input/{test_file['name']}")
     remove_dir('tests/data/input/granada/')
@@ -36,7 +35,7 @@ def main():
 
     start_server(5000, 'tests/data/server/metadata/', f'{SCRIPT_PATH}/md.log')
 
-    res = requests.post(url, files=files)
+    res = requests.put(url, files=files)
     print(res.status_code, res.text)
     remove_dir('tests/data/input/granada/')
 
