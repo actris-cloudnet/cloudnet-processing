@@ -48,17 +48,17 @@ def _check_hash(reference_hash: str, file_obj: UploadFile) -> None:
 def _put_metadata(meta: dict, credentials) -> None:
     root = _read_conf()['main']['METADATASERVER']['url']
     url = path.join(root, 'metadata', meta['hashSum'])
-    res = requests.put(url, data=meta, auth=(credentials.username, credentials.password))
+    res = requests.put(url, json=meta, auth=(credentials.username, credentials.password))
     if str(res.status_code) == '200':
         raise HTTPException(status_code=200, detail="File already exists")
     if str(res.status_code) != '201':
-        raise HTTPException(status_code=int(res.status_code), detail="Error in metadata submission")
+        raise HTTPException(status_code=int(res.status_code), detail=res.json())
 
 
 def _post_hash(hash_sum: str) -> None:
     root = _read_conf()['main']['METADATASERVER']['url']
     url = path.join(root, 'metadata', hash_sum)
-    requests.post(url, data={'status': 'uploaded'})
+    requests.post(url, json={'status': 'uploaded'})
 
 
 def _process(file_submitted: UploadFile, metadata: dict) -> None:
