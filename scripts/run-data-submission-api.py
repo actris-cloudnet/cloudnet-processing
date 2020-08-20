@@ -32,7 +32,6 @@ async def create_upload_file(background_tasks: BackgroundTasks,
             'filename': ntpath.basename(file_submitted.filename)}
     _check_hash(hashSum, file_submitted)
     _put_metadata(meta, credentials)
-    meta['site'] = credentials.username
     background_tasks.add_task(_process, file_submitted, meta)
     return {"message": "File submission successful!"}
 
@@ -48,8 +47,7 @@ def _check_hash(reference_hash: str, file_obj: UploadFile) -> None:
 
 def _put_metadata(meta: dict, credentials) -> None:
     root = _read_conf()['main']['METADATASERVER']['url']
-    url = path.join(root, 'protected', 'metadata', meta['hashSum'])
-    meta['status'] = 'uploaded'
+    url = path.join(root, 'metadata', meta['hashSum'])
     res = requests.put(url, data=meta, auth=(credentials.username, credentials.password))
     if str(res.status_code) == '200':
         raise HTTPException(status_code=200, detail="File already exists")
@@ -59,7 +57,7 @@ def _put_metadata(meta: dict, credentials) -> None:
 
 def _post_hash(hash_sum: str) -> None:
     root = _read_conf()['main']['METADATASERVER']['url']
-    url = path.join(root, 'protected', 'metadata', hash_sum)
+    url = path.join(root, 'metadata', hash_sum)
     requests.post(url, data={'status': 'uploaded'})
 
 
