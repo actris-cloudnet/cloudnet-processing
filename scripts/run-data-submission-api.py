@@ -29,9 +29,9 @@ async def create_upload_file(background_tasks: BackgroundTasks,
                              measurementDate: str = Form(...), product: str = Form(...)):
     """Submit file with metadata to Cloudnet data portal."""
     meta = {'hashSum': hashSum, 'measurementDate': measurementDate, 'product': product,
-            'filename': ntpath.basename(file_submitted.filename)}
+            'filename': ntpath.basename(file_submitted.filename), 'site': credentials.username}
     _check_hash(hashSum, file_submitted)
-    _put_metadata(meta, credentials)
+    _put_metadata(meta)
     background_tasks.add_task(_process, file_submitted, meta)
     return {"message": "File submission successful!"}
 
@@ -45,10 +45,10 @@ def _check_hash(reference_hash: str, file_obj: UploadFile) -> None:
         raise HTTPException(status_code=400, detail="Unexpected hash in the submitted file")
 
 
-def _put_metadata(meta: dict, credentials) -> None:
+def _put_metadata(meta: dict) -> None:
     root = _read_conf()['main']['METADATASERVER']['url']
     url = path.join(root, 'metadata', meta['hashSum'])
-    res = requests.put(url, json=meta, auth=(credentials.username, credentials.password))
+    res = requests.put(url, json=meta)
     if str(res.status_code) == '200':
         raise HTTPException(status_code=200, detail="File already exists")
     if str(res.status_code) != '201':
