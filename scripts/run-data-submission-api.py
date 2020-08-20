@@ -30,8 +30,8 @@ async def create_upload_file(background_tasks: BackgroundTasks,
     """Submit file with metadata to Cloudnet data portal."""
     meta = {'hashSum': hashSum, 'measurementDate': measurementDate, 'product': product,
             'filename': ntpath.basename(file_submitted.filename), 'site': credentials.username}
-    _check_hash(hashSum, file_submitted)
     _put_metadata(meta)
+    _check_hash(hashSum, file_submitted)
     background_tasks.add_task(_process, file_submitted, meta)
     return {"message": "File submission successful!"}
 
