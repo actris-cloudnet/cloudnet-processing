@@ -40,12 +40,6 @@ def main():
 
     remove_dir('tests/data/input/granada/')
 
-    # files = {'file_submitted': (full_path,
-    #                             open(full_path, 'rb'),
-    #                             'application/x-netcdf',
-    #                             {'Content-Type': 'multipart/form-data', 'accept': 'application/json'})
-    #          }
-
     start_server(5000, 'tests/data/server/metadata/', f'{SCRIPT_PATH}/md.log')
     start_server(5001, 'tests/data/server/pid/', f'{SCRIPT_PATH}/pid.log')
 
@@ -61,6 +55,7 @@ def main():
     pytest.main(['-v', 'tests/e2e/data_submission/tests.py'])
 
     remove_dir('tests/data/input/granada/')
+
 
 if __name__ == "__main__":
     main()
