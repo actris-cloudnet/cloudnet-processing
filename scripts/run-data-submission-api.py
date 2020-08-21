@@ -23,8 +23,7 @@ ARGS = parser.parse_args()
 
 
 @app.post("/data/")
-async def create_upload_file(background_tasks: BackgroundTasks,
-                             credentials: HTTPBasicCredentials = Depends(security),
+async def create_upload_file(credentials: HTTPBasicCredentials = Depends(security),
                              file_submitted: UploadFile = File(...), hashSum: str = Form(...),
                              measurementDate: str = Form(...), product: str = Form(...)):
     """Submit file with metadata to Cloudnet data portal."""
@@ -33,8 +32,8 @@ async def create_upload_file(background_tasks: BackgroundTasks,
     config = _read_conf(meta['site'])
     _put_metadata(meta, config)
     _check_hash(hashSum, file_submitted)
-    folder = _save_file_to_correct_folder(meta, file_submitted, config)
-    background_tasks.add_task(_process, folder, meta, config)
+    _save_file_to_correct_folder(meta, file_submitted, config)
+    _post_hash(config, meta['hashSum'])
     return {"message": "File submission successful!"}
 
 
@@ -57,11 +56,9 @@ def _check_hash(reference_hash: str, file_obj: UploadFile) -> None:
         raise HTTPException(status_code=400, detail="Unexpected hash in the submitted file")
 
 
-def _save_file_to_correct_folder(meta: dict, file_obj: UploadFile, config: dict) -> str:
+def _save_file_to_correct_folder(meta: dict, file_obj: UploadFile, config: dict) -> None:
     partial_path, full_path = _create_folder(config, meta)
     _save_file(file_obj, full_path)
-    _post_hash(config, meta['hashSum'])
-    return partial_path
 
 
 def _create_folder(config: dict, meta: dict) -> (str, str):
@@ -70,33 +67,24 @@ def _create_folder(config: dict, meta: dict) -> (str, str):
     root = path.join(config['main']['PATH']['input'], meta['site'], 'uncalibrated', instrument)
     yyyy, mm, dd = meta['measurementDate'].split('-')
     full_path = path.join(root, yyyy, mm, dd)
-    print(full_path)
     os.makedirs(full_path, exist_ok=True)
     return root, full_path
 
 
 def _save_file(file_obj: UploadFile, folder: str) -> None:
     filename = ntpath.basename(file_obj.filename)
-    file = open(path.join(folder, filename), 'wb+')
-    shutil.copyfileobj(file_obj.file, file)
-    file.close()
+    try:
+        with open(path.join(folder, filename), 'wb+') as file:
+            shutil.copyfileobj(file_obj.file, file)
+    except IOError as e:
+        # What should we do here?
+        print(e)
 
 
 def _post_hash(config: dict, hash_sum: str) -> None:
     root = config['main']['METADATASERVER']['url']
     url = path.join(root, 'metadata', hash_sum)
     requests.post(url, json={'status': 'uploaded'})
-
-
-def _process(folder: str, metadata: dict, config: dict) -> None:
-    if 'chm15k' in folder:
-        subprocess.check_call(['python3', 'scripts/concat-lidar.py', folder])
-    start_date = metadata['measurementDate']
-    stop_date = process_utils.get_date_from_past(-1, start_date)
-    subprocess.check_call(['python3', 'scripts/process-cloudnet.py', metadata['site'],
-                           f"--start={start_date}", f"--stop={stop_date}"])
-    output_path = path.join(config['main']['PATH']['output'], metadata['site'])
-    subprocess.check_call(['python3', 'scripts/plot-quicklooks.py', output_path])
 
 
 def _read_conf(site=None) -> dict:
