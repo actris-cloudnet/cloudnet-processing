@@ -1,8 +1,4 @@
 import os
-import subprocess
-
-import pytest
-
 
 script_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -21,3 +17,12 @@ class TestDataSubmission:
         n_files = 3
         with open(f'{script_path}/md.log', 'r') as file:
             assert file.read().count('POST') == n_files
+
+    def test_saves_files(self):
+        dirs = ['chm15k', 'ecmwf', 'rpg-fmcw-94']
+        files = ['chm15k_20200405-1ed6.nc', '20200405_granada_ecmwf-8ea4.nc', '200405_020000_P06_ZEN-5399.LV1']
+        sizes = [11357662, 501460, 4282656]
+        for (dir, file, size) in zip(dirs, files, sizes):
+            path = f'tests/data/input/granada/uncalibrated/{dir}/2020/04/05/{file}'
+            assert os.path.isfile(path)
+            assert os.stat(path).st_size == size
