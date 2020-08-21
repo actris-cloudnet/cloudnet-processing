@@ -30,10 +30,22 @@ async def create_upload_file(background_tasks: BackgroundTasks,
     """Submit file with metadata to Cloudnet data portal."""
     meta = {'hashSum': hashSum, 'measurementDate': measurementDate, 'product': product,
             'filename': ntpath.basename(file_submitted.filename), 'site': credentials.username}
-    _put_metadata(meta)
+    config = _read_conf(meta['site'])
+    _put_metadata(meta, config)
     _check_hash(hashSum, file_submitted)
-    background_tasks.add_task(_process, file_submitted, meta)
+    folder = _save_file_to_correct_folder(meta, file_submitted, config)
+    background_tasks.add_task(_process, folder, meta, config)
     return {"message": "File submission successful!"}
+
+
+def _put_metadata(meta: dict, config: dict) -> None:
+    root = config['main']['METADATASERVER']['url']
+    url = path.join(root, 'metadata', meta['hashSum'])
+    res = requests.put(url, json=meta)
+    if str(res.status_code) == '200':
+        raise HTTPException(status_code=200, detail="File already exists")
+    if str(res.status_code) != '201':
+        raise HTTPException(status_code=int(res.status_code), detail=res.json())
 
 
 def _check_hash(reference_hash: str, file_obj: UploadFile) -> None:
@@ -45,52 +57,46 @@ def _check_hash(reference_hash: str, file_obj: UploadFile) -> None:
         raise HTTPException(status_code=400, detail="Unexpected hash in the submitted file")
 
 
-def _put_metadata(meta: dict) -> None:
-    root = _read_conf()['main']['METADATASERVER']['url']
-    url = path.join(root, 'metadata', meta['hashSum'])
-    res = requests.put(url, json=meta)
-    if str(res.status_code) == '200':
-        raise HTTPException(status_code=200, detail="File already exists")
-    if str(res.status_code) != '201':
-        raise HTTPException(status_code=int(res.status_code), detail=res.json())
+def _save_file_to_correct_folder(meta: dict, file_obj: UploadFile, config: dict) -> str:
+    partial_path, full_path = _create_folder(config, meta)
+    _save_file(file_obj, full_path)
+    _post_hash(config, meta['hashSum'])
+    return partial_path
 
 
-def _post_hash(hash_sum: str) -> None:
-    root = _read_conf()['main']['METADATASERVER']['url']
+def _create_folder(config: dict, meta: dict) -> (str, str):
+    product = meta['product']
+    instrument = config['site']['INSTRUMENTS'][product]
+    root = path.join(config['main']['PATH']['input'], meta['site'], 'uncalibrated', instrument)
+    yyyy, mm, dd = meta['measurementDate'].split('-')
+    full_path = path.join(root, yyyy, mm, dd)
+    print(full_path)
+    os.makedirs(full_path, exist_ok=True)
+    return root, full_path
+
+
+def _save_file(file_obj: UploadFile, folder: str) -> None:
+    filename = ntpath.basename(file_obj.filename)
+    file = open(path.join(folder, filename), 'wb+')
+    shutil.copyfileobj(file_obj.file, file)
+    file.close()
+
+
+def _post_hash(config: dict, hash_sum: str) -> None:
+    root = config['main']['METADATASERVER']['url']
     url = path.join(root, 'metadata', hash_sum)
     requests.post(url, json={'status': 'uploaded'})
 
 
-def _process(file_submitted: UploadFile, metadata: dict) -> None:
-    config = _read_conf(metadata['site'])
-    partial_path, full_path = _create_folder(config, metadata)
-    _save_file(file_submitted, full_path)
-    _post_hash(metadata['hashSum'])
-    if 'chm15k' in partial_path:
-        subprocess.check_call(['python3', 'scripts/concat-lidar.py', partial_path])
+def _process(folder: str, metadata: dict, config: dict) -> None:
+    if 'chm15k' in folder:
+        subprocess.check_call(['python3', 'scripts/concat-lidar.py', folder])
     start_date = metadata['measurementDate']
     stop_date = process_utils.get_date_from_past(-1, start_date)
     subprocess.check_call(['python3', 'scripts/process-cloudnet.py', metadata['site'],
                            f"--start={start_date}", f"--stop={stop_date}"])
     output_path = path.join(config['main']['PATH']['output'], metadata['site'])
     subprocess.check_call(['python3', 'scripts/plot-quicklooks.py', output_path])
-
-
-def _create_folder(config: dict, metadata: dict) -> (str, str):
-    product = metadata['product']
-    instrument = config['site']['INSTRUMENTS'][product]
-    root = path.join(config['main']['PATH']['input'], metadata['site'], 'uncalibrated', instrument)
-    yyyy, mm, dd = metadata['measurementDate'].split('-')
-    full_path = path.join(root, yyyy, mm, dd)
-    os.makedirs(full_path, exist_ok=True)
-    return root, full_path
-
-
-def _save_file(file_submitted: UploadFile, folder: str) -> None:
-    filename = ntpath.basename(file_submitted.filename)
-    file = open(path.join(folder, filename), 'wb+')
-    shutil.copyfileobj(file_submitted.file, file)
-    file.close()
 
 
 def _read_conf(site=None) -> dict:
