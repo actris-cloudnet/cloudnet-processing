@@ -1,4 +1,5 @@
 import os
+from os import path
 import fnmatch
 import datetime
 import configparser
@@ -6,6 +7,7 @@ import hashlib
 import requests
 from cloudnetpy.utils import get_time
 from cloudnetpy.plotting.plot_meta import ATTRIBUTES as ATTR
+from collections import namedtuple
 
 
 def read_site_info(site_name):
@@ -51,6 +53,18 @@ def get_date_from_past(n, reference_date=None):
     reference = reference_date or get_time().split()[0]
     date = date_string_to_date(reference) - datetime.timedelta(n)
     return str(date)
+
+
+def read_site_configs(args):
+    conf_dir = args.config_dir
+    files = [f for f in os.listdir(conf_dir) if path.isfile(path.join(conf_dir, f))]
+    files = [f for f in files if f.endswith('.ini') and f != 'main.ini']
+    out = {}
+    for file in files:
+        site = file[:file.index(".")]
+        args = namedtuple('args', ['config_dir', 'site'])(args.config_dir, (site, ))
+        out[site] = read_conf(args)
+    return out
 
 
 def read_conf(args) -> dict:
