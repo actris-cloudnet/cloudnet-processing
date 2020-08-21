@@ -76,9 +76,8 @@ def _save_file(file_obj: UploadFile, folder: str) -> None:
     try:
         with open(path.join(folder, filename), 'wb+') as file:
             shutil.copyfileobj(file_obj.file, file)
-    except IOError as e:
-        # What should we do here?
-        print(e)
+    except IOError:
+        raise HTTPException(status_code=500, detail="File saving failed.")
 
 
 def _post_hash(config: dict, hash_sum: str) -> None:
