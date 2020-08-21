@@ -57,8 +57,8 @@ def _check_hash(reference_hash: str, file_obj: UploadFile) -> None:
 
 
 def _save_file_to_correct_folder(meta: dict, file_obj: UploadFile, config: dict) -> None:
-    partial_path, full_path = _create_folder(config, meta)
-    _save_file(file_obj, full_path)
+    folder = _create_folder(config, meta)
+    _save_file(file_obj, folder)
 
 
 def _create_folder(config: dict, meta: dict) -> (str, str):
@@ -68,7 +68,7 @@ def _create_folder(config: dict, meta: dict) -> (str, str):
     yyyy, mm, dd = meta['measurementDate'].split('-')
     full_path = path.join(root, yyyy, mm, dd)
     os.makedirs(full_path, exist_ok=True)
-    return root, full_path
+    return full_path
 
 
 def _save_file(file_obj: UploadFile, folder: str) -> None:
