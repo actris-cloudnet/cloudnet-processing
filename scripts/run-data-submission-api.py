@@ -2,13 +2,12 @@
 import argparse
 import os
 import shutil
-import subprocess
 from os import path
 import hashlib
 import ntpath
 import requests
 import uvicorn
-from fastapi import FastAPI, BackgroundTasks, File, Form, UploadFile, HTTPException, Depends
+from fastapi import FastAPI, File, Form, UploadFile, HTTPException, Depends
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from data_processing import utils as process_utils
 
@@ -27,6 +26,7 @@ async def create_upload_file(credentials: HTTPBasicCredentials = Depends(securit
                              file_submitted: UploadFile = File(...), hashSum: str = Form(...),
                              measurementDate: str = Form(...), product: str = Form(...)):
     """Submit file with metadata to Cloudnet data portal."""
+    file_submitted.filename = process_utils.add_hash(file_submitted.filename, hashSum)
     meta = {'hashSum': hashSum, 'measurementDate': measurementDate, 'product': product,
             'filename': ntpath.basename(file_submitted.filename), 'site': credentials.username}
     config = _read_conf(meta['site'])

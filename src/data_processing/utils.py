@@ -137,3 +137,11 @@ def sha256sum(filename: str) -> str:
         for byte_block in iter(lambda: f.read(4096), b""):
             hash_sum.update(byte_block)
     return hash_sum.hexdigest()
+
+
+def add_hash(filename: str, hash_sum: str) -> str:
+    hash_to_name = hash_sum[:4]
+    parts = filename.split('.')
+    if len(parts) == 1:
+        return f"{filename}-{hash_to_name}"
+    return f"{''.join(parts[:-1])}-{hash_to_name}.{parts[-1]}"
