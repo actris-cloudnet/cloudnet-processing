@@ -14,8 +14,8 @@ SCRIPT_PATH = path.dirname(path.realpath(__file__))
 test_files = [{
     'name': 'chm15k_20200405.nc',
     'hashSum': '1ed679842745d1b1809c63d203a0c2bfd2f2b43e15123b306ea9f7ec4c089b71',
-    "measurementDate":"2020-04-05",
-    "product":"radar",
+    "measurementDate": "2020-04-05",
+    "product": "lidar",
     "site": "granada"
 },{
     'name': '20200405_granada_ecmwf.nc',
