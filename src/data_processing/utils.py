@@ -55,6 +55,14 @@ def get_date_from_past(n, reference_date=None):
     return str(date)
 
 
+def read_main_conf(args):
+    """Read data-processing main config-file."""
+    config_path = f'{args.config_dir}/main.ini'
+    config = configparser.ConfigParser()
+    config.read_file(open(config_path, 'r'))
+    return config
+
+
 def read_site_configs(args):
     conf_dir = args.config_dir
     files = [f for f in os.listdir(conf_dir) if path.isfile(path.join(conf_dir, f))]
