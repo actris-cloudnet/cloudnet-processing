@@ -16,17 +16,17 @@ parser.add_argument('--config-dir', type=str, metavar='/FOO/BAR',
                     default='./config')
 ARGS = parser.parse_args()
 
-site_configs = process_utils.read_site_configs(ARGS)
-api = DataSubmissionApi(site_configs)
+config = process_utils.read_main_conf(ARGS)
+api = DataSubmissionApi(config)
 
 
 @app.post("/data/")
 async def create_upload_file(credentials: HTTPBasicCredentials = Depends(security),
                              file_submitted: UploadFile = File(...), hashSum: str = Form(...),
-                             measurementDate: str = Form(...), product: str = Form(...)):
+                             measurementDate: str = Form(...), instrument: str = Form(...)):
     """Submit file with metadata to Cloudnet data portal."""
     file_submitted.filename = process_utils.add_hash(file_submitted.filename, hashSum)
-    meta = {'hashSum': hashSum, 'measurementDate': measurementDate, 'product': product,
+    meta = {'hashSum': hashSum, 'measurementDate': measurementDate, 'instrument': instrument,
             'filename': ntpath.basename(file_submitted.filename), 'site': credentials.username}
     api.put_metadata(meta)
     api.check_hash(meta, file_submitted)
