@@ -46,8 +46,9 @@ def test_get_date_from_past(n, input_date, result):
 @pytest.mark.parametrize("filename, hash_sum, result", [
     ('abc.nc', 'xyz', 'abc-xyz.nc'),
     ('abc', 'xyz', 'abc-xyz'),
+    ('xyz', 'aaaaaaaaaaaaaaaabbccdd', 'xyz-aaaaaaaaaaaaaaaabb'),
 ])
-def test_get_date_from_past(filename, hash_sum, result):
+def test_add_hash(filename, hash_sum, result):
     assert utils.add_hash(filename, hash_sum) == result
 
 
