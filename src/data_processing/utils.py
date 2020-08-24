@@ -63,18 +63,6 @@ def read_main_conf(args):
     return config
 
 
-def read_site_configs(args):
-    conf_dir = args.config_dir
-    files = [f for f in os.listdir(conf_dir) if path.isfile(path.join(conf_dir, f))]
-    files = [f for f in files if f.endswith('.ini') and f != 'main.ini']
-    out = {}
-    for file in files:
-        site = file[:file.index(".")]
-        args = namedtuple('args', ['config_dir', 'site'])(args.config_dir, (site, ))
-        out[site] = read_conf(args)
-    return out
-
-
 def read_conf(args) -> dict:
     conf_dir = args.config_dir
 
