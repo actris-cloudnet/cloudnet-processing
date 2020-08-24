@@ -20,9 +20,11 @@ class TestDataSubmission:
 
     def test_saves_files(self):
         dirs = ['chm15k', 'ecmwf', 'rpg-fmcw-94']
-        files = ['chm15k_20200405-1ed6.nc', '20200405_granada_ecmwf-8ea4.nc', '200405_020000_P06_ZEN-5399.LV1']
+        files = ['chm15k_20200405-1ed679842745d1b180.nc',
+                 '20200405_granada_ecmwf-8ea4732a1234f66c37.nc',
+                 '200405_020000_P06_ZEN-539969323e9a8cfb60.LV1']
         sizes = [11357662, 501460, 4282656]
         for (dir, file, size) in zip(dirs, files, sizes):
-            path = f'tests/data/input/granada/uncalibrated/{dir}/2020/04/05/{file}'
+            path = f'tests/data/api_files/granada/{dir}/2020/04/05/{file}'
             assert os.path.isfile(path)
             assert os.stat(path).st_size == size
