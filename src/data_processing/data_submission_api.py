@@ -11,13 +11,14 @@ from fastapi import UploadFile, HTTPException
 class DataSubmissionApi:
     """Class handling data submissions to Cloudnet data portal."""
 
-    def __init__(self, config):
+    def __init__(self, config, session=requests.Session()):
         self.config = config
         self._meta_server = self.config['METADATASERVER']['url']
+        self._session = session
 
     def put_metadata(self, meta: dict) -> None:
         url = path.join(self._meta_server, 'metadata', meta['hashSum'])
-        res = requests.put(url, json=meta)
+        res = self._session.put(url, json=meta)
         if str(res.status_code) == '200':
             raise HTTPException(status_code=200, detail="File already exists")
         if str(res.status_code) != '201':
@@ -25,7 +26,7 @@ class DataSubmissionApi:
 
     def post_hash(self, meta: dict) -> None:
         url = path.join(self._meta_server, 'metadata', meta['hashSum'])
-        requests.post(url, json={'status': 'uploaded'})
+        self._session.post(url, json={'status': 'uploaded'})
 
     def save_file(self, meta: dict, file_obj: UploadFile) -> None:
         folder = self._create_folder(meta)
