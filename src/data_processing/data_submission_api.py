@@ -16,16 +16,14 @@ class DataSubmissionApi:
         self._meta_server = self.config['METADATASERVER']['url']
         self._session = session
 
-    def put_metadata(self, meta: dict) -> None:
-        url = path.join(self._meta_server, 'metadata', meta['hashSum'])
+    def put_metadata(self, url: str, meta: dict) -> None:
         res = self._session.put(url, json=meta)
         if str(res.status_code) == '200':
             raise HTTPException(status_code=200, detail="File already exists")
         if str(res.status_code) != '201':
             raise HTTPException(status_code=int(res.status_code), detail=res.json())
 
-    def update_metadata_status_to_processed(self, meta: dict) -> None:
-        url = path.join(self._meta_server, 'metadata', meta['hashSum'])
+    def update_metadata_status_to_processed(self, url: str) -> None:
         self._session.post(url, json={'status': 'uploaded'})
 
     def save_file(self, meta: dict, file_obj: UploadFile) -> None:
@@ -38,6 +36,10 @@ class DataSubmissionApi:
         full_path = path.join(root, yyyy, mm, dd)
         os.makedirs(full_path, exist_ok=True)
         return full_path
+
+    def construct_url_from_meta(self, meta: dict) -> str:
+        metadata_id = meta['hashSum'][:18]
+        return path.join(self._meta_server, 'metadata', metadata_id)
 
     @staticmethod
     def check_hash(meta: dict, file_obj: UploadFile) -> None:

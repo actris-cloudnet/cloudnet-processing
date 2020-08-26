@@ -28,10 +28,11 @@ async def create_upload_file(credentials: HTTPBasicCredentials = Depends(securit
     file_submitted.filename = process_utils.add_hash(file_submitted.filename, hashSum)
     meta = {'hashSum': hashSum, 'measurementDate': measurementDate, 'instrument': instrument,
             'filename': ntpath.basename(file_submitted.filename), 'site': credentials.username}
-    api.put_metadata(meta)
+    md_url = api.construct_url_from_meta(meta)
+    api.put_metadata(md_url, meta)
     api.check_hash(meta, file_submitted)
     api.save_file(meta, file_submitted)
-    api.update_metadata_status_to_processed(meta)
+    api.update_metadata_status_to_processed(md_url)
     return {"message": "File submission successful!"}
 
 
