@@ -31,7 +31,7 @@ async def create_upload_file(credentials: HTTPBasicCredentials = Depends(securit
     api.put_metadata(meta)
     api.check_hash(meta, file_submitted)
     api.save_file(meta, file_submitted)
-    api.post_hash(meta)
+    api.update_metadata_status_to_processed(meta)
     return {"message": "File submission successful!"}
 
 

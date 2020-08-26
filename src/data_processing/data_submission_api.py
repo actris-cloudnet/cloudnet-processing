@@ -24,7 +24,7 @@ class DataSubmissionApi:
         if str(res.status_code) != '201':
             raise HTTPException(status_code=int(res.status_code), detail=res.json())
 
-    def post_hash(self, meta: dict) -> None:
+    def update_metadata_status_to_processed(self, meta: dict) -> None:
         url = path.join(self._meta_server, 'metadata', meta['hashSum'])
         self._session.post(url, json={'status': 'uploaded'})
 
