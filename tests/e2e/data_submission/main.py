@@ -54,7 +54,7 @@ def main():
 
     pytest.main(['-v', 'tests/e2e/data_submission/tests.py'])
 
-    #remove_dir(api_files_dir)
+    remove_dir(api_files_dir)
 
 
 if __name__ == "__main__":
