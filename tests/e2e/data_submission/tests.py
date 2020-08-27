@@ -25,6 +25,6 @@ class TestDataSubmission:
                  '200405_020000_P06_ZEN-539969323e9a8cfb60.LV1']
         sizes = [11357662, 501460, 4282656]
         for (dir, file, size) in zip(dirs, files, sizes):
-            path = f'tests/data/api_files/granada/{dir}/2020/04/05/{file}'
+            path = f'tests/data/api_files/granada/uncalibrated/{dir}/2020/04/05/{file}'
             assert os.path.isfile(path)
             assert os.stat(path).st_size == size

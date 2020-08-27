@@ -31,7 +31,7 @@ class DataSubmissionApi:
         self._save(file_obj, folder)
 
     def _create_folder(self, meta: dict) -> (str, str):
-        root = path.join(self.config['PATH']['api_files'], meta['site'], meta['instrument'])
+        root = path.join(self.config['PATH']['api_files'], meta['site'], 'uncalibrated', meta['instrument'])
         yyyy, mm, dd = meta['measurementDate'].split('-')
         full_path = path.join(root, yyyy, mm, dd)
         os.makedirs(full_path, exist_ok=True)
