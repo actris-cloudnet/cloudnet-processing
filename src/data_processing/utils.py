@@ -1,10 +1,13 @@
 import os
+from os import path
 import fnmatch
 import datetime
 import configparser
+import hashlib
 import requests
 from cloudnetpy.utils import get_time
 from cloudnetpy.plotting.plot_meta import ATTRIBUTES as ATTR
+from collections import namedtuple
 
 
 def read_site_info(site_name):
@@ -52,7 +55,15 @@ def get_date_from_past(n, reference_date=None):
     return str(date)
 
 
-def read_conf(args):
+def read_main_conf(args):
+    """Read data-processing main config-file."""
+    config_path = f'{args.config_dir}/main.ini'
+    config = configparser.ConfigParser()
+    config.read_file(open(config_path, 'r'))
+    return config
+
+
+def read_conf(args) -> dict:
     conf_dir = args.config_dir
 
     def _read(conf_type):
@@ -127,3 +138,20 @@ def get_plottable_variables_info(cloudnet_file_type):
 def get_var_id(cloudnet_file_type, field):
     """Return identifier for variable / Cloudnet file combination."""
     return f"{cloudnet_file_type}-{field}"
+
+
+def sha256sum(filename: str) -> str:
+    """Calculates hash of file using sha-256."""
+    hash_sum = hashlib.sha256()
+    with open(filename, "rb") as f:
+        for byte_block in iter(lambda: f.read(4096), b""):
+            hash_sum.update(byte_block)
+    return hash_sum.hexdigest()
+
+
+def add_hash_to_filename(filename: str, hash_sum: str) -> str:
+    hash_to_name = hash_sum[:18]
+    parts = filename.split('.')
+    if len(parts) == 1:
+        return f"{filename}-{hash_to_name}"
+    return f"{''.join(parts[:-1])}-{hash_to_name}.{parts[-1]}"

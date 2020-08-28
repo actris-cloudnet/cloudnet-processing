@@ -37,9 +37,19 @@ def test_date_string_to_date():
     (0, '2020-05-20', '2020-05-20'),
     (5, '2020-05-20', '2020-05-15'),
     (1, '2020-01-01', '2019-12-31'),
+    (-1, '2020-01-10', '2020-01-11'),
 ])
 def test_get_date_from_past(n, input_date, result):
     assert utils.get_date_from_past(n, input_date) == result
+
+
+@pytest.mark.parametrize("filename, hash_sum, result", [
+    ('abc.nc', 'xyz', 'abc-xyz.nc'),
+    ('abc', 'xyz', 'abc-xyz'),
+    ('xyz', 'aaaaaaaaaaaaaaaabbccdd', 'xyz-aaaaaaaaaaaaaaaabb'),
+])
+def test_add_hash(filename, hash_sum, result):
+    assert utils.add_hash_to_filename(filename, hash_sum) == result
 
 
 def test_get_plottable_variables_info():
@@ -69,3 +79,10 @@ def test_read_conf_3():
     conf = utils.read_conf(args)
     assert conf['main']['PATH']['input'] == '/my/input'
     assert conf['main']['PATH']['output'] == '/my/output'
+
+
+def test_read_main_conf():
+    Args = namedtuple('args', 'config_dir')
+    args = Args(config_dir=f"{test_file_path}/../../config")
+    conf = utils.read_main_conf(args)
+    assert 'received_api_files' in conf['PATH']
