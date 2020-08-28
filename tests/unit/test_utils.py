@@ -49,7 +49,7 @@ def test_get_date_from_past(n, input_date, result):
     ('xyz', 'aaaaaaaaaaaaaaaabbccdd', 'xyz-aaaaaaaaaaaaaaaabb'),
 ])
 def test_add_hash(filename, hash_sum, result):
-    assert utils.add_hash(filename, hash_sum) == result
+    assert utils.add_hash_to_filename(filename, hash_sum) == result
 
 
 def test_get_plottable_variables_info():

@@ -22,16 +22,16 @@ api = DataSubmissionApi(config)
 
 @app.post("/data/")
 async def create_upload_file(credentials: HTTPBasicCredentials = Depends(security),
-                             file_submitted: UploadFile = File(...), hashSum: str = Form(...),
+                             file: UploadFile = File(...), hashSum: str = Form(...),
                              measurementDate: str = Form(...), instrument: str = Form(...)):
     """Submit file with metadata to Cloudnet data portal."""
-    file_submitted.filename = process_utils.add_hash(file_submitted.filename, hashSum)
+    file.filename = process_utils.add_hash_to_filename(file.filename, hashSum)
     meta = {'hashSum': hashSum, 'measurementDate': measurementDate, 'instrument': instrument,
-            'filename': ntpath.basename(file_submitted.filename), 'site': credentials.username}
+            'filename': ntpath.basename(file.filename), 'site': credentials.username}
     md_url = api.construct_url_from_meta(meta)
     api.put_metadata(md_url, meta)
-    api.check_hash(meta, file_submitted)
-    api.save_file(meta, file_submitted)
+    api.check_hash(meta, file)
+    api.save_file(meta, file)
     api.update_metadata_status_to_processed(md_url)
     return {"detail": "File submission successful!"}
 

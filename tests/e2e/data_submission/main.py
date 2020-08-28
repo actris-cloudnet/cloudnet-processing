@@ -47,7 +47,7 @@ def main():
         url = f"http://localhost:5701/data/"
         full_path = f"tests/data/input/data_submission/{file['name']}"
         del file['name']
-        res = requests.post(url, data=file, files={'file_submitted': open(full_path, 'rb')}, auth=('granada', 'letmein'))
+        res = requests.post(url, data=file, files={'file': open(full_path, 'rb')}, auth=('granada', 'letmein'))
         print(res.status_code, res.text)
 
     web_server.send_signal(signal.SIGINT)

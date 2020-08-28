@@ -149,7 +149,7 @@ def sha256sum(filename: str) -> str:
     return hash_sum.hexdigest()
 
 
-def add_hash(filename: str, hash_sum: str) -> str:
+def add_hash_to_filename(filename: str, hash_sum: str) -> str:
     hash_to_name = hash_sum[:18]
     parts = filename.split('.')
     if len(parts) == 1:
