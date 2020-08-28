@@ -79,3 +79,10 @@ def test_read_conf_3():
     conf = utils.read_conf(args)
     assert conf['main']['PATH']['input'] == '/my/input'
     assert conf['main']['PATH']['output'] == '/my/output'
+
+
+def test_read_main_conf():
+    Args = namedtuple('args', 'config_dir')
+    args = Args(config_dir=f"{test_file_path}/../../config")
+    conf = utils.read_main_conf(args)
+    assert 'received_api_files' in conf['PATH']
