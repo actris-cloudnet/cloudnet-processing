@@ -12,7 +12,7 @@ from collections import namedtuple
 
 def read_site_info(site_name):
     """Read site information from Cloudnet http API."""
-    url = f"https://altocumulus.fmi.fi/api/sites/"
+    url = f"https://altocumulus.fmi.fi/api/sites?developer"
     sites = requests.get(url=url).json()
     for site in sites:
         if site['id'] == site_name.replace('-', ''):
