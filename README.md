@@ -60,7 +60,7 @@ Optional arguments:
 
 | Short | Long            | Default           | Description         | 
 | :---  | :---            | :---              | :---                |
-| `-h`  | `-help`         |                   | Show help and exit. |
+| `-h`  | `--help`         |                   | Show help and exit. |
 |       | `--model-type`  | `ecmwf`           |  Model type name.   |
 |       | `--config-dir`  | `./config`        | Path to directory containing config files. |
 |       | `--input`       | from `config/main.ini`     | Input directory path.|
@@ -89,13 +89,13 @@ Optional arguments:
 
 | Short | Long            | Default           | Description                                | 
 | :---  | :---            | :---              | :---                                       |
-| `-h`  | `-help`         |                   | Show help and exit. |
+| `-h`  | `--help`        |                   | Show help and exit. |
 |       | `--output`      | same as the positional argument `path` | Output directory. |
-| `-o`  | `--overwrite`   | `False`             | Overwrite data in existing files. |
-|       | `--year`   |              | Limit to certain year only. |
-|       | `--month`   |              | Limit to certain month only. |
-|       | `--day`   |                | Limit to certain day only. |
-| `-l`  | `--limit`   |              | Run only on folders modified within N hours. |
+| `-o`  | `--overwrite`   | `False`           | Overwrite data in existing files. |
+|       | `--year`        |                   | Limit to certain year only. |
+|       | `--month`       |                   | Limit to certain month only. |
+|       | `--day`         |                   | Limit to certain day only. |
+| `-l`  | `--limit`       |                   | Run only on folders modified within N hours. |
 
 Examples:
 ```
@@ -138,7 +138,7 @@ Optional arguments:
 
 | Short | Long            | Default           | Description                                | 
 | :---  | :---            | :---              | :---                                       |
-| `-h`  | `-help`         |                   | Show help and exit. |
+| `-h`  | `--help`        |                   | Show help and exit. |
 |       | `--config-dir`  | `./config`        | Path to directory containing config files. |
 |       | `--start`       | `current day - 7` | Starting date. |
 |       | `--stop`        | `current day - 1 `| Stopping date. |
@@ -168,12 +168,12 @@ Optional arguments:
 
 | Short | Long            | Default          | Description                                | 
 | :---  | :---            | :---             | :---                                       |
-| `-h`  | `-help`         |                  | Show help and exit.                        |
+| `-h`  | `--help`        |                  | Show help and exit.                        |
 |       | `--config-dir`  | `./config`       | Path to directory containing config files. |
 |       | `--start`       | `current day -7` | Starting date. |
 |       | `--stop`        | `current day`    | Stopping date. |
-| `-o`  | `--overwrite`   | `False`            | Overwrite existing images        |
-| `-na`  | `--no-api`     | `False`            | Disable API calls. Useful for testing.     |
+| `-o`  | `--overwrite`   | `False`          | Overwrite existing images        |
+| `-na` | `--no-api`      | `False`          | Disable API calls. Useful for testing.     |
 
 ### `put-missing-files.py`
 Put missing files to database.
@@ -193,7 +193,7 @@ Optional arguments:
 
 | Short | Long             | Default      | Description                                | 
 | :---  | :---             | :---         | :---                                       |
-| `-h`  | `-help`          |              | Show help and exit.                        |
+| `-h`  | `--help`         |              | Show help and exit.                        |
 |       | `--config-dir`   | `./config`   | Path to directory containing config files. |
 
 
@@ -208,7 +208,7 @@ Optional arguments:
 
 | Short | Long             | Default      | Description                                | 
 | :---  | :---             | :---         | :---                                       |
-| `-h`  | `-help`          |              | Show help and exit.                        |
+| `-h`  | `--help`         |              | Show help and exit.                        |
 |       | `--config-dir`   | `./config`   | Path to directory containing config files. |
 
 
