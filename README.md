@@ -37,6 +37,9 @@ Optional arguments:
 |       | `--config-dir`  | `./config`        | Path to directory containing config files. |
 
 
+See [API reference](https://github.com/actris-cloudnet/dataportal/blob/master/docs/data-upload.md) on how to use the 
+data submission API from the client's side.
+
 ### `fix-model-files.py`
 
 Fix Cloudnet model files.
