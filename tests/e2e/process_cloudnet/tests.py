@@ -1,6 +1,7 @@
 import os
 import pytest
 import netCDF4
+from glob import glob
 
 
 class TestCloudnetProcessing:
@@ -19,20 +20,26 @@ class TestCloudnetProcessing:
         assert os.path.isfile(file)
 
     def test_that_creates_calibrated_lidar_file(self):
-        file = '/'.join((self.output, self.site, 'calibrated/chm15k',
-                         self.year, f"{self.date}_{self.site}_chm15k.nc"))
+        file = glob('/'.join((self.output, self.site, 'calibrated/chm15k',
+                         self.year, f"{self.date}_{self.site}_chm15k_*.nc")))
+        assert len(file) == 1
+        file = file[0]
         assert os.path.isfile(file)
         assert netCDF4.Dataset(file).cloudnet_file_type == 'lidar'
 
     def test_that_creates_calibrated_radar_file(self):
-        file = '/'.join((self.output, self.site, 'calibrated/rpg-fmcw-94',
-                         self.year, f"{self.date}_{self.site}_rpg-fmcw-94.nc"))
+        file = glob('/'.join((self.output, self.site, 'calibrated/rpg-fmcw-94',
+                         self.year, f"{self.date}_{self.site}_rpg-fmcw-94_*.nc")))
+        assert len(file) == 1
+        file = file[0]
         assert os.path.isfile(file)
         assert netCDF4.Dataset(file).cloudnet_file_type == 'radar'
 
     def test_that_creates_categorize_file(self):
-        file = '/'.join((self.output, self.site, 'processed/categorize',
-                         self.year, f"{self.date}_{self.site}_categorize.nc"))
+        file = glob('/'.join((self.output, self.site, 'processed/categorize',
+                         self.year, f"{self.date}_{self.site}_categorize_*.nc")))
+        assert len(file) == 1
+        file = file[0]
         assert os.path.isfile(file)
         assert netCDF4.Dataset(file).cloudnet_file_type == 'categorize'
 
@@ -40,8 +47,10 @@ class TestCloudnetProcessing:
         products = ['iwc-Z-T-method', 'lwc-scaled-adiabatic', 'classification']
         file_types = ['iwc', 'lwc', 'classification']
         for product, file_type in zip(products, file_types):
-            file = '/'.join((self.output, self.site, f"products/{product}",
-                             self.year, f"{self.date}_{self.site}_{product}.nc"))
+            file = glob('/'.join((self.output, self.site, f"products/{product}",
+                             self.year, f"{self.date}_{self.site}_{product}_*.nc")))
+            assert len(file) == 1
+            file = file[0]
             assert os.path.isfile(file)
             assert netCDF4.Dataset(file).cloudnet_file_type == file_type
 
