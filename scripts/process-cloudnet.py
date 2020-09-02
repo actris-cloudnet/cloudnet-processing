@@ -87,7 +87,7 @@ def _find_input_file(path, pattern):
     try:
         return process_utils.find_file(path, pattern)
     except FileNotFoundError:
-        raise UncalibratedFileMissing("Can't find uncalibrated input file.")
+        raise UncalibratedFileMissing()
 
 
 def _process_categorize(obj):
@@ -134,18 +134,30 @@ def _is_writable(output_file):
 
 class UncalibratedFileMissing(Exception):
     """Internal exception class."""
+    def __init__(self):
+        self.message = 'Uncalibrated file missing'
+        super().__init__(self.message)
 
 
 class CalibratedFileMissing(Exception):
     """Internal exception class."""
+    def __init__(self):
+        self.message = 'Calibrated file missing'
+        super().__init__(self.message)
 
 
 class CategorizeFileMissing(Exception):
     """Internal exception class."""
+    def __init__(self):
+        self.message = 'Categorize file missing'
+        super().__init__(self.message)
 
 
 class NotWritableFile(Exception):
     """Internal exception class."""
+    def __init__(self):
+        self.message = 'File not writable'
+        super().__init__(self.message)
 
 
 if __name__ == "__main__":
