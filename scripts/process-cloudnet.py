@@ -6,8 +6,12 @@ import importlib
 from cloudnetpy.categorize import generate_categorize
 from cloudnetpy.instruments import rpg2nc, ceilo2nc
 from cloudnetpy import utils
+from requests import HTTPError
+
 from data_processing import metadata_api, file_paths
 import data_processing.utils as process_utils
+
+FILE_EXISTS_AND_NOT_CHANGED = 409
 
 
 def main():
@@ -27,37 +31,52 @@ def main():
         print('Date: ', dvec)
         obj = file_paths.FilePaths(dvec, config, site_info)
 
-        for processing_type in ('lidar', 'radar', 'categorize'):
+        processed_files = {
+            'lidar': '',
+            'radar': '',
+            'categorize': ''
+        }
+
+        for processing_type in processed_files.keys():
             try:
-                res = _process_level1(processing_type, obj)
-                if not ARGS.no_api and res and len(res) > 1:
-                    output_file, uuid = res
+                output_file, uuid = _process_level1(processing_type, obj, processed_files)
+                output_file = _rename_output_file(uuid, output_file)
+                if not ARGS.no_api:
                     md_api.put(uuid, output_file)
+                processed_files[processing_type] = output_file
             except (UncalibratedFileMissing, CalibratedFileMissing, RuntimeError,
                     ValueError, IndexError, TypeError, NotImplementedError,
                     NotWritableFile) as error:
                 print(error)
-                continue
+            except HTTPError as error:
+                print(error)
+                os.remove(output_file)
+                if error.response.status_code != FILE_EXISTS_AND_NOT_CHANGED:
+                    raise error
 
         for product in ('classification', 'iwc-Z-T-method', 'lwc-scaled-adiabatic', 'drizzle'):
             try:
-                res = _process_level2(product, obj)
-                if not ARGS.no_api and res and len(res) > 1:
-                    output_file, uuid = res
+                output_file, uuid = _process_level2(product, obj, processed_files)
+                output_file = _rename_output_file(uuid, output_file)
+                if not ARGS.no_api:
                     md_api.put(uuid, output_file)
             except (CategorizeFileMissing, RuntimeError, ValueError,
                     IndexError, NotWritableFile) as error:
                 print(error)
-                continue
+            except HTTPError as error:
+                print(error)
+                os.remove(output_file)
+                if error.response.status_code != FILE_EXISTS_AND_NOT_CHANGED:
+                    raise error
         print(' ')
 
 
-def _process_level1(process_type, obj):
+def _process_level1(process_type, obj, processed_files):
     module = importlib.import_module(__name__)
-    return getattr(module, f"_process_{process_type}")(obj)
+    return getattr(module, f"_process_{process_type}")(obj, processed_files)
 
 
-def _process_radar(obj):
+def _process_radar(obj, _):
     output_file = obj.build_calibrated_file_name('radar')
     if obj.config['site']['INSTRUMENTS']['radar'] == 'rpg-fmcw-94':
         rpg_path = obj.build_rpg_path()
@@ -69,7 +88,7 @@ def _process_radar(obj):
     raise NotImplementedError
 
 
-def _process_lidar(obj):
+def _process_lidar(obj, _):
     input_path = obj.build_standard_path('uncalibrated', 'lidar')
     input_file = _find_input_file(input_path, f"*{obj.dvec[3:]}*")
     output_file = obj.build_calibrated_file_name('lidar')
@@ -87,13 +106,14 @@ def _find_input_file(path, pattern):
     try:
         return process_utils.find_file(path, pattern)
     except FileNotFoundError:
-        raise UncalibratedFileMissing("Can't find uncalibrated input file.")
+        raise UncalibratedFileMissing()
 
 
-def _process_categorize(obj):
-    input_files = {key: obj.build_calibrated_file_name(key, makedir=False)
-                   for key in ['radar', 'lidar', 'model']}
-    input_files['mwr'] = obj.build_mwr_file_name()
+def _process_categorize(obj, processed_files):
+    input_files = processed_files.copy()
+    input_files['model'] = obj.build_calibrated_file_name('model', makedir=False)
+    input_files['mwr'] = input_files['radar']
+    del input_files['categorize']
     for file in input_files.values():
         if not os.path.isfile(file):
             raise CalibratedFileMissing
@@ -108,8 +128,8 @@ def _process_categorize(obj):
     raise NotWritableFile
 
 
-def _process_level2(product, obj):
-    categorize_file = obj.build_standard_output_file_name()
+def _process_level2(product, obj, processed_files):
+    categorize_file = processed_files['categorize']
     if not os.path.isfile(categorize_file):
         raise CategorizeFileMissing
     output_file = obj.build_standard_output_file_name(product=product)
@@ -132,20 +152,40 @@ def _is_writable(output_file):
     return False
 
 
+def _rename_output_file(uuid: str, output_file: str) -> str:
+    suffix = '_' + uuid[:4]
+    path, extension = os.path.splitext(output_file)
+    new_output_file = f"{path}{suffix}{extension}"
+    os.rename(output_file, new_output_file)
+    return new_output_file
+
+
 class UncalibratedFileMissing(Exception):
     """Internal exception class."""
+    def __init__(self):
+        self.message = 'Uncalibrated file missing'
+        super().__init__(self.message)
 
 
 class CalibratedFileMissing(Exception):
     """Internal exception class."""
+    def __init__(self):
+        self.message = 'Calibrated file missing'
+        super().__init__(self.message)
 
 
 class CategorizeFileMissing(Exception):
     """Internal exception class."""
+    def __init__(self):
+        self.message = 'Categorize file missing'
+        super().__init__(self.message)
 
 
 class NotWritableFile(Exception):
     """Internal exception class."""
+    def __init__(self):
+        self.message = 'File not writable'
+        super().__init__(self.message)
 
 
 if __name__ == "__main__":
