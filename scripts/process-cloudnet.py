@@ -39,8 +39,7 @@ def main():
 
         for processing_type in processed_files.keys():
             try:
-                res = _process_level1(processing_type, obj, processed_files)
-                output_file, uuid = res
+                output_file, uuid = _process_level1(processing_type, obj, processed_files)
                 output_file = _rename_output_file(uuid, output_file)
                 if not ARGS.no_api:
                     md_api.put(uuid, output_file)
@@ -57,8 +56,7 @@ def main():
 
         for product in ('classification', 'iwc-Z-T-method', 'lwc-scaled-adiabatic', 'drizzle'):
             try:
-                res = _process_level2(product, obj, processed_files)
-                output_file, uuid = res
+                output_file, uuid = _process_level2(product, obj, processed_files)
                 output_file = _rename_output_file(uuid, output_file)
                 if not ARGS.no_api:
                     md_api.put(uuid, output_file)
@@ -73,7 +71,7 @@ def main():
         print(' ')
 
 
-def _process_level1(process_type, obj, processed_files={}):
+def _process_level1(process_type, obj, processed_files):
     module = importlib.import_module(__name__)
     return getattr(module, f"_process_{process_type}")(obj, processed_files)
 
@@ -156,8 +154,8 @@ def _is_writable(output_file):
 
 def _rename_output_file(uuid: str, output_file: str) -> str:
     suffix = '_' + uuid[:4]
-    splitfile = os.path.splitext(output_file)
-    new_output_file = splitfile[0] + suffix + splitfile[1]
+    path, extension = os.path.splitext(output_file)
+    new_output_file = f"{path}{suffix}{extension}"
     os.rename(output_file, new_output_file)
     return new_output_file
 
