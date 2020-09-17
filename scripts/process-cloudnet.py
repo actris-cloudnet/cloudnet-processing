@@ -94,7 +94,7 @@ def _process_radar(obj, _):
         rpg_path = obj.build_rpg_path()
         _ = _find_input_file(rpg_path, '*.LV1')
         print("Calibrating rpg-fmcw-94 cloud radar..")
-        uuid = rpg2nc(rpg_path, output_file_temp, obj.site_info, keep_uuid=ARGS.keep_uuid)
+        uuid = rpg2nc(rpg_path, output_file_temp, obj.site_info)
         return output_file_temp, output_file, uuid
     raise NotImplementedError
 
@@ -106,7 +106,7 @@ def _process_lidar(obj, _):
     output_file_temp = _replace_path(output_file, TEMP_DIR.name)
     print(f"Calibrating {obj.config['site']['INSTRUMENTS']['lidar']} lidar..")
     try:
-        uuid = ceilo2nc(input_file, output_file_temp, obj.site_info, keep_uuid=ARGS.keep_uuid)
+        uuid = ceilo2nc(input_file, output_file_temp, obj.site_info)
         return output_file_temp, output_file, uuid
     except RuntimeError as error:
         raise error
@@ -131,7 +131,7 @@ def _process_categorize(obj, processed_files):
     output_file_temp = _replace_path(output_file, TEMP_DIR.name)
     try:
         print("Processing categorize file..")
-        uuid = generate_categorize(input_files, output_file_temp, keep_uuid=ARGS.keep_uuid)
+        uuid = generate_categorize(input_files, output_file_temp)
         return output_file_temp, output_file, uuid
     except RuntimeError as error:
         raise error
@@ -148,7 +148,7 @@ def _process_level2(product, obj, processed_files):
     try:
         print(f"Processing {product} product..")
         fun = getattr(module, f"generate_{product_prefix}")
-        uuid = fun(categorize_file, output_file_temp, keep_uuid=ARGS.keep_uuid)
+        uuid = fun(categorize_file, output_file_temp)
         return output_file_temp, output_file, uuid
     except ValueError:
         raise RuntimeError(f"Something went wrong with {product} processing.")
@@ -217,10 +217,6 @@ if __name__ == "__main__":
                         help='Input folder path. Overrides config/main.ini value.')
     parser.add_argument('--output', type=str, metavar='/FOO/BAR',
                         help='Output folder path. Overrides config/main.ini value.')
-    parser.add_argument('-o', '--overwrite', dest='overwrite', action='store_true',
-                        help='Overwrite data in existing files', default=False)
-    parser.add_argument('-k', '--keep_uuid', dest='keep_uuid', action='store_true',
-                        help='Keep ID of old file even if the data is overwritten', default=True)
     parser.add_argument('-na', '--no-api', dest='no_api', action='store_true',
                         help='Disable API calls. Useful for testing.', default=False)
     parser.add_argument('--new-version', dest='new_version', action='store_true',
