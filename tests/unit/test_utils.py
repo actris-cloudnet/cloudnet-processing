@@ -91,14 +91,27 @@ def test_read_main_conf():
 
 
 @pytest.mark.parametrize("date, result", [
-    ('20201012', 2),
-    ('20201013', 1),
-    ('20201014', 0),
+    ('19800112', 2),
+    ('19800113', 1),
+    ('19800114', 0),
 ])
 def test_count_nc_files_for_date(date, result):
-    f1 = tempfile.TemporaryDirectory(prefix='20201012', suffix='.nc')
-    f2 = tempfile.TemporaryDirectory(prefix='20201012', suffix='.nc')
-    f3 = tempfile.TemporaryDirectory(prefix='20201012', suffix='.txt')
-    f4 = tempfile.TemporaryDirectory(prefix='20201013', suffix='.nc')
+    f1 = tempfile.NamedTemporaryFile(prefix='19800112', suffix='.nc')
+    f2 = tempfile.NamedTemporaryFile(prefix='19800112', suffix='.nc')
+    f3 = tempfile.NamedTemporaryFile(prefix='19800112', suffix='.txt')
+    f4 = tempfile.NamedTemporaryFile(prefix='19800113', suffix='.nc')
     folder = os.path.dirname(f1.name)
     assert utils.count_nc_files_for_date(folder, date) == result
+
+
+def test_add_uuid_to_filename():
+    temp_dir = 'tests/data/temp/'
+    filename = 'kukkuu.nc'
+    os.makedirs(temp_dir, exist_ok=True)
+    filename = os.path.join(temp_dir, filename)
+    open(filename, 'a').close()
+    uuid = 'abcdefgh'
+    new_filename = utils.add_uuid_to_filename(uuid, filename)
+    os.remove(new_filename)
+    os.rmdir(temp_dir)
+    assert new_filename == f"{filename[:-3]}_abcd.nc"
