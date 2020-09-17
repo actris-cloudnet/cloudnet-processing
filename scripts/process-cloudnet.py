@@ -41,6 +41,9 @@ def main():
         }
 
         for processing_type in processed_files.keys():
+
+            n_files = _count_cloudnet_files(processing_type, obj)
+
             try:
                 output_file_temp, output_file, uuid = _process_level1(processing_type, obj, processed_files)
                 output_file = _rename_and_move_to_correct_folder(output_file_temp, output_file, uuid)
@@ -58,6 +61,9 @@ def main():
                     raise error
 
         for product in ('classification', 'iwc-Z-T-method', 'lwc-scaled-adiabatic', 'drizzle'):
+
+            n_files = _count_cloudnet_files(product, obj)
+
             try:
                 output_file_temp, output_file, uuid = _process_level2(product, obj, processed_files)
                 output_file = _rename_and_move_to_correct_folder(output_file_temp, output_file, uuid)
@@ -73,6 +79,14 @@ def main():
                     raise error
         print(' ')
     TEMP_DIR.cleanup()
+
+
+def _count_cloudnet_files(processing_type, obj):
+    if processing_type in ('radar', 'lidar'):
+        path = obj.build_standard_path('calibrated', processing_type)
+    else:
+        path = obj.build_standard_output_path(processing_type)
+    return process_utils.count_nc_files_for_date(path, obj.dvec)
 
 
 def _rename_and_move_to_correct_folder(temp_filename: str, true_filename: str, uuid: str) -> str:
