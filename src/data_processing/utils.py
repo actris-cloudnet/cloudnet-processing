@@ -155,3 +155,10 @@ def add_hash_to_filename(filename: str, hash_sum: str) -> str:
     if len(parts) == 1:
         return f"{filename}-{hash_to_name}"
     return f"{''.join(parts[:-1])}-{hash_to_name}.{parts[-1]}"
+
+
+def count_nc_files_for_date(folder: str, date_str: str) -> int:
+    """Counts number of nc-files for certain date in a folder."""
+    if os.path.isdir(folder):
+        return len(fnmatch.filter(os.listdir(folder), f"{date_str}*.nc"))
+    return 0

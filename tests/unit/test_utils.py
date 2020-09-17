@@ -1,6 +1,8 @@
+import os
 import datetime
 from pathlib import Path
 from collections import namedtuple
+import tempfile
 import pytest
 import data_processing.utils as utils
 
@@ -86,3 +88,17 @@ def test_read_main_conf():
     args = Args(config_dir=f"{test_file_path}/../../config")
     conf = utils.read_main_conf(args)
     assert 'received_api_files' in conf['PATH']
+
+
+@pytest.mark.parametrize("date, result", [
+    ('20201012', 2),
+    ('20201013', 1),
+    ('20201014', 0),
+])
+def test_count_nc_files_for_date(date, result):
+    f1 = tempfile.TemporaryDirectory(prefix='20201012', suffix='.nc')
+    f2 = tempfile.TemporaryDirectory(prefix='20201012', suffix='.nc')
+    f3 = tempfile.TemporaryDirectory(prefix='20201012', suffix='.txt')
+    f4 = tempfile.TemporaryDirectory(prefix='20201013', suffix='.nc')
+    folder = os.path.dirname(f1.name)
+    assert utils.count_nc_files_for_date(folder, date) == result
