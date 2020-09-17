@@ -162,3 +162,12 @@ def count_nc_files_for_date(folder: str, date_str: str) -> int:
     if os.path.isdir(folder):
         return len(fnmatch.filter(os.listdir(folder), f"{date_str}*.nc"))
     return 0
+
+
+def add_uuid_to_filename(uuid: str, filename: str) -> str:
+    """Adds uuid suffix to file."""
+    suffix = f"_{uuid[:4]}"
+    folder, extension = os.path.splitext(filename)
+    new_filename = f"{folder}{suffix}{extension}"
+    os.rename(filename, new_filename)
+    return new_filename
