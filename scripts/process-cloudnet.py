@@ -3,6 +3,7 @@
 import os
 import argparse
 import importlib
+import tempfile
 from cloudnetpy.categorize import generate_categorize
 from cloudnetpy.instruments import rpg2nc, ceilo2nc
 from cloudnetpy import utils
@@ -12,6 +13,8 @@ from data_processing import metadata_api, file_paths
 import data_processing.utils as process_utils
 
 FILE_EXISTS_AND_NOT_CHANGED = 409
+
+TEMP_DIR = tempfile.TemporaryDirectory()
 
 
 def main():
@@ -39,8 +42,8 @@ def main():
 
         for processing_type in processed_files.keys():
             try:
-                output_file, uuid = _process_level1(processing_type, obj, processed_files)
-                output_file = _rename_output_file(uuid, output_file)
+                output_file_temp, output_file, uuid = _process_level1(processing_type, obj, processed_files)
+                output_file = _rename_and_move_to_correct_folder(output_file_temp, output_file, uuid)
                 if not ARGS.no_api:
                     md_api.put(uuid, output_file)
                 processed_files[processing_type] = output_file
@@ -56,8 +59,8 @@ def main():
 
         for product in ('classification', 'iwc-Z-T-method', 'lwc-scaled-adiabatic', 'drizzle'):
             try:
-                output_file, uuid = _process_level2(product, obj, processed_files)
-                output_file = _rename_output_file(uuid, output_file)
+                output_file_temp, output_file, uuid = _process_level2(product, obj, processed_files)
+                output_file = _rename_and_move_to_correct_folder(output_file_temp, output_file, uuid)
                 if not ARGS.no_api:
                     md_api.put(uuid, output_file)
             except (CategorizeFileMissing, RuntimeError, ValueError,
@@ -69,6 +72,14 @@ def main():
                 if error.response.status_code != FILE_EXISTS_AND_NOT_CHANGED:
                     raise error
         print(' ')
+    TEMP_DIR.cleanup()
+
+
+def _rename_and_move_to_correct_folder(temp_filename: str, true_filename: str, uuid: str) -> str:
+    temp_filename = _rename_output_file(uuid, temp_filename)
+    true_filename = _replace_path(temp_filename, os.path.dirname(true_filename))
+    os.rename(temp_filename, true_filename)
+    return true_filename
 
 
 def _process_level1(process_type, obj, processed_files):
@@ -78,15 +89,13 @@ def _process_level1(process_type, obj, processed_files):
 
 def _process_radar(obj, _):
     output_file = obj.build_calibrated_file_name('radar')
+    output_file_temp = _replace_path(output_file, TEMP_DIR.name)
     if obj.config['site']['INSTRUMENTS']['radar'] == 'rpg-fmcw-94':
         rpg_path = obj.build_rpg_path()
         _ = _find_input_file(rpg_path, '*.LV1')
-        if _is_writable(output_file):
-            print("Calibrating rpg-fmcw-94 cloud radar..")
-            return output_file, rpg2nc(rpg_path, output_file, obj.site_info,
-                                       keep_uuid=ARGS.keep_uuid)
-        else:
-            raise NotWritableFile
+        print("Calibrating rpg-fmcw-94 cloud radar..")
+        uuid = rpg2nc(rpg_path, output_file_temp, obj.site_info, keep_uuid=ARGS.keep_uuid)
+        return output_file_temp, output_file, uuid
     raise NotImplementedError
 
 
@@ -94,14 +103,13 @@ def _process_lidar(obj, _):
     input_path = obj.build_standard_path('uncalibrated', 'lidar')
     input_file = _find_input_file(input_path, f"*{obj.dvec[3:]}*")
     output_file = obj.build_calibrated_file_name('lidar')
-    if _is_writable(output_file):
-        print(f"Calibrating {obj.config['site']['INSTRUMENTS']['lidar']} lidar..")
-        try:
-            return output_file, ceilo2nc(input_file, output_file, obj.site_info,
-                                         keep_uuid=ARGS.keep_uuid)
-        except RuntimeError as error:
-            raise error
-    raise NotWritableFile
+    output_file_temp = _replace_path(output_file, TEMP_DIR.name)
+    print(f"Calibrating {obj.config['site']['INSTRUMENTS']['lidar']} lidar..")
+    try:
+        uuid = ceilo2nc(input_file, output_file_temp, obj.site_info, keep_uuid=ARGS.keep_uuid)
+        return output_file_temp, output_file, uuid
+    except RuntimeError as error:
+        raise error
 
 
 def _find_input_file(path, pattern):
@@ -120,14 +128,13 @@ def _process_categorize(obj, processed_files):
         if not os.path.isfile(file):
             raise CalibratedFileMissing
     output_file = obj.build_standard_output_file_name()
-    if _is_writable(output_file):
-        try:
-            print("Processing categorize file..")
-            return output_file, generate_categorize(input_files, output_file,
-                                                    keep_uuid=ARGS.keep_uuid)
-        except RuntimeError as error:
-            raise error
-    raise NotWritableFile
+    output_file_temp = _replace_path(output_file, TEMP_DIR.name)
+    try:
+        print("Processing categorize file..")
+        uuid = generate_categorize(input_files, output_file_temp, keep_uuid=ARGS.keep_uuid)
+        return output_file_temp, output_file, uuid
+    except RuntimeError as error:
+        raise error
 
 
 def _process_level2(product, obj, processed_files):
@@ -135,17 +142,16 @@ def _process_level2(product, obj, processed_files):
     if not os.path.isfile(categorize_file):
         raise CategorizeFileMissing
     output_file = obj.build_standard_output_file_name(product=product)
+    output_file_temp = _replace_path(output_file, TEMP_DIR.name)
     product_prefix = product.split('-')[0]
     module = importlib.import_module(f"cloudnetpy.products.{product_prefix}")
-    if _is_writable(output_file):
-        try:
-            print(f"Processing {product} product..")
-            fun = getattr(module, f"generate_{product_prefix}")
-            return output_file, fun(categorize_file, output_file,
-                                    keep_uuid=ARGS.keep_uuid)
-        except ValueError:
-            raise RuntimeError(f"Something went wrong with {product} processing.")
-    raise NotWritableFile
+    try:
+        print(f"Processing {product} product..")
+        fun = getattr(module, f"generate_{product_prefix}")
+        uuid = fun(categorize_file, output_file_temp, keep_uuid=ARGS.keep_uuid)
+        return output_file_temp, output_file, uuid
+    except ValueError:
+        raise RuntimeError(f"Something went wrong with {product} processing.")
 
 
 def _is_writable(output_file):
@@ -160,6 +166,10 @@ def _rename_output_file(uuid: str, output_file: str) -> str:
     new_output_file = f"{path}{suffix}{extension}"
     os.rename(output_file, new_output_file)
     return new_output_file
+
+
+def _replace_path(filename: str, new_path: str) -> str:
+    return filename.replace(os.path.dirname(filename), new_path)
 
 
 class UncalibratedFileMissing(Exception):
