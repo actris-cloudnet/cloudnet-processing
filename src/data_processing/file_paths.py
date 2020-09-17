@@ -17,12 +17,15 @@ class FilePaths:
         return self._get_nc_name(folder, identifier)
 
     def build_standard_output_file_name(self, product='categorize', makedir=True):
-        folder_id = 'processed' if product == 'categorize' else 'products'
-        root = self.config['main']['PATH']['output']
-        folder = os.path.join(root, self.site_name, folder_id, product, self._year)
+        folder = self.build_standard_output_path(product)
         if makedir:
             os.makedirs(folder, exist_ok=True)
         return self._get_nc_name(folder, product)
+
+    def build_standard_output_path(self, product='categorize'):
+        folder_id = 'processed' if product == 'categorize' else 'products'
+        root = self.config['main']['PATH']['output']
+        return os.path.join(root, self.site_name, folder_id, product, self._year)
 
     def build_standard_path(self, folder_id, instrument_type):
         direction = 'input' if folder_id == 'uncalibrated' else 'output'
