@@ -211,5 +211,7 @@ if __name__ == "__main__":
                         help='Keep ID of old file even if the data is overwritten', default=True)
     parser.add_argument('-na', '--no-api', dest='no_api', action='store_true',
                         help='Disable API calls. Useful for testing.', default=False)
+    parser.add_argument('--new-version', dest='new_version', action='store_true',
+                        help='Process new version.', default=False)
     ARGS = parser.parse_args()
     main()
