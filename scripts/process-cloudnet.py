@@ -85,6 +85,8 @@ def _process_radar(obj, _):
             print("Calibrating rpg-fmcw-94 cloud radar..")
             return output_file, rpg2nc(rpg_path, output_file, obj.site_info,
                                        keep_uuid=ARGS.keep_uuid)
+        else:
+            raise NotWritableFile
     raise NotImplementedError
 
 
