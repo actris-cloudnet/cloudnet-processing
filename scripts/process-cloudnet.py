@@ -4,13 +4,12 @@ import os
 import argparse
 import importlib
 import tempfile
+import cloudnetpy.utils
 from cloudnetpy.categorize import generate_categorize
 from cloudnetpy.instruments import rpg2nc, ceilo2nc
-from cloudnetpy import utils
 from requests import HTTPError
 
-from data_processing import metadata_api, file_paths
-import data_processing.utils as process_utils
+from data_processing import metadata_api, file_paths, utils
 
 FILE_EXISTS_AND_NOT_CHANGED = 409
 
@@ -20,19 +19,19 @@ TEMP_DIR = tempfile.TemporaryDirectory()
 def main():
     """The main function."""
 
-    config = process_utils.read_conf(ARGS)
+    config = utils.read_conf(ARGS)
     site_name = ARGS.site[0]
-    site_info = process_utils.read_site_info(site_name)
+    site_info = utils.read_site_info(site_name)
 
-    start_date = process_utils.date_string_to_date(ARGS.start)
-    stop_date = process_utils.date_string_to_date(ARGS.stop)
+    start_date = utils.date_string_to_date(ARGS.start)
+    stop_date = utils.date_string_to_date(ARGS.stop)
 
     md_api = metadata_api.MetadataApi(config['main']['METADATASERVER']['url'])
 
-    for date in utils.date_range(start_date, stop_date):
-        dvec = date.strftime("%Y%m%d")
-        print('Date: ', dvec)
-        obj = file_paths.FilePaths(dvec, config, site_info)
+    for date in cloudnetpy.utils.date_range(start_date, stop_date):
+        date_str = date.strftime("%Y%m%d")
+        print('Date: ', date_str)
+        obj = file_paths.FilePaths(date_str, config, site_info)
 
         processed_files = {
             'lidar': '',
@@ -86,14 +85,18 @@ def _count_cloudnet_files(processing_type, obj):
         path = obj.build_standard_path('calibrated', processing_type)
     else:
         path = obj.build_standard_output_path(processing_type)
-    return process_utils.count_nc_files_for_date(path, obj.dvec)
+    return utils.count_nc_files_for_date(path, obj.dvec)
 
 
 def _rename_and_move_to_correct_folder(temp_filename: str, true_filename: str, uuid: str) -> str:
-    temp_filename = _rename_output_file(uuid, temp_filename)
+    temp_filename = utils.add_uuid_to_filename(uuid, temp_filename)
     true_filename = _replace_path(temp_filename, os.path.dirname(true_filename))
     os.rename(temp_filename, true_filename)
     return true_filename
+
+
+def _replace_path(filename: str, new_path: str) -> str:
+    return filename.replace(os.path.dirname(filename), new_path)
 
 
 def _process_level1(process_type, obj, processed_files):
@@ -128,7 +131,7 @@ def _process_lidar(obj, _):
 
 def _find_input_file(path, pattern):
     try:
-        return process_utils.find_file(path, pattern)
+        return utils.find_file(path, pattern)
     except FileNotFoundError:
         raise UncalibratedFileMissing()
 
@@ -168,24 +171,6 @@ def _process_level2(product, obj, processed_files):
         raise RuntimeError(f"Something went wrong with {product} processing.")
 
 
-def _is_writable(output_file):
-    if ARGS.overwrite or not os.path.isfile(output_file):
-        return True
-    return False
-
-
-def _rename_output_file(uuid: str, output_file: str) -> str:
-    suffix = '_' + uuid[:4]
-    path, extension = os.path.splitext(output_file)
-    new_output_file = f"{path}{suffix}{extension}"
-    os.rename(output_file, new_output_file)
-    return new_output_file
-
-
-def _replace_path(filename: str, new_path: str) -> str:
-    return filename.replace(os.path.dirname(filename), new_path)
-
-
 class UncalibratedFileMissing(Exception):
     """Internal exception class."""
     def __init__(self):
@@ -223,10 +208,10 @@ if __name__ == "__main__":
                         default='./config')
     parser.add_argument('--start', type=str, metavar='YYYY-MM-DD',
                         help='Starting date. Default is current day - 7.',
-                        default=process_utils.get_date_from_past(7))
+                        default=utils.get_date_from_past(7))
     parser.add_argument('--stop', type=str, metavar='YYYY-MM-DD',
                         help='Stopping date. Default is current day - 1.',
-                        default=process_utils.get_date_from_past(1))
+                        default=utils.get_date_from_past(1))
     parser.add_argument('--input', type=str, metavar='/FOO/BAR',
                         help='Input folder path. Overrides config/main.ini value.')
     parser.add_argument('--output', type=str, metavar='/FOO/BAR',
