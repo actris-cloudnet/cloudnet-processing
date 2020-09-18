@@ -4,6 +4,7 @@ import os
 import argparse
 import importlib
 import tempfile
+import netCDF4
 import cloudnetpy.utils
 from cloudnetpy.categorize import generate_categorize
 from cloudnetpy.instruments import rpg2nc, ceilo2nc
@@ -161,10 +162,17 @@ def _choose_how_to_process(cloudnet_file_type: str, obj: FilePaths) -> (bool, st
     process, file_to_append = False, None
     if ARGS.new_version or n_files == 0:
         process = True
-    elif not ARGS.new_version and n_files == 1:
+    elif not ARGS.new_version and n_files == 1 and _is_volatile(existing_files[0]):
         process = True
         file_to_append = existing_files[0]
     return process, file_to_append
+
+
+def _is_volatile(filename):
+    nc = netCDF4.Dataset(filename)
+    is_missing_pid = not hasattr(nc, 'pid')
+    nc.close()
+    return is_missing_pid
 
 
 def _find_input_file(path: str, pattern: str) -> str:
