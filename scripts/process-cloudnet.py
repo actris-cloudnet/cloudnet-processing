@@ -47,17 +47,18 @@ def main():
                 output_file_temp, output_file, uuid = _process_level1(processing_type, obj, processed_files)
                 output_file = _rename_and_move_to_correct_folder(output_file_temp, output_file, uuid)
                 if not ARGS.no_api:
-                    md_api.put(uuid, output_file)
+                    try:
+                        md_api.put(uuid, output_file)
+                    except HTTPError as error:
+                        print(error)
+                        os.remove(output_file)
+                        if error.response.status_code != FILE_EXISTS_AND_NOT_CHANGED:
+                            raise error
                 processed_files[processing_type] = output_file
             except (UncalibratedFileMissing, CalibratedFileMissing, RuntimeError,
                     ValueError, IndexError, TypeError, NotImplementedError,
                     NotWritableFile) as error:
                 print(error)
-            except HTTPError as error:
-                print(error)
-                os.remove(output_file)
-                if error.response.status_code != FILE_EXISTS_AND_NOT_CHANGED:
-                    raise error
 
         for product in ('classification', 'iwc-Z-T-method', 'lwc-scaled-adiabatic', 'drizzle'):
 
