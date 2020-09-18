@@ -8,13 +8,12 @@ import cloudnetpy.utils
 from cloudnetpy.categorize import generate_categorize
 from cloudnetpy.instruments import rpg2nc, ceilo2nc
 from requests import HTTPError
-
-from data_processing import metadata_api, file_paths, utils
+from data_processing import metadata_api, utils
+from data_processing.file_paths import FilePaths
 
 FILE_EXISTS_AND_NOT_CHANGED = 409
-
 TEMP_DIR = tempfile.TemporaryDirectory()
-
+PRODUCTS = ('classification', 'iwc-Z-T-method', 'lwc-scaled-adiabatic', 'drizzle')
 
 def main():
     """The main function."""
@@ -31,62 +30,105 @@ def main():
     for date in cloudnetpy.utils.date_range(start_date, stop_date):
         date_str = date.strftime("%Y%m%d")
         print('Date: ', date_str)
-        obj = file_paths.FilePaths(date_str, config, site_info)
+        obj = FilePaths(date_str, config, site_info)
 
         processed_files = {
             'lidar': '',
             'radar': '',
             'categorize': ''
         }
-
         for processing_type in processed_files.keys():
+            process, file_to_append = _choose_how_to_process(processing_type, obj)
+            if process:
+                try:
+                    res = _process_level1(processing_type, obj, processed_files, file_to_append)
+                    processed_files[processing_type] = _put_to_database(*res, md_api, file_to_append)
+                except (UncalibratedFileMissing, CalibratedFileMissing, RuntimeError,
+                        ValueError, IndexError, TypeError, NotImplementedError) as error:
+                    print(error)
 
-            n_files = _count_cloudnet_files(processing_type, obj)
-
-            try:
-                output_file_temp, output_file, uuid = _process_level1(processing_type, obj, processed_files)
-                output_file = _rename_and_move_to_correct_folder(output_file_temp, output_file, uuid)
-                if not ARGS.no_api:
-                    try:
-                        md_api.put(uuid, output_file)
-                    except HTTPError as error:
-                        print(error)
-                        os.remove(output_file)
-                        if error.response.status_code != FILE_EXISTS_AND_NOT_CHANGED:
-                            raise error
-                processed_files[processing_type] = output_file
-            except (UncalibratedFileMissing, CalibratedFileMissing, RuntimeError,
-                    ValueError, IndexError, TypeError, NotImplementedError,
-                    NotWritableFile) as error:
-                print(error)
-
-        for product in ('classification', 'iwc-Z-T-method', 'lwc-scaled-adiabatic', 'drizzle'):
-
-            n_files = _count_cloudnet_files(product, obj)
-
-            try:
-                output_file_temp, output_file, uuid = _process_level2(product, obj, processed_files)
-                output_file = _rename_and_move_to_correct_folder(output_file_temp, output_file, uuid)
-                if not ARGS.no_api:
-                    md_api.put(uuid, output_file)
-            except (CategorizeFileMissing, RuntimeError, ValueError,
-                    IndexError, NotWritableFile) as error:
-                print(error)
-            except HTTPError as error:
-                print(error)
-                os.remove(output_file)
-                if error.response.status_code != FILE_EXISTS_AND_NOT_CHANGED:
-                    raise error
-        print(' ')
+        for product in PRODUCTS:
+            process, file_to_append = _choose_how_to_process(product, obj)
+            if process:
+                try:
+                    res = _process_level2(product, obj, processed_files, file_to_append)
+                    _ = _put_to_database(*res, md_api, file_to_append)
+                except (CategorizeFileMissing, RuntimeError, ValueError, IndexError, TypeError) as error:
+                    print(error)
+            print(' ')
     TEMP_DIR.cleanup()
 
 
-def _count_cloudnet_files(processing_type, obj):
+def _process_level1(*args):
+    module = importlib.import_module(__name__)
+    return getattr(module, f"_process_{args[0]}")(*args[1:])
+
+
+def _process_radar(obj: FilePaths, _, file_to_append: str or None) -> (str, str, str):
+    output_file_temp, output_file = _build_output_file_names('radar', obj, file_to_append)
+    if obj.config['site']['INSTRUMENTS']['radar'] == 'rpg-fmcw-94':
+        rpg_path = obj.build_rpg_path()
+        _ = _find_input_file(rpg_path, '*.LV1')
+        uuid = rpg2nc(rpg_path, output_file_temp, obj.site_info, keep_uuid=isinstance(file_to_append, str))
+        return output_file_temp, output_file, uuid
+    raise NotImplementedError
+
+
+def _process_lidar(obj: FilePaths, _, file_to_append: str or None) -> (str, str, str):
+    output_file_temp, output_file = _build_output_file_names('lidar', obj, file_to_append)
+    input_path = obj.build_standard_path('uncalibrated', 'lidar')
+    input_file = _find_input_file(input_path, f"*{obj.dvec[3:]}*")
+    uuid = ceilo2nc(input_file, output_file_temp, obj.site_info, keep_uuid=isinstance(file_to_append, str))
+    return output_file_temp, output_file, uuid
+
+
+def _process_categorize(obj: FilePaths, processed_files: dict, file_to_append: str or None) -> (str, str, str):
+    input_files = processed_files.copy()
+    input_files['model'] = obj.build_calibrated_file_name('model', makedir=False)
+    input_files['mwr'] = input_files['radar']
+    del input_files['categorize']
+    for file in input_files.values():
+        if not os.path.isfile(file):
+            raise CalibratedFileMissing
+    output_file_temp, output_file = _build_output_file_names('categorize', obj, file_to_append)
+    uuid = generate_categorize(input_files, output_file_temp, keep_uuid=isinstance(file_to_append, str))
+    return output_file_temp, output_file, uuid
+
+
+def _process_level2(product: str, obj: FilePaths, processed_files: dict, file_to_append: str or None) -> (str, str, str):
+    categorize_file = processed_files['categorize']
+    if not os.path.isfile(categorize_file):
+        raise CategorizeFileMissing
+    output_file_temp, output_file = _build_output_file_names(product, obj, file_to_append)
+    product_prefix = product.split('-')[0]
+    module = importlib.import_module(f"cloudnetpy.products.{product_prefix}")
+    fun = getattr(module, f"generate_{product_prefix}")
+    uuid = fun(categorize_file, output_file_temp)
+    return output_file_temp, output_file, uuid
+
+
+def _put_to_database(output_file_temp, output_file, uuid, md_api, file_to_append) -> str:
+    if file_to_append:
+        output_file = output_file_temp
+    else:
+        output_file = _rename_and_move_to_correct_folder(output_file_temp, output_file, uuid)
+    if not ARGS.no_api:
+        try:
+            md_api.put(uuid, output_file)
+        except HTTPError as error:
+            print(error)
+            os.remove(output_file)
+            if error.response.status_code != FILE_EXISTS_AND_NOT_CHANGED:
+                raise error
+    return output_file
+
+
+def _get_cloudnet_files(processing_type: str, obj: FilePaths) -> list:
     if processing_type in ('radar', 'lidar'):
         path = obj.build_standard_path('calibrated', processing_type)
     else:
         path = obj.build_standard_output_path(processing_type)
-    return utils.count_nc_files_for_date(path, obj.dvec)
+    return utils.list_files(path, f"{obj.dvec}*.nc")
 
 
 def _rename_and_move_to_correct_folder(temp_filename: str, true_filename: str, uuid: str) -> str:
@@ -96,80 +138,40 @@ def _rename_and_move_to_correct_folder(temp_filename: str, true_filename: str, u
     return true_filename
 
 
+def _build_output_file_names(cloudnet_file_type: str, obj: FilePaths, file_to_append: str) -> (str, str):
+    if file_to_append:
+        output_file_temp = file_to_append
+        output_file = file_to_append
+    else:
+        if cloudnet_file_type == 'categorize' or cloudnet_file_type in PRODUCTS:
+            output_file = obj.build_standard_output_file_name(cloudnet_file_type)
+        else:
+            output_file = obj.build_calibrated_file_name(cloudnet_file_type)
+        output_file_temp = _replace_path(output_file, TEMP_DIR.name)
+    return output_file_temp, output_file
+
+
 def _replace_path(filename: str, new_path: str) -> str:
     return filename.replace(os.path.dirname(filename), new_path)
 
 
-def _process_level1(process_type, obj, processed_files):
-    module = importlib.import_module(__name__)
-    return getattr(module, f"_process_{process_type}")(obj, processed_files)
+def _choose_how_to_process(cloudnet_file_type: str, obj: FilePaths) -> (bool, str or None):
+    existing_files = _get_cloudnet_files(cloudnet_file_type, obj)
+    n_files = len(existing_files)
+    process, file_to_append = False, None
+    if ARGS.new_version or n_files == 0:
+        process = True
+    elif not ARGS.new_version and n_files == 1:
+        process = True
+        file_to_append = existing_files[0]
+    return process, file_to_append
 
 
-def _process_radar(obj, _):
-    output_file = obj.build_calibrated_file_name('radar')
-    output_file_temp = _replace_path(output_file, TEMP_DIR.name)
-    if obj.config['site']['INSTRUMENTS']['radar'] == 'rpg-fmcw-94':
-        rpg_path = obj.build_rpg_path()
-        _ = _find_input_file(rpg_path, '*.LV1')
-        print("Calibrating rpg-fmcw-94 cloud radar..")
-        uuid = rpg2nc(rpg_path, output_file_temp, obj.site_info)
-        return output_file_temp, output_file, uuid
-    raise NotImplementedError
-
-
-def _process_lidar(obj, _):
-    input_path = obj.build_standard_path('uncalibrated', 'lidar')
-    input_file = _find_input_file(input_path, f"*{obj.dvec[3:]}*")
-    output_file = obj.build_calibrated_file_name('lidar')
-    output_file_temp = _replace_path(output_file, TEMP_DIR.name)
-    print(f"Calibrating {obj.config['site']['INSTRUMENTS']['lidar']} lidar..")
-    try:
-        uuid = ceilo2nc(input_file, output_file_temp, obj.site_info)
-        return output_file_temp, output_file, uuid
-    except RuntimeError as error:
-        raise error
-
-
-def _find_input_file(path, pattern):
+def _find_input_file(path: str, pattern: str) -> str:
     try:
         return utils.find_file(path, pattern)
     except FileNotFoundError:
         raise UncalibratedFileMissing()
-
-
-def _process_categorize(obj, processed_files):
-    input_files = processed_files.copy()
-    input_files['model'] = obj.build_calibrated_file_name('model', makedir=False)
-    input_files['mwr'] = input_files['radar']
-    del input_files['categorize']
-    for file in input_files.values():
-        if not os.path.isfile(file):
-            raise CalibratedFileMissing
-    output_file = obj.build_standard_output_file_name()
-    output_file_temp = _replace_path(output_file, TEMP_DIR.name)
-    try:
-        print("Processing categorize file..")
-        uuid = generate_categorize(input_files, output_file_temp)
-        return output_file_temp, output_file, uuid
-    except RuntimeError as error:
-        raise error
-
-
-def _process_level2(product, obj, processed_files):
-    categorize_file = processed_files['categorize']
-    if not os.path.isfile(categorize_file):
-        raise CategorizeFileMissing
-    output_file = obj.build_standard_output_file_name(product=product)
-    output_file_temp = _replace_path(output_file, TEMP_DIR.name)
-    product_prefix = product.split('-')[0]
-    module = importlib.import_module(f"cloudnetpy.products.{product_prefix}")
-    try:
-        print(f"Processing {product} product..")
-        fun = getattr(module, f"generate_{product_prefix}")
-        uuid = fun(categorize_file, output_file_temp)
-        return output_file_temp, output_file, uuid
-    except ValueError:
-        raise RuntimeError(f"Something went wrong with {product} processing.")
 
 
 class UncalibratedFileMissing(Exception):
@@ -190,13 +192,6 @@ class CategorizeFileMissing(Exception):
     """Internal exception class."""
     def __init__(self):
         self.message = 'Categorize file missing'
-        super().__init__(self.message)
-
-
-class NotWritableFile(Exception):
-    """Internal exception class."""
-    def __init__(self):
-        self.message = 'File not writable'
         super().__init__(self.message)
 
 
