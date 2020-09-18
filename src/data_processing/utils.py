@@ -7,7 +7,6 @@ import hashlib
 import requests
 from cloudnetpy.utils import get_time
 from cloudnetpy.plotting.plot_meta import ATTRIBUTES as ATTR
-from collections import namedtuple
 
 
 def read_site_info(site_name):
@@ -42,11 +41,11 @@ def find_file(folder, wildcard):
     raise FileNotFoundError(f"No {wildcard} in {folder}")
 
 
-def list_files(folder: str, wildcard: str) -> list:
-    """List files from folder (non-recursively) using a wildcard.
-    If folder does not exist, return empty list."""
+def list_files(folder: str, pattern: str) -> list:
+    """List files from folder (non-recursively) using a pattern that can include wildcard.
+    If folder or suitable files do not exist, return empty list."""
     if os.path.isdir(folder):
-        files = fnmatch.filter(os.listdir(folder), wildcard)
+        files = fnmatch.filter(os.listdir(folder), pattern)
         return [path.join(folder, file) for file in files]
     return []
 
