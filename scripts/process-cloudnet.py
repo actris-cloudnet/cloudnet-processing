@@ -103,7 +103,7 @@ def _process_level2(product: str, obj: FilePaths, processed_files: dict, file_to
     product_prefix = product.split('-')[0]
     module = importlib.import_module(f"cloudnetpy.products.{product_prefix}")
     fun = getattr(module, f"generate_{product_prefix}")
-    uuid = fun(categorize_file, output_file_temp)
+    uuid = fun(categorize_file, output_file_temp, keep_uuid=isinstance(file_to_append, str))
     return output_file_temp, output_file, uuid
 
 
