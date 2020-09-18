@@ -15,6 +15,7 @@ FILE_EXISTS_AND_NOT_CHANGED = 409
 TEMP_DIR = tempfile.TemporaryDirectory()
 PRODUCTS = ('classification', 'iwc-Z-T-method', 'lwc-scaled-adiabatic', 'drizzle')
 
+
 def main():
     """The main function."""
 
@@ -42,7 +43,7 @@ def main():
             if process:
                 try:
                     res = _process_level1(processing_type, obj, processed_files, file_to_append)
-                    processed_files[processing_type] = _put_to_database(*res, md_api, file_to_append)
+                    processed_files[processing_type] = _put_to_portal(*res, md_api, file_to_append)
                 except (UncalibratedFileMissing, CalibratedFileMissing, RuntimeError,
                         ValueError, IndexError, TypeError, NotImplementedError) as error:
                     print(error)
@@ -52,10 +53,9 @@ def main():
             if process:
                 try:
                     res = _process_level2(product, obj, processed_files, file_to_append)
-                    _ = _put_to_database(*res, md_api, file_to_append)
+                    _ = _put_to_portal(*res, md_api, file_to_append)
                 except (CategorizeFileMissing, RuntimeError, ValueError, IndexError, TypeError) as error:
                     print(error)
-            print(' ')
     TEMP_DIR.cleanup()
 
 
@@ -107,7 +107,7 @@ def _process_level2(product: str, obj: FilePaths, processed_files: dict, file_to
     return output_file_temp, output_file, uuid
 
 
-def _put_to_database(output_file_temp, output_file, uuid, md_api, file_to_append) -> str:
+def _put_to_portal(output_file_temp, output_file, uuid, md_api, file_to_append) -> str:
     if file_to_append:
         output_file = output_file_temp
     else:
