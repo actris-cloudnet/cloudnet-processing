@@ -16,37 +16,32 @@ def main():
     stop = '2020-04-03'
     lidar_root = path.join(input_folder, site, 'uncalibrated', 'chm15k')
 
-    if ARGS.clean or not ARGS.skip_processing:
-        remove_files(path.join(lidar_root, start[:4]))
-        remove_dirs(path.join(output_folder, site), 'calibrated')
-        remove_dirs(path.join(output_folder, site, 'calibrated'), 'ecmwf')
+    remove_files(path.join(lidar_root, start[:4]))
+    remove_dirs(path.join(output_folder, site), 'calibrated')
+    remove_dirs(path.join(output_folder, site, 'calibrated'), 'ecmwf')
 
-    if ARGS.clean:
-        return
+    start_server(5000, 'tests/data/server/metadata', f'{SCRIPT_PATH}/md.log')
 
-    if not ARGS.skip_processing:
-        start_server(5000, 'tests/data/server/metadata', f'{SCRIPT_PATH}/md.log')
+    subprocess.check_call(['python3', 'scripts/concat-lidar.py', f"{lidar_root}"])
 
-        subprocess.check_call(['python3', 'scripts/concat-lidar.py', f"{lidar_root}"])
-        subprocess.check_call(['python3', 'scripts/process-cloudnet.py', site,
-                               f"--config-dir=tests/data/config",
-                               f"--start={start}",
-                               f"--stop={stop}"])
+    process_cmd = ['python3', '-W', 'ignore', 'scripts/process-cloudnet.py', site,
+                   f"--config-dir=tests/data/config", f"--start={start}", f"--stop={stop}"]
 
-    pytest.main(['-v', 'tests/e2e/process_cloudnet/tests.py',
-                 '--site', site,
-                 '--date', start,
-                 '--input', input_folder,
-                 '--output', output_folder])
+    test_cmd = ['-v', 'tests/e2e/process_cloudnet/tests.py', '--site', site, '--date', start,
+                '--input', input_folder, '--output', output_folder]
+
+    # Process to empty directories
+    subprocess.check_call(process_cmd)
+    pytest.main(test_cmd + ['-m', 'first_run'])
+
+    # Rewrite existing files and keep uuids
+    subprocess.check_call(process_cmd)
+    pytest.main(test_cmd + ['-m', 'second_run'])
 
     remove_files(f'{lidar_root}/2020')
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Cloudnet processing e2e test.')
-    parser.add_argument('-s', '--skip_processing', dest='skip_processing', action='store_true',
-                        help='Skip processing steps but run tests.', default=False)
-    parser.add_argument('--clean', dest='clean', action='store_true',
-                        help='Clean test data folders only.', default=False)
     ARGS = parser.parse_args()
     main()

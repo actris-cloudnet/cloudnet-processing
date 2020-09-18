@@ -4,6 +4,8 @@ import netCDF4
 from glob import glob
 
 
+@pytest.mark.first_run
+@pytest.mark.second_run
 class TestCloudnetProcessing:
 
     @pytest.fixture(autouse=True)
@@ -25,7 +27,7 @@ class TestCloudnetProcessing:
         assert len(file) == 1
         file = file[0]
         assert os.path.isfile(file)
-        assert netCDF4.Dataset(file).cloudnet_file_type == 'lidar'
+        assert _read_file_type(file) == 'lidar'
 
     def test_that_creates_calibrated_radar_file(self):
         file = glob('/'.join((self.output, self.site, 'calibrated/rpg-fmcw-94',
@@ -33,7 +35,7 @@ class TestCloudnetProcessing:
         assert len(file) == 1
         file = file[0]
         assert os.path.isfile(file)
-        assert netCDF4.Dataset(file).cloudnet_file_type == 'radar'
+        assert _read_file_type(file) == 'radar'
 
     def test_that_creates_categorize_file(self):
         file = glob('/'.join((self.output, self.site, 'processed/categorize',
@@ -41,21 +43,45 @@ class TestCloudnetProcessing:
         assert len(file) == 1
         file = file[0]
         assert os.path.isfile(file)
-        assert netCDF4.Dataset(file).cloudnet_file_type == 'categorize'
+        assert _read_file_type(file) == 'categorize'
 
     def test_that_creates_product_files(self):
         products = ['iwc-Z-T-method', 'lwc-scaled-adiabatic', 'classification']
-        file_types = ['iwc', 'lwc', 'classification']
+        file_types = ['iwc', 'lwc', 'classification', 'drizzle']
         for product, file_type in zip(products, file_types):
             file = glob('/'.join((self.output, self.site, f"products/{product}",
                              self.year, f"{self.date}_{self.site}_{product}_*.nc")))
             assert len(file) == 1
             file = file[0]
             assert os.path.isfile(file)
-            assert netCDF4.Dataset(file).cloudnet_file_type == file_type
+            assert _read_file_type(file) == file_type
 
-    def test_that_PUTs_all_files_to_metadata_server(self):
-        n_files = 7
-        script_path = os.path.dirname(os.path.realpath(__file__))
-        with open(f'{script_path}/md.log', 'r') as file:
-            assert file.read().count('PUT') == n_files
+
+@pytest.mark.first_run
+def test_that_PUTs_all_files_to_metadata_server():
+    n_files = 7
+    script_path = os.path.dirname(os.path.realpath(__file__))
+    with open(f'{script_path}/md.log', 'r') as file:
+        assert file.read().count('PUT') == n_files
+
+
+@pytest.mark.second_run
+def test_that_PUTs_identical_files_to_metadata_server():
+    lines = []
+    script_path = os.path.dirname(os.path.realpath(__file__))
+    with open(f'{script_path}/md.log', 'r') as file:
+        for line in file:
+            lines.append(line)
+    assert len(lines) == 14
+    for n in range(7):
+        first_sub = lines[n]
+        second_sub = lines[n+7]
+        ind = first_sub.index('PUT')
+        assert first_sub[ind:] == second_sub[ind:]
+
+
+def _read_file_type(file):
+    nc = netCDF4.Dataset(file)
+    value = nc.cloudnet_file_type
+    nc.close()
+    return value
