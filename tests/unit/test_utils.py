@@ -90,18 +90,20 @@ def test_read_main_conf():
     assert 'received_api_files' in conf['PATH']
 
 
-@pytest.mark.parametrize("date, result", [
-    ('19800112', 2),
-    ('19800113', 1),
-    ('19800114', 0),
+@pytest.mark.parametrize("pattern, result", [
+    ('19800112*.nc', 2),
+    ('19800113*.nc', 1),
+    ('19800114*.nc', 0),
+    ('19800112*.txt', 1),
+    ('19800113*.txt', 0),
 ])
-def test_count_nc_files_for_date(date, result):
+def test_list_files(pattern, result):
     f1 = tempfile.NamedTemporaryFile(prefix='19800112', suffix='.nc')
     f2 = tempfile.NamedTemporaryFile(prefix='19800112', suffix='.nc')
     f3 = tempfile.NamedTemporaryFile(prefix='19800112', suffix='.txt')
     f4 = tempfile.NamedTemporaryFile(prefix='19800113', suffix='.nc')
     folder = os.path.dirname(f1.name)
-    assert utils.count_nc_files_for_date(folder, date) == result
+    assert len(utils.list_files(folder, pattern)) == result
 
 
 def test_add_uuid_to_filename():
