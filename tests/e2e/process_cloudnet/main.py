@@ -30,13 +30,17 @@ def main():
     test_cmd = ['-v', 'tests/e2e/process_cloudnet/tests.py', '--site', site, '--date', start,
                 '--input', input_folder, '--output', output_folder]
 
-    # Process to empty directories
     subprocess.check_call(process_cmd)
     pytest.main(test_cmd + ['-m', 'first_run'])
 
-    # Rewrite existing files and keep uuids
     subprocess.check_call(process_cmd)
-    pytest.main(test_cmd + ['-m', 'second_run'])
+    pytest.main(test_cmd + ['-m', 'append_data'])
+
+    subprocess.check_call(process_cmd + ['--new-version'])
+    pytest.main(test_cmd + ['-m', 'new_version'])
+
+    subprocess.check_call(process_cmd)
+    pytest.main(test_cmd + ['-m', 'append_fail'])
 
     remove_files(f'{lidar_root}/2020')
 
