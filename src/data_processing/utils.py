@@ -42,6 +42,15 @@ def find_file(folder, wildcard):
     raise FileNotFoundError(f"No {wildcard} in {folder}")
 
 
+def list_files(folder: str, wildcard: str) -> list:
+    """List files from folder (non-recursively) using a wildcard.
+    If folder does not exist, return empty list."""
+    if os.path.isdir(folder):
+        files = fnmatch.filter(os.listdir(folder), wildcard)
+        return [path.join(folder, file) for file in files]
+    return []
+
+
 def date_string_to_date(date_string):
     """Convert YYYY-MM-DD to Python date."""
     date = [int(x) for x in date_string.split('-')]
@@ -155,13 +164,6 @@ def add_hash_to_filename(filename: str, hash_sum: str) -> str:
     if len(parts) == 1:
         return f"{filename}-{hash_to_name}"
     return f"{''.join(parts[:-1])}-{hash_to_name}.{parts[-1]}"
-
-
-def count_nc_files_for_date(folder: str, date_str: str) -> int:
-    """Counts number of nc-files for certain date in a folder."""
-    if os.path.isdir(folder):
-        return len(fnmatch.filter(os.listdir(folder), f"{date_str}*.nc"))
-    return 0
 
 
 def add_uuid_to_filename(uuid: str, filename: str) -> str:
