@@ -60,7 +60,7 @@ def main():
     TEMP_DIR.cleanup()
 
 
-def _process_level1(*args):
+def _process_level1(*args) -> Tuple[str, str, str]:
     module = importlib.import_module(__name__)
     return getattr(module, f"_process_{args[0]}")(*args[1:])
 
