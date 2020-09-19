@@ -117,3 +117,26 @@ def test_add_uuid_to_filename():
     os.remove(new_filename)
     os.rmdir(temp_dir)
     assert new_filename == f"{filename[:-3]}_abcd.nc"
+
+
+def test_is_volatile_file(nc_file, nc_file_with_pid):
+    assert utils.is_volatile_file(nc_file) is True
+    assert utils.is_volatile_file(nc_file_with_pid) is False
+
+
+def test_replace_path():
+    filename = '/foo/bar/filu.nc'
+    new_path = '/uusi/polku'
+    assert utils.replace_path(filename, new_path) == '/uusi/polku/filu.nc'
+
+
+def test_str2bool():
+    assert utils.str2bool('True') is True
+    assert utils.str2bool('False') is False
+    assert utils.str2bool('kissa') == 'kissa'
+
+
+def test_sha256sum(nc_file):
+    hash_sum = utils.sha256sum(nc_file)
+    assert isinstance(hash_sum, str)
+    assert len(hash_sum) == 64
