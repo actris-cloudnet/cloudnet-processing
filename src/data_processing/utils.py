@@ -5,6 +5,7 @@ import datetime
 import configparser
 import hashlib
 import requests
+import netCDF4
 from cloudnetpy.utils import get_time
 from cloudnetpy.plotting.plot_meta import ATTRIBUTES as ATTR
 
@@ -172,3 +173,16 @@ def add_uuid_to_filename(uuid: str, filename: str) -> str:
     new_filename = f"{folder}{suffix}{extension}"
     os.rename(filename, new_filename)
     return new_filename
+
+
+def is_volatile_file(filename):
+    """Check if nc-file is volatile."""
+    nc = netCDF4.Dataset(filename)
+    is_missing_pid = not hasattr(nc, 'pid')
+    nc.close()
+    return is_missing_pid
+
+
+def replace_path(filename: str, new_path: str) -> str:
+    """Replaces path of file."""
+    return filename.replace(os.path.dirname(filename), new_path)

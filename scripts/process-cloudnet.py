@@ -5,7 +5,6 @@ import argparse
 from typing import Tuple
 import importlib
 import tempfile
-import netCDF4
 import cloudnetpy.utils
 from cloudnetpy.categorize import generate_categorize
 from cloudnetpy.instruments import rpg2nc, ceilo2nc
@@ -45,7 +44,7 @@ def main():
             if process:
                 try:
                     res = _process_level1(processing_type, obj, processed_files, file_to_append)
-                    processed_files[processing_type] = _put_to_portal(*res, md_api, file_to_append)
+                    processed_files[processing_type] = _archive_file(*res, md_api, file_to_append)
                 except (UncalibratedFileMissing, CalibratedFileMissing, RuntimeError,
                         ValueError, IndexError, TypeError, NotImplementedError) as error:
                     print(error)
@@ -55,7 +54,7 @@ def main():
             if process:
                 try:
                     res = _process_level2(product, obj, processed_files, file_to_append)
-                    _ = _put_to_portal(*res, md_api, file_to_append)
+                    _ = _archive_file(*res, md_api, file_to_append)
                 except (CategorizeFileMissing, RuntimeError, ValueError, IndexError, TypeError) as error:
                     print(error)
     TEMP_DIR.cleanup()
@@ -70,7 +69,7 @@ def _process_radar(obj: FilePaths, _, file_to_append: str or None) -> Tuple[str,
     output_file_temp, output_file = _build_output_file_names('radar', obj, file_to_append)
     if obj.config['site']['INSTRUMENTS']['radar'] == 'rpg-fmcw-94':
         rpg_path = obj.build_rpg_path()
-        _ = _find_input_file(rpg_path, '*.LV1')
+        _ = _find_uncalibrated_file(rpg_path, '*.LV1')
         uuid = rpg2nc(rpg_path, output_file_temp, obj.site_info, keep_uuid=isinstance(file_to_append, str))
         return output_file_temp, output_file, uuid
     raise NotImplementedError
@@ -79,7 +78,7 @@ def _process_radar(obj: FilePaths, _, file_to_append: str or None) -> Tuple[str,
 def _process_lidar(obj: FilePaths, _, file_to_append: str or None) -> Tuple[str, str, str]:
     output_file_temp, output_file = _build_output_file_names('lidar', obj, file_to_append)
     input_path = obj.build_standard_path('uncalibrated', 'lidar')
-    input_file = _find_input_file(input_path, f"*{obj.dvec[3:]}*")
+    input_file = _find_uncalibrated_file(input_path, f"*{obj.dvec[3:]}*")
     uuid = ceilo2nc(input_file, output_file_temp, obj.site_info, keep_uuid=isinstance(file_to_append, str))
     return output_file_temp, output_file, uuid
 
@@ -110,7 +109,20 @@ def _process_level2(product: str, obj: FilePaths, processed_files: dict,
     return output_file_temp, output_file, uuid
 
 
-def _put_to_portal(output_file_temp, output_file, uuid, md_api, file_to_append) -> str:
+def _build_output_file_names(cloudnet_file_type: str, obj: FilePaths, file_to_append: str) -> Tuple[str, str]:
+    if file_to_append:
+        output_file_temp = file_to_append
+        output_file = file_to_append
+    else:
+        if cloudnet_file_type == 'categorize' or cloudnet_file_type in PRODUCTS:
+            output_file = obj.build_standard_output_file_name(cloudnet_file_type)
+        else:
+            output_file = obj.build_calibrated_file_name(cloudnet_file_type)
+        output_file_temp = utils.replace_path(output_file, TEMP_DIR.name)
+    return output_file_temp, output_file
+
+
+def _archive_file(output_file_temp, output_file, uuid, md_api, file_to_append) -> str:
     if file_to_append:
         output_file = output_file_temp
     else:
@@ -126,6 +138,25 @@ def _put_to_portal(output_file_temp, output_file, uuid, md_api, file_to_append) 
     return output_file
 
 
+def _rename_and_move_to_correct_folder(temp_filename: str, true_filename: str, uuid: str) -> str:
+    temp_filename = utils.add_uuid_to_filename(uuid, temp_filename)
+    true_filename = utils.replace_path(temp_filename, os.path.dirname(true_filename))
+    os.rename(temp_filename, true_filename)
+    return true_filename
+
+
+def _choose_how_to_process(cloudnet_file_type: str, obj: FilePaths) -> Tuple[bool, str or None]:
+    existing_files = _get_cloudnet_files(cloudnet_file_type, obj)
+    n_files = len(existing_files)
+    process, file_to_append = False, None
+    if ARGS.new_version or n_files == 0:
+        process = True
+    elif not ARGS.new_version and n_files == 1 and utils.is_volatile_file(existing_files[0]):
+        process = True
+        file_to_append = existing_files[0]
+    return process, file_to_append
+
+
 def _get_cloudnet_files(processing_type: str, obj: FilePaths) -> list:
     if processing_type in ('radar', 'lidar'):
         path = obj.build_standard_path('calibrated', processing_type)
@@ -134,50 +165,7 @@ def _get_cloudnet_files(processing_type: str, obj: FilePaths) -> list:
     return utils.list_files(path, f"{obj.dvec}*.nc")
 
 
-def _rename_and_move_to_correct_folder(temp_filename: str, true_filename: str, uuid: str) -> str:
-    temp_filename = utils.add_uuid_to_filename(uuid, temp_filename)
-    true_filename = _replace_path(temp_filename, os.path.dirname(true_filename))
-    os.rename(temp_filename, true_filename)
-    return true_filename
-
-
-def _build_output_file_names(cloudnet_file_type: str, obj: FilePaths, file_to_append: str) -> Tuple[str, str]:
-    if file_to_append:
-        output_file_temp = file_to_append
-        output_file = file_to_append
-    else:
-        if cloudnet_file_type == 'categorize' or cloudnet_file_type in PRODUCTS:
-            output_file = obj.build_standard_output_file_name(cloudnet_file_type)
-        else:
-            output_file = obj.build_calibrated_file_name(cloudnet_file_type)
-        output_file_temp = _replace_path(output_file, TEMP_DIR.name)
-    return output_file_temp, output_file
-
-
-def _replace_path(filename: str, new_path: str) -> str:
-    return filename.replace(os.path.dirname(filename), new_path)
-
-
-def _choose_how_to_process(cloudnet_file_type: str, obj: FilePaths) -> (bool, str or None):
-    existing_files = _get_cloudnet_files(cloudnet_file_type, obj)
-    n_files = len(existing_files)
-    process, file_to_append = False, None
-    if ARGS.new_version or n_files == 0:
-        process = True
-    elif not ARGS.new_version and n_files == 1 and _is_volatile(existing_files[0]):
-        process = True
-        file_to_append = existing_files[0]
-    return process, file_to_append
-
-
-def _is_volatile(filename):
-    nc = netCDF4.Dataset(filename)
-    is_missing_pid = not hasattr(nc, 'pid')
-    nc.close()
-    return is_missing_pid
-
-
-def _find_input_file(path: str, pattern: str) -> str:
+def _find_uncalibrated_file(path: str, pattern: str) -> str:
     try:
         return utils.find_file(path, pattern)
     except FileNotFoundError:
