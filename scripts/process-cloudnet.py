@@ -2,6 +2,7 @@
 """Master script for CloudnetPy backward processing."""
 import os
 import argparse
+from typing import Tuple
 import importlib
 import tempfile
 import netCDF4
@@ -65,7 +66,7 @@ def _process_level1(*args):
     return getattr(module, f"_process_{args[0]}")(*args[1:])
 
 
-def _process_radar(obj: FilePaths, _, file_to_append: str or None) -> (str, str, str):
+def _process_radar(obj: FilePaths, _, file_to_append: str or None) -> Tuple[str, str, str]:
     output_file_temp, output_file = _build_output_file_names('radar', obj, file_to_append)
     if obj.config['site']['INSTRUMENTS']['radar'] == 'rpg-fmcw-94':
         rpg_path = obj.build_rpg_path()
@@ -75,7 +76,7 @@ def _process_radar(obj: FilePaths, _, file_to_append: str or None) -> (str, str,
     raise NotImplementedError
 
 
-def _process_lidar(obj: FilePaths, _, file_to_append: str or None) -> (str, str, str):
+def _process_lidar(obj: FilePaths, _, file_to_append: str or None) -> Tuple[str, str, str]:
     output_file_temp, output_file = _build_output_file_names('lidar', obj, file_to_append)
     input_path = obj.build_standard_path('uncalibrated', 'lidar')
     input_file = _find_input_file(input_path, f"*{obj.dvec[3:]}*")
@@ -83,7 +84,7 @@ def _process_lidar(obj: FilePaths, _, file_to_append: str or None) -> (str, str,
     return output_file_temp, output_file, uuid
 
 
-def _process_categorize(obj: FilePaths, processed_files: dict, file_to_append: str or None) -> (str, str, str):
+def _process_categorize(obj: FilePaths, processed_files: dict, file_to_append: str or None) -> Tuple[str, str, str]:
     input_files = processed_files.copy()
     input_files['model'] = obj.build_calibrated_file_name('model', makedir=False)
     input_files['mwr'] = input_files['radar']
@@ -96,7 +97,8 @@ def _process_categorize(obj: FilePaths, processed_files: dict, file_to_append: s
     return output_file_temp, output_file, uuid
 
 
-def _process_level2(product: str, obj: FilePaths, processed_files: dict, file_to_append: str or None) -> (str, str, str):
+def _process_level2(product: str, obj: FilePaths, processed_files: dict,
+                    file_to_append: str or None) -> Tuple[str, str, str]:
     categorize_file = processed_files['categorize']
     if not os.path.isfile(categorize_file):
         raise CategorizeFileMissing
@@ -139,7 +141,7 @@ def _rename_and_move_to_correct_folder(temp_filename: str, true_filename: str, u
     return true_filename
 
 
-def _build_output_file_names(cloudnet_file_type: str, obj: FilePaths, file_to_append: str) -> (str, str):
+def _build_output_file_names(cloudnet_file_type: str, obj: FilePaths, file_to_append: str) -> Tuple[str, str]:
     if file_to_append:
         output_file_temp = file_to_append
         output_file = file_to_append
