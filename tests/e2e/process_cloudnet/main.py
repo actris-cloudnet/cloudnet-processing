@@ -1,11 +1,19 @@
 #!/usr/bin/env python3
 import subprocess
+import shutil
 from os import path
 import argparse
 import pytest
-from test_utils.utils import start_server, remove_dirs, remove_files
+from test_utils.utils import start_server, remove_dirs, remove_files, remove_dir
 
 SCRIPT_PATH = path.dirname(path.realpath(__file__))
+
+
+def _clean_dirs(lidar_root, output_folder, site):
+    remove_files(path.join(lidar_root, '2020'))
+    remove_dirs(path.join(output_folder, site, 'calibrated'), keep='ecmwf')
+    remove_dir(path.join(output_folder, site, 'processed'))
+    remove_dir(path.join(output_folder, site, 'products'))
 
 
 def main():
@@ -16,9 +24,7 @@ def main():
     stop = '2020-04-03'
     lidar_root = path.join(input_folder, site, 'uncalibrated', 'chm15k')
 
-    remove_files(path.join(lidar_root, start[:4]))
-    remove_dirs(path.join(output_folder, site), 'calibrated')
-    remove_dirs(path.join(output_folder, site, 'calibrated'), 'ecmwf')
+    _clean_dirs(lidar_root, output_folder, site)
 
     start_server(5000, 'tests/data/server/metadata', f'{SCRIPT_PATH}/md.log')
 
@@ -42,7 +48,7 @@ def main():
     subprocess.check_call(process_cmd)
     pytest.main(test_cmd + ['-m', 'append_fail'])
 
-    remove_files(f'{lidar_root}/2020')
+    _clean_dirs(lidar_root, output_folder, site)
 
 
 if __name__ == "__main__":
