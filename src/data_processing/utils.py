@@ -170,8 +170,8 @@ def add_hash_to_filename(filename: str, hash_sum: str) -> str:
 def add_uuid_to_filename(uuid: str, filename: str) -> str:
     """Adds uuid suffix to file."""
     suffix = f"_{uuid[:4]}"
-    folder, extension = os.path.splitext(filename)
-    new_filename = f"{folder}{suffix}{extension}"
+    filepath, extension = os.path.splitext(filename)
+    new_filename = f"{filepath}{suffix}{extension}"
     os.rename(filename, new_filename)
     return new_filename
 
