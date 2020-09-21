@@ -61,8 +61,11 @@ def main():
 
 
 def _process_level1(*args) -> Tuple[str, str, str]:
+    _print_info(args[0], args[3])
     module = importlib.import_module(__name__)
-    return getattr(module, f"_process_{args[0]}")(*args[1:])
+    res = getattr(module, f"_process_{args[0]}")(*args[1:])
+    print("done")
+    return res
 
 
 def _process_radar(obj: FilePaths, _, file_to_append: str or None) -> Tuple[str, str, str]:
@@ -98,6 +101,7 @@ def _process_categorize(obj: FilePaths, processed_files: dict, file_to_append: s
 
 def _process_level2(product: str, obj: FilePaths, processed_files: dict,
                     file_to_append: str or None) -> Tuple[str, str, str]:
+    _print_info(product, file_to_append)
     categorize_file = processed_files['categorize']
     if not os.path.isfile(categorize_file):
         raise CategorizeFileMissing
@@ -106,6 +110,7 @@ def _process_level2(product: str, obj: FilePaths, processed_files: dict,
     module = importlib.import_module(f"cloudnetpy.products.{product_prefix}")
     fun = getattr(module, f"generate_{product_prefix}")
     uuid = fun(categorize_file, output_file_temp, keep_uuid=isinstance(file_to_append, str))
+    print('done')
     return output_file_temp, output_file, uuid
 
 
@@ -170,6 +175,14 @@ def _find_uncalibrated_file(path: str, pattern: str) -> str:
         return utils.find_file(path, pattern)
     except FileNotFoundError:
         raise UncalibratedFileMissing()
+
+
+def _print_info(cloudnet_file_type: str, file_to_append: str) -> None:
+    if file_to_append:
+        prefix = 'Appending to existing volatile'
+    else:
+        prefix = 'Creating new'
+    print(f"{prefix} {cloudnet_file_type} file.. ", end='')
 
 
 class UncalibratedFileMissing(Exception):
