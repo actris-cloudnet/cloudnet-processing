@@ -5,7 +5,7 @@ import datetime
 import configparser
 import hashlib
 import requests
-from typing import Tuple
+from typing import Tuple, Union
 import netCDF4
 from cloudnetpy.utils import get_time
 from cloudnetpy.plotting.plot_meta import ATTRIBUTES as ATTR
@@ -98,7 +98,7 @@ def read_conf(args) -> dict:
     return {'main': main_conf}
 
 
-def str2bool(s: str) -> bool or str:
+def str2bool(s: str) -> Union[bool, str]:
     return False if s == 'False' else True if s == 'True' else s
 
 

@@ -2,15 +2,16 @@
 """Master script for CloudnetPy backward processing."""
 import os
 import argparse
-from typing import Tuple
+from typing import Tuple, Union
 import importlib
 import tempfile
 import cloudnetpy.utils
 from cloudnetpy.categorize import generate_categorize
 from cloudnetpy.instruments import rpg2nc, ceilo2nc
 from requests import HTTPError
-from data_processing import metadata_api, utils
+from data_processing import utils
 from data_processing.file_paths import FilePaths
+from data_processing.metadata_api import MetadataApi
 
 FILE_EXISTS_AND_NOT_CHANGED = 409
 TEMP_DIR = tempfile.TemporaryDirectory()
@@ -27,7 +28,7 @@ def main():
     start_date = utils.date_string_to_date(ARGS.start)
     stop_date = utils.date_string_to_date(ARGS.stop)
 
-    md_api = metadata_api.MetadataApi(config['main']['METADATASERVER']['url'])
+    md_api = MetadataApi(config['main']['METADATASERVER']['url'])
 
     for date in cloudnetpy.utils.date_range(start_date, stop_date):
         date_str = date.strftime("%Y%m%d")
@@ -68,7 +69,7 @@ def _process_level1(*args) -> Tuple[str, str, str]:
     return res
 
 
-def _process_radar(obj: FilePaths, _, file_to_append: str or None) -> Tuple[str, str, str]:
+def _process_radar(obj: FilePaths, _, file_to_append: Union[str, None]) -> Tuple[str, str, str]:
     output_file_temp, output_file = _build_output_file_names('radar', obj, file_to_append)
     if obj.config['site']['INSTRUMENTS']['radar'] == 'rpg-fmcw-94':
         rpg_path = obj.build_rpg_path()
@@ -78,7 +79,7 @@ def _process_radar(obj: FilePaths, _, file_to_append: str or None) -> Tuple[str,
     raise NotImplementedError
 
 
-def _process_lidar(obj: FilePaths, _, file_to_append: str or None) -> Tuple[str, str, str]:
+def _process_lidar(obj: FilePaths, _, file_to_append: Union[str, None]) -> Tuple[str, str, str]:
     output_file_temp, output_file = _build_output_file_names('lidar', obj, file_to_append)
     input_path = obj.build_standard_path('uncalibrated', 'lidar')
     input_file = _find_uncalibrated_file(input_path, f"*{obj.dvec[3:]}*")
@@ -86,7 +87,8 @@ def _process_lidar(obj: FilePaths, _, file_to_append: str or None) -> Tuple[str,
     return output_file_temp, output_file, uuid
 
 
-def _process_categorize(obj: FilePaths, processed_files: dict, file_to_append: str or None) -> Tuple[str, str, str]:
+def _process_categorize(obj: FilePaths, processed_files: dict,
+                        file_to_append: Union[str, None]) -> Tuple[str, str, str]:
     input_files = processed_files.copy()
     input_files['model'] = obj.build_calibrated_file_name('model', makedir=False)
     input_files['mwr'] = input_files['radar']
@@ -100,7 +102,7 @@ def _process_categorize(obj: FilePaths, processed_files: dict, file_to_append: s
 
 
 def _process_level2(product: str, obj: FilePaths, processed_files: dict,
-                    file_to_append: str or None) -> Tuple[str, str, str]:
+                    file_to_append: Union[str, None]) -> Tuple[str, str, str]:
     _print_info(product, file_to_append)
     categorize_file = processed_files['categorize']
     if not os.path.isfile(categorize_file):
@@ -114,7 +116,8 @@ def _process_level2(product: str, obj: FilePaths, processed_files: dict,
     return output_file_temp, output_file, uuid
 
 
-def _build_output_file_names(cloudnet_file_type: str, obj: FilePaths, file_to_append: str) -> Tuple[str, str]:
+def _build_output_file_names(cloudnet_file_type: str, obj: FilePaths,
+                             file_to_append: Union[str, None]) -> Tuple[str, str]:
     if file_to_append:
         output_file_temp = file_to_append
         output_file = file_to_append
@@ -127,7 +130,8 @@ def _build_output_file_names(cloudnet_file_type: str, obj: FilePaths, file_to_ap
     return output_file_temp, output_file
 
 
-def _archive_file(output_file_temp, output_file, uuid, md_api, file_to_append) -> str:
+def _archive_file(output_file_temp: str, output_file: str, uuid: str, md_api: MetadataApi,
+                  file_to_append: Union[str, None]) -> str:
     if file_to_append:
         output_file = output_file_temp
     else:
@@ -150,7 +154,7 @@ def _rename_and_move_to_correct_folder(temp_filename: str, true_filename: str, u
     return true_filename
 
 
-def _choose_how_to_process(cloudnet_file_type: str, obj: FilePaths) -> Tuple[bool, str or None]:
+def _choose_how_to_process(cloudnet_file_type: str, obj: FilePaths) -> Tuple[bool, Union[str, None]]:
     existing_files = _get_cloudnet_files(cloudnet_file_type, obj)
     n_files = len(existing_files)
     process, file_to_append = False, None
@@ -177,7 +181,7 @@ def _find_uncalibrated_file(path: str, pattern: str) -> str:
         raise UncalibratedFileMissing()
 
 
-def _print_info(cloudnet_file_type: str, file_to_append: str) -> None:
+def _print_info(cloudnet_file_type: str, file_to_append: Union[str, None]) -> None:
     if file_to_append:
         prefix = 'Appending to existing volatile'
     else:
