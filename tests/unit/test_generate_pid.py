@@ -1,7 +1,7 @@
 import pytest
 import requests
 import requests_mock
-from data_processing import generate_pid
+from data_processing.pid_generator import PidGenerator
 
 
 adapter = requests_mock.Adapter()
@@ -29,7 +29,7 @@ class TestMetadataApi:
         adapter.register_uri('PUT', 'mock://test/api/handles/21.T12995/1.be8154c1a6aa4f44',
                              additional_matcher=is_valid_json, json=handle_response)
 
-        pid_gen = generate_pid.PidGenerator(options, session=session)
+        pid_gen = PidGenerator(options, session=session)
         pid = pid_gen.generate_pid('be8154c1a6aa4f44b953780b016987b5')
             
         assert pid == 'https://hdl.handle.net/21.T12995/1.be8154c1a6aa4f44'
@@ -37,7 +37,7 @@ class TestMetadataApi:
     def test_raises_error_on_failed_request(self):
         adapter.register_uri('PUT', 'mock://test/api/handles/21.T12995/1.fail', status_code=403)
 
-        pid_gen = generate_pid.PidGenerator(options, session=session)
+        pid_gen = PidGenerator(options, session=session)
 
         with pytest.raises(requests.exceptions.HTTPError):
             pid_gen.generate_pid('fail')

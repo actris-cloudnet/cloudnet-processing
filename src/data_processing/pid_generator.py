@@ -1,6 +1,8 @@
 """Module containing classes / functions for PID generation."""
 import sys
 import requests
+from typing import Tuple
+import netCDF4
 from data_processing.utils import str2bool
 
 
@@ -76,3 +78,13 @@ class PidGenerator:
                 }
             }]
         }
+
+
+def add_pid_to_file(pid_gen: PidGenerator, filename: str) -> Tuple[str, str]:
+    """Generates PID and adds it to nc-global attributes."""
+    root_grp = netCDF4.Dataset(filename, 'r+')
+    uuid = getattr(root_grp, 'file_uuid')
+    pid = pid_gen.generate_pid(uuid)
+    root_grp.pid = pid
+    root_grp.close()
+    return pid, uuid

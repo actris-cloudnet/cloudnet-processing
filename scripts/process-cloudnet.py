@@ -11,8 +11,10 @@ from cloudnetpy.categorize import generate_categorize
 from cloudnetpy.instruments import rpg2nc, ceilo2nc
 from requests import HTTPError
 from data_processing import utils
+from data_processing.pid_generator import add_pid_to_file, PidGenerator
 from data_processing.file_paths import FilePaths
 from data_processing.metadata_api import MetadataApi
+
 
 FILE_EXISTS_AND_NOT_CHANGED = 409
 TEMP_DIR = tempfile.TemporaryDirectory()
@@ -30,6 +32,7 @@ def main():
     stop_date = utils.date_string_to_date(ARGS.stop)
 
     md_api = MetadataApi(config['main']['METADATASERVER']['url'])
+    pid_gen = PidGenerator(config['main']['PID'])
 
     for date in cloudnetpy.utils.date_range(start_date, stop_date):
         date_str = date.strftime("%Y%m%d")
@@ -45,7 +48,7 @@ def main():
             try:
                 file_to_append = _find_volatile_file(processing_type, file_paths)
                 res = _process_level1(processing_type, file_paths, processed_files, file_to_append)
-                processed_files[processing_type] = _archive_file(*res, md_api, file_to_append)
+                processed_files[processing_type] = _archive_file(*res, md_api, pid_gen, file_to_append)
             except (UncalibratedFileMissing, CalibratedFileMissing, VolatileFileError, RuntimeError,
                     ValueError, IndexError, TypeError, NotImplementedError) as error:
                 print(error)
@@ -54,7 +57,7 @@ def main():
             try:
                 file_to_append = _find_volatile_file(product, file_paths)
                 res = _process_level2(product, file_paths, processed_files, file_to_append)
-                _ = _archive_file(*res, md_api, file_to_append)
+                _ = _archive_file(*res, md_api, pid_gen, file_to_append)
             except (CategorizeFileMissing, RuntimeError, ValueError, IndexError, TypeError, VolatileFileError) as error:
                 print(error)
     TEMP_DIR.cleanup()
@@ -149,7 +152,7 @@ def _build_output_file_names(cloudnet_file_type: str, file_paths: FilePaths,
 
 
 def _archive_file(output_file_temp: str, output_file: str, uuid: str, md_api: MetadataApi,
-                  file_to_append: Union[str, None]) -> str:
+                  pid_gen: PidGenerator, file_to_append: Union[str, None]) -> str:
     if file_to_append:
         # We have only rewritten the existing volatile file (with already correct name):
         output_file = output_file_temp
@@ -158,7 +161,12 @@ def _archive_file(output_file_temp: str, output_file: str, uuid: str, md_api: Me
         output_file = _rename_and_move_to_correct_folder(output_file_temp, output_file, uuid)
     if not ARGS.no_api:
         try:
-            md_api.put(uuid, output_file)
+            if ARGS.new_version:
+                add_pid_to_file(pid_gen, output_file)
+                freeze = True
+            else:
+                freeze = False
+            md_api.put(uuid, output_file, freeze=freeze)
         except HTTPError as error:
             print(error)
             os.remove(output_file)

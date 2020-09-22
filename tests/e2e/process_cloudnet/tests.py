@@ -132,6 +132,26 @@ def test_that_PUTs_new_files_to_metadata_server():
         assert first_sub[ind:] != third_sub[ind:]
 
 
+@pytest.mark.new_version
+def test_that_freezes_new_version_files():
+    md_lines, pid_lines = [], []
+    script_path = os.path.dirname(os.path.realpath(__file__))
+    with open(f'{script_path}/md.log', 'r') as file:
+        for line in file:
+            md_lines.append(line)
+    md_lines = md_lines[-7:]
+    sub_str = 'PUT /api/handles/21.T12995/1.'
+    with open(f'{script_path}/pid.log', 'r') as file:
+        for line in file:
+            if sub_str in line:
+                pid_lines.append(line)
+    n = len(sub_str)
+    for pid_line, md_line in zip(pid_lines, md_lines):
+        ind = pid_line.find(sub_str)
+        uuid_part = pid_line[n+ind:n+ind+16]
+        assert uuid_part in md_line
+
+
 def _read_file_type(file):
     nc = netCDF4.Dataset(file)
     value = nc.cloudnet_file_type

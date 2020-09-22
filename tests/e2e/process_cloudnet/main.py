@@ -27,6 +27,7 @@ def main():
     _clean_dirs(lidar_root, output_folder, site)
 
     start_server(5000, 'tests/data/server/metadata', f'{SCRIPT_PATH}/md.log')
+    start_server(5001, 'tests/data/server/pid', f'{SCRIPT_PATH}/pid.log')
 
     subprocess.check_call(['python3', 'scripts/concat-lidar.py', f"{lidar_root}"])
 
