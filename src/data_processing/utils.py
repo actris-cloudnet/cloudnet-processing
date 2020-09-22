@@ -5,12 +5,13 @@ import datetime
 import configparser
 import hashlib
 import requests
+from typing import Tuple, Union
+import netCDF4
 from cloudnetpy.utils import get_time
 from cloudnetpy.plotting.plot_meta import ATTRIBUTES as ATTR
-from collections import namedtuple
 
 
-def read_site_info(site_name):
+def read_site_info(site_name: str) -> dict:
     """Read site information from Cloudnet http API."""
     url = f"https://altocumulus.fmi.fi/api/sites?developer"
     sites = requests.get(url=url).json()
@@ -21,7 +22,7 @@ def read_site_info(site_name):
             return site
 
 
-def find_file(folder, wildcard):
+def find_file(folder: str, wildcard: str) -> str:
     """Find the first file name matching a wildcard.
 
     Args:
@@ -42,13 +43,22 @@ def find_file(folder, wildcard):
     raise FileNotFoundError(f"No {wildcard} in {folder}")
 
 
-def date_string_to_date(date_string):
+def list_files(folder: str, pattern: str) -> list:
+    """List files from folder (non-recursively) using a pattern that can include wildcard.
+    If folder or suitable files do not exist, return empty list."""
+    if os.path.isdir(folder):
+        files = fnmatch.filter(os.listdir(folder), pattern)
+        return [path.join(folder, file) for file in files]
+    return []
+
+
+def date_string_to_date(date_string: str) -> datetime.date:
     """Convert YYYY-MM-DD to Python date."""
     date = [int(x) for x in date_string.split('-')]
     return datetime.date(*date)
 
 
-def get_date_from_past(n, reference_date=None):
+def get_date_from_past(n: int, reference_date: str = None) -> str:
     """Return date N-days ago."""
     reference = reference_date or get_time().split()[0]
     date = date_string_to_date(reference) - datetime.timedelta(n)
@@ -88,11 +98,11 @@ def read_conf(args) -> dict:
     return {'main': main_conf}
 
 
-def str2bool(s):
+def str2bool(s: str) -> Union[bool, str]:
     return False if s == 'False' else True if s == 'True' else s
 
 
-def get_fields_for_plot(cloudnet_file_type):
+def get_fields_for_plot(cloudnet_file_type: str) -> Tuple[list, int]:
     """Return list of variables and maximum altitude for Cloudnet quicklooks.
 
     Args:
@@ -128,14 +138,14 @@ def get_fields_for_plot(cloudnet_file_type):
     return fields, max_alt
 
 
-def get_plottable_variables_info(cloudnet_file_type):
+def get_plottable_variables_info(cloudnet_file_type: str) -> dict:
     """Find variable IDs and corresponding human readable names."""
     fields = get_fields_for_plot(cloudnet_file_type)[0]
     return {get_var_id(cloudnet_file_type, field): [f"{ATTR[field].name}", i]
             for i, field in enumerate(fields)}
 
 
-def get_var_id(cloudnet_file_type, field):
+def get_var_id(cloudnet_file_type: str, field: str) -> str:
     """Return identifier for variable / Cloudnet file combination."""
     return f"{cloudnet_file_type}-{field}"
 
@@ -155,3 +165,25 @@ def add_hash_to_filename(filename: str, hash_sum: str) -> str:
     if len(parts) == 1:
         return f"{filename}-{hash_to_name}"
     return f"{''.join(parts[:-1])}-{hash_to_name}.{parts[-1]}"
+
+
+def add_uuid_to_filename(uuid: str, filename: str) -> str:
+    """Adds uuid suffix to file."""
+    suffix = f"_{uuid[:4]}"
+    filepath, extension = os.path.splitext(filename)
+    new_filename = f"{filepath}{suffix}{extension}"
+    os.rename(filename, new_filename)
+    return new_filename
+
+
+def is_volatile_file(filename: str) -> bool:
+    """Check if nc-file is volatile."""
+    nc = netCDF4.Dataset(filename)
+    is_missing_pid = not hasattr(nc, 'pid')
+    nc.close()
+    return is_missing_pid
+
+
+def replace_path(filename: str, new_path: str) -> str:
+    """Replaces path of file."""
+    return filename.replace(os.path.dirname(filename), new_path)

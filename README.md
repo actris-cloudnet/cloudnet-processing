@@ -124,7 +124,7 @@ Prerequisites:
 ```
 usage: process-cloudnet.py [-h] [--config-dir /FOO/BAR] [--start YYYY-MM-DD]
                            [--stop YYYY-MM-DD] [--input /FOO/BAR]
-                           [--output /FOO/BAR] [-o] [-k] [-na]
+                           [--output /FOO/BAR] [--new-version] [-na]
                            SITE [SITE ...]
 ```
 
@@ -144,8 +144,7 @@ Optional arguments:
 |       | `--stop`        | `current day - 1 `| Stopping date. |
 |       | `--input`       | from `config/main.ini` | Input folder path. |
 |       | `--output`      | from `config/main.ini` | Output folder path. |
-| `-o`  | `--overwrite`   | `False`             | Overwrite data in existing files. |
-| `-k`  | `--keep_uuid`   | `True`              | Keep ID of old file even if the data is overwritten. |
+|       | `--new-version` | `False`             | Create new version of the files. |
 | `-na`  | `--no-api`     | `False`             | Disable API calls. Useful for testing. |
 
 

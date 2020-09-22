@@ -1,6 +1,8 @@
+import os
 import datetime
 from pathlib import Path
 from collections import namedtuple
+import tempfile
 import pytest
 import data_processing.utils as utils
 
@@ -86,3 +88,55 @@ def test_read_main_conf():
     args = Args(config_dir=f"{test_file_path}/../../config")
     conf = utils.read_main_conf(args)
     assert 'received_api_files' in conf['PATH']
+
+
+@pytest.mark.parametrize("pattern, result", [
+    ('19800112*.nc', 2),
+    ('19800113*.nc', 1),
+    ('19800114*.nc', 0),
+    ('19800112*.txt', 1),
+    ('19800113*.txt', 0),
+])
+def test_list_files(pattern, result):
+    f1 = tempfile.NamedTemporaryFile(prefix='19800112', suffix='.nc')
+    f2 = tempfile.NamedTemporaryFile(prefix='19800112', suffix='.nc')
+    f3 = tempfile.NamedTemporaryFile(prefix='19800112', suffix='.txt')
+    f4 = tempfile.NamedTemporaryFile(prefix='19800113', suffix='.nc')
+    folder = os.path.dirname(f1.name)
+    assert len(utils.list_files(folder, pattern)) == result
+
+
+def test_add_uuid_to_filename():
+    temp_dir = 'tests/data/temp/'
+    filename = 'kukkuu.nc'
+    os.makedirs(temp_dir, exist_ok=True)
+    filename = os.path.join(temp_dir, filename)
+    open(filename, 'a').close()
+    uuid = 'abcdefgh'
+    new_filename = utils.add_uuid_to_filename(uuid, filename)
+    os.remove(new_filename)
+    os.rmdir(temp_dir)
+    assert new_filename == f"{filename[:-3]}_abcd.nc"
+
+
+def test_is_volatile_file(nc_file, nc_file_with_pid):
+    assert utils.is_volatile_file(nc_file) is True
+    assert utils.is_volatile_file(nc_file_with_pid) is False
+
+
+def test_replace_path():
+    filename = '/foo/bar/filu.nc'
+    new_path = '/uusi/polku'
+    assert utils.replace_path(filename, new_path) == '/uusi/polku/filu.nc'
+
+
+def test_str2bool():
+    assert utils.str2bool('True') is True
+    assert utils.str2bool('False') is False
+    assert utils.str2bool('kissa') == 'kissa'
+
+
+def test_sha256sum(nc_file):
+    hash_sum = utils.sha256sum(nc_file)
+    assert isinstance(hash_sum, str)
+    assert len(hash_sum) == 64

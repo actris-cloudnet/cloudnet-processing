@@ -14,3 +14,13 @@ def nc_file(tmpdir_factory):
     root_grp.day = '20'
     root_grp.close()
     return file_name
+
+
+@pytest.fixture(scope='session')
+def nc_file_with_pid(tmpdir_factory):
+    file_name = tmpdir_factory.mktemp("data").join("file_pid.nc")
+    root_grp = netCDF4.Dataset(file_name, "w", format="NETCDF4_CLASSIC")
+    root_grp.createDimension('time', 10)
+    root_grp.pid = 'w20930293029fj3'
+    root_grp.close()
+    return file_name
