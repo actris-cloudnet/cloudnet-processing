@@ -5,6 +5,7 @@ import argparse
 from typing import Tuple, Union
 import importlib
 import tempfile
+import shutil
 import cloudnetpy.utils
 from cloudnetpy.categorize import generate_categorize
 from cloudnetpy.instruments import rpg2nc, ceilo2nc
@@ -169,7 +170,7 @@ def _archive_file(output_file_temp: str, output_file: str, uuid: str, md_api: Me
 def _rename_and_move_to_correct_folder(temp_filename: str, true_filename: str, uuid: str) -> str:
     temp_filename = utils.add_uuid_to_filename(uuid, temp_filename)
     true_filename = utils.replace_path(temp_filename, os.path.dirname(true_filename))
-    os.rename(temp_filename, true_filename)
+    shutil.move(temp_filename, true_filename)
     return true_filename
 
 
