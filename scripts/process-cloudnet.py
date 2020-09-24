@@ -46,19 +46,24 @@ def main():
         }
         for processing_type in processed_files.keys():
             try:
-                file_to_append = _find_volatile_file(processing_type, file_paths)
-                res = _process_level1(processing_type, file_paths, processed_files, file_to_append)
-                processed_files[processing_type] = _archive_file(*res, md_api, pid_gen, file_to_append)
-            except (UncalibratedFileMissing, CalibratedFileMissing, VolatileFileError, RuntimeError,
+                file_to_append, file_stable = _find_existing_files(processing_type, file_paths)
+                if file_stable:
+                    processed_files[processing_type] = file_stable
+                else:
+                    res = _process_level1(processing_type, file_paths, processed_files, file_to_append)
+                    processed_files[processing_type] = _archive_file(*res, md_api, pid_gen, file_to_append)
+            except (UncalibratedFileMissing, CalibratedFileMissing, MultipleFilesError, RuntimeError,
                     ValueError, IndexError, TypeError, NotImplementedError) as error:
                 print(error)
 
         for product in PRODUCTS:
             try:
-                file_to_append = _find_volatile_file(product, file_paths)
-                res = _process_level2(product, file_paths, processed_files, file_to_append)
-                _ = _archive_file(*res, md_api, pid_gen, file_to_append)
-            except (CategorizeFileMissing, RuntimeError, ValueError, IndexError, TypeError, VolatileFileError) as error:
+                file_to_append, file_stable = _find_existing_files(product, file_paths)
+                if not file_stable:
+                    res = _process_level2(product, file_paths, processed_files, file_to_append)
+                    _ = _archive_file(*res, md_api, pid_gen, file_to_append)
+            except (CategorizeFileMissing, RuntimeError, ValueError, IndexError, TypeError,
+                    MultipleFilesError) as error:
                 print(error)
     TEMP_DIR.cleanup()
 
@@ -182,15 +187,18 @@ def _rename_and_move_to_correct_folder(temp_filename: str, true_filename: str, u
     return true_filename
 
 
-def _find_volatile_file(cloudnet_file_type: str, file_paths: FilePaths) -> Union[str, None]:
+def _find_existing_files(cloudnet_file_type: str, file_paths: FilePaths) -> Tuple[Union[str, None], Union[str, None]]:
     existing_files = _get_cloudnet_files(cloudnet_file_type, file_paths)
     n_files = len(existing_files)
+    volatile_file, stable_file = None, None
     if not ARGS.new_version:
-        if n_files > 1 or (n_files == 1 and not utils.is_volatile_file(existing_files[0])):
-            raise VolatileFileError
+        if n_files > 1:
+            raise MultipleFilesError
+        if n_files == 1 and not utils.is_volatile_file(existing_files[0]):
+            stable_file = existing_files[0]
         if n_files == 1 and utils.is_volatile_file(existing_files[0]):
-            return existing_files[0]
-    return None
+            volatile_file = existing_files[0]
+    return volatile_file, stable_file
 
 
 def _get_cloudnet_files(processing_type: str, file_paths: FilePaths) -> list:
@@ -216,10 +224,10 @@ def _print_info(cloudnet_file_type: str, file_to_append: Union[str, None]) -> No
     print(f"{prefix} {cloudnet_file_type} file.. ", end='')
 
 
-class VolatileFileError(Exception):
+class MultipleFilesError(Exception):
     """Internal exception class."""
     def __init__(self):
-        self.message = "Can't update a stable file"
+        self.message = "Multiple files exist - don't know what to do"
         super().__init__(self.message)
 
 
