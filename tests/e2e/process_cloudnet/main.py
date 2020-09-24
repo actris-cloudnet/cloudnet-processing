@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 import subprocess
-import shutil
+import os
 from os import path
 import argparse
 import pytest
+import netCDF4
 from test_utils.utils import start_server, remove_dirs, remove_files, remove_dir
 
 SCRIPT_PATH = path.dirname(path.realpath(__file__))
@@ -14,6 +15,16 @@ def _clean_dirs(lidar_root, output_folder, site):
     remove_dirs(path.join(output_folder, site, 'calibrated'), keep='ecmwf')
     remove_dir(path.join(output_folder, site, 'processed'))
     remove_dir(path.join(output_folder, site, 'products'))
+
+
+def _freeze_files(output_folder):
+    for root, dirs, files in os.walk(output_folder):
+        for file in files:
+            if file.endswith(".nc") and 'ecmwf' not in file:
+                filename = os.path.abspath(os.path.join(root, file))
+                root_grp = netCDF4.Dataset(filename, 'r+')
+                root_grp.pid = "www.cloudnet.com"
+                root_grp.close()
 
 
 def main():
@@ -42,6 +53,8 @@ def main():
 
     subprocess.check_call(process_cmd)
     pytest.main(test_cmd + ['-m', 'append_data'])
+
+    _freeze_files(output_folder)
 
     subprocess.check_call(process_cmd + ['--new-version'])
     pytest.main(test_cmd + ['-m', 'new_version'])

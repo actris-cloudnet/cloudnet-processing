@@ -52,7 +52,7 @@ def main():
                 else:
                     res = _process_level1(processing_type, file_paths, processed_files, file_to_append)
                     processed_files[processing_type] = _archive_file(*res, md_api, pid_gen, file_to_append)
-            except (UncalibratedFileMissing, CalibratedFileMissing, MultipleFilesError, RuntimeError,
+            except (UncalibratedFileMissing, CalibratedFileMissing, MultipleFilesError, NewVersionError, RuntimeError,
                     ValueError, IndexError, TypeError, NotImplementedError) as error:
                 print(error)
 
@@ -62,7 +62,7 @@ def main():
                 if not file_stable:
                     res = _process_level2(product, file_paths, processed_files, file_to_append)
                     _ = _archive_file(*res, md_api, pid_gen, file_to_append)
-            except (CategorizeFileMissing, RuntimeError, ValueError, IndexError, TypeError,
+            except (CategorizeFileMissing, NewVersionError, RuntimeError, ValueError, IndexError, TypeError,
                     MultipleFilesError) as error:
                 print(error)
     TEMP_DIR.cleanup()
@@ -191,7 +191,11 @@ def _find_existing_files(cloudnet_file_type: str, file_paths: FilePaths) -> Tupl
     existing_files = _get_cloudnet_files(cloudnet_file_type, file_paths)
     n_files = len(existing_files)
     volatile_file, stable_file = None, None
-    if not ARGS.new_version:
+    if ARGS.new_version:
+        for file in existing_files:
+            if utils.is_volatile_file(file):
+                raise NewVersionError
+    else:
         if n_files > 1:
             raise MultipleFilesError
         if n_files == 1 and not utils.is_volatile_file(existing_files[0]):
@@ -228,6 +232,13 @@ class MultipleFilesError(Exception):
     """Internal exception class."""
     def __init__(self):
         self.message = "Multiple files exist - don't know what to do"
+        super().__init__(self.message)
+
+
+class NewVersionError(Exception):
+    """Internal exception class."""
+    def __init__(self):
+        self.message = "Not allowed to make new version of a volatile file"
         super().__init__(self.message)
 
 
