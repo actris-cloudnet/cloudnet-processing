@@ -59,7 +59,16 @@ def date_string_to_date(date_string: str) -> datetime.date:
 
 
 def get_date_from_past(n: int, reference_date: str = None) -> str:
-    """Return date N-days ago."""
+    """Return date N-days ago.
+
+    Args:
+        n (int): Number of days to skip (can be negative, when it means the future).
+        reference_date (str, optional): Date as "YYYY-MM-DD". Default is the current date.
+
+    Returns:
+        str: Date as "YYYY-MM-DD".
+
+    """
     reference = reference_date or get_time().split()[0]
     date = date_string_to_date(reference) - datetime.timedelta(n)
     return str(date)

@@ -123,8 +123,8 @@ Prerequisites:
 
 ```
 usage: process-cloudnet.py [-h] [--config-dir /FOO/BAR] [--start YYYY-MM-DD]
-                           [--stop YYYY-MM-DD] [--input /FOO/BAR]
-                           [--output /FOO/BAR] [--new-version] [-na]
+                           [--stop YYYY-MM-DD] [--input /FOO/BAR] [--output /FOO/BAR] 
+                           [--new-version] [--plot-quicklooks] [-na]
                            SITE [SITE ...]
 ```
 
@@ -146,7 +146,7 @@ Optional arguments:
 |       | `--output`      | from `config/main.ini` | Output folder path. |
 |       | `--new-version` | `False`             | Create new version of the files. |
 | `-na`  | `--no-api`     | `False`             | Disable API calls. Useful for testing. |
-
+|       | `--plot-quicklooks` | `False`             | Also plot quicklooks. |
 
 ### `plot-quicklooks.py`
 Plot quicklooks from Cloudnet data.

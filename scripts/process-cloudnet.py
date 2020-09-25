@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """Master script for CloudnetPy backward processing."""
 import os
+import sys
 import argparse
 from typing import Tuple, Union
 import importlib
 import tempfile
 import shutil
+import subprocess
 import cloudnetpy.utils
 from cloudnetpy.categorize import generate_categorize
 from cloudnetpy.instruments import rpg2nc, ceilo2nc
@@ -65,6 +67,10 @@ def main():
             except (CategorizeFileMissing, NewVersionError, RuntimeError, ValueError, IndexError, TypeError,
                     MultipleFilesError) as error:
                 print(error)
+
+        if ARGS.plot_quicklooks:
+            _plot_quicklooks(date_str, config, site_name)
+
     TEMP_DIR.cleanup()
 
 
@@ -213,6 +219,16 @@ def _get_cloudnet_files(processing_type: str, file_paths: FilePaths) -> list:
     return utils.list_files(path, f"{file_paths.date}*.nc")
 
 
+def _plot_quicklooks(start_date: str, config: dict, site: str) -> None:
+    start_date = f"{start_date[:4]}-{start_date[4:6]}-{start_date[6:8]}"
+    stop_date = utils.get_date_from_past(-1, start_date)
+    script_path = os.path.dirname(os.path.realpath(__file__))
+    folder = os.path.join(config['main']['PATH']['output'], site)
+    cmd = [sys.executable, f'{script_path}/plot-quicklooks.py', folder, f'--start={start_date}', f'--stop={stop_date}',
+           f'--config-dir={ARGS.config_dir}']
+    subprocess.check_call(cmd)
+
+
 def _find_uncalibrated_file(path: str, pattern: str) -> str:
     try:
         return utils.find_file(path, pattern)
@@ -267,7 +283,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Process Cloudnet data.')
     parser.add_argument('site', nargs='+', help='Site Name',
                         choices=['bucharest', 'norunda', 'granada', 'mace-head'])
-    parser.add_argument('--config-dir', type=str, metavar='/FOO/BAR',
+    parser.add_argument('--config-dir', dest='config_dir', type=str, metavar='/FOO/BAR',
                         help='Path to directory containing config files. Default: ./config.',
                         default='./config')
     parser.add_argument('--start', type=str, metavar='YYYY-MM-DD',
@@ -284,5 +300,7 @@ if __name__ == "__main__":
                         help='Disable API calls. Useful for testing.', default=False)
     parser.add_argument('--new-version', dest='new_version', action='store_true',
                         help='Process new version.', default=False)
+    parser.add_argument('--plot-quicklooks', dest='plot_quicklooks', action='store_true',
+                        help='Also plot quicklooks.', default=False)
     ARGS = parser.parse_args()
     main()
