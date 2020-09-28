@@ -31,12 +31,16 @@ class PidGenerator:
         handle = f'{prefix}/{suffix}'
         target = f'{self._options["resolve_to_url"]}{uuid}'
 
+        print(f'Calling pid server with: {server_url}{handle}', end='')
+
         res = self._session.put(f'{server_url}{handle}',
                                 json=self._get_payload(target))
         res.raise_for_status()
 
         if res.status_code == 200:
             print(f'WARN: Handle {handle} already exists, updating handle.', file=sys.stderr)
+
+        print(' ..done')
 
         return f'https://hdl.handle.net/{res.json()["handle"]}'
 
