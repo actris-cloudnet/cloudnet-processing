@@ -19,7 +19,7 @@ class TestFreeze:
     def test_that_calls_pid_service(self):
         n_files = 5
         with open(f'{script_path}/pid.log', 'r') as file:
-            assert file.read().count('PUT') == n_files
+            assert file.read().count('POST') == n_files
 
     def test_that_calls_metadata_service(self):
         n_files = 5
