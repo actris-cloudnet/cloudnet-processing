@@ -21,12 +21,13 @@ def main():
 
     for filepath in resolved_filepaths:
 
-        pid, uuid = pid_generator.add_pid_to_file(pid_gen, filepath)
-
-        print(f'{uuid} => {pid}')
-
-        if not ARGS.no_api:
-            md_api.put(uuid, filepath, freeze=True)
+        try:
+            pid, uuid = pid_generator.add_pid_to_file(pid_gen, filepath)
+            print(f'{uuid} => {pid}')
+            if not ARGS.no_api:
+                md_api.put(uuid, filepath, freeze=True)
+        except OSError:
+            print(f'Error: corrupted file in pid-freezing: {filepath}')
 
     del pid_gen
 
