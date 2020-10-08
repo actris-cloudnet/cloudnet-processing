@@ -1,4 +1,5 @@
 from configparser import SectionProxy
+from typing import Tuple
 
 import netCDF4
 import requests
@@ -10,7 +11,7 @@ class PidUtils:
     def __init__(self, config: SectionProxy):
         self._pid_service_url = config['url']
 
-    def add_pid_to_file(self, filepath: str) -> (str, str):
+    def add_pid_to_file(self, filepath: str) -> Tuple[str, str]:
         """Queries PID service and adds the PID to NC file metadata."""
         rootgrp = netCDF4.Dataset(filepath, 'r+')
         uuid = getattr(rootgrp, 'file_uuid')
