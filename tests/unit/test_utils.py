@@ -130,12 +130,6 @@ def test_replace_path():
     assert utils.replace_path(filename, new_path) == '/uusi/polku/filu.nc'
 
 
-def test_str2bool():
-    assert utils.str2bool('True') is True
-    assert utils.str2bool('False') is False
-    assert utils.str2bool('kissa') == 'kissa'
-
-
 def test_sha256sum(nc_file):
     hash_sum = utils.sha256sum(nc_file)
     assert isinstance(hash_sum, str)
