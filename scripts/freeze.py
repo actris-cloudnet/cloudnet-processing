@@ -4,11 +4,10 @@ import argparse
 import os.path as path
 import sys
 
-import requests
-from netCDF4 import Dataset
 from requests import HTTPError
 
 from data_processing import metadata_api
+from data_processing.pid_utils import PidUtils
 from data_processing.utils import read_conf
 
 
@@ -16,6 +15,7 @@ def main():
     config = read_conf(ARGS)
 
     md_api = metadata_api.MetadataApi(config['main']['METADATASERVER']['url'])
+    pid_utils = PidUtils(config['main']['PID-SERVICE'])
 
     freeze_after = {k: int(v) for k, v in dict(config['main']['FREEZE_AFTER']).items()}
     stable_files = md_api.get_volatile_files_updated_before(**freeze_after)
@@ -26,29 +26,13 @@ def main():
 
     for filepath in resolved_filepaths:
         try:
-            rootgrp = Dataset(filepath, 'r+')
-            uuid = getattr(rootgrp, 'file_uuid')
-            payload = {
-                'type': 'file',
-                'uuid': uuid
-            }
-            res = requests.post(config['main']['PID-SERVICE']['url'], data=payload)
-
-            res.raise_for_status()
-
-            pid = res.json()['pid']
-            rootgrp.pid = pid
-            rootgrp.close()
-
+            uuid, pid = pid_utils.add_pid_to_file(filepath)
             print(f'{uuid} => {pid}')
+        except OSError as e:
+            print(f'Error: corrupted file in pid-freezing: {filepath}\n{e}', file=sys.stderr)
 
             if not ARGS.no_api:
                 md_api.put(uuid, filepath, freeze=True)
-        except HTTPError:
-            print(f'PID service failed with status {res.status_code}:\n{res.json()["detail"]}', file=sys.stderr)
-            break
-        except OSError as e:
-            print(f'Error: corrupted file in pid-freezing: {filepath}\n{e}', file=sys.stderr)
 
 
 if __name__ == "__main__":
