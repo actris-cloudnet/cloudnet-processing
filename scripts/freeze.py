@@ -4,8 +4,6 @@ import argparse
 import os.path as path
 import sys
 
-from requests import HTTPError
-
 from data_processing import metadata_api
 from data_processing.pid_utils import PidUtils
 from data_processing.utils import read_conf
@@ -28,11 +26,10 @@ def main():
         try:
             uuid, pid = pid_utils.add_pid_to_file(filepath)
             print(f'{uuid} => {pid}')
-        except OSError as e:
-            print(f'Error: corrupted file in pid-freezing: {filepath}\n{e}', file=sys.stderr)
-
             if not ARGS.no_api:
                 md_api.put(uuid, filepath, freeze=True)
+        except OSError as e:
+            print(f'Error: corrupted file in pid-freezing: {filepath}\n{e}', file=sys.stderr)
 
 
 if __name__ == "__main__":
