@@ -13,10 +13,9 @@ from cloudnetpy.categorize import generate_categorize
 from cloudnetpy.instruments import rpg2nc, ceilo2nc
 from requests import HTTPError
 from data_processing import utils
-from data_processing.pid_generator import add_pid_to_file, PidGenerator
 from data_processing.file_paths import FilePaths
 from data_processing.metadata_api import MetadataApi
-
+from data_processing.pid_utils import PidUtils
 
 FILE_EXISTS_AND_NOT_CHANGED = 409
 TEMP_DIR = tempfile.TemporaryDirectory()
@@ -34,7 +33,7 @@ def main():
     stop_date = utils.date_string_to_date(ARGS.stop)
 
     md_api = MetadataApi(config['main']['METADATASERVER']['url'])
-    pid_gen = PidGenerator(config['main']['PID'])
+    pid_utils = PidUtils(config['main']['PID-SERVICE'])
 
     for date in cloudnetpy.utils.date_range(start_date, stop_date):
         date_str = date.strftime("%Y%m%d")
@@ -53,7 +52,7 @@ def main():
                     processed_files[processing_type] = file_stable
                 else:
                     res = _process_level1(processing_type, file_paths, processed_files, file_to_append)
-                    processed_files[processing_type] = _archive_file(*res, md_api, pid_gen, file_to_append)
+                    processed_files[processing_type] = _archive_file(*res, md_api, pid_utils, file_to_append)
             except (UncalibratedFileMissing, CalibratedFileMissing, MultipleFilesError, NewVersionError, RuntimeError,
                     ValueError, IndexError, TypeError, NotImplementedError) as error:
                 print(error)
@@ -63,7 +62,7 @@ def main():
                 file_to_append, file_stable = _find_existing_files(product, file_paths)
                 if not file_stable:
                     res = _process_level2(product, file_paths, processed_files, file_to_append)
-                    _ = _archive_file(*res, md_api, pid_gen, file_to_append)
+                    _ = _archive_file(*res, md_api, pid_utils, file_to_append)
             except (CategorizeFileMissing, NewVersionError, RuntimeError, ValueError, IndexError, TypeError,
                     MultipleFilesError) as error:
                 print(error)
@@ -163,7 +162,7 @@ def _build_output_file_names(cloudnet_file_type: str, file_paths: FilePaths,
 
 
 def _archive_file(output_file_temp: str, output_file: str, uuid: str, md_api: MetadataApi,
-                  pid_gen: PidGenerator, file_to_append: Union[str, None]) -> str:
+                  pid_utils: PidUtils, file_to_append: Union[str, None]) -> str:
     if file_to_append:
         # We have only rewritten the existing volatile file (with already correct name):
         output_file = output_file_temp
@@ -173,7 +172,7 @@ def _archive_file(output_file_temp: str, output_file: str, uuid: str, md_api: Me
     if not ARGS.no_api:
         try:
             if ARGS.new_version:
-                add_pid_to_file(pid_gen, output_file)
+                pid_utils.add_pid_to_file(output_file)
                 freeze = True
             else:
                 freeze = False

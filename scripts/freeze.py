@@ -2,7 +2,10 @@
 """A script for assigning PIDs for data files."""
 import argparse
 import os.path as path
-from data_processing import pid_generator, metadata_api
+import sys
+
+from data_processing import metadata_api
+from data_processing.pid_utils import PidUtils
 from data_processing.utils import read_conf
 
 
@@ -10,7 +13,7 @@ def main():
     config = read_conf(ARGS)
 
     md_api = metadata_api.MetadataApi(config['main']['METADATASERVER']['url'])
-    pid_gen = pid_generator.PidGenerator(config['main']['PID'])
+    pid_utils = PidUtils(config['main']['PID-SERVICE'])
 
     freeze_after = {k: int(v) for k, v in dict(config['main']['FREEZE_AFTER']).items()}
     stable_files = md_api.get_volatile_files_updated_before(**freeze_after)
@@ -20,16 +23,13 @@ def main():
     resolved_filepaths = [path.realpath(path.join(public_path, file)) for file in stable_files]
 
     for filepath in resolved_filepaths:
-
         try:
-            pid, uuid = pid_generator.add_pid_to_file(pid_gen, filepath)
+            uuid, pid = pid_utils.add_pid_to_file(filepath)
             print(f'{uuid} => {pid}')
             if not ARGS.no_api:
                 md_api.put(uuid, filepath, freeze=True)
-        except OSError:
-            print(f'Error: corrupted file in pid-freezing: {filepath}')
-
-    del pid_gen
+        except OSError as e:
+            print(f'Error: corrupted file in pid-freezing: {filepath}\n{e}', file=sys.stderr)
 
 
 if __name__ == "__main__":
