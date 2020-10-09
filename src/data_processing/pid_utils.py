@@ -19,7 +19,7 @@ class PidUtils:
             'type': 'file',
             'uuid': uuid
         }
-        res = requests.post(self._pid_service_url, data=payload)
+        res = requests.post(self._pid_service_url, json=payload)
 
         try:
             res.raise_for_status()
