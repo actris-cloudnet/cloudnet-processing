@@ -1,9 +1,16 @@
-import atexit
 import os
+import signal
+import atexit
 import shutil
 import subprocess
 import time
 import socket
+
+
+def kill_pid(name='data-processing'):
+    for line in os.popen(f"ps ax | grep {name} | grep -v grep"):
+        pid = line.split()[0]
+        os.kill(int(pid), signal.SIGKILL)
 
 
 def wait_for_port(port, host='localhost', timeout=10.0):
