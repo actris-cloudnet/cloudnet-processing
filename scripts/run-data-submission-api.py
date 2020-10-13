@@ -2,7 +2,7 @@
 import argparse
 import ntpath
 import uvicorn
-from fastapi import FastAPI, File, Form, UploadFile, HTTPException, Depends
+from fastapi import FastAPI, File, Form, UploadFile, Depends
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from data_processing import utils as process_utils
 from data_processing.data_submission_api import DataSubmissionApi
@@ -28,28 +28,32 @@ async def create_upload_file(credentials: HTTPBasicCredentials = Depends(securit
                              instrument: str = Form(...)):
     """Submit file with metadata to Cloudnet data portal."""
     file.filename = process_utils.add_hash_to_filename(file.filename, hashSum)
-    meta = {'hashSum': hashSum, 'measurementDate': measurementDate, 'instrument': instrument,
-            'filename': ntpath.basename(file.filename), 'site': credentials.username}
-    md_url = api.construct_url_from_meta(meta)
-    api.put_metadata(md_url, meta)
+    meta = {'hashSum': hashSum,
+            'measurementDate': measurementDate,
+            'instrument': instrument,
+            'filename': ntpath.basename(file.filename),
+            'site': credentials.username}
+    api.put_metadata(meta)
     api.check_hash(meta, file)
     api.save_file(meta, file)
-    api.update_metadata_status_to_processed(md_url)
+    api.update_metadata_status_to_processed(meta)
     return {"detail": "File submission successful!"}
 
 
 @app.put("/modelData/")
 async def create_model_upload_file(file: UploadFile = File(...),
-                                   hashSum: str = Form(...),
-                                   measurementDate: str = Form(...),
                                    site: str = Form(...),
-                                   modelType: str = Form(...)):
+                                   date: str = Form(...),
+                                   modelType: str = Form(...),
+                                   hashSum: str = Form(...)):
     """Submit model file."""
-    meta = {'hashSum': hashSum, 'measurementDate': measurementDate, 'modelType': modelType,
-            'filename': ntpath.basename(file.filename), 'site': site}
+    meta = {'hashSum': hashSum,
+            'date': date,
+            'modelType': modelType,
+            'filename': ntpath.basename(file.filename),
+            'site': site}
     api.check_hash(meta, file)
-    md_url = api.construct_url_from_meta(meta, model_file=True)
-    api.put_metadata(md_url, meta)
+    api.put_model_metadata(meta, file)
     api.save_file(meta, file, model_file=True)
     return {"detail": "Model file submission successful!"}
 
