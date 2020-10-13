@@ -6,7 +6,7 @@ import hashlib
 import ntpath
 import requests
 from fastapi import UploadFile, HTTPException
-import subprocess
+import netCDF4
 
 
 class DataSubmissionApi:
@@ -28,12 +28,12 @@ class DataSubmissionApi:
 
     def put_model_metadata(self, meta: dict, file_obj: UploadFile, freeze: bool = False):
         """Put Cloudnet model file metadata to database."""
-        payload = subprocess.check_output(['ncdump', '-xh', path.realpath(file_obj.filename)])
         url = path.join(self._meta_server, 'modelFiles')
-        headers = {'Content-Type': 'application/xml'}
+        payload = _create_model_payload(meta, file_obj)
+        headers = {'Content-Type': 'application/json'}
         if freeze:
             headers['X-Freeze'] = 'True'
-        res = self._session.put(url, data=payload, headers=headers)
+        res = self._session.put(url, json=payload, headers=headers)
         res.raise_for_status()
         return res
 
@@ -83,3 +83,14 @@ class DataSubmissionApi:
                 shutil.copyfileobj(file_obj.file, file)
         except IOError:
             raise HTTPException(status_code=500, detail="File saving failed")
+
+
+def _create_model_payload(meta: dict, file_obj: UploadFile) -> dict:
+    root_grp = netCDF4.Dataset(file_obj.filename)
+    global_attrs = {key: getattr(root_grp, key) for key in root_grp.ncattrs()}
+    payload = {**global_attrs, **meta,
+               'size': os.stat(file_obj.filename).st_size,
+               'format': root_grp.data_model,
+               'filename': file_obj.filename}
+    root_grp.close()
+    return payload
