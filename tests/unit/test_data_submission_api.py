@@ -44,17 +44,17 @@ class TestMetadataApi:
         file.file.write(bytes('asd', 'utf-8'))
 
         with pytest.raises(HTTPException):
-            ds_api.check_hash(meta, file)
+            data_submission_api.check_hash(meta['hashSum'], file)
 
         file2 = UploadFile('asd')
         file2.file = SpooledTemporaryFile()
         file2.file.write(bytes('asd', 'utf-8'))
         meta2 = meta.copy()
         meta2['hashSum'] = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
-        ds_api.check_hash(meta2, file2)
+        data_submission_api.check_hash(meta2['hashSum'], file2)
 
     def test_construct_url_from_meta(self):
-        assert ds_api.construct_url_from_meta(meta) == md_url
+        assert ds_api.create_url(meta) == md_url
 
 
 def is_correct_meta(request):
