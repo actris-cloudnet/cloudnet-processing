@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import subprocess
+import os
 from os import path
 import time
 import requests
@@ -27,7 +28,7 @@ def main():
     start_server(5000, 'tests/data/server/metadata/modelFiles/', f'{SCRIPT_PATH}/md.log')
 
     url = f"http://localhost:5701/modelData/"
-    res = requests.put(url, data=meta, files={'file': open(filepath, 'rb')})
+    res = requests.post(url, data=meta, files={'file': open(filepath, 'rb')})
     res.raise_for_status()
 
     pytest.main(['-v', 'tests/e2e/model_data_submission/tests.py'])
@@ -35,6 +36,7 @@ def main():
     web_server.send_signal(signal.SIGINT)
     kill_pid()
     remove_dir(api_files_dir)
+    os.remove('tests/data/freeze/model/20200405_granada_ecmwf.nc')
 
 
 if __name__ == "__main__":

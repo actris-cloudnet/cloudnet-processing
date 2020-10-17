@@ -42,7 +42,7 @@ async def create_upload_file(credentials: HTTPBasicCredentials = Depends(securit
     return {"detail": "File submission successful!"}
 
 
-@app.put("/modelData/")
+@app.post("/modelData/")
 async def create_model_upload_file(file: UploadFile = File(...),
                                    modelType: str = Form(...),
                                    hashSum: str = Form(...)):
