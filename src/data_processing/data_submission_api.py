@@ -47,9 +47,8 @@ class ModelDataSubmissionApi:
             root_grp = netCDF4.Dataset(self._temp_full_path)
             for key in ('temperature', 'pressure', 'q'):
                 assert key in root_grp.variables
-        except OSError:
-            raise HTTPException(status_code=400, detail=f"Invalid netCDF file: {meta['filename']}")
-        except AssertionError:
+        except (OSError, AssertionError):
+            os.remove(self._temp_full_path)
             raise HTTPException(status_code=400, detail=f"Invalid model netCDF file: {meta['filename']}")
         global_attrs = {key: str(getattr(root_grp, key)) for key in root_grp.ncattrs()}
         payload = {**global_attrs, **meta,
