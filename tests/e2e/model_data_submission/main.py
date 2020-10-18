@@ -7,13 +7,11 @@ import requests
 from test_utils.utils import start_server, remove_dir, kill_pid
 import signal
 import pytest
+from data_processing.utils import sha256sum
 
 SCRIPT_PATH = path.dirname(path.realpath(__file__))
 
-filepath = "tests/data/input/data_submission/20200405_granada_ecmwf.nc"
-
-meta = {'hashSum': '8ea4732a1234f66c374a518f2be041c15087139341103c9c3cbf8680de507424',
-        'modelType': 'ecmwf'}
+data_dir = "tests/data/input/data_submission/"
 
 
 def main():
@@ -28,15 +26,21 @@ def main():
     start_server(5000, 'tests/data/server/metadata/modelFiles/', f'{SCRIPT_PATH}/md.log')
 
     url = f"http://localhost:5701/modelData/"
-    res = requests.post(url, data=meta, files={'file': open(filepath, 'rb')})
-    res.raise_for_status()
+
+    filenames = ('20200405_granada_ecmwf.nc', 'chm15k_20200405.nc', '200405_020000_P06_ZEN.LV1')
+
+    for filename in filenames:
+        filepath = f"{data_dir}{filename}"
+        meta = {'hashSum': sha256sum(filepath), 'modelType': 'ecmwf'}
+        requests.post(url, data=meta, files={'file': open(filepath, 'rb')})
 
     pytest.main(['-v', 'tests/e2e/model_data_submission/tests.py'])
 
     web_server.send_signal(signal.SIGINT)
     kill_pid()
     remove_dir(api_files_dir)
-    os.remove('tests/data/freeze/model/20200405_granada_ecmwf.nc')
+
+    os.remove(f'tests/data/freeze/model/20200405_granada_ecmwf.nc')
 
 
 if __name__ == "__main__":
