@@ -5,6 +5,7 @@ from fastapi import FastAPI, File, Form, UploadFile, Depends
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from data_processing import utils as process_utils
 from data_processing.data_submission_api import DataSubmissionApi, ModelDataSubmissionApi, check_hash
+from fastapi.responses import JSONResponse
 
 
 app = FastAPI()
@@ -53,10 +54,10 @@ async def create_model_upload_file(file: UploadFile = File(...),
     check_hash(hashSum, file)
     model_api.save_file_to_temp(file)
     payload = model_api.create_payload(meta)
-    model_api.put_metadata(payload)
+    status, msg = model_api.put_metadata(payload)
     full_path = model_api.move_file_from_temp(payload)
     model_api.link_file(full_path)
-    return {"detail": "Model file submission successful!"}
+    return JSONResponse(content=msg, status_code=status)
 
 
 if __name__ == "__main__":

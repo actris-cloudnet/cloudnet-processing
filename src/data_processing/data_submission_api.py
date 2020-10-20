@@ -4,6 +4,7 @@ import shutil
 from os import path
 import hashlib
 import requests
+from typing import Tuple
 from fastapi import UploadFile, HTTPException
 import netCDF4
 
@@ -21,12 +22,18 @@ class ModelDataSubmissionApi:
         """Save API-submitted model file to /tmp."""
         self._temp_full_path = _save(file_obj, '/tmp')
 
-    def put_metadata(self, payload: dict) -> None:
+    def put_metadata(self, payload: dict) -> Tuple[int, str]:
         """Put submitted Cloudnet model file metadata to database."""
         res = self._session.put(self._url, json=payload)
-        if str(res.status_code) not in ('200', '201'):
+        status = res.json()['status']  # res.status_code always 200 for some reason
+        if status == 201:
+            msg = "New model file submitted"
+        elif status == 200:
+            msg = "Model file updated"
+        else:
             os.remove(self._temp_full_path)
-            raise HTTPException(status_code=int(res.status_code), detail=res.json())
+            raise HTTPException(status_code=status, detail=res.json())
+        return status, f"{msg}: {payload['filename']}"
 
     def move_file_from_temp(self, payload: dict) -> str:
         """Move model file from temp folder to final destination."""
