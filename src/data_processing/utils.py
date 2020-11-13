@@ -82,31 +82,6 @@ def read_main_conf(args):
     return config
 
 
-def read_conf(args) -> dict:
-    conf_dir = args.config_dir
-
-    def _read(conf_type):
-        config_path = f'{conf_dir}/{conf_type}.ini'
-        config = configparser.ConfigParser()
-        config.read_file(open(config_path, 'r'))
-        return config
-
-    def _overwrite_path(name):
-        if hasattr(args, name):
-            value = getattr(args, name)
-            if value:
-                main_conf['PATH'][name] = value
-
-    main_conf = _read('main')
-    _overwrite_path('input')
-    _overwrite_path('output')
-    if hasattr(args, 'site'):
-        site_name = args.site[0]
-        return {'main': main_conf,
-                'site': _read(site_name)}
-    return {'main': main_conf}
-
-
 def str2bool(s: str) -> Union[bool, str]:
     return False if s == 'False' else True if s == 'True' else s
 
