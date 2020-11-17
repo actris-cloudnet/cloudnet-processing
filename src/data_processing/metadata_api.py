@@ -53,3 +53,18 @@ class MetadataApi:
         res = self._session.get(url, params=payload)
         res.raise_for_status()
         return [file['filename'] for file in res.json()]
+
+    def change_status_from_uploaded_to_processed(self, checksum: str):
+        url = path.join(self._url, 'metadata', checksum)
+        res = self._session.post(url)
+        res.raise_for_status()
+        return res
+
+    def get_uploaded_metadata(self, site: str, date_str: str, instrument: str) -> list:
+        """Get uploaded metadata for certain site / date / instrument."""
+        payload = {'dateFrom': date_str,
+                   'dateTo': date_str,
+                   'site': site,
+                   'instrument': instrument}
+        url = path.join(self._url, 'metadata')
+        return requests.get(url, payload).json()

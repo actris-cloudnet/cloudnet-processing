@@ -1,4 +1,3 @@
-import glob
 import pytest
 import netCDF4
 from cloudnetpy.utils import seconds2hours

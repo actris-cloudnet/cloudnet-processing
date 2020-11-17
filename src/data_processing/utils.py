@@ -13,7 +13,7 @@ from cloudnetpy.plotting.plot_meta import ATTRIBUTES as ATTR
 
 def read_site_info(site_name: str) -> dict:
     """Read site information from Cloudnet http API."""
-    url = f"https://altocumulus.fmi.fi/api/sites?developer"
+    url = f"https://cloudnet.fmi.fi/api/sites?developer"
     sites = requests.get(url=url).json()
     for site in sites:
         if site['id'] == site_name.replace('-', ''):

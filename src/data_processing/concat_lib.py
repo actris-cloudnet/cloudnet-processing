@@ -7,7 +7,7 @@ CONSTANTS = ['range', 'wavelength', 'scaling', 'zenith']
 VARIABLES = ['time', 'beta_raw', 'stddev', 'nn1', 'nn2', 'nn3']
 
 
-def concat_chm15k_files(files: list, date: str, output_file: str) -> None:
+def concat_chm15k_files(files: list, date: str, output_file: str) -> list:
     """ Concatenate several small chm15k files into a daily file.
 
     Args:
@@ -15,7 +15,12 @@ def concat_chm15k_files(files: list, date: str, output_file: str) -> None:
         date (str): Measurement date 'YYYY-MM-DD'.
         output_file (str): Output file name, e.g., 20201012_bucharest_chm15k.nc.
 
+    Returns:
+        list: List of files that were valid and actually used in the concatenation.
+
     """
+
+    files.sort()
 
     file_new = netCDF4.Dataset(output_file, 'w', format='NETCDF4_CLASSIC')
 
@@ -32,6 +37,7 @@ def concat_chm15k_files(files: list, date: str, output_file: str) -> None:
             _append_data(file_new, netCDF4.Dataset(file))
 
     file_new.close()
+    return valid_files
 
 
 def _remove_files_with_wrong_date(files: list, date: str) -> list:
