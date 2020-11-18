@@ -67,8 +67,11 @@ class Process:
 
         lidar_file = NamedTemporaryFile()
         print('Creating lidar file...')
-        ceilo2nc(raw_daily_file.name, lidar_file.name, site_meta=self.site_meta)
+        uuid = ceilo2nc(raw_daily_file.name, lidar_file.name, site_meta=self.site_meta)
         self._update_statuses(valid_checksums)
+        print('Uploading metadata and data...')
+        self.md_api.put(uuid, lidar_file.name)
+        self.storage_api.upload_product(raw_daily_file.name, uuid)
 
     def _concatenate_chm15k(self, raw_daily_file: str) -> list:
         """Concatenate several chm15k files into one file for certain site / date."""

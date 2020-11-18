@@ -136,11 +136,23 @@ def get_var_id(cloudnet_file_type: str, field: str) -> str:
 
 def sha256sum(filename: str) -> str:
     """Calculates hash of file using sha-256."""
-    hash_sum = hashlib.sha256()
+    return _calc_hash_sum(filename, 'sh256')
+
+
+def md5sum(filename: str, base64=False) -> str:
+    """Calculates hash of file using md5."""
+    return _calc_hash_sum(filename, 'md5', base64)
+
+
+def _calc_hash_sum(filename, method, base64=False):
+    hash_sum = getattr(hashlib, method)()
     with open(filename, "rb") as f:
         for byte_block in iter(lambda: f.read(4096), b""):
             hash_sum.update(byte_block)
-    return hash_sum.hexdigest()
+    if base64:
+        return hash_sum.digest().encode('base64')
+    else:
+        return hash_sum.hexdigest()
 
 
 def add_hash_to_filename(filename: str, hash_sum: str) -> str:

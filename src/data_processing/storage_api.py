@@ -2,16 +2,19 @@
 from typing import Tuple
 from os import path
 import requests
+from data_processing import utils
 
 
 class StorageApi:
-    """Class handling connection between Cloudnet files and database."""
+    """Class for uploading / downloading files from the Cloudnet data archive in Sodankylä."""
 
     def __init__(self, url, session=requests.Session()):
         self.url = url
         self.session = session
 
-    def download_files(self, metadata: list, dir_name: str, uploaded_only: bool = True) -> Tuple[list, list]:
+    def download_files(self, metadata: list,
+                       dir_name: str,
+                       uploaded_only: bool = True) -> Tuple[list, list]:
         """From a list of upload-metadata, download files."""
         full_paths = []
         checksums = []
@@ -28,3 +31,10 @@ class StorageApi:
         if len(full_paths) == 0:
             raise ValueError
         return full_paths, checksums
+
+    def upload_product(self, full_path: str, uuid: str):
+        """Upload a processed Cloudnet file."""
+        headers = {'content-md5': utils.md5sum(full_path, base64=True)}
+        url = path.join(self.url, 'cloudnet-product', uuid)
+        res = requests.put(url, data=open(full_path, 'rb'), auth=('test', 'test'), headers=headers)
+        res.raise_for_status()
