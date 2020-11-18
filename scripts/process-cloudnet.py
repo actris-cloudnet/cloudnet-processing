@@ -32,13 +32,14 @@ def main():
 
     md_api = MetadataApi(config['METADATASERVER']['url'])
     pid_utils = PidUtils(config['PID-SERVICE'])
-    storage_api = StorageApi(config['STORAGE-SERVICE']['url'])
+    storage_api = StorageApi(config['STORAGE-SERVICE']['url'],
+                             (config['STORAGE-SERVICE']['username'],
+                              config['STORAGE-SERVICE']['password']))
 
     for date in cloudnetpy.utils.date_range(start_date, stop_date):
         date_str = date.strftime("%Y-%m-%d")
-        #print(f'{site_name} {date_str}')
-
-        process = Process(site_meta, date_str, config, md_api, storage_api)
+        print(f'{site_name} {date_str}')
+        process = Process(site_meta, date_str, md_api, storage_api)
         try:
             process.process_lidar()
         except RawLidarFileMissing:
@@ -46,10 +47,9 @@ def main():
 
 
 class Process:
-    def __init__(self, site_meta: dict, date_str: str, config: dict, md_api: MetadataApi, storage_api: StorageApi):
+    def __init__(self, site_meta: dict, date_str: str, md_api: MetadataApi, storage_api: StorageApi):
         self.site_meta = site_meta
         self.date_str = date_str  # YYYY-MM-DD
-        self.config = config
         self.md_api = md_api
         self.storage_api = storage_api
 
@@ -71,7 +71,7 @@ class Process:
         self._update_statuses(valid_checksums)
         print('Uploading metadata and data...')
         self.md_api.put(uuid, lidar_file.name)
-        self.storage_api.upload_product(raw_daily_file.name, uuid)
+        self.storage_api.upload_product_file(raw_daily_file.name, uuid)
 
     def _concatenate_chm15k(self, raw_daily_file: str) -> list:
         """Concatenate several chm15k files into one file for certain site / date."""
@@ -89,7 +89,7 @@ class Process:
 
     def _download_instrument_data(self, instrument: str, temp_dir: TemporaryDirectory) -> Tuple[list, list]:
         metadata = self.md_api.get_uploaded_metadata(self.site_meta['id'], self.date_str, instrument)
-        return self.storage_api.download_files(metadata, temp_dir.name)
+        return self.storage_api.download_raw_files(metadata, temp_dir.name)
 
     def _update_statuses(self, checksums):
         print('Updating statuses of processed raw files..')
