@@ -18,16 +18,17 @@ def concat_chm15k_files(files: list, date: str, output_file: str) -> list:
     Returns:
         list: List of files that were valid and actually used in the concatenation.
 
+    Raises:
+        ValueError: No valid files to be concatenated.
+
     """
 
     files.sort()
-
-    file_new = netCDF4.Dataset(output_file, 'w', format='NETCDF4_CLASSIC')
-
     valid_files = _remove_files_with_wrong_date(files, date)
-
+    if len(valid_files) == 0:
+        raise ValueError
+    file_new = netCDF4.Dataset(output_file, 'w', format='NETCDF4_CLASSIC')
     first_file_of_day = netCDF4.Dataset(valid_files[0])
-
     _create_dimensions(file_new, first_file_of_day)
     _create_global_attributes(file_new, first_file_of_day)
     _write_initial_data(file_new, first_file_of_day)

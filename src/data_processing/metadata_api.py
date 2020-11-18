@@ -56,7 +56,7 @@ class MetadataApi:
 
     def change_status_from_uploaded_to_processed(self, checksum: str):
         url = path.join(self._url, 'metadata', checksum)
-        res = self._session.post(url)
+        res = self._session.post(url, json={'status': 'processed'})
         res.raise_for_status()
         return res
 
