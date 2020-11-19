@@ -6,7 +6,7 @@ from typing import Tuple, Union
 import cloudnetpy.utils
 import shutil
 from cloudnetpy.categorize import generate_categorize
-from cloudnetpy.instruments import rpg2nc, ceilo2nc
+from cloudnetpy.instruments import rpg2nc, ceilo2nc, mira2nc
 from data_processing import utils
 from data_processing.metadata_api import MetadataApi
 from data_processing.storage_api import StorageApi
@@ -41,14 +41,11 @@ def main():
         date_str = date.strftime("%Y-%m-%d")
         print(f'{site_name} {date_str}')
         process = Process(site_meta, date_str, md_api, storage_api)
-        try:
-            process.process_lidar()
-        except InputFileMissing:
-            print('No raw lidar data or already processed.')
-        try:
-            process.process_model()
-        except InputFileMissing:
-            print('No raw model data or already processed.')
+        for process_type in ('lidar', 'radar', 'model'):
+            try:
+                getattr(process, f'process_{process_type}')()
+            except InputFileMissing:
+                print(f'No raw {process_type} data or already processed.')
 
 
 class Process:
@@ -59,6 +56,7 @@ class Process:
         self.storage_api = storage_api
 
     def process_model(self):
+        """Process Cloudnet model file"""
         try:
             raw_daily_file = NamedTemporaryFile(suffix='.nc')
             valid_checksums = self._get_daily_raw_file(raw_daily_file.name)
@@ -84,7 +82,20 @@ class Process:
         self._upload_data_and_metadata(lidar_file.name, uuid, valid_checksums)
 
     def process_radar(self):
-        pass
+        """Process Cloudnet radar file."""
+        radar_file = NamedTemporaryFile()
+        try:
+            temp_dir = TemporaryDirectory()
+            full_paths, valid_checksums = self._download_data(temp_dir, 'rpg-fmcw-94')
+            uuid = rpg2nc(temp_dir.name, radar_file.name, site_meta=self.site_meta)
+        except ValueError:
+            try:
+                raw_daily_file = NamedTemporaryFile(suffix='.mmclx')
+                valid_checksums = self._get_daily_raw_file(raw_daily_file.name, 'mira')
+                uuid = mira2nc(raw_daily_file.name, radar_file.name, site_meta=self.site_meta)
+            except ValueError:
+                raise InputFileMissing('Raw radar')
+        self._upload_data_and_metadata(radar_file.name, uuid, valid_checksums)
 
     def _concatenate_chm15k(self, raw_daily_file: str) -> list:
         """Concatenate several chm15k files into one file for certain site / date."""
@@ -101,7 +112,7 @@ class Process:
         shutil.move(full_paths[0], raw_daily_file)
         return checksums
 
-    def _download_data(self, temp_dir: TemporaryDirectory, instrument: str = None):
+    def _download_data(self, temp_dir: TemporaryDirectory, instrument: str = None) -> Tuple[list, list]:
         if instrument:
             metadata = self.md_api.get_uploaded_metadata(self.site_meta['id'], self.date_str, instrument=instrument)
         else:
