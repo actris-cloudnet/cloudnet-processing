@@ -9,6 +9,7 @@ from typing import Tuple, Union
 import netCDF4
 from cloudnetpy.utils import get_time
 from cloudnetpy.plotting.plot_meta import ATTRIBUTES as ATTR
+import base64
 
 
 def read_site_info(site_name: str) -> dict:
@@ -136,21 +137,21 @@ def get_var_id(cloudnet_file_type: str, field: str) -> str:
 
 def sha256sum(filename: str) -> str:
     """Calculates hash of file using sha-256."""
-    return _calc_hash_sum(filename, 'sh256')
+    return _calc_hash_sum(filename, 'sha256')
 
 
-def md5sum(filename: str, base64=False) -> str:
+def md5sum(filename: str, is_base64=False) -> str:
     """Calculates hash of file using md5."""
-    return _calc_hash_sum(filename, 'md5', base64)
+    return _calc_hash_sum(filename, 'md5', is_base64)
 
 
-def _calc_hash_sum(filename, method, base64=False):
+def _calc_hash_sum(filename, method, is_base64=False):
     hash_sum = getattr(hashlib, method)()
     with open(filename, "rb") as f:
         for byte_block in iter(lambda: f.read(4096), b""):
             hash_sum.update(byte_block)
-    if base64:
-        return hash_sum.digest().encode('base64')
+    if is_base64:
+        return base64.encodebytes(hash_sum.digest()).decode('utf-8').strip()
     else:
         return hash_sum.hexdigest()
 

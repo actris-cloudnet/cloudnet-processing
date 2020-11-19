@@ -69,9 +69,10 @@ class Process:
         print('Creating lidar file...')
         uuid = ceilo2nc(raw_daily_file.name, lidar_file.name, site_meta=self.site_meta)
         self._update_statuses(valid_checksums)
-        print('Uploading metadata and data...')
+        print('Uploading metadata...')
         self.md_api.put(uuid, lidar_file.name)
-        self.storage_api.upload_product_file(raw_daily_file.name, uuid)
+        print('Uploading data...')
+        self.storage_api.upload_product(raw_daily_file.name, uuid)
 
     def _concatenate_chm15k(self, raw_daily_file: str) -> list:
         """Concatenate several chm15k files into one file for certain site / date."""

@@ -33,9 +33,10 @@ class StorageApi:
             raise ValueError
         return full_paths, checksums
 
-    def upload_product_file(self, full_path: str, uuid: str):
+    def upload_product(self, full_path: str, uuid: str):
         """Upload a processed Cloudnet file."""
-        headers = {'content-md5': utils.md5sum(full_path, base64=True)}
-        url = path.join(self.url, 'cloudnet-product', uuid)
+        checksum = utils.md5sum(full_path, is_base64=True)
+        headers = {'content-md5': checksum}
+        url = path.join(self.url, 'cloudnet-product', uuid)  # What key would be good?
         res = requests.put(url, data=open(full_path, 'rb'), headers=headers, auth=self.auth)
         res.raise_for_status()

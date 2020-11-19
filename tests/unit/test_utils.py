@@ -61,28 +61,6 @@ def test_get_plottable_variables_info():
     assert res == expected
 
 
-def test_read_conf_1():
-    Args = namedtuple('args', ['config_dir'])
-    args = Args(config_dir=f"{test_file_path}/../../config")
-    conf = utils.read_conf(args)
-    assert conf['main']['METADATASERVER']['url'] == 'http://localhost:3000/'
-
-
-def test_read_conf_2():
-    Args = namedtuple('args', ['config_dir', 'site'])
-    args = Args(config_dir=f"{test_file_path}/../../config", site=['bucharest'])
-    conf = utils.read_conf(args)
-    assert conf['site']['INSTRUMENTS']['lidar'] == 'chm15k'
-
-
-def test_read_conf_3():
-    Args = namedtuple('args', ['config_dir', 'input', 'output'])
-    args = Args(config_dir=f"{test_file_path}/../../config", input='/my/input', output='/my/output')
-    conf = utils.read_conf(args)
-    assert conf['main']['PATH']['input'] == '/my/input'
-    assert conf['main']['PATH']['output'] == '/my/output'
-
-
 def test_read_main_conf():
     Args = namedtuple('args', 'config_dir')
     args = Args(config_dir=f"{test_file_path}/../../config")
@@ -134,3 +112,15 @@ def test_sha256sum(nc_file):
     hash_sum = utils.sha256sum(nc_file)
     assert isinstance(hash_sum, str)
     assert len(hash_sum) == 64
+
+
+def test_md5sum():
+    file = 'tests/data/input/bucharest/uncalibrated/chm15k/2020/04/02/00100_A202004022120_CHM170137.nc'
+    hash_sum = utils.md5sum(file)
+    assert hash_sum == '0c76528228514824b7975c80a911e2f4'
+
+
+def test_sha256sum2():
+    file = 'tests/data/input/bucharest/uncalibrated/chm15k/2020/04/02/00100_A202004022120_CHM170137.nc'
+    hash_sum = utils.sha256sum(file)
+    assert hash_sum == 'd0b67250568e7a9c0948d50553b5d56be183500d4289627bbfe65b0c2a3316a1'
