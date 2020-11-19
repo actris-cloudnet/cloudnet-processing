@@ -60,11 +60,12 @@ class MetadataApi:
         res.raise_for_status()
         return res
 
-    def get_uploaded_metadata(self, site: str, date_str: str, instrument: str) -> list:
+    def get_uploaded_metadata(self, site: str, date_str: str, instrument: str = None) -> list:
         """Get uploaded metadata for certain site / date / instrument."""
         payload = {'dateFrom': date_str,
                    'dateTo': date_str,
-                   'site': site,
-                   'instrument': instrument}
+                   'site': site}
+        if instrument:
+            payload['instrument'] = instrument
         url = path.join(self._url, 'metadata')
         return requests.get(url, payload).json()

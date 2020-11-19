@@ -12,6 +12,7 @@ from data_processing.metadata_api import MetadataApi
 from data_processing.storage_api import StorageApi
 from data_processing.pid_utils import PidUtils
 from data_processing import concat_lib
+from data_processing import modifier
 from tempfile import TemporaryDirectory
 from tempfile import NamedTemporaryFile
 
@@ -42,8 +43,12 @@ def main():
         process = Process(site_meta, date_str, md_api, storage_api)
         try:
             process.process_lidar()
-        except RawLidarFileMissing:
-            print('No raw lidar file for this day.')
+        except InputFileMissing:
+            print('No raw lidar data or already processed.')
+        try:
+            process.process_model()
+        except InputFileMissing:
+            print('No raw model data or already processed.')
 
 
 class Process:
@@ -53,6 +58,15 @@ class Process:
         self.md_api = md_api
         self.storage_api = storage_api
 
+    def process_model(self):
+        try:
+            raw_daily_file = NamedTemporaryFile(suffix='.nc')
+            valid_checksums = self._get_daily_raw_file(raw_daily_file.name)
+        except ValueError:
+            raise InputFileMissing('Raw model')
+        uuid = modifier.fix_attributes(raw_daily_file.name)
+        self._upload_data_and_metadata(raw_daily_file.name, uuid, valid_checksums)
+
     def process_lidar(self):
         """Process Cloudnet lidar file."""
         try:
@@ -61,67 +75,55 @@ class Process:
         except ValueError:
             try:
                 raw_daily_file = NamedTemporaryFile(suffix='.DAT')
-                valid_checksums = self._get_daily_file('cl51', raw_daily_file.name)
+                valid_checksums = self._get_daily_raw_file(raw_daily_file.name, 'cl51')
             except ValueError:
-                raise RawLidarFileMissing
+                raise InputFileMissing('Raw lidar')
 
         lidar_file = NamedTemporaryFile()
-        print('Creating lidar file...')
         uuid = ceilo2nc(raw_daily_file.name, lidar_file.name, site_meta=self.site_meta)
-        self._update_statuses(valid_checksums)
-        print('Uploading metadata...')
-        self.md_api.put(uuid, lidar_file.name)
-        print('Uploading data...')
-        self.storage_api.upload_product(raw_daily_file.name, uuid)
-
-    def _concatenate_chm15k(self, raw_daily_file: str) -> list:
-        """Concatenate several chm15k files into one file for certain site / date."""
-        temp_dir = TemporaryDirectory()
-        full_paths, checksums = self._download_instrument_data('chm15k', temp_dir)
-        print('Concatenating CHM15k files...')
-        valid_full_paths = concat_lib.concat_chm15k_files(full_paths, self.date_str, raw_daily_file)
-        return [checksum for checksum, full_path in zip(checksums, full_paths) if full_path in valid_full_paths]
-
-    def _get_daily_file(self, instrument: str, raw_daily_file: str) -> list:
-        temp_dir = TemporaryDirectory()
-        full_paths, checksums = self._download_instrument_data(instrument, temp_dir)
-        shutil.move(full_paths[0], raw_daily_file)
-        return checksums
-
-    def _download_instrument_data(self, instrument: str, temp_dir: TemporaryDirectory) -> Tuple[list, list]:
-        metadata = self.md_api.get_uploaded_metadata(self.site_meta['id'], self.date_str, instrument)
-        return self.storage_api.download_raw_files(metadata, temp_dir.name)
-
-    def _update_statuses(self, checksums):
-        print('Updating statuses of processed raw files..')
-        for checksum in checksums:
-            self.md_api.change_status_from_uploaded_to_processed(checksum)
-
-    def process_model(self):
-        pass
+        self._upload_data_and_metadata(lidar_file.name, uuid, valid_checksums)
 
     def process_radar(self):
         pass
 
+    def _concatenate_chm15k(self, raw_daily_file: str) -> list:
+        """Concatenate several chm15k files into one file for certain site / date."""
+        temp_dir = TemporaryDirectory()
+        full_paths, checksums = self._download_data(temp_dir, 'chm15k')
+        print('Concatenating CHM15k files...')
+        valid_full_paths = concat_lib.concat_chm15k_files(full_paths, self.date_str, raw_daily_file)
+        return [checksum for checksum, full_path in zip(checksums, full_paths) if full_path in valid_full_paths]
 
-class CalibratedFileMissing(Exception):
+    def _get_daily_raw_file(self, raw_daily_file: str, instrument: str = None):
+        """Downloads and saves to /tmp a single daily instrument or model file."""
+        temp_dir = TemporaryDirectory()
+        full_paths, checksums = self._download_data(temp_dir, instrument)
+        shutil.move(full_paths[0], raw_daily_file)
+        return checksums
+
+    def _download_data(self, temp_dir: TemporaryDirectory, instrument: str = None):
+        if instrument:
+            metadata = self.md_api.get_uploaded_metadata(self.site_meta['id'], self.date_str, instrument=instrument)
+        else:
+            all_metadata_for_day = self.md_api.get_uploaded_metadata(self.site_meta['id'], self.date_str)
+            model_metadata = [row for row in all_metadata_for_day if row['model']]
+            metadata = sorted(model_metadata, key=lambda k: k['model']['optimumOrder'])
+        return self.storage_api.download_raw_files(metadata, temp_dir.name)
+
+    def _upload_data_and_metadata(self, full_path: str, uuid, valid_checksums: list):
+        self._update_statuses(valid_checksums)
+        self.md_api.put(uuid, full_path)
+        self.storage_api.upload_product(full_path, uuid)
+
+    def _update_statuses(self, checksums):
+        for checksum in checksums:
+            self.md_api.change_status_from_uploaded_to_processed(checksum)
+
+
+class InputFileMissing(Exception):
     """Internal exception class."""
-    def __init__(self):
-        self.message = 'Calibrated file missing'
-        super().__init__(self.message)
-
-
-class UnCalibratedFileMissing(Exception):
-    """Internal exception class."""
-    def __init__(self):
-        self.message = 'Calibrated file missing'
-        super().__init__(self.message)
-
-
-class RawLidarFileMissing(Exception):
-    """Internal exception class."""
-    def __init__(self):
-        self.message = 'Raw lidar file missing'
+    def __init__(self, file_type: str):
+        self.message = f'{file_type} file missing'
         super().__init__(self.message)
 
 
@@ -129,20 +131,6 @@ class UploadedFileMissing(Exception):
     """Internal exception class."""
     def __init__(self):
         self.message = 'Uploaded file missing'
-        super().__init__(self.message)
-
-
-class CHM15kFileMissing(Exception):
-    """Internal exception class."""
-    def __init__(self):
-        self.message = 'CHM15k file(s) missing'
-        super().__init__(self.message)
-
-
-class CL51FileMissing(Exception):
-    """Internal exception class."""
-    def __init__(self):
-        self.message = 'CL51 file missing'
         super().__init__(self.message)
 
 
