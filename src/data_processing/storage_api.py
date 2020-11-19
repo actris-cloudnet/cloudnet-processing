@@ -8,10 +8,14 @@ from data_processing import utils
 class StorageApi:
     """Class for uploading / downloading files from the Cloudnet data archive in Sodankylä."""
 
-    def __init__(self, url: str, auth: tuple, session=requests.Session()):
+    def __init__(self, url: str,
+                 auth: tuple,
+                 product_bucket: str,
+                 session: requests.Session = requests.Session()):
         self.url = url
         self.session = session
         self.auth = auth
+        self.product_bucket = product_bucket
 
     def download_raw_files(self, metadata: list,
                            dir_name: str,
@@ -57,6 +61,6 @@ class StorageApi:
         """Upload a processed Cloudnet file."""
         checksum = utils.md5sum(full_path, is_base64=True)
         headers = {'content-md5': checksum}
-        url = path.join(self.url, 'cloudnet-product', uuid)  # What key would be good?
+        url = path.join(self.url, self.product_bucket, uuid)
         res = requests.put(url, data=open(full_path, 'rb'), headers=headers, auth=self.auth)
         res.raise_for_status()

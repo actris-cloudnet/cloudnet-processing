@@ -15,7 +15,6 @@ from data_processing import concat_lib
 from data_processing import modifier
 from tempfile import TemporaryDirectory
 from tempfile import NamedTemporaryFile
-import netCDF4
 
 
 PRODUCTS = ('classification', 'iwc-Z-T-method', 'lwc-scaled-adiabatic', 'drizzle')
@@ -35,8 +34,8 @@ def main():
     md_api = MetadataApi(config['METADATASERVER']['url'])
     pid_utils = PidUtils(config['PID-SERVICE'])
     storage_api = StorageApi(config['STORAGE-SERVICE']['url'],
-                             (config['STORAGE-SERVICE']['username'],
-                              config['STORAGE-SERVICE']['password']))
+                             (config['STORAGE-SERVICE']['username'], config['STORAGE-SERVICE']['password']),
+                             product_bucket=_get_product_bucket())
 
     for date in cloudnetpy.utils.date_range(start_date, stop_date):
         date_str = date.strftime("%Y-%m-%d")
@@ -47,6 +46,10 @@ def main():
                 getattr(process, f'process_{instrument_type}')()
             except InputFileMissing:
                 print(f'No raw {instrument_type} data or already processed.')
+
+
+def _get_product_bucket() -> str:
+    return 'cloudnet-product' if ARGS.new_version else 'cloudnet-product-volatile'
 
 
 class Process:
@@ -154,13 +157,6 @@ class InputFileMissing(Exception):
         super().__init__(self.message)
 
 
-class UploadedFileMissing(Exception):
-    """Internal exception class."""
-    def __init__(self):
-        self.message = 'Uploaded file missing'
-        super().__init__(self.message)
-
-
 class CategorizeFileMissing(Exception):
     """Internal exception class."""
     def __init__(self):
@@ -185,7 +181,5 @@ if __name__ == "__main__":
                         help='Disable API calls. Useful for testing.', default=False)
     parser.add_argument('--new-version', dest='new_version', action='store_true',
                         help='Process new version.', default=False)
-    parser.add_argument('--plot-quicklooks', dest='plot_quicklooks', action='store_true',
-                        help='Also plot quicklooks.', default=False)
     ARGS = parser.parse_args()
     main()
