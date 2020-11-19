@@ -2,20 +2,17 @@
 """Master script for CloudnetPy processing."""
 import os
 import argparse
-from typing import Tuple, Union
-import cloudnetpy.utils
+from typing import Tuple
 import shutil
-from cloudnetpy.categorize import generate_categorize
+from tempfile import TemporaryDirectory
+from tempfile import NamedTemporaryFile
 from cloudnetpy.instruments import rpg2nc, ceilo2nc, mira2nc
+from cloudnetpy.utils import date_range
 from data_processing import utils
 from data_processing.metadata_api import MetadataApi
 from data_processing.storage_api import StorageApi
-from data_processing.pid_utils import PidUtils
 from data_processing import concat_lib
 from data_processing import modifier
-from tempfile import TemporaryDirectory
-from tempfile import NamedTemporaryFile
-
 
 PRODUCTS = ('classification', 'iwc-Z-T-method', 'lwc-scaled-adiabatic', 'drizzle')
 
@@ -32,18 +29,17 @@ def main():
     stop_date = utils.date_string_to_date(ARGS.stop)
 
     md_api = MetadataApi(config['METADATASERVER']['url'])
-    pid_utils = PidUtils(config['PID-SERVICE'])
     storage_api = StorageApi(config['STORAGE-SERVICE']['url'],
                              (config['STORAGE-SERVICE']['username'], config['STORAGE-SERVICE']['password']),
                              product_bucket=_get_product_bucket())
 
-    for date in cloudnetpy.utils.date_range(start_date, stop_date):
+    for date in date_range(start_date, stop_date):
         date_str = date.strftime("%Y-%m-%d")
         print(f'{site_name} {date_str}')
         process = Process(site_meta, date_str, md_api, storage_api)
         for instrument_type in ('mwr', 'lidar', 'radar', 'model'):
             try:
-                getattr(process, f'process_{instrument_type}')()
+                getattr(process, f'process_{instrument_type}')(instrument_type)
             except InputFileMissing:
                 print(f'No raw {instrument_type} data or already processed.')
 
@@ -59,27 +55,27 @@ class Process:
         self.md_api = md_api
         self.storage_api = storage_api
 
-    def process_mwr(self):
+    def process_mwr(self, instrument_type: str):
         """Process Cloudnet mwr file"""
         try:
             raw_daily_file = NamedTemporaryFile(suffix='.nc')
             valid_checksums, original_filename = self._get_daily_raw_file(raw_daily_file.name, 'hatpro')
         except ValueError:
-            raise InputFileMissing('Raw mwr')
+            raise InputFileMissing(f'Raw {instrument_type}')
         uuid = modifier.fix_mwr_file(raw_daily_file.name, original_filename, self.date_str, self.site_meta['name'])
-        self._upload_data_and_metadata(raw_daily_file.name, uuid, valid_checksums)
+        self._upload_data_and_metadata(raw_daily_file.name, uuid, valid_checksums, instrument_type)
 
-    def process_model(self):
+    def process_model(self, instrument_type: str):
         """Process Cloudnet model file"""
         try:
             raw_daily_file = NamedTemporaryFile(suffix='.nc')
             valid_checksums, _ = self._get_daily_raw_file(raw_daily_file.name)
         except ValueError:
-            raise InputFileMissing('Raw model')
+            raise InputFileMissing(f'Raw {instrument_type}')
         uuid = modifier.fix_model_file(raw_daily_file.name)
-        self._upload_data_and_metadata(raw_daily_file.name, uuid, valid_checksums)
+        self._upload_data_and_metadata(raw_daily_file.name, uuid, valid_checksums, instrument_type)
 
-    def process_lidar(self):
+    def process_lidar(self, instrument_type: str):
         """Process Cloudnet lidar file."""
         try:
             raw_daily_file = NamedTemporaryFile(suffix='.nc')
@@ -89,13 +85,13 @@ class Process:
                 raw_daily_file = NamedTemporaryFile(suffix='.DAT')
                 valid_checksums, _ = self._get_daily_raw_file(raw_daily_file.name, 'cl51')
             except ValueError:
-                raise InputFileMissing('Raw lidar')
+                raise InputFileMissing(f'Raw {instrument_type}')
 
         lidar_file = NamedTemporaryFile()
         uuid = ceilo2nc(raw_daily_file.name, lidar_file.name, site_meta=self.site_meta)
-        self._upload_data_and_metadata(lidar_file.name, uuid, valid_checksums)
+        self._upload_data_and_metadata(lidar_file.name, uuid, valid_checksums, instrument_type)
 
-    def process_radar(self):
+    def process_radar(self, instrument_type: str):
         """Process Cloudnet radar file."""
         radar_file = NamedTemporaryFile()
         try:
@@ -108,14 +104,13 @@ class Process:
                 valid_checksums, _ = self._get_daily_raw_file(raw_daily_file.name, 'mira')
                 uuid = mira2nc(raw_daily_file.name, radar_file.name, site_meta=self.site_meta)
             except ValueError:
-                raise InputFileMissing('Raw radar')
-        self._upload_data_and_metadata(radar_file.name, uuid, valid_checksums)
+                raise InputFileMissing(f'Raw {instrument_type}')
+        self._upload_data_and_metadata(radar_file.name, uuid, valid_checksums, instrument_type)
 
     def _concatenate_chm15k(self, raw_daily_file: str) -> list:
         """Concatenate several chm15k files into one file for certain site / date."""
         temp_dir = TemporaryDirectory()
         full_paths, checksums = self._download_data(temp_dir, 'chm15k')
-        print('Concatenating CHM15k files...')
         valid_full_paths = concat_lib.concat_chm15k_files(full_paths, self.date_str, raw_daily_file)
         return [checksum for checksum, full_path in zip(checksums, full_paths) if full_path in valid_full_paths]
 
@@ -136,16 +131,23 @@ class Process:
             metadata = self.md_api.get_uploaded_metadata(self.site_meta['id'], self.date_str, instrument=instrument)
         else:
             all_metadata_for_day = self.md_api.get_uploaded_metadata(self.site_meta['id'], self.date_str)
-            model_metadata = [row for row in all_metadata_for_day if row['model']]
-            metadata = sorted(model_metadata, key=lambda k: k['model']['optimumOrder'])
+            metadata = self._select_optimum_model(all_metadata_for_day)
         return self.storage_api.download_raw_files(metadata, temp_dir.name)
 
-    def _upload_data_and_metadata(self, full_path: str, uuid, valid_checksums: list):
+    @staticmethod
+    def _select_optimum_model(all_metadata_for_day: list) -> list:
+        model_metadata = [row for row in all_metadata_for_day if row['model']]
+        return sorted(model_metadata, key=lambda k: k['model']['optimumOrder'])
+
+    def _upload_data_and_metadata(self, full_path: str, uuid, valid_checksums: list, product: str) -> None:
         self.md_api.put(uuid, full_path)
-        self.storage_api.upload_product(full_path, uuid)
+        self.storage_api.upload_product(full_path, self._get_product_key(product))
         self._update_statuses(valid_checksums)
 
-    def _update_statuses(self, checksums):
+    def _get_product_key(self, product: str) -> str:
+        return f"{self.date_str.replace('-', '')}_{self.site_meta['id']}_{product}.nc"
+
+    def _update_statuses(self, checksums: list) -> None:
         for checksum in checksums:
             self.md_api.change_status_from_uploaded_to_processed(checksum)
 
