@@ -15,6 +15,7 @@ from data_processing import concat_lib
 from data_processing import modifier
 from tempfile import TemporaryDirectory
 from tempfile import NamedTemporaryFile
+import netCDF4
 
 
 PRODUCTS = ('classification', 'iwc-Z-T-method', 'lwc-scaled-adiabatic', 'drizzle')
@@ -41,11 +42,11 @@ def main():
         date_str = date.strftime("%Y-%m-%d")
         print(f'{site_name} {date_str}')
         process = Process(site_meta, date_str, md_api, storage_api)
-        for process_type in ('lidar', 'radar', 'model'):
+        for instrument_type in ('mwr', 'lidar', 'radar', 'model'):
             try:
-                getattr(process, f'process_{process_type}')()
+                getattr(process, f'process_{instrument_type}')()
             except InputFileMissing:
-                print(f'No raw {process_type} data or already processed.')
+                print(f'No raw {instrument_type} data or already processed.')
 
 
 class Process:
@@ -55,14 +56,24 @@ class Process:
         self.md_api = md_api
         self.storage_api = storage_api
 
+    def process_mwr(self):
+        """Process Cloudnet mwr file"""
+        try:
+            raw_daily_file = NamedTemporaryFile(suffix='.nc')
+            valid_checksums, original_filename = self._get_daily_raw_file(raw_daily_file.name, 'hatpro')
+        except ValueError:
+            raise InputFileMissing('Raw mwr')
+        uuid = modifier.fix_mwr_file(raw_daily_file.name, original_filename, self.date_str, self.site_meta['name'])
+        self._upload_data_and_metadata(raw_daily_file.name, uuid, valid_checksums)
+
     def process_model(self):
         """Process Cloudnet model file"""
         try:
             raw_daily_file = NamedTemporaryFile(suffix='.nc')
-            valid_checksums = self._get_daily_raw_file(raw_daily_file.name)
+            valid_checksums, _ = self._get_daily_raw_file(raw_daily_file.name)
         except ValueError:
             raise InputFileMissing('Raw model')
-        uuid = modifier.fix_attributes(raw_daily_file.name)
+        uuid = modifier.fix_model_file(raw_daily_file.name)
         self._upload_data_and_metadata(raw_daily_file.name, uuid, valid_checksums)
 
     def process_lidar(self):
@@ -73,7 +84,7 @@ class Process:
         except ValueError:
             try:
                 raw_daily_file = NamedTemporaryFile(suffix='.DAT')
-                valid_checksums = self._get_daily_raw_file(raw_daily_file.name, 'cl51')
+                valid_checksums, _ = self._get_daily_raw_file(raw_daily_file.name, 'cl51')
             except ValueError:
                 raise InputFileMissing('Raw lidar')
 
@@ -91,7 +102,7 @@ class Process:
         except ValueError:
             try:
                 raw_daily_file = NamedTemporaryFile(suffix='.mmclx')
-                valid_checksums = self._get_daily_raw_file(raw_daily_file.name, 'mira')
+                valid_checksums, _ = self._get_daily_raw_file(raw_daily_file.name, 'mira')
                 uuid = mira2nc(raw_daily_file.name, radar_file.name, site_meta=self.site_meta)
             except ValueError:
                 raise InputFileMissing('Raw radar')
@@ -105,15 +116,20 @@ class Process:
         valid_full_paths = concat_lib.concat_chm15k_files(full_paths, self.date_str, raw_daily_file)
         return [checksum for checksum, full_path in zip(checksums, full_paths) if full_path in valid_full_paths]
 
-    def _get_daily_raw_file(self, raw_daily_file: str, instrument: str = None):
+    def _get_daily_raw_file(self, raw_daily_file: str, instrument: str = None) -> Tuple[list, str]:
         """Downloads and saves to /tmp a single daily instrument or model file."""
         temp_dir = TemporaryDirectory()
         full_paths, checksums = self._download_data(temp_dir, instrument)
-        shutil.move(full_paths[0], raw_daily_file)
-        return checksums
+        full_path = full_paths[0]
+        shutil.move(full_path, raw_daily_file)
+        original_filename = os.path.basename(full_path)
+        return checksums, original_filename
 
     def _download_data(self, temp_dir: TemporaryDirectory, instrument: str = None) -> Tuple[list, list]:
-        if instrument:
+        if instrument == 'hatpro':
+            all_metadata_for_day = self.md_api.get_uploaded_metadata(self.site_meta['id'], self.date_str, instrument)
+            metadata = [row for row in all_metadata_for_day if row['filename'].lower().endswith('.lwp.nc')]
+        elif instrument:
             metadata = self.md_api.get_uploaded_metadata(self.site_meta['id'], self.date_str, instrument=instrument)
         else:
             all_metadata_for_day = self.md_api.get_uploaded_metadata(self.site_meta['id'], self.date_str)
@@ -122,9 +138,9 @@ class Process:
         return self.storage_api.download_raw_files(metadata, temp_dir.name)
 
     def _upload_data_and_metadata(self, full_path: str, uuid, valid_checksums: list):
-        self._update_statuses(valid_checksums)
         self.md_api.put(uuid, full_path)
         self.storage_api.upload_product(full_path, uuid)
+        self._update_statuses(valid_checksums)
 
     def _update_statuses(self, checksums):
         for checksum in checksums:
