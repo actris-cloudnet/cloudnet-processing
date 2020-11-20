@@ -1,12 +1,8 @@
-import os
-from os import path
-import fnmatch
 import datetime
 import configparser
 import hashlib
 import requests
 from typing import Tuple, Union
-import netCDF4
 from cloudnetpy.utils import get_time
 from cloudnetpy.plotting.plot_meta import ATTRIBUTES as ATTR
 import base64
@@ -14,7 +10,7 @@ import base64
 
 def read_site_info(site_name: str) -> dict:
     """Read site information from Cloudnet http API."""
-    url = f"https://cloudnet.fmi.fi/api/sites?developer"
+    url = f"https://cloudnet.fmi.fi/api/sites?modelSites"
     sites = requests.get(url=url).json()
     for site in sites:
         if site['id'] == site_name.replace('-', ''):
@@ -30,36 +26,6 @@ def get_raw_processing_types() -> list:
     all_types = [instrument['type'] for instrument in instruments]
     all_types.append('model')
     return list(set(all_types))
-
-
-def find_file(folder: str, wildcard: str) -> str:
-    """Find the first file name matching a wildcard.
-
-    Args:
-        folder (str): Name of folder.
-        wildcard (str): pattern to be searched, e.g., '*some_string*'.
-
-    Returns:
-        str: Full path of the first found file.
-
-    Raises:
-        FileNotFoundError: Can not find such file.
-
-    """
-    files = os.listdir(folder)
-    for file in files:
-        if fnmatch.fnmatch(file, wildcard):
-            return os.path.join(folder, file)
-    raise FileNotFoundError(f"No {wildcard} in {folder}")
-
-
-def list_files(folder: str, pattern: str) -> list:
-    """List files from folder (non-recursively) using a pattern that can include wildcard.
-    If folder or suitable files do not exist, return empty list."""
-    if os.path.isdir(folder):
-        files = fnmatch.filter(os.listdir(folder), pattern)
-        return [path.join(folder, file) for file in files]
-    return []
 
 
 def date_string_to_date(date_string: str) -> datetime.date:
@@ -163,33 +129,3 @@ def _calc_hash_sum(filename, method, is_base64=False):
         return base64.encodebytes(hash_sum.digest()).decode('utf-8').strip()
     else:
         return hash_sum.hexdigest()
-
-
-def add_hash_to_filename(filename: str, hash_sum: str) -> str:
-    hash_to_name = hash_sum[:18]
-    parts = filename.split('.')
-    if len(parts) == 1:
-        return f"{filename}-{hash_to_name}"
-    return f"{''.join(parts[:-1])}-{hash_to_name}.{parts[-1]}"
-
-
-def add_uuid_to_filename(uuid: str, filename: str) -> str:
-    """Adds uuid suffix to file."""
-    suffix = f"_{uuid[:4]}"
-    filepath, extension = os.path.splitext(filename)
-    new_filename = f"{filepath}{suffix}{extension}"
-    os.rename(filename, new_filename)
-    return new_filename
-
-
-def is_volatile_file(filename: str) -> bool:
-    """Check if nc-file is volatile."""
-    nc = netCDF4.Dataset(filename)
-    is_missing_pid = not hasattr(nc, 'pid')
-    nc.close()
-    return is_missing_pid
-
-
-def replace_path(filename: str, new_path: str) -> str:
-    """Replaces path of file."""
-    return filename.replace(os.path.dirname(filename), new_path)

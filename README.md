@@ -53,7 +53,6 @@ Optional arguments:
 |       | `--start`       | `current day - 7` | Starting date. |
 |       | `--stop`        | `current day - 1 `| Stopping date. |
 |       | `--new-version` | `False`             | Create new version of the files. |
-| `-na`  | `--no-api`     | `False`             | Disable API calls. Useful for testing. |
 
 
 ### `freeze.py`
