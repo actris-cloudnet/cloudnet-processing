@@ -14,34 +14,32 @@ from data_processing.storage_api import StorageApi
 from data_processing import concat_lib
 from data_processing import modifier
 
-PRODUCTS = ('classification', 'iwc-Z-T-method', 'lwc-scaled-adiabatic', 'drizzle')
-
 
 def main():
     """The main function."""
 
     config = utils.read_main_conf(ARGS)
-
-    site_name = ARGS.site[0]
-    site_meta = utils.read_site_info(site_name)
-
+    site_meta = utils.read_site_info(ARGS.site[0])
     start_date = utils.date_string_to_date(ARGS.start)
     stop_date = utils.date_string_to_date(ARGS.stop)
 
     md_api = MetadataApi(config['METADATASERVER']['url'])
     storage_api = StorageApi(config['STORAGE-SERVICE']['url'],
-                             (config['STORAGE-SERVICE']['username'], config['STORAGE-SERVICE']['password']),
+                             (config['STORAGE-SERVICE']['username'],
+                              config['STORAGE-SERVICE']['password']),
                              product_bucket=_get_product_bucket())
 
     for date in date_range(start_date, stop_date):
         date_str = date.strftime("%Y-%m-%d")
-        print(f'{site_name} {date_str}')
+        print(f'{date_str}')
         process = Process(site_meta, date_str, md_api, storage_api)
-        for instrument_type in ('mwr', 'lidar', 'radar', 'model'):
+        for processing_type in utils.get_raw_processing_types():
             try:
-                getattr(process, f'process_{instrument_type}')(instrument_type)
+                getattr(process, f'process_{processing_type}')(processing_type)
+            except AttributeError:
+                continue
             except InputFileMissing:
-                print(f'No raw {instrument_type} data or already processed.')
+                print(f'No raw {processing_type} data or already processed.')
 
 
 def _get_product_bucket() -> str:
@@ -137,7 +135,8 @@ class Process:
     @staticmethod
     def _select_optimum_model(all_metadata_for_day: list) -> list:
         model_metadata = [row for row in all_metadata_for_day if row['model']]
-        return sorted(model_metadata, key=lambda k: k['model']['optimumOrder'])
+        sorted_metadata = sorted(model_metadata, key=lambda k: k['model']['optimumOrder'])
+        return [sorted_metadata[0]] if sorted_metadata else []
 
     def _upload_data_and_metadata(self, full_path: str, uuid, valid_checksums: list, product: str) -> None:
         self.md_api.put(uuid, full_path)

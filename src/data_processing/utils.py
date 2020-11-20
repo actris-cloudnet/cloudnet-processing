@@ -23,6 +23,15 @@ def read_site_info(site_name: str) -> dict:
             return site
 
 
+def get_raw_processing_types() -> list:
+    """Return Cloudnet raw file processing types."""
+    url = f"https://cloudnet.fmi.fi/api/instruments"
+    instruments = requests.get(url=url).json()
+    all_types = [instrument['type'] for instrument in instruments]
+    all_types.append('model')
+    return list(set(all_types))
+
+
 def find_file(folder: str, wildcard: str) -> str:
     """Find the first file name matching a wildcard.
 
