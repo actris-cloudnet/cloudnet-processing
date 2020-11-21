@@ -6,20 +6,20 @@ import sys
 
 from data_processing import metadata_api
 from data_processing.pid_utils import PidUtils
-from data_processing.utils import read_conf
+from data_processing.utils import read_main_conf
 
 
 def main():
-    config = read_conf(ARGS)
+    config = read_main_conf(ARGS)
 
-    md_api = metadata_api.MetadataApi(config['main']['METADATASERVER']['url'])
-    pid_utils = PidUtils(config['main']['PID-SERVICE'])
+    md_api = metadata_api.MetadataApi(config['METADATASERVER']['url'])
+    pid_utils = PidUtils(config['PID-SERVICE'])
 
-    freeze_after = {k: int(v) for k, v in dict(config['main']['FREEZE_AFTER']).items()}
+    freeze_after = {k: int(v) for k, v in dict(config['FREEZE_AFTER']).items()}
     stable_files = md_api.get_volatile_files_updated_before(**freeze_after)
     print(f'Found {len(stable_files)} files to freeze.')
 
-    public_path = config['main']['PATH']['public']
+    public_path = config['PATH']['public']
     resolved_filepaths = [path.realpath(path.join(public_path, file)) for file in stable_files]
 
     for filepath in resolved_filepaths:
