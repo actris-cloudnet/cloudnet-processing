@@ -18,14 +18,10 @@ class MetadataApi:
         res = self.session.get(url)
         return str(res.status_code) == '200'
 
-    def put(self, uuid, filepath, freeze=False) -> requests.Response:
+    def put(self, s3_key: str, payload: dict) -> requests.Response:
         """Put Cloudnet file to database."""
-        payload = subprocess.check_output(['ncdump', '-xh', path.realpath(filepath)])
-        url = path.join(self.url, 'files', uuid)
-        headers = {'Content-Type': 'application/xml'}
-        if freeze:
-            headers['X-Freeze'] = 'True'
-        res = self.session.put(url, data=payload, headers=headers)
+        url = path.join(self.url, 'files', s3_key)
+        res = self.session.put(url, data=payload)
         res.raise_for_status()
         return res
 

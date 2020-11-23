@@ -35,11 +35,12 @@ class StorageApi:
         url = path.join(self.url, self.product_bucket, key)
         res = self.put(url, full_path, headers).json()
         return {'version': res.get('version', 'volatile'),
-                'size': res['size']}
+                'size': int(res['size'])}
 
-    def create_images(self, nc_file_full_path: str, product_key: str, file_info: dict) -> None:
+    def create_images(self, nc_file_full_path: str, product_key: str, file_info: dict) -> list:
         product = product_key.split('_')[-1][:-3]
         fields, max_alt = utils.get_fields_for_plot(product)
+        visualizations = []
         for field in fields:
             generate_figure(nc_file_full_path, [field], show=False, image_name=self._temp_file.name,
                             max_y=max_alt, sub_title=False, title=False, dpi=120)
@@ -47,6 +48,8 @@ class StorageApi:
             url = path.join(self.url, 'cloudnet-img', key)
             headers = self._get_headers(self._temp_file.name)
             self.put(url, self._temp_file.name, headers=headers)
+            visualizations.append({'s3key': key, 'variableId': utils.get_var_id(product, field)})
+        return visualizations
 
     @staticmethod
     def _get_headers(full_path):

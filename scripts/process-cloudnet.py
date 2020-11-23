@@ -7,6 +7,7 @@ import shutil
 import warnings
 from tempfile import TemporaryDirectory
 from tempfile import NamedTemporaryFile
+import netCDF4
 from cloudnetpy.instruments import rpg2nc, ceilo2nc, mira2nc
 from cloudnetpy.utils import date_range
 from data_processing import utils
@@ -61,8 +62,8 @@ class Process:
             valid_checksums, original_filename = self._get_daily_raw_file(self._temp_file.name, 'hatpro')
         except ValueError:
             raise InputFileMissing(f'Raw {instrument_type}')
-        uuid = modifier.fix_mwr_file(self._temp_file.name, original_filename, self.date_str, self.site_meta['name'])
-        self._upload_data_and_metadata(self._temp_file.name, uuid, valid_checksums, instrument_type)
+        modifier.fix_mwr_file(self._temp_file.name, original_filename, self.date_str, self.site_meta['name'])
+        self._upload_data_and_metadata(self._temp_file.name, valid_checksums, instrument_type)
 
     def process_model(self, instrument_type: str) -> None:
         """Process Cloudnet model file"""
@@ -70,8 +71,8 @@ class Process:
             valid_checksums, _ = self._get_daily_raw_file(self._temp_file.name)
         except ValueError:
             raise InputFileMissing(f'Raw {instrument_type}')
-        uuid = modifier.fix_model_file(self._temp_file.name)
-        self._upload_data_and_metadata(self._temp_file.name, uuid, valid_checksums, instrument_type)
+        modifier.fix_model_file(self._temp_file.name)
+        self._upload_data_and_metadata(self._temp_file.name, valid_checksums, instrument_type)
 
     def process_lidar(self, instrument_type: str) -> None:
         """Process Cloudnet lidar file."""
@@ -85,21 +86,21 @@ class Process:
             except ValueError:
                 raise InputFileMissing(f'Raw {instrument_type}')
 
-        uuid = ceilo2nc(raw_daily_file.name, self._temp_file.name, site_meta=self.site_meta)
-        self._upload_data_and_metadata(self._temp_file.name, uuid, valid_checksums, instrument_type)
+        ceilo2nc(raw_daily_file.name, self._temp_file.name, site_meta=self.site_meta)
+        self._upload_data_and_metadata(self._temp_file.name, valid_checksums, instrument_type)
 
     def process_radar(self, instrument_type: str) -> None:
         """Process Cloudnet radar file."""
         try:
             full_paths, valid_checksums = self._download_data('rpg-fmcw-94')
-            uuid = rpg2nc(self._temp_dir.name, self._temp_file.name, site_meta=self.site_meta)
+            rpg2nc(self._temp_dir.name, self._temp_file.name, site_meta=self.site_meta)
         except ValueError:
             try:
                 valid_checksums, _ = self._get_daily_raw_file(self._temp_file.name, 'mira')
-                uuid = mira2nc(self._temp_file.name, self._temp_file.name, site_meta=self.site_meta)
+                mira2nc(self._temp_file.name, self._temp_file.name, site_meta=self.site_meta)
             except ValueError:
                 raise InputFileMissing(f'Raw {instrument_type}')
-        self._upload_data_and_metadata(self._temp_file.name, uuid, valid_checksums, instrument_type)
+        self._upload_data_and_metadata(self._temp_file.name, valid_checksums, instrument_type)
 
     def _concatenate_chm15k(self, raw_daily_file: str) -> list:
         """Concatenate several chm15k files into one file for certain site / date."""
@@ -122,12 +123,41 @@ class Process:
         checksums = [row['checksum'] for row in metadata]
         return full_paths, checksums
 
-    def _upload_data_and_metadata(self, full_path: str, uuid, valid_checksums: list, product: str) -> None:
+    def _upload_data_and_metadata(self, full_path: str, valid_checksums: list, product: str) -> None:
         s3_key = self._get_product_key(product)
         file_info = self.storage_api.upload_product(full_path, s3_key)
-        self.storage_api.create_images(full_path, s3_key, file_info)
-        self.md_api.put(uuid, full_path)
+        visualizations = self.storage_api.create_images(full_path, s3_key, file_info)
+        payload = self._create_product_payload(full_path, product, file_info, visualizations)
+        self.md_api.put(s3_key, payload)
         self._update_statuses(valid_checksums)
+
+    def _create_product_payload(self, full_path: str, product: str, file_info: dict, visualizations: list) -> dict:
+        nc = netCDF4.Dataset(full_path, 'r')
+        payload = {
+            'uuid': getattr(nc, 'file_uuid', ''),
+            'pid': getattr(nc, 'pid', ''),
+            'volatile': not ARGS.new_version,
+            'measurementDate': self.date_str,
+            'history': getattr(nc, 'history', ''),
+            'product': product,
+            'cloudnetpyVersion': getattr(nc, 'cloudnetpy_version', ''),
+            'checksum': utils.sha256sum(full_path),
+            'format': self._get_file_format(nc),
+            'site': self.site_meta['id'],
+            'visualizations': visualizations,
+            ** file_info
+        }
+        nc.close()
+        return payload
+
+    @staticmethod
+    def _get_file_format(nc: netCDF4.Dataset):
+        file_format = nc.file_format.lower()
+        if 'netcdf4' in file_format:
+            return 'HDF5 (NetCDF4)'
+        elif 'netcdf3' in file_format:
+            return 'NetCDF3'
+        raise RuntimeError('Unknown file type')
 
     def _get_product_key(self, product: str) -> str:
         return f"{self.date_str.replace('-', '')}_{self.site_meta['id']}_{product}.nc"
