@@ -1,6 +1,5 @@
 """Metadata API for Cloudnet files."""
-import subprocess
-from datetime import datetime, timedelta
+from datetime import date, timedelta
 from os import path
 import requests
 
@@ -37,9 +36,9 @@ class MetadataApi:
         res.raise_for_status()
         return [file['filename'] for file in res.json()]
 
-    def change_status_from_uploaded_to_processed(self, checksum: str) -> requests.Response:
-        url = path.join(self.url, 'upload-metadata', checksum)
-        res = self.session.post(url, json={'status': 'processed'})
+    def update_upload_metadata(self, payload: dict) -> requests.Response:
+        url = path.join(self.url, 'upload-metadata')
+        res = self.session.post(url, json=payload)
         res.raise_for_status()
         return res
 

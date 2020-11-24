@@ -64,71 +64,71 @@ class Process:
     def process_mwr(self, instrument_type: str) -> None:
         """Process Cloudnet mwr file"""
         try:
-            valid_checksums, original_filename = self._get_daily_raw_file(self._temp_file.name, 'hatpro')
+            valid_uuids, original_filename = self._get_daily_raw_file(self._temp_file.name, 'hatpro')
         except ValueError:
             raise InputFileMissing(f'Raw {instrument_type}')
         modifier.fix_mwr_file(self._temp_file.name, original_filename, self.date_str, self.site_meta['name'])
-        self._upload_data_and_metadata(self._temp_file.name, valid_checksums, instrument_type)
+        self._upload_data_and_metadata(self._temp_file.name, valid_uuids, instrument_type)
 
     def process_model(self, instrument_type: str) -> None:
         """Process Cloudnet model file"""
         try:
-            valid_checksums, _ = self._get_daily_raw_file(self._temp_file.name)
+            valid_uuids, _ = self._get_daily_raw_file(self._temp_file.name)
         except ValueError:
             raise InputFileMissing(f'Raw {instrument_type}')
         modifier.fix_model_file(self._temp_file.name)
-        self._upload_data_and_metadata(self._temp_file.name, valid_checksums, instrument_type)
+        self._upload_data_and_metadata(self._temp_file.name, valid_uuids, instrument_type)
 
     def process_lidar(self, instrument_type: str) -> None:
         """Process Cloudnet lidar file."""
         try:
             raw_daily_file = NamedTemporaryFile(suffix='.nc')
-            valid_checksums = self._concatenate_chm15k(raw_daily_file.name)
+            valid_uuids = self._concatenate_chm15k(raw_daily_file.name)
         except ValueError:
             try:
                 raw_daily_file = NamedTemporaryFile(suffix='.DAT')
-                valid_checksums, _ = self._get_daily_raw_file(raw_daily_file.name, 'cl51')
+                valid_uuids, _ = self._get_daily_raw_file(raw_daily_file.name, 'cl51')
             except ValueError:
                 raise InputFileMissing(f'Raw {instrument_type}')
 
         ceilo2nc(raw_daily_file.name, self._temp_file.name, site_meta=self.site_meta)
-        self._upload_data_and_metadata(self._temp_file.name, valid_checksums, instrument_type)
+        self._upload_data_and_metadata(self._temp_file.name, valid_uuids, instrument_type)
 
     def process_radar(self, instrument_type: str) -> None:
         """Process Cloudnet radar file."""
         try:
-            full_paths, valid_checksums = self._download_data('rpg-fmcw-94')
+            full_paths, valid_uuids = self._download_data('rpg-fmcw-94')
             rpg2nc(self._temp_dir.name, self._temp_file.name, site_meta=self.site_meta)
         except ValueError:
             try:
-                valid_checksums, _ = self._get_daily_raw_file(self._temp_file.name, 'mira')
+                valid_uuids, _ = self._get_daily_raw_file(self._temp_file.name, 'mira')
                 mira2nc(self._temp_file.name, self._temp_file.name, site_meta=self.site_meta)
             except ValueError:
                 raise InputFileMissing(f'Raw {instrument_type}')
-        self._upload_data_and_metadata(self._temp_file.name, valid_checksums, instrument_type)
+        self._upload_data_and_metadata(self._temp_file.name, valid_uuids, instrument_type)
 
     def _concatenate_chm15k(self, raw_daily_file: str) -> list:
         """Concatenate several chm15k files into one file for certain site / date."""
-        full_paths, checksums = self._download_data('chm15k')
+        full_paths, uuids = self._download_data('chm15k')
         valid_full_paths = concat_lib.concat_chm15k_files(full_paths, self.date_str, raw_daily_file)
-        return [checksum for checksum, full_path in zip(checksums, full_paths) if full_path in valid_full_paths]
+        return [uuid for uuid, full_path in zip(uuids, full_paths) if full_path in valid_full_paths]
 
     def _get_daily_raw_file(self, raw_daily_file: str, instrument: str = None) -> Tuple[list, str]:
         """Downloads and saves to /tmp a single daily instrument or model file."""
-        full_path, checksum = self._download_data(instrument)
-        assert len(full_path) == 1 and len(checksum) == 1
+        full_path, uuid = self._download_data(instrument)
+        assert len(full_path) == 1 and len(uuid) == 1
         shutil.move(full_path[0], raw_daily_file)
         original_filename = os.path.basename(full_path[0])
-        return checksum, original_filename
+        return uuid, original_filename
 
     def _download_data(self, instrument: str = None) -> Tuple[list, list]:
         all_metadata = self.md_api.get_uploaded_metadata(self.site_meta['id'], self.date_str)
         metadata = self.md_api.screen_metadata(all_metadata, ARGS.new_version, instrument)
         full_paths = self.storage_api.download_raw_files(metadata, self._temp_dir.name)
-        checksums = [row['checksum'] for row in metadata]
-        return full_paths, checksums
+        uuids = [row['uuid'] for row in metadata]
+        return full_paths, uuids
 
-    def _upload_data_and_metadata(self, full_path: str, valid_checksums: list, product: str) -> None:
+    def _upload_data_and_metadata(self, full_path: str, valid_uuids: list, product: str) -> None:
         s3_key = self._get_product_key(product)
         if ARGS.new_version:
             self.pid_utils.add_pid_to_file(full_path)
@@ -136,13 +136,13 @@ class Process:
         visualizations = self.storage_api.create_images(full_path, s3_key, file_info)
         payload = self._create_product_payload(full_path, product, file_info, visualizations)
         self.md_api.put(s3_key, payload)
-        self._update_statuses(valid_checksums)
+        self._update_statuses(valid_uuids)
 
     def _create_product_payload(self, full_path: str, product: str, file_info: dict, visualizations: list) -> dict:
         nc = netCDF4.Dataset(full_path, 'r')
         payload = {
             'product': product,
-            'visualizations': visualizations,
+            #'visualizations': visualizations,
             'site': self.site_meta['id'],
             'measurementDate': self.date_str,
             'format': self._get_file_format(nc),
@@ -169,9 +169,13 @@ class Process:
     def _get_product_key(self, product: str) -> str:
         return f"{self.date_str.replace('-', '')}_{self.site_meta['id']}_{product}.nc"
 
-    def _update_statuses(self, checksums: list) -> None:
-        for checksum in checksums:
-            self.md_api.change_status_from_uploaded_to_processed(checksum)
+    def _update_statuses(self, uuids: list) -> None:
+        for uuid in uuids:
+            payload = {
+                'uuid': uuid,
+                'status': 'processed'
+            }
+            self.md_api.update_upload_metadata(payload)
 
 
 def _get_product_bucket() -> str:
