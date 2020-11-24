@@ -19,9 +19,9 @@ class MetadataApi:
         return str(res.status_code) == '200'
 
     def put(self, s3_key: str, payload: dict) -> requests.Response:
-        """Put Cloudnet file to database."""
+        """Put Cloudnet product file metadata to database."""
         url = path.join(self.url, 'files', s3_key)
-        res = self.session.put(url, data=payload)
+        res = self.session.put(url, json=payload)
         res.raise_for_status()
         return res
 
@@ -38,7 +38,7 @@ class MetadataApi:
         return [file['filename'] for file in res.json()]
 
     def change_status_from_uploaded_to_processed(self, checksum: str) -> requests.Response:
-        url = path.join(self.url, 'metadata', checksum)
+        url = path.join(self.url, 'upload-metadata', checksum)
         res = self.session.post(url, json={'status': 'processed'})
         res.raise_for_status()
         return res
@@ -48,8 +48,10 @@ class MetadataApi:
         payload = {'dateFrom': date_str,
                    'dateTo': date_str,
                    'site': site}
-        url = path.join(self.url, 'metadata')
-        return requests.get(url, payload).json()
+        url = path.join(self.url, 'upload-metadata')
+        res = requests.get(url, payload)
+        res.raise_for_status()
+        return res.json()
 
     def screen_metadata(self, metadata: list, new_version: bool, instrument: str = None) -> list:
         if instrument:

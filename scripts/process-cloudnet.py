@@ -13,6 +13,7 @@ from cloudnetpy.utils import date_range
 from data_processing import utils
 from data_processing.metadata_api import MetadataApi
 from data_processing.storage_api import StorageApi
+from data_processing.pid_utils import PidUtils
 from data_processing import concat_lib
 from data_processing import modifier
 
@@ -27,6 +28,7 @@ def main():
     start_date = utils.date_string_to_date(ARGS.start)
     stop_date = utils.date_string_to_date(ARGS.stop)
 
+    pid_utils = PidUtils(config['PID-SERVICE'])
     md_api = MetadataApi(config['METADATASERVER']['url'])
     storage_api = StorageApi(config['STORAGE-SERVICE']['url'],
                              (config['STORAGE-SERVICE']['username'],
@@ -36,23 +38,26 @@ def main():
     for date in date_range(start_date, stop_date):
         date_str = date.strftime("%Y-%m-%d")
         print(f'{date_str}')
-        process = Process(site_meta, date_str, md_api, storage_api)
+        process = Process(site_meta, date_str, md_api, storage_api, pid_utils)
         for processing_type in utils.get_raw_processing_types():
             try:
+                print('{:<15}'.format(f'{processing_type}'), end='\t')
                 getattr(process, f'process_{processing_type}')(processing_type)
-                print(f'{processing_type} - Created')
+                print('Created')
             except (AttributeError, NotImplementedError):
-                print(f'{processing_type} - Something not implemented')
+                print('Something not implemented')
             except InputFileMissing:
-                print(f'{processing_type} - No raw data or already processed')
+                print('No raw data or already processed')
 
 
 class Process:
-    def __init__(self, site_meta: dict, date_str: str, md_api: MetadataApi, storage_api: StorageApi):
+    def __init__(self, site_meta: dict, date_str: str, md_api: MetadataApi,
+                 storage_api: StorageApi, pid_utils: PidUtils):
         self.site_meta = site_meta
         self.date_str = date_str  # YYYY-MM-DD
         self.md_api = md_api
         self.storage_api = storage_api
+        self.pid_utils = pid_utils
         self._temp_file = NamedTemporaryFile()
         self._temp_dir = TemporaryDirectory()
 
@@ -125,6 +130,8 @@ class Process:
 
     def _upload_data_and_metadata(self, full_path: str, valid_checksums: list, product: str) -> None:
         s3_key = self._get_product_key(product)
+        if ARGS.new_version:
+            self.pid_utils.add_pid_to_file(full_path)
         file_info = self.storage_api.upload_product(full_path, s3_key)
         visualizations = self.storage_api.create_images(full_path, s3_key, file_info)
         payload = self._create_product_payload(full_path, product, file_info, visualizations)
@@ -134,17 +141,17 @@ class Process:
     def _create_product_payload(self, full_path: str, product: str, file_info: dict, visualizations: list) -> dict:
         nc = netCDF4.Dataset(full_path, 'r')
         payload = {
+            'product': product,
+            'visualizations': visualizations,
+            'site': self.site_meta['id'],
+            'measurementDate': self.date_str,
+            'format': self._get_file_format(nc),
+            'checksum': utils.sha256sum(full_path),
+            'volatile': not ARGS.new_version,
             'uuid': getattr(nc, 'file_uuid', ''),
             'pid': getattr(nc, 'pid', ''),
-            'volatile': not ARGS.new_version,
-            'measurementDate': self.date_str,
             'history': getattr(nc, 'history', ''),
-            'product': product,
             'cloudnetpyVersion': getattr(nc, 'cloudnetpy_version', ''),
-            'checksum': utils.sha256sum(full_path),
-            'format': self._get_file_format(nc),
-            'site': self.site_meta['id'],
-            'visualizations': visualizations,
             ** file_info
         }
         nc.close()

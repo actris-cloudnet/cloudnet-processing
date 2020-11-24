@@ -23,7 +23,7 @@ class StorageApi:
 
     def download_raw_files(self, metadata: list, dir_name: str) -> list:
         """From a list of upload-metadata, download files."""
-        urls = [path.join(self.url, 'cloudnet-upload', row['s3Key']) for row in metadata]
+        urls = [path.join(self.url, 'cloudnet-upload', row['s3key']) for row in metadata]
         full_paths = [path.join(dir_name, row['filename']) for row in metadata]
         for args in zip(urls, full_paths):
             self.get(*args)
@@ -34,7 +34,7 @@ class StorageApi:
         headers = self._get_headers(full_path)
         url = path.join(self.url, self.product_bucket, key)
         res = self.put(url, full_path, headers).json()
-        return {'version': res.get('version', 'volatile'),
+        return {'version': res.get('version', ''),
                 'size': int(res['size'])}
 
     def create_images(self, nc_file_full_path: str, product_key: str, file_info: dict) -> list:
