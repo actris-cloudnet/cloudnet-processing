@@ -30,10 +30,7 @@ def main():
 
     pid_utils = PidUtils(config['PID-SERVICE'])
     md_api = MetadataApi(config['METADATASERVER']['url'])
-    storage_api = StorageApi(config['STORAGE-SERVICE']['url'],
-                             (config['STORAGE-SERVICE']['username'],
-                              config['STORAGE-SERVICE']['password']),
-                             product_bucket=_get_product_bucket())
+    storage_api = StorageApi(config)
 
     for date in date_range(start_date, stop_date):
         date_str = date.strftime("%Y-%m-%d")
@@ -67,8 +64,8 @@ class Process:
             valid_uuids, original_filename = self._get_daily_raw_file(self._temp_file.name, 'hatpro')
         except ValueError:
             raise InputFileMissing(f'Raw {instrument_type}')
-        modifier.fix_mwr_file(self._temp_file.name, original_filename, self.date_str, self.site_meta['name'])
-        self._upload_data_and_metadata(self._temp_file.name, valid_uuids, instrument_type)
+        uuid = modifier.fix_mwr_file(self._temp_file.name, original_filename, self.date_str, self.site_meta['name'])
+        self._upload_product_and_images(self._temp_file.name, valid_uuids, instrument_type, uuid)
 
     def process_model(self, instrument_type: str) -> None:
         """Process Cloudnet model file"""
@@ -76,8 +73,8 @@ class Process:
             valid_uuids, _ = self._get_daily_raw_file(self._temp_file.name)
         except ValueError:
             raise InputFileMissing(f'Raw {instrument_type}')
-        modifier.fix_model_file(self._temp_file.name)
-        self._upload_data_and_metadata(self._temp_file.name, valid_uuids, instrument_type)
+        uuid = modifier.fix_model_file(self._temp_file.name)
+        self._upload_product_and_images(self._temp_file.name, valid_uuids, instrument_type, uuid)
 
     def process_lidar(self, instrument_type: str) -> None:
         """Process Cloudnet lidar file."""
@@ -91,21 +88,21 @@ class Process:
             except ValueError:
                 raise InputFileMissing(f'Raw {instrument_type}')
 
-        ceilo2nc(raw_daily_file.name, self._temp_file.name, site_meta=self.site_meta)
-        self._upload_data_and_metadata(self._temp_file.name, valid_uuids, instrument_type)
+        uuid = ceilo2nc(raw_daily_file.name, self._temp_file.name, site_meta=self.site_meta)
+        self._upload_product_and_images(self._temp_file.name, valid_uuids, instrument_type, uuid)
 
     def process_radar(self, instrument_type: str) -> None:
         """Process Cloudnet radar file."""
         try:
             full_paths, valid_uuids = self._download_data('rpg-fmcw-94')
-            rpg2nc(self._temp_dir.name, self._temp_file.name, site_meta=self.site_meta)
+            uuid = rpg2nc(self._temp_dir.name, self._temp_file.name, site_meta=self.site_meta)
         except ValueError:
             try:
                 valid_uuids, _ = self._get_daily_raw_file(self._temp_file.name, 'mira')
-                mira2nc(self._temp_file.name, self._temp_file.name, site_meta=self.site_meta)
+                uuid = mira2nc(self._temp_file.name, self._temp_file.name, site_meta=self.site_meta)
             except ValueError:
                 raise InputFileMissing(f'Raw {instrument_type}')
-        self._upload_data_and_metadata(self._temp_file.name, valid_uuids, instrument_type)
+        self._upload_product_and_images(self._temp_file.name, valid_uuids, instrument_type, uuid)
 
     def _concatenate_chm15k(self, raw_daily_file: str) -> list:
         """Concatenate several chm15k files into one file for certain site / date."""
@@ -128,21 +125,22 @@ class Process:
         uuids = [row['uuid'] for row in metadata]
         return full_paths, uuids
 
-    def _upload_data_and_metadata(self, full_path: str, valid_uuids: list, product: str) -> None:
-        s3_key = self._get_product_key(product)
+    def _upload_product_and_images(self, full_path: str, upload_uuids: list, product: str, product_uuid: str) -> None:
+        s3key = self._get_product_key(product)
         if ARGS.new_version:
             self.pid_utils.add_pid_to_file(full_path)
-        file_info = self.storage_api.upload_product(full_path, s3_key)
-        visualizations = self.storage_api.create_images(full_path, s3_key, file_info)
-        payload = self._create_product_payload(full_path, product, file_info, visualizations)
-        self.md_api.put(s3_key, payload)
-        self._update_statuses(valid_uuids)
+        file_info = self.storage_api.upload_product(full_path, s3key, volatile=not ARGS.new_version)
+        img_metadata = self.storage_api.create_and_upload_images(full_path, s3key, file_info)
+        payload = self._create_product_payload(full_path, product, file_info)
+        self.md_api.put(s3key, payload)
+        for data in img_metadata:
+            self.md_api.put_img(data, product_uuid)
+        self._update_statuses(upload_uuids)
 
-    def _create_product_payload(self, full_path: str, product: str, file_info: dict, visualizations: list) -> dict:
+    def _create_product_payload(self, full_path: str, product: str, file_info: dict) -> dict:
         nc = netCDF4.Dataset(full_path, 'r')
         payload = {
             'product': product,
-            #'visualizations': visualizations,
             'site': self.site_meta['id'],
             'measurementDate': self.date_str,
             'format': self._get_file_format(nc),
@@ -171,15 +169,8 @@ class Process:
 
     def _update_statuses(self, uuids: list) -> None:
         for uuid in uuids:
-            payload = {
-                'uuid': uuid,
-                'status': 'processed'
-            }
-            self.md_api.update_upload_metadata(payload)
-
-
-def _get_product_bucket() -> str:
-    return 'cloudnet-product' if ARGS.new_version else 'cloudnet-product-volatile'
+            payload = {'uuid': uuid, 'status': 'processed'}
+            self.md_api.post('upload-metadata', payload)
 
 
 class InputFileMissing(Exception):

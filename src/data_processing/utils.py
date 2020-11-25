@@ -129,3 +129,7 @@ def _calc_hash_sum(filename, method, is_base64=False):
         return base64.encodebytes(hash_sum.digest()).decode('utf-8').strip()
     else:
         return hash_sum.hexdigest()
+
+
+def get_product_bucket(volatile: bool = False) -> str:
+    return 'cloudnet-product-volatile' if volatile else 'cloudnet-product'
