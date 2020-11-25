@@ -1,5 +1,4 @@
 import json
-from xml.dom import minidom
 from datetime import date, timedelta
 import pytest
 import requests
@@ -49,52 +48,38 @@ files_response = '''
 
 class TestMetadataApi:
 
+    payload = {
+        'product': 'model',
+        'site': 'bucharest',
+        'measurementDate': '2020-10-21',
+        'format': 'NetCDF3',
+        'checksum': '23cf03694943fbcd1cce9ff45ea05242fae68cda06f127668963bb99d0b2de33',
+        'volatile': True,
+        'uuid': 'b09174d204e04ffbb6d284c150bb7271',
+        'pid': '',
+        'history': "Some arbitrary history",
+        'cloudnetpyVersion': '',
+        'version': '',
+        'size': 501524
+    }
+
     def test_put_metadata(self):
-        adapter.register_uri('PUT', f'{mock_addr}files/uuid', additional_matcher=is_valid_xml, text='resp')
+        adapter.register_uri('PUT', f'{mock_addr}files/s3key', text='resp')
         md_api = metadata_api.MetadataApi(mock_addr, session)
-        r = md_api.put('uuid', 'tests/data/output_fixed/bucharest/calibrated/chm15k/2020/20200118_bucharest_chm15k.nc')
-            
-        assert r.text == 'resp'
-
-    def test_put_metadata_freeze(self):
-        def has_freeze_in_header(request):
-            if not is_valid_xml(request):
-                return False
-            return 'X-Freeze' in request.headers
-
-        adapter.register_uri('PUT', f'{mock_addr}files/uuid', additional_matcher=has_freeze_in_header, text='resp')
-        md_api = metadata_api.MetadataApi(mock_addr, session)
-        r = md_api.put('uuid', 'tests/data/output_fixed/bucharest/calibrated/chm15k/2020/20200118_bucharest_chm15k.nc',
-                       freeze=True)
-            
-        assert r.text == 'resp'
+        res = md_api.put('s3key', self.payload)
+        assert res.text == 'resp'
 
     def test_raises_error_on_failed_request(self):
-        adapter.register_uri('PUT', f'{mock_addr}files/uuid_fail', status_code=500)
-
+        adapter.register_uri('PUT', f'{mock_addr}files/s3key_fail', status_code=500)
         md_api = metadata_api.MetadataApi(mock_addr, session)
-
         with pytest.raises(requests.exceptions.HTTPError):
-            md_api.put('uuid_fail',
-                       'tests/data/output_fixed/bucharest/calibrated/chm15k/2020/20200118_bucharest_chm15k.nc')
+            md_api.put('s3key_fail', self.payload)
 
     def test_calls_files_with_proper_params_and_parses_response_correctly(self):
         now = date.today()
         two_days_ago = now - timedelta(days=2)
-
-        adapter.register_uri('GET', f'http://test/api/files?volatile=True&releasedBefore={two_days_ago}',
-                             json=json.loads(files_response))
-
+        adapter.register_uri('GET', f'http://test/api/files?volatile=True&releasedBefore={two_days_ago}', json=json.loads(files_response))
         md_api = metadata_api.MetadataApi(mock_addr, session)
         r = md_api.get_volatile_files_updated_before(days=2)
-
         assert len(r) == 1
         assert r[0] == '20200513_granada_rpg-fmcw-94.nc'
-
-
-def is_valid_xml(request):
-    try:
-        minidom.parseString(request.text)
-    except (TypeError, AttributeError):
-        return False
-    return True
