@@ -1,5 +1,5 @@
 """Metadata API for Cloudnet files."""
-from datetime import date, timedelta, datetime
+from datetime import timedelta, datetime
 from os import path
 import requests
 

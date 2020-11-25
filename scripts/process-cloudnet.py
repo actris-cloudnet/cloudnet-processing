@@ -130,7 +130,7 @@ class Process:
         if ARGS.new_version:
             self.pid_utils.add_pid_to_file(full_path)
         file_info = self.storage_api.upload_product(full_path, s3key, volatile=not ARGS.new_version)
-        img_metadata = self.storage_api.create_and_upload_images(full_path, s3key, file_info)
+        img_metadata = self.storage_api.create_and_upload_images(full_path, s3key, product_uuid)
         payload = self._create_product_payload(full_path, product, file_info)
         self.md_api.put(s3key, payload)
         for data in img_metadata:

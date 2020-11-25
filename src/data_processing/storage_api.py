@@ -48,14 +48,20 @@ class StorageApi:
         return {'version': res.get('version', ''),
                 'size': int(res['size'])}
 
-    def create_and_upload_images(self, nc_file_full_path: str, product_key: str, file_info: dict) -> list:
+    def delete_volatile_product(self, s3key: str):
+        bucket = utils.get_product_bucket(volatile=True)
+        url = path.join(self.url, bucket, s3key)
+        res = self.session.delete(url, auth=self.auth)
+        return res
+
+    def create_and_upload_images(self, nc_file_full_path: str, product_key: str, uuid: str) -> list:
         product = product_key.split('_')[-1][:-3]
         fields, max_alt = utils.get_fields_for_plot(product)
         visualizations = []
         for field in fields:
             generate_figure(nc_file_full_path, [field], show=False, image_name=self._temp_file.name,
                             max_y=max_alt, sub_title=False, title=False, dpi=120)
-            s3key = product_key.replace('.nc', f"-{file_info['version']}-{field}.png")
+            s3key = product_key.replace('.nc', f"-{uuid[:8]}-{field}.png")
             url = path.join(self.url, 'cloudnet-img', s3key)
             headers = self._get_headers(self._temp_file.name)
             self.put(url, self._temp_file.name, headers=headers)
