@@ -6,6 +6,35 @@ from typing import Tuple, Union
 from cloudnetpy.utils import get_time
 from cloudnetpy.plotting.plot_meta import ATTRIBUTES as ATTR
 import base64
+import netCDF4
+
+
+def create_product_put_payload(full_path: str, storage_service_response: dict) -> dict:
+    nc = netCDF4.Dataset(full_path, 'r')
+    payload = {
+        'product': nc.cloudnet_file_type,
+        'site': nc.location.lower().replace('-', ''),
+        'measurementDate': f'{nc.year}-{nc.month}-{nc.day}',
+        'format': get_file_format(nc),
+        'checksum': sha256sum(full_path),
+        'volatile': not hasattr(nc, 'pid'),
+        'uuid': getattr(nc, 'file_uuid', ''),
+        'pid': getattr(nc, 'pid', ''),
+        'history': getattr(nc, 'history', ''),
+        'cloudnetpyVersion': getattr(nc, 'cloudnetpy_version', ''),
+        ** storage_service_response
+    }
+    nc.close()
+    return payload
+
+
+def get_file_format(nc: netCDF4.Dataset):
+    file_format = nc.file_format.lower()
+    if 'netcdf4' in file_format:
+        return 'HDF5 (NetCDF4)'
+    elif 'netcdf3' in file_format:
+        return 'NetCDF3'
+    raise RuntimeError('Unknown file type')
 
 
 def read_site_info(site_name: str) -> dict:
@@ -19,13 +48,19 @@ def read_site_info(site_name: str) -> dict:
             return site
 
 
-def get_raw_processing_types() -> list:
-    """Return Cloudnet raw file processing types."""
-    url = f"https://cloudnet.fmi.fi/api/instruments"
-    instruments = requests.get(url=url).json()
-    all_types = [instrument['type'] for instrument in instruments]
-    all_types.append('model')
-    return list(set(all_types))
+def get_product_types(level: int = None) -> list:
+    """Return Cloudnet processing types."""
+    url = f"https://cloudnet.fmi.fi/api/products"
+    products = requests.get(url=url).json()
+    l1_types = [product['id'] for product in products if int(product['level']) == 1]
+    l2_types = [product['id'] for product in products if int(product['level']) == 2]
+    l1_types.remove('categorize')
+    if level == 1:
+        return l1_types
+    elif level == 2:
+        return l2_types
+    else:
+        return l1_types + ['categorize'] + l2_types
 
 
 def date_string_to_date(date_string: str) -> datetime.date:
@@ -133,3 +168,25 @@ def _calc_hash_sum(filename, method, is_base64=False):
 
 def get_product_bucket(volatile: bool = False) -> str:
     return 'cloudnet-product-volatile' if volatile else 'cloudnet-product'
+
+
+def is_volatile_file(filename: str) -> bool:
+    """Check if nc-file is volatile."""
+    nc = netCDF4.Dataset(filename)
+    is_missing_pid = not hasattr(nc, 'pid')
+    nc.close()
+    return is_missing_pid
+
+
+class MiscError(Exception):
+    """Internal exception class."""
+    def __init__(self, msg: str):
+        self.message = msg
+        super().__init__(self.message)
+
+
+class RawDataMissingError(Exception):
+    """Internal exception class."""
+    def __init__(self, msg: str):
+        self.message = msg
+        super().__init__(self.message)

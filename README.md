@@ -25,17 +25,9 @@ The following scripts are provided:
 ### `process-cloudnet.py`
 Create Cloudnet products.
 
-Prerequisites:
-* Fix the `input` and `output` data paths in `config/main.ini` 
-* Make sure that the instrument list is correct in `config/<site>.ini`.
-* Make sure you have `output/<site>/calibrated/<model>/<year>` folder containing pre-processed model data. 
-* If you use CHM15k lidar, make sure there are pre-processed daily files in `input/uncalibrated/chm15k/<year>` folder.
-
 ```
-usage: process-cloudnet.py [-h] [--config-dir /FOO/BAR] [--start YYYY-MM-DD]
-                           [--stop YYYY-MM-DD] [--input /FOO/BAR] [--output /FOO/BAR] 
-                           [--new-version] [--plot-quicklooks] [-na]
-                           SITE [SITE ...]
+usage: process-cloudnet.py [-h] [-r] [--config-dir /FOO/BAR] [--start YYYY-MM-DD]
+                           [--stop YYYY-MM-DD] [-p ...] SITE
 ```
 
 Positional arguments:
@@ -49,10 +41,11 @@ Optional arguments:
 | Short | Long            | Default           | Description                                | 
 | :---  | :---            | :---              | :---                                       |
 | `-h`  | `--help`        |                   | Show help and exit. |
+| `-r`  | `--reprocess`   | `False`           | Process new version of freezed files and reprocess volatile files. |
 |       | `--config-dir`  | `./config`        | Path to directory containing config files. |
 |       | `--start`       | `current day - 7` | Starting date. |
 |       | `--stop`        | `current day - 1 `| Stopping date. |
-|       | `--new-version` | `False`             | Create new version of the files. |
+| `-p`  | `--products`    | `all`             | Processed products, e.g, `radar,lidar,categorize,classification`. |
 
 
 ### `freeze.py`
@@ -64,10 +57,10 @@ usage: freeze.py [-h] [--config-dir /FOO/BAR] [-na]
 
 Optional arguments:
 
-| Short | Long             | Default      | Description                                | 
-| :---  | :---             | :---         | :---                                       |
-| `-h`  | `--help`         |              | Show help and exit.                        |
-|       | `--config-dir`   | `./config`   | Path to directory containing config files. |
+| Short | Long             | Default     | Description                                | 
+| :---  | :---             | :---        | :---                                       |
+| `-h`  | `--help`         |             | Show help and exit.                        |
+|       | `--config-dir`   | `./config`  | Path to directory containing config files. |
 
 
 ### `map-variable-names.py`

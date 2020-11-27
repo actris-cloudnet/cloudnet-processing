@@ -10,7 +10,8 @@ VERSION = '%d.%d.%d' % (MAJOR, MINOR, PATCH)
 def fix_mwr_file(full_path: str,
                  original_filename: str,
                  date_str: str,
-                 site_name: str):
+                 site_name: str,
+                 uuid: str) -> str:
     """Fixes global attributes of raw MWR netCDF file."""
 
     def _get_date():
@@ -21,10 +22,10 @@ def fix_mwr_file(full_path: str,
         return year, month, day
 
     nc = netCDF4.Dataset(full_path, 'a')
-    uuid = get_uuid()
+    uuid = uuid or get_uuid()
     nc.file_uuid = uuid
     nc.cloudnet_file_type = 'mwr'
-    nc.history = _add_history(nc)
+    nc.history = _get_history(nc)
     nc.year, nc.month, nc.day = _get_date()
     nc.location = site_name
     nc.title = _get_title(nc)
@@ -34,7 +35,7 @@ def fix_mwr_file(full_path: str,
     return uuid
 
 
-def fix_model_file(file_name):
+def fix_model_file(file_name: str, site_name: str, uuid: str = None) -> str:
     """Fixes global attributes of raw model netCDF file."""
 
     def _get_date():
@@ -43,21 +44,22 @@ def fix_model_file(file_name):
         return the_date.split('-')
 
     nc = netCDF4.Dataset(file_name, 'a')
-    uuid = get_uuid()
+    uuid = uuid or get_uuid()
     nc.file_uuid = uuid
     nc.cloudnet_file_type = 'model'
     nc.year, nc.month, nc.day = _get_date()
-    nc.history = _add_history(nc)
+    nc.history = _get_history(nc)
     nc.title = _get_title(nc)
+    nc.location = site_name
     nc.close()
     return uuid
 
 
-def _add_history(nc):
+def _get_history(nc: netCDF4.Dataset) -> str:
     old_history = getattr(nc, 'history', '')
     new_record = f"{get_time()} - global attributes fixed using attribute_modifier {VERSION}\n"
     return f"{new_record}{old_history}"
 
 
-def _get_title(nc):
+def _get_title(nc: netCDF4.Dataset) -> str:
     return f"{nc.cloudnet_file_type.capitalize()} file from {nc.location}"
