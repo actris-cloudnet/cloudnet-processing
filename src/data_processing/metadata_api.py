@@ -1,6 +1,6 @@
 """Metadata API for Cloudnet files."""
 import subprocess
-from datetime import date, timedelta
+from datetime import datetime, timedelta
 from os import path
 import requests
 
@@ -44,7 +44,7 @@ class MetadataApi:
 
     def get_volatile_files_updated_before(self, **time_delta):
         """Find volatile files released before given time limit."""
-        updated_before = date.today() - timedelta(**time_delta)
+        updated_before = datetime.now() - timedelta(**time_delta)
         url = path.join(self._url, 'api/files')
         payload = {
             'volatile': True,
