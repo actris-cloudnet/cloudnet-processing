@@ -7,6 +7,28 @@ import data_processing.utils as utils
 test_file_path = Path(__file__).parent.absolute()
 
 
+@pytest.mark.parametrize("key, value", [
+    ('product', 'classification'),
+    ('site', 'bucharest'),
+    ('measurementDate', '2020-11-21'),
+    ('format', 'HDF5 (NetCDF4)'),
+    ('checksum', '48e006f769a9352a42bf41beac449eae62aea545f4d3ba46bffd35759d8982ca'),
+    ('volatile', True),
+    ('uuid', '2a211fc97e86489c9745e8027f86053a'),
+    ('pid', ''),
+    ('cloudnetpyVersion', '1.3.2'),
+    ('version', 'abc'),
+    ('size', 120931)
+])
+def test_create_product_payload(key, value):
+    storage_response = {'version': 'abc',
+                        'size': 120931}
+    full_path = 'tests/data/products/20201121_bucharest_classification.nc'
+    payload = utils.create_product_put_payload(full_path, storage_response)
+    assert key in payload
+    assert payload[key] == value
+
+
 def test_read_site_info():
     site = 'bucharest'
     site_info = utils.read_site_info(site)
@@ -42,22 +64,35 @@ def test_read_main_conf():
     Args = namedtuple('args', 'config_dir')
     args = Args(config_dir=f"{test_file_path}/../../config")
     conf = utils.read_main_conf(args)
-    assert 'received_api_files' in conf['PATH']
+    assert 'username' in conf['STORAGE-SERVICE']
 
 
-def test_sha256sum(nc_file):
-    hash_sum = utils.sha256sum(nc_file)
-    assert isinstance(hash_sum, str)
-    assert len(hash_sum) == 64
+def test_is_volatile_file():
+    file = 'tests/data/products/20201121_bucharest_classification.nc'
+    assert utils.is_volatile_file(file) is True
 
 
-def test_md5sum():
-    file = 'tests/data/input/bucharest/uncalibrated/chm15k/2020/04/02/00100_A202004022120_CHM170137.nc'
-    hash_sum = utils.md5sum(file)
-    assert hash_sum == '0c76528228514824b7975c80a911e2f4'
+def test_get_product_bucket():
+    assert utils.get_product_bucket(True) == 'cloudnet-product-volatile'
+    assert utils.get_product_bucket(False) == 'cloudnet-product'
 
 
-def test_sha256sum2():
-    file = 'tests/data/input/bucharest/uncalibrated/chm15k/2020/04/02/00100_A202004022120_CHM170137.nc'
-    hash_sum = utils.sha256sum(file)
-    assert hash_sum == 'd0b67250568e7a9c0948d50553b5d56be183500d4289627bbfe65b0c2a3316a1'
+def test_get_product_types():
+    l1_types = ['lidar', 'model', 'mwr', 'radar']
+    l2_types = ['classification', 'drizzle', 'iwc', 'lwc']
+    assert utils.get_product_types(level=1) == l1_types
+    assert utils.get_product_types(level=2) == l2_types
+    assert utils.get_product_types() == l1_types + ['categorize'] + l2_types
+
+
+class TestHash:
+
+    file = 'tests/data/products/20201121_bucharest_classification.nc'
+
+    def test_md5sum(self):
+        hash_sum = utils.md5sum(self.file)
+        assert hash_sum == 'c81d7834d7189facbc5f63416fe5b3da'
+
+    def test_sha256sum2(self):
+        hash_sum = utils.sha256sum(self.file)
+        assert hash_sum == '48e006f769a9352a42bf41beac449eae62aea545f4d3ba46bffd35759d8982ca'

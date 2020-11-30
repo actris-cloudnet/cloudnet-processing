@@ -1,14 +1,19 @@
 import json
-from datetime import date, timedelta
+from datetime import timedelta, datetime
 import pytest
 import requests
 import requests_mock
 from data_processing import metadata_api
+import re
 
 adapter = requests_mock.Adapter()
 session = requests.Session()
 session.mount('http://', adapter)
 mock_addr = 'http://test/'
+config = {
+    'METADATASERVER': {'url': mock_addr},
+    'FREEZE_AFTER': {'days': 2}
+}
 
 files_response = '''
 [
@@ -65,21 +70,41 @@ class TestMetadataApi:
 
     def test_put_metadata(self):
         adapter.register_uri('PUT', f'{mock_addr}files/s3key', text='resp')
-        md_api = metadata_api.MetadataApi(mock_addr, session)
+        md_api = metadata_api.MetadataApi(config, session)
         res = md_api.put('s3key', self.payload)
         assert res.text == 'resp'
 
     def test_raises_error_on_failed_request(self):
         adapter.register_uri('PUT', f'{mock_addr}files/s3key_fail', status_code=500)
-        md_api = metadata_api.MetadataApi(mock_addr, session)
+        md_api = metadata_api.MetadataApi(config, session)
         with pytest.raises(requests.exceptions.HTTPError):
             md_api.put('s3key_fail', self.payload)
 
+    def test_screen_metadata(self):
+        metadata = [
+            {'instrument': {'id': 'chm15k', 'type': 'lidar'},
+             'model': None, 's3key': 'key1', 'filename': 'foo.nc'},
+            {'instrument': {'id': 'chm15k', 'type': 'radar'},
+             'model': None, 's3key': 'key2', 'filename': 'foo.nc'},
+            {'instrument': {'id': 'hatpro', 'type': 'mwr'},
+             'model': None, 's3key': 'key3', 'filename': 'foo.lwp.nc'},
+            {'instrument': {'id': 'chm15k', 'type': 'hatpro'},
+             'model': None, 's3key': 'key4', 'filename': 'foo.iwc.nc'},
+            {'model': {'id': 'ecmwf', 'optimumOrder': '1'},
+             'instrument': None, 's3key': 'key5', 'filename': 'foo.nc'},
+            {'model': {'id': 'icon', 'optimumOrder': '0'},
+             'instrument': None, 's3key': 'key6', 'filename': 'foo.nc'}
+        ]
+        md_api = metadata_api.MetadataApi(config, session)
+        assert md_api.screen_metadata(metadata)[0]['s3key'] == 'key6'
+        assert md_api.screen_metadata(metadata, 'chm15k')[0]['s3key'] == 'key1'
+        assert md_api.screen_metadata(metadata, 'hatpro')[0]['s3key'] == 'key3'
+        assert md_api.screen_metadata(metadata, 'xyz') == []
+
     def test_calls_files_with_proper_params_and_parses_response_correctly(self):
-        now = date.today()
-        two_days_ago = now - timedelta(days=2)
-        adapter.register_uri('GET', f'http://test/api/files?volatile=True&releasedBefore={two_days_ago}', json=json.loads(files_response))
-        md_api = metadata_api.MetadataApi(mock_addr, session)
-        r = md_api.get_volatile_files_updated_before(days=2)
+        url = f'{mock_addr}api/files(.*?)'
+        adapter.register_uri('GET', re.compile(url), json=json.loads(files_response))
+        md_api = metadata_api.MetadataApi(config, session)
+        r = md_api.find_volatile_files_to_freeze()
         assert len(r) == 1
-        assert r[0] == '20200513_granada_rpg-fmcw-94.nc'
+        assert r[0]['filename'] == '20200513_granada_rpg-fmcw-94.nc'

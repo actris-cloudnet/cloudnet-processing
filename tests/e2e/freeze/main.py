@@ -17,13 +17,14 @@ def main():
 
     start_server(5000, 'tests/data/server/metadata', f'{SCRIPT_PATH}/md.log')
     start_server(5001, 'tests/data/server/pid', f'{SCRIPT_PATH}/pid.log')
+    start_server(5901, 'tests/data/server/storage', f'{SCRIPT_PATH}/pid.log')
 
-    subprocess.check_call(['python3', 'scripts/freeze.py',
-                           '--config-dir=tests/data/config'
-                           ])
 
-    pytest.main(['-v', 'tests/e2e/freeze/tests.py',
-                 '--output', test_output])
+    #subprocess.check_call(['python3', 'scripts/freeze.py',
+    #                       '--config-dir=tests/data/config'])
+
+    #pytest.main(['-v', 'tests/e2e/freeze/tests.py',
+    #            '--output', test_output])
 
 
 if __name__ == "__main__":

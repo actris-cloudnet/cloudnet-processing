@@ -1,3 +1,4 @@
+from typing import Union
 import netCDF4
 from cloudnetpy.utils import get_uuid, get_time
 
@@ -11,7 +12,7 @@ def fix_mwr_file(full_path: str,
                  original_filename: str,
                  date_str: str,
                  site_name: str,
-                 uuid: str) -> str:
+                 uuid: Union[str, bool, None]) -> str:
     """Fixes global attributes of raw MWR netCDF file."""
 
     def _get_date():
@@ -35,7 +36,9 @@ def fix_mwr_file(full_path: str,
     return uuid
 
 
-def fix_model_file(file_name: str, site_name: str, uuid: str = None) -> str:
+def fix_model_file(full_path: str,
+                   site_name: str,
+                   uuid: Union[str, bool, None]) -> str:
     """Fixes global attributes of raw model netCDF file."""
 
     def _get_date():
@@ -43,7 +46,7 @@ def fix_model_file(file_name: str, site_name: str, uuid: str = None) -> str:
         the_date = date_string.split()[2]
         return the_date.split('-')
 
-    nc = netCDF4.Dataset(file_name, 'a')
+    nc = netCDF4.Dataset(full_path, 'a')
     uuid = uuid or get_uuid()
     nc.file_uuid = uuid
     nc.cloudnet_file_type = 'model'
@@ -62,4 +65,4 @@ def _get_history(nc: netCDF4.Dataset) -> str:
 
 
 def _get_title(nc: netCDF4.Dataset) -> str:
-    return f"{nc.cloudnet_file_type.capitalize()} file from {nc.location}"
+    return f"{nc.cloudnet_file_type.capitalize()} file from {nc.location.capitalize()}"
