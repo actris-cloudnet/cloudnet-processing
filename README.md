@@ -38,21 +38,33 @@ Positional arguments:
 
 Optional arguments:
 
-| Short | Long            | Default           | Description                                | 
-| :---  | :---            | :---              | :---                                       |
-| `-h`  | `--help`        |                   | Show help and exit. |
-| `-r`  | `--reprocess`   | `False`           | Process new version of freezed files and reprocess volatile files. |
-|       | `--config-dir`  | `./config`        | Path to directory containing config files. |
-|       | `--start`       | `current day - 7` | Starting date. |
-|       | `--stop`        | `current day - 1 `| Stopping date. |
-| `-p`  | `--products`    | `all`             | Processed products, e.g, `radar,lidar,categorize,classification`. |
+| Short | Long             | Default           | Description                                | 
+| :---  | :----------             | :---              | :---                                       |
+| `-h`  | `--help`         |                   | Show help and exit. |
+| `-r`  | `--reprocess`    | `False`           | See below. |
+|       | `--config-dir`   | `./config`        | Path to directory containing config files. |
+|       | `--start`        | `current day - 7` | Starting date. |
+|       | `--stop`         | `current day - 1 `| Stopping date. |
+| `-p`  | `--products`     | all             | Processed products, e.g, `radar,lidar,categorize,classification`. |
+
+Behavior of `--reprocess` flag:
+
+| Existing file | `--reprocess` | Action          |
+| :---          | :---          | :---            |
+| -             | `False`       | Create volatile file |
+| -             | `True`        | Create stable file |
+| `volatile`    | `False`       | Reprocess the volatile file (if new input data) |
+| `volatile`    | `True`        | Reprocess the volatile file |
+| `stable`      | `False`       | - |
+| `stable`      | `True`        | Create new stable file version|
+
 
 
 ### `freeze.py`
 Freeze selected files.
 
 ```
-usage: freeze.py [-h] [--config-dir /FOO/BAR] [-na]
+usage: freeze.py [-h] [--config-dir /FOO/BAR]
 ```
 
 Optional arguments:
