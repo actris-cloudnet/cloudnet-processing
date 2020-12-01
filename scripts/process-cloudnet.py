@@ -2,7 +2,7 @@
 """Master script for CloudnetPy processing."""
 import os
 import argparse
-from typing import Tuple, Union, NamedTuple
+from typing import Tuple, Union
 import shutil
 import warnings
 import importlib
@@ -38,8 +38,11 @@ def main():
         for product in ARGS.products:
             try:
                 print(f'{product.ljust(15)}', end='\t')
-                uuid = Uuid
-                uuid.volatile = process.check_product_status(product)
+                uuid = {
+                    'raw': [],
+                    'product': '',
+                    'volatile': process.check_product_status(product)
+                }
                 if product in utils.get_product_types(level=2):
                     uuid, identifier = process.process_level2(uuid, product)
                 else:
@@ -48,12 +51,6 @@ def main():
                 _print_info(uuid)
             except (RawDataMissingError, MiscError) as err:
                 print(err)
-
-
-class Uuid(NamedTuple):
-    raw: list
-    product: str
-    volatile: str
 
 
 class Process:
@@ -66,34 +63,34 @@ class Process:
         self._temp_dir = TemporaryDirectory()
         self._site = self.site_meta['id']
 
-    def process_model(self, uuid: Uuid) -> Tuple[Uuid, str]:
-        uuid.raw, upload_filename = self._get_daily_raw_file(temp_file.name)
-        uuid.product = modifier.fix_model_file(temp_file.name, self._site, uuid.volatile)
+    def process_model(self, uuid: dict) -> Tuple[dict, str]:
+        uuid['raw'], upload_filename = self._get_daily_raw_file(temp_file.name)
+        uuid['product'] = modifier.fix_model_file(temp_file.name, self._site, uuid['volatile'])
         identifier = upload_filename.split('_')[-1][:-3]
         return uuid, identifier
 
-    def process_mwr(self, uuid: Uuid) -> Tuple[Uuid, str]:
+    def process_mwr(self, uuid: dict) -> Tuple[dict, str]:
         identifier = 'hatpro'
-        uuid.raw, upload_filename = self._get_daily_raw_file(temp_file.name, identifier)
-        uuid.product = modifier.fix_mwr_file(temp_file.name, upload_filename, self.date_str,
-                                             self._site, uuid.volatile)
+        uuid['raw'], upload_filename = self._get_daily_raw_file(temp_file.name, identifier)
+        uuid['product'] = modifier.fix_mwr_file(temp_file.name, upload_filename, self.date_str,
+                                                self._site, uuid['volatile'])
         return uuid, identifier
 
-    def process_radar(self, uuid: Uuid) -> Tuple[Uuid, str]:
+    def process_radar(self, uuid: dict) -> Tuple[dict, str]:
         try:
             identifier = 'rpg-fmcw-94'
-            _, uuid.raw = self._download_raw_data(identifier)
-            uuid.product = rpg2nc(self._temp_dir.name, temp_file.name, self.site_meta,
-                                  uuid=uuid.volatile)
+            _, uuid['raw'] = self._download_raw_data(identifier)
+            uuid['product'] = rpg2nc(self._temp_dir.name, temp_file.name, self.site_meta,
+                                     uuid=uuid['volatile'])
         except RawDataMissingError:
             identifier = 'mira'
             raw_daily_file = NamedTemporaryFile()
-            uuid.raw, _ = self._get_daily_raw_file(raw_daily_file.name, identifier)
-            uuid.product = mira2nc(raw_daily_file.name, temp_file.name, self.site_meta,
-                                   uuid=uuid.volatile)
+            uuid['raw'], _ = self._get_daily_raw_file(raw_daily_file.name, identifier)
+            uuid['product'] = mira2nc(raw_daily_file.name, temp_file.name, self.site_meta,
+                                      uuid=uuid['volatile'])
         return uuid, identifier
 
-    def process_lidar(self, uuid: Uuid) -> Tuple[Uuid, str]:
+    def process_lidar(self, uuid: dict) -> Tuple[dict, str]:
 
         def _concatenate_chm15k() -> list:
             full_paths, uuids = self._download_raw_data(identifier)
@@ -105,17 +102,17 @@ class Process:
         try:
             identifier = 'chm15k'
             raw_daily_file = NamedTemporaryFile(suffix='.nc')
-            uuid.raw = _concatenate_chm15k()
+            uuid['raw'] = _concatenate_chm15k()
         except RawDataMissingError:
             identifier = 'cl51'
             raw_daily_file = NamedTemporaryFile(suffix='.DAT')
-            uuid.raw, _ = self._get_daily_raw_file(raw_daily_file.name, identifier)
+            uuid['raw'], _ = self._get_daily_raw_file(raw_daily_file.name, identifier)
 
-        uuid.product = ceilo2nc(raw_daily_file.name, temp_file.name, self.site_meta,
-                                uuid=uuid.volatile)
+        uuid['product'] = ceilo2nc(raw_daily_file.name, temp_file.name, self.site_meta,
+                                   uuid=uuid['volatile'])
         return uuid, identifier
 
-    def process_categorize(self, uuid: Uuid) -> Tuple[Uuid, str]:
+    def process_categorize(self, uuid: dict) -> Tuple[dict, str]:
         l1_products = utils.get_product_types(level=1)
         input_files = {key: '' for key in l1_products}
         for product in l1_products:
@@ -129,10 +126,10 @@ class Process:
         missing = [product for product in l1_products if not input_files[product]]
         if missing:
             raise MiscError(f'Missing required input files: {", ".join(missing)}')
-        uuid.product = generate_categorize(input_files, temp_file.name, uuid=uuid.volatile)
+        uuid['product'] = generate_categorize(input_files, temp_file.name, uuid=uuid['volatile'])
         return uuid, 'categorize'
 
-    def process_level2(self, uuid: Uuid, product: str) -> Tuple[Uuid, str]:
+    def process_level2(self, uuid: dict, product: str) -> Tuple[dict, str]:
         payload = self._get_payload({'product': 'categorize'})
         metadata = self._md_api.get('api/files', payload)
         if metadata:
@@ -141,7 +138,7 @@ class Process:
             raise MiscError(f'Missing input categorize file')
         module = importlib.import_module(f'cloudnetpy.products.{product}')
         fun = getattr(module, f'generate_{product}')
-        uuid.product = fun(categorize_file, temp_file.name, uuid=uuid.volatile)
+        uuid['product'] = fun(categorize_file, temp_file.name, uuid=uuid['volatile'])
         identifier = _get_product_identifier(product)
         return uuid, identifier
 
@@ -156,19 +153,20 @@ class Process:
                 return metadata[0]['uuid']
         return None
 
-    def upload_product_and_images(self, full_path: str, product: str, uuid: Uuid,
+    def upload_product_and_images(self, full_path: str, product: str, uuid: dict,
                                   identifier: str) -> None:
-        if ARGS.reprocess and uuid.volatile is None:
+        if ARGS.reprocess and uuid['volatile'] is None:
             self._pid_utils.add_pid_to_file(full_path)
         s3key = self._get_product_key(identifier)
         file_info = self._storage_api.upload_product(full_path, s3key)
-        img_metadata = self._storage_api.create_and_upload_images(full_path, s3key, uuid.product, product)
+        img_metadata = self._storage_api.create_and_upload_images(full_path, s3key, uuid['product'],
+                                                                  product)
         payload = utils.create_product_put_payload(full_path, file_info)
         self._md_api.put(s3key, payload)
         for data in img_metadata:
-            self._md_api.put_img(data, uuid.product)
+            self._md_api.put_img(data, uuid['product'])
         if product in utils.get_product_types(level=1):
-            self._update_statuses(uuid.raw)
+            self._update_statuses(uuid['raw'])
 
     def _get_daily_raw_file(self, raw_daily_file: str, instrument: str = None) -> Tuple[list, str]:
         full_path, uuid = self._download_raw_data(instrument)
@@ -223,8 +221,8 @@ def _get_product_identifier(product: str) -> str:
         return product
 
 
-def _print_info(uuid: Uuid) -> None:
-    is_new_version = ARGS.reprocess and uuid.volatile is None
+def _print_info(uuid: dict) -> None:
+    is_new_version = ARGS.reprocess and uuid['volatile'] is None
     print(f'Created: {"New version" if is_new_version else "Volatile file"}')
 
 
