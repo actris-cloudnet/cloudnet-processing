@@ -50,10 +50,13 @@ class StorageApi:
         res = self.session.delete(url, auth=self._auth)
         return res
 
-    def create_and_upload_images(self, nc_file_full_path: str, product_key: str, uuid: str) -> list:
+    def create_and_upload_images(self,
+                                 nc_file_full_path: str,
+                                 product_key: str,
+                                 uuid: str,
+                                 product: str) -> list:
         """Create and upload images."""
         temp_file = NamedTemporaryFile(suffix='.png')
-        product = product_key.split('_')[-1][:-3]
         try:
             fields, max_alt = utils.get_fields_for_plot(product)
         except NotImplementedError:
