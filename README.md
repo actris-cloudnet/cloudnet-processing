@@ -47,13 +47,13 @@ Optional arguments:
 |       | `--stop`         | `current day - 1 `| Stopping date. |
 | `-p`  | `--products`     | all             | Processed products, e.g, `radar,lidar,categorize,classification`. |
 
-Behavior of `--reprocess` flag:
+Behavior of the `--reprocess` flag:
 
 | Existing file | `--reprocess` | Action          |
 | :---          | :---          | :---            |
 | -             | `False`       | Create volatile file |
-| -             | `True`        | Create stable file |
-| `volatile`    | `False`       | Reprocess the volatile file (if new input data) |
+| -             | `True`        | Create volatile file |
+| `volatile`    | `False`       | Reprocess the volatile file (Level 1 products only if new raw data)|
 | `volatile`    | `True`        | Reprocess the volatile file |
 | `stable`      | `False`       | - |
 | `stable`      | `True`        | Create new stable file version|

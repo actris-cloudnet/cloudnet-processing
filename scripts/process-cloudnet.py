@@ -155,7 +155,7 @@ class Process:
 
     def upload_product_and_images(self, full_path: str, product: str, uuid: dict,
                                   identifier: str) -> None:
-        if ARGS.reprocess and uuid['volatile'] is None:
+        if _is_new_version(uuid):
             self._pid_utils.add_pid_to_file(full_path)
         s3key = self._get_product_key(identifier)
         file_info = self._storage_api.upload_product(full_path, s3key)
@@ -221,9 +221,12 @@ def _get_product_identifier(product: str) -> str:
         return product
 
 
+def _is_new_version(uuid) -> bool:
+    return ARGS.reprocess and uuid['volatile'] is False
+
+
 def _print_info(uuid: dict) -> None:
-    is_new_version = ARGS.reprocess and uuid['volatile'] is None
-    print(f'Created: {"New version" if is_new_version else "Volatile file"}')
+    print(f'Created: {"New version" if _is_new_version(uuid) else "Volatile file"}')
 
 
 if __name__ == "__main__":
