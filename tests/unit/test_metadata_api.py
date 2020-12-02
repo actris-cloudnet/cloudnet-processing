@@ -1,5 +1,4 @@
 import json
-from datetime import timedelta, datetime
 import pytest
 import requests
 import requests_mock

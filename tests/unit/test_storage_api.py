@@ -1,13 +1,9 @@
-import requests
-import requests_mock
 from data_processing.storage_api import StorageApi
 from tempfile import TemporaryDirectory
 import os
+from test_utils import utils as utils
 
-adapter = requests_mock.Adapter()
-session = requests.Session()
-session.mount('http://', adapter)
-mock_addr = 'http://test/'
+session, adapter, mock_addr = utils.init_test_session()
 
 config = {
     'STORAGE-SERVICE': {

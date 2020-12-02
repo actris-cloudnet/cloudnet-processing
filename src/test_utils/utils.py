@@ -1,9 +1,34 @@
 import atexit
 import os
+import io
+import sys
 import shutil
 import subprocess
 import time
 import socket
+import requests
+import requests_mock
+
+
+def init_test_session():
+    adapter = requests_mock.Adapter()
+    session = requests.Session()
+    session.mount('http://', adapter)
+    mock_addr = 'http://test/'
+    return session, adapter, mock_addr
+
+
+def start_output_capturing():
+    old_stdout = sys.stdout
+    stdout = io.StringIO()
+    sys.stdout = stdout
+    return old_stdout, stdout
+
+
+def reset_output(old_stdout, stdout):
+    output = stdout.getvalue()
+    sys.stdout = old_stdout
+    return output
 
 
 def wait_for_port(port, host='localhost', timeout=10.0):

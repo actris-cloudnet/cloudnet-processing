@@ -55,15 +55,22 @@ class MetadataApi:
         }
         return self.get('api/files', payload)
 
-    def screen_metadata(self, metadata: list, instrument: str = None) -> list:
+    def screen_metadata(self, metadata: list, instrument: str = None, product: str = None) -> list:
         """Return metadata suitable for processing."""
-        if instrument:
+        if product:
+            metadata = self._select_product(metadata, product)
+        elif instrument:
             metadata = self._select_instrument(metadata, instrument)
             if instrument == 'hatpro':
                 metadata = self._select_lwp(metadata)
         else:
             metadata = self._select_optimum_model(metadata)
         return metadata
+
+    @staticmethod
+    def _select_product(metadata: list, product: str) -> list:
+        return [row for row in metadata if row['product']
+                and row['product']['id'] == product]
 
     @staticmethod
     def _select_instrument(metadata: list, instrument: str) -> list:

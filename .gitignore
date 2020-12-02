@@ -1,6 +1,7 @@
 venv/
 .idea/
 *egg-info/
+.eggs/
 *pycache*
 .vscode/
 *.log

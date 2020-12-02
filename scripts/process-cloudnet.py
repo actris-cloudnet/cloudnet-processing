@@ -28,40 +28,7 @@ temp_file = NamedTemporaryFile()
 
 
 def main(args, storage_session=requests.session()):
-
-    parser = argparse.ArgumentParser(description='Process Cloudnet data.')
-    parser.add_argument('site',
-                        nargs='+',
-                        help='Site Name')
-    parser.add_argument('--config-dir',
-                        dest='config_dir',
-                        type=str,
-                        metavar='/FOO/BAR',
-                        help='Path to directory containing config files. Default: ./config.',
-                        default='./config')
-    parser.add_argument('--start',
-                        type=str,
-                        metavar='YYYY-MM-DD',
-                        help='Starting date. Default is current day - 7.',
-                        default=utils.get_date_from_past(7))
-    parser.add_argument('--stop',
-                        type=str,
-                        metavar='YYYY-MM-DD',
-                        help='Stopping date. Default is current day - 1.',
-                        default=utils.get_date_from_past(1))
-    parser.add_argument('-r', '--reprocess',
-                        action='store_true',
-                        help='Process new version of the stable files and reprocess volatile '
-                             'files.',
-                        default=False)
-    parser.add_argument('-p', '--products',
-                        help='Products to be processed, e.g., radar,lidar,model,categorize,'
-                             'classification',
-                        type=lambda s: s.split(','),
-                        default=utils.get_product_types())
-
-    args = parser.parse_args(args)
-
+    args = _parse_args(args)
     config = utils.read_main_conf(args)
     start_date = utils.date_string_to_date(args.start)
     stop_date = utils.date_string_to_date(args.stop)
@@ -163,8 +130,9 @@ class Process:
         l1_products = utils.get_product_types(level=1)
         input_files = {key: '' for key in l1_products}
         for product in l1_products:
-            payload = self._get_payload({'product': product})
-            metadata = self._md_api.get('api/files', payload)
+            payload = self._get_payload()
+            all_metadata = self._md_api.get('api/files', payload)
+            metadata = self._md_api.screen_metadata(all_metadata, product=product)
             if metadata:
                 input_files[product] = self._storage_api.download_product(metadata[0],
                                                                           self._temp_dir.name)
@@ -177,8 +145,10 @@ class Process:
         return uuid, 'categorize'
 
     def process_level2(self, uuid: Uuid, product: str) -> Tuple[Uuid, str]:
-        payload = self._get_payload({'product': 'categorize'})
-        metadata = self._md_api.get('api/files', payload)
+        payload = self._get_payload()
+        all_metadata = self._md_api.get('api/files', payload)
+        metadata = self._md_api.screen_metadata(all_metadata, product='categorize')
+        assert len(metadata) <= 1
         if metadata:
             categorize_file = self._storage_api.download_product(metadata[0], self._temp_dir.name)
         else:
@@ -190,8 +160,9 @@ class Process:
         return uuid, identifier
 
     def check_product_status(self, product: str) -> Union[str, None, bool]:
-        payload = self._get_payload({'product': product})
-        metadata = self._md_api.get('api/files', payload)
+        payload = self._get_payload()
+        all_metadata = self._md_api.get('api/files', payload)
+        metadata = self._md_api.screen_metadata(all_metadata, product=product)
         assert len(metadata) <= 1
         if metadata:
             if not metadata[0]['volatile'] and not self.is_reprocess:
@@ -230,7 +201,7 @@ class Process:
     def _download_raw_data(self, instrument: str = None) -> Tuple[list, list]:
         payload = self._get_payload()
         all_upload_metadata = self._md_api.get('upload-metadata', payload)
-        upload_metadata = self._md_api.screen_metadata(all_upload_metadata, instrument)
+        upload_metadata = self._md_api.screen_metadata(all_upload_metadata, instrument=instrument)
         self._check_raw_data_status(upload_metadata)
         full_paths = self._storage_api.download_raw_files(upload_metadata, self._temp_dir.name)
         uuids = [row['uuid'] for row in upload_metadata]
@@ -273,6 +244,40 @@ def _get_product_identifier(product: str) -> str:
         return 'lwc-scaled-adiabatic'
     else:
         return product
+
+
+def _parse_args(args):
+    parser = argparse.ArgumentParser(description='Process Cloudnet data.')
+    parser.add_argument('site',
+                        nargs='+',
+                        help='Site Name')
+    parser.add_argument('--config-dir',
+                        dest='config_dir',
+                        type=str,
+                        metavar='/FOO/BAR',
+                        help='Path to directory containing config files. Default: ./config.',
+                        default='./config')
+    parser.add_argument('--start',
+                        type=str,
+                        metavar='YYYY-MM-DD',
+                        help='Starting date. Default is current day - 7.',
+                        default=utils.get_date_from_past(7))
+    parser.add_argument('--stop',
+                        type=str,
+                        metavar='YYYY-MM-DD',
+                        help='Stopping date. Default is current day - 1.',
+                        default=utils.get_date_from_past(1))
+    parser.add_argument('-r', '--reprocess',
+                        action='store_true',
+                        help='Process new version of the stable files and reprocess volatile '
+                             'files.',
+                        default=False)
+    parser.add_argument('-p', '--products',
+                        help='Products to be processed, e.g., radar,lidar,model,categorize,'
+                             'classification',
+                        type=lambda s: s.split(','),
+                        default=utils.get_product_types())
+    return parser.parse_args(args)
 
 
 if __name__ == "__main__":
