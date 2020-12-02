@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Master script for CloudnetPy processing."""
 import os
+import sys
+import requests
 import argparse
 from typing import Tuple, Union
 import shutil
@@ -25,17 +27,50 @@ warnings.simplefilter("ignore", RuntimeWarning)
 temp_file = NamedTemporaryFile()
 
 
-def main():
-    config = utils.read_main_conf(ARGS)
-    site_meta = utils.read_site_info(ARGS.site[0])
-    start_date = utils.date_string_to_date(ARGS.start)
-    stop_date = utils.date_string_to_date(ARGS.stop)
+def main(args, storage_session=requests.session()):
+
+    parser = argparse.ArgumentParser(description='Process Cloudnet data.')
+    parser.add_argument('site',
+                        nargs='+',
+                        help='Site Name')
+    parser.add_argument('--config-dir',
+                        dest='config_dir',
+                        type=str,
+                        metavar='/FOO/BAR',
+                        help='Path to directory containing config files. Default: ./config.',
+                        default='./config')
+    parser.add_argument('--start',
+                        type=str,
+                        metavar='YYYY-MM-DD',
+                        help='Starting date. Default is current day - 7.',
+                        default=utils.get_date_from_past(7))
+    parser.add_argument('--stop',
+                        type=str,
+                        metavar='YYYY-MM-DD',
+                        help='Stopping date. Default is current day - 1.',
+                        default=utils.get_date_from_past(1))
+    parser.add_argument('-r', '--reprocess',
+                        action='store_true',
+                        help='Process new version of the stable files and reprocess volatile '
+                             'files.',
+                        default=False)
+    parser.add_argument('-p', '--products',
+                        help='Products to be processed, e.g., radar,lidar,model,categorize,'
+                             'classification',
+                        type=lambda s: s.split(','),
+                        default=utils.get_product_types())
+
+    args = parser.parse_args(args)
+
+    config = utils.read_main_conf(args)
+    start_date = utils.date_string_to_date(args.start)
+    stop_date = utils.date_string_to_date(args.stop)
 
     for date in date_range(start_date, stop_date):
         date_str = date.strftime("%Y-%m-%d")
         print(f'{date_str}')
-        process = Process(site_meta, date_str, config)
-        for product in ARGS.products:
+        process = Process(args, date_str, config, storage_session)
+        for product in args.products:
             try:
                 print(f'{product.ljust(15)}', end='\t')
                 uuid = Uuid()
@@ -45,7 +80,7 @@ def main():
                 else:
                     uuid, identifier = getattr(process, f'process_{product}')(uuid)
                 process.upload_product_and_images(temp_file.name, product, uuid, identifier)
-                _print_info(uuid)
+                process.print_info(uuid)
             except (RawDataMissingError, MiscError) as err:
                 print(err)
 
@@ -61,11 +96,16 @@ class Uuid:
 
 
 class Process:
-    def __init__(self, site_meta: dict, date_str: str, config: dict):
-        self.site_meta = site_meta
+    def __init__(self,
+                 args,
+                 date_str: str,
+                 config: dict,
+                 storage_session):
+        self.site_meta = utils.read_site_info(args.site[0])
         self.date_str = date_str  # YYYY-MM-DD
+        self.is_reprocess = args.reprocess
         self._md_api = MetadataApi(config)
-        self._storage_api = StorageApi(config)
+        self._storage_api = StorageApi(config, storage_session)
         self._pid_utils = PidUtils(config)
         self._temp_dir = TemporaryDirectory()
         self._site = self.site_meta['id']
@@ -154,7 +194,7 @@ class Process:
         metadata = self._md_api.get('api/files', payload)
         assert len(metadata) <= 1
         if metadata:
-            if not metadata[0]['volatile'] and not ARGS.reprocess:
+            if not metadata[0]['volatile'] and not self.is_reprocess:
                 raise MiscError('Existing freezed file and no "reprocess" flag')
             if metadata[0]['volatile']:
                 return metadata[0]['uuid']
@@ -164,7 +204,7 @@ class Process:
 
     def upload_product_and_images(self, full_path: str, product: str, uuid: Uuid,
                                   identifier: str) -> None:
-        if _is_new_version(uuid):
+        if self._is_new_version(uuid):
             self._pid_utils.add_pid_to_file(full_path)
         s3key = self._get_product_key(identifier)
         file_info = self._storage_api.upload_product(full_path, s3key)
@@ -176,6 +216,9 @@ class Process:
             self._md_api.put_img(data, uuid.product)
         if product in utils.get_product_types(level=1):
             self._update_statuses(uuid.raw)
+
+    def print_info(self, uuid: Uuid) -> None:
+        print(f'Created: {"New version" if self._is_new_version(uuid) else "Volatile file"}')
 
     def _get_daily_raw_file(self, raw_daily_file: str, instrument: str = None) -> Tuple[list, str]:
         full_path, uuid = self._download_raw_data(instrument)
@@ -193,12 +236,11 @@ class Process:
         uuids = [row['uuid'] for row in upload_metadata]
         return full_paths, uuids
 
-    @staticmethod
-    def _check_raw_data_status(metadata: list) -> None:
+    def _check_raw_data_status(self, metadata: list) -> None:
         if not metadata:
             raise RawDataMissingError('No raw data')
         is_unprocessed_data = any([row['status'] == 'uploaded' for row in metadata])
-        if not is_unprocessed_data and not ARGS.reprocess:
+        if not is_unprocessed_data and not self.is_reprocess:
             raise MiscError('Raw data already processed')
 
     def _update_statuses(self, uuids: list) -> None:
@@ -220,6 +262,9 @@ class Process:
     def _get_product_key(self, identifier: str) -> str:
         return f"{self.date_str.replace('-', '')}_{self._site}_{identifier}.nc"
 
+    def _is_new_version(self, uuid: Uuid) -> bool:
+        return self.is_reprocess and uuid.volatile is False
+
 
 def _get_product_identifier(product: str) -> str:
     if product == 'iwc':
@@ -230,44 +275,5 @@ def _get_product_identifier(product: str) -> str:
         return product
 
 
-def _is_new_version(uuid: Uuid) -> bool:
-    return ARGS.reprocess and uuid.volatile is False
-
-
-def _print_info(uuid: Uuid) -> None:
-    print(f'Created: {"New version" if _is_new_version(uuid) else "Volatile file"}')
-
-
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Process Cloudnet data.')
-    parser.add_argument('site',
-                        nargs='+',
-                        help='Site Name')
-    parser.add_argument('--config-dir',
-                        dest='config_dir',
-                        type=str,
-                        metavar='/FOO/BAR',
-                        help='Path to directory containing config files. Default: ./config.',
-                        default='./config')
-    parser.add_argument('--start',
-                        type=str,
-                        metavar='YYYY-MM-DD',
-                        help='Starting date. Default is current day - 7.',
-                        default=utils.get_date_from_past(7))
-    parser.add_argument('--stop',
-                        type=str,
-                        metavar='YYYY-MM-DD',
-                        help='Stopping date. Default is current day - 1.',
-                        default=utils.get_date_from_past(1))
-    parser.add_argument('-r', '--reprocess',
-                        action='store_true',
-                        help='Process new version of the stable files and reprocess volatile '
-                             'files.',
-                        default=False)
-    parser.add_argument('-p', '--products',
-                        help='Products to be processed, e.g., radar,lidar,model,categorize,'
-                             'classification',
-                        type=lambda s: s.split(','),
-                        default=utils.get_product_types())
-    ARGS = parser.parse_args()
-    main()
+    main(sys.argv[1:])
