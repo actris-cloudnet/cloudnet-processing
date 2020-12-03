@@ -75,7 +75,7 @@ def _create_global_attributes(file_new: netCDF4.Dataset, file_source: netCDF4.Da
 def _copy_attributes(source: netCDF4.Dataset, target: netCDF4.Dataset) -> None:
     for attr in source.ncattrs():
         value = getattr(source, attr)
-        setattr(target, attr, value)
+        setattr(target, attr, str(value))
 
 
 def _write_initial_data(file_new: netCDF4.Dataset, file_source: netCDF4.Dataset) -> None:
