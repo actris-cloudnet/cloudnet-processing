@@ -27,7 +27,7 @@ class TestChm15kProcessing:
         f = open(f'{SCRIPT_PATH}/md.log')
         data = f.readlines()
         assert len(data) == 1
-        suffix = 'dateFrom=2020-10-22&dateTo=2020-10-22&location=bucharest'
+        suffix = 'dateFrom=2020-10-22&dateTo=2020-10-22&site=bucharest'
         assert f'GET /api/files?{suffix}' in data[0]
 
     @pytest.mark.first_run
@@ -68,7 +68,7 @@ class TestChm15kProcessing:
         n_puts = 1
         n_posts = 3
         assert len(data) == n_gets + n_puts + n_img + n_posts
-        suffix = 'dateFrom=2020-10-22&dateTo=2020-10-22&location=bucharest'
+        suffix = 'dateFrom=2020-10-22&dateTo=2020-10-22&site=bucharest'
         assert f'GET /api/files?{suffix}' in data[1]
         assert f'GET /upload-metadata?{suffix}' in data[2]
         assert f'PUT /files/20201022_bucharest_{self.instrument}.nc HTTP/1.1" 201' in data[3]

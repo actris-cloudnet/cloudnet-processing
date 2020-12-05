@@ -223,7 +223,7 @@ class Process:
         payload = {
             'dateFrom': self.date_str,
             'dateTo': self.date_str,
-            'location': self._site,
+            'site': self._site,
         }
         if args:
             for key, value in args.items():

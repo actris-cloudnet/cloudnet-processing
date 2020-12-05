@@ -38,7 +38,7 @@ class TestClassificationProcessing:
         n_gets = 2
         n_puts = 1
         assert len(data) == n_gets + n_puts + n_img
-        suffix = 'dateFrom=2020-10-22&dateTo=2020-10-22&location=bucharest'
+        suffix = 'dateFrom=2020-10-22&dateTo=2020-10-22&site=bucharest'
         for row in data[:n_gets]:
             assert f'GET /api/files?{suffix} HTTP/1.1" 200' in row
         assert f'PUT /files/20201022_bucharest_{self.product}.nc' in data[n_gets]
