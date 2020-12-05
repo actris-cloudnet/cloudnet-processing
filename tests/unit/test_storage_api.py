@@ -34,7 +34,7 @@ class TestStorageApi:
         file.close()
 
     def test_download_raw_files(self):
-        filename = '00100_A202010092355_CHM170137.nc'
+        filename = '00100_A202010221205_CHM170137.nc'
         s3key = 'ur_a_nus'
         metadata = [
             {
@@ -51,7 +51,20 @@ class TestStorageApi:
         assert full_paths[0] == f'{self.temp_dir.name}/{filename}'
         file.close()
 
-    def test_upload_product(self):
+    def test_upload_stable_product(self):
+        s3key = '20201022_bucharest_ecmwf.nc'
+        full_path = f'tests/data/products/{s3key}'
+        res = {
+            "size": 667,
+            "version": "abc"
+        }
+        url = f'{mock_addr}cloudnet-product/{s3key}'
+        adapter.register_uri('PUT', url, json=res)
+        storage_api = StorageApi(config, session)
+        data = storage_api.upload_product(full_path, s3key)
+        assert data == res
+
+    def test_upload_volatile_product(self):
         s3key = '20201121_bucharest_classification.nc'
         full_path = f'tests/data/products/{s3key}'
         res = {

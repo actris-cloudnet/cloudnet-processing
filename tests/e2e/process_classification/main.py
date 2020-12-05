@@ -34,7 +34,8 @@ def register_storage_urls(temp_file):
 
 
 def main():
-    utils.start_server(5000, 'tests/data/server/metadata', f'{SCRIPT_PATH}/md.log')
+    utils.start_server(5000, 'tests/data/server/metadata/process_classification',
+                       f'{SCRIPT_PATH}/md.log')
 
     # Processes new volatile file (no prior file):
     _process()

@@ -22,14 +22,15 @@ def register_storage_urls():
             file.write(request.body.read())
         return True
 
-    # raw data:
-    raw_lidar_path = 'tests/data/server/storage/cloudnet-upload/bucharest/'
-    uuids = os.listdir(raw_lidar_path)
-    for uuid in uuids:
-        filename = os.listdir(f'{raw_lidar_path}/{uuid}')[0]
+    raw_data = [
+        ('27d8ac0d-3bab-45fe-9d85-1cc2528e9f95', '00100_A202010221900_CHM170137.nc'),
+        ('80c2fab5-2dc5-4692-bafe-a7274071770e', '00100_A202010221205_CHM170137.nc'),
+        ('d72d71af-a949-4094-aa14-73d1894c6aa5', '00100_A202010220835_CHM170137.nc'),
+        ('ada7f659-68e8-45aa-b88d-e5cd54520052', '00100_A202010212350_CHM170137.nc')  # incorrect file, shoud not process this
+    ]
+    for uuid, filename in raw_data:
         url = f'{mock_addr}cloudnet-upload/bucharest/{uuid}/{filename}'
         adapter.register_uri('GET', url, body=open(f'tests/data/raw/chm15k/{filename}', 'rb'))
-
     # product file:
     url = f'{mock_addr}cloudnet-product/20201022_bucharest_chm15k.nc'
     adapter.register_uri('PUT', url, additional_matcher=save_file, json={'size': 65, 'version': ''})
@@ -38,7 +39,7 @@ def register_storage_urls():
 
 
 def main():
-    utils.start_server(5000, 'tests/data/server/metadata', f'{SCRIPT_PATH}/md.log')
+    utils.start_server(5000, 'tests/data/server/metadata/process_chm15k', f'{SCRIPT_PATH}/md.log')
     utils.start_server(5001, 'tests/data/server/pid', f'{SCRIPT_PATH}/pid.log')
     register_storage_urls()
 
