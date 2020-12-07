@@ -93,9 +93,12 @@ class Process:
     def process_radar(self, uuid: Uuid) -> Tuple[Uuid, str]:
         try:
             identifier = 'rpg-fmcw-94'
-            _, uuid.raw = self._download_raw_data(identifier)
-            uuid.product = rpg2nc(self._temp_dir.name, temp_file.name, self.site_meta,
-                                  uuid=uuid.volatile)
+            full_paths, uuids = self._download_raw_data(identifier)
+            uuid.product, valid_full_paths = rpg2nc(self._temp_dir.name, temp_file.name,
+                                                    self.site_meta, uuid=uuid.volatile,
+                                                    date=self.date_str)
+            uuid.raw = _get_valid_uuids(uuids, full_paths, valid_full_paths)
+
         except RawDataMissingError:
             identifier = 'mira'
             raw_daily_file = NamedTemporaryFile()
@@ -110,9 +113,7 @@ class Process:
             full_paths, uuids = self._download_raw_data(identifier)
             valid_full_paths = concat_lib.concat_chm15k_files(full_paths, self.date_str,
                                                               raw_daily_file.name)
-            return [valid_uuid for valid_uuid, full_path in zip(uuids, full_paths)
-                    if full_path in valid_full_paths]
-
+            return _get_valid_uuids(uuids, full_paths, valid_full_paths)
         try:
             identifier = 'chm15k'
             raw_daily_file = NamedTemporaryFile(suffix='.nc')
@@ -179,8 +180,10 @@ class Process:
             self._pid_utils.add_pid_to_file(full_path)
         s3key = self._get_product_key(identifier)
         file_info = self._storage_api.upload_product(full_path, s3key)
+
         img_metadata = self._storage_api.create_and_upload_images(full_path, s3key, uuid.product,
                                                                   product)
+
         payload = utils.create_product_put_payload(full_path, file_info)
         self._md_api.put(s3key, payload)
         for data in img_metadata:
@@ -244,6 +247,10 @@ def _get_product_identifier(product: str) -> str:
         return 'lwc-scaled-adiabatic'
     else:
         return product
+
+
+def _get_valid_uuids(uuids: list, full_paths: list, valid_full_paths: list) -> list:
+    return [uuid for uuid, full_path in zip(uuids, full_paths) if full_path in valid_full_paths]
 
 
 def _parse_args(args):

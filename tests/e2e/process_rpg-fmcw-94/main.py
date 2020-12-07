@@ -25,6 +25,7 @@ def register_storage_urls():
     raw_data = [
         ('1bd2bd3b-45ae-455e-ab2b-627d9fde3a53', '201022_070003_P06_ZEN.LV1'),
         ('01425ad8-4acd-429b-b395-88723538e308', '201022_100001_P06_ZEN.LV1'),
+        ('d5859d33-c7b0-4f1b-bf40-66a236be76c6', '201023_160000_P06_ZEN.LV1')  # wrong file, should not process this
     ]
     for uuid, filename in raw_data:
         url = f'{mock_addr}cloudnet-upload/bucharest/{uuid}/{filename}'

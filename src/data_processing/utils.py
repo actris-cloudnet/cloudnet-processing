@@ -124,7 +124,7 @@ def get_fields_for_plot(cloudnet_file_type: str) -> Tuple[list, int]:
     elif cloudnet_file_type == 'lidar':
         fields = ['beta', 'beta_raw']
     elif cloudnet_file_type == 'mwr':
-        fields = ['lwp']
+        fields = ['LWP']
     elif cloudnet_file_type == 'radar':
         fields = ['Ze', 'v', 'width', 'ldr']
     elif cloudnet_file_type == 'drizzle':
