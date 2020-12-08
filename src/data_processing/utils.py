@@ -1,19 +1,45 @@
-import os
-from os import path
-import fnmatch
 import datetime
 import configparser
 import hashlib
 import requests
 from typing import Tuple, Union
-import netCDF4
 from cloudnetpy.utils import get_time
 from cloudnetpy.plotting.plot_meta import ATTRIBUTES as ATTR
+import base64
+import netCDF4
+
+
+def create_product_put_payload(full_path: str, storage_service_response: dict) -> dict:
+    nc = netCDF4.Dataset(full_path, 'r')
+    payload = {
+        'product': nc.cloudnet_file_type,
+        'site': nc.location.lower().replace('-', ''),
+        'measurementDate': f'{nc.year}-{nc.month}-{nc.day}',
+        'format': get_file_format(nc),
+        'checksum': sha256sum(full_path),
+        'volatile': not hasattr(nc, 'pid'),
+        'uuid': getattr(nc, 'file_uuid', ''),
+        'pid': getattr(nc, 'pid', ''),
+        'history': getattr(nc, 'history', ''),
+        'cloudnetpyVersion': getattr(nc, 'cloudnetpy_version', ''),
+        ** storage_service_response
+    }
+    nc.close()
+    return payload
+
+
+def get_file_format(nc: netCDF4.Dataset):
+    file_format = nc.file_format.lower()
+    if 'netcdf4' in file_format:
+        return 'HDF5 (NetCDF4)'
+    elif 'netcdf3' in file_format:
+        return 'NetCDF3'
+    raise RuntimeError('Unknown file type')
 
 
 def read_site_info(site_name: str) -> dict:
     """Read site information from Cloudnet http API."""
-    url = f"https://altocumulus.fmi.fi/api/sites?developer"
+    url = f"https://cloudnet.fmi.fi/api/sites?modelSites"
     sites = requests.get(url=url).json()
     for site in sites:
         if site['id'] == site_name.replace('-', ''):
@@ -22,34 +48,19 @@ def read_site_info(site_name: str) -> dict:
             return site
 
 
-def find_file(folder: str, wildcard: str) -> str:
-    """Find the first file name matching a wildcard.
-
-    Args:
-        folder (str): Name of folder.
-        wildcard (str): pattern to be searched, e.g., '*some_string*'.
-
-    Returns:
-        str: Full path of the first found file.
-
-    Raises:
-        FileNotFoundError: Can not find such file.
-
-    """
-    files = os.listdir(folder)
-    for file in files:
-        if fnmatch.fnmatch(file, wildcard):
-            return os.path.join(folder, file)
-    raise FileNotFoundError(f"No {wildcard} in {folder}")
-
-
-def list_files(folder: str, pattern: str) -> list:
-    """List files from folder (non-recursively) using a pattern that can include wildcard.
-    If folder or suitable files do not exist, return empty list."""
-    if os.path.isdir(folder):
-        files = fnmatch.filter(os.listdir(folder), pattern)
-        return [path.join(folder, file) for file in files]
-    return []
+def get_product_types(level: int = None) -> list:
+    """Return Cloudnet processing types."""
+    url = f"https://cloudnet.fmi.fi/api/products"
+    products = requests.get(url=url).json()
+    l1_types = [product['id'] for product in products if int(product['level']) == 1]
+    l2_types = [product['id'] for product in products if int(product['level']) == 2]
+    l1_types.remove('categorize')
+    if level == 1:
+        return l1_types
+    elif level == 2:
+        return l2_types
+    else:
+        return l1_types + ['categorize'] + l2_types
 
 
 def date_string_to_date(date_string: str) -> datetime.date:
@@ -82,31 +93,6 @@ def read_main_conf(args):
     return config
 
 
-def read_conf(args) -> dict:
-    conf_dir = args.config_dir
-
-    def _read(conf_type):
-        config_path = f'{conf_dir}/{conf_type}.ini'
-        config = configparser.ConfigParser()
-        config.read_file(open(config_path, 'r'))
-        return config
-
-    def _overwrite_path(name):
-        if hasattr(args, name):
-            value = getattr(args, name)
-            if value:
-                main_conf['PATH'][name] = value
-
-    main_conf = _read('main')
-    _overwrite_path('input')
-    _overwrite_path('output')
-    if hasattr(args, 'site'):
-        site_name = args.site[0]
-        return {'main': main_conf,
-                'site': _read(site_name)}
-    return {'main': main_conf}
-
-
 def str2bool(s: str) -> Union[bool, str]:
     return False if s == 'False' else True if s == 'True' else s
 
@@ -137,6 +123,8 @@ def get_fields_for_plot(cloudnet_file_type: str) -> Tuple[list, int]:
         fields = ['cloud_fraction', 'uwind', 'vwind', 'temperature', 'q', 'pressure']
     elif cloudnet_file_type == 'lidar':
         fields = ['beta', 'beta_raw']
+    elif cloudnet_file_type == 'mwr':
+        fields = ['LWP']
     elif cloudnet_file_type == 'radar':
         fields = ['Ze', 'v', 'width', 'ldr']
     elif cloudnet_file_type == 'drizzle':
@@ -161,28 +149,27 @@ def get_var_id(cloudnet_file_type: str, field: str) -> str:
 
 def sha256sum(filename: str) -> str:
     """Calculates hash of file using sha-256."""
-    hash_sum = hashlib.sha256()
+    return _calc_hash_sum(filename, 'sha256')
+
+
+def md5sum(filename: str, is_base64=False) -> str:
+    """Calculates hash of file using md5."""
+    return _calc_hash_sum(filename, 'md5', is_base64)
+
+
+def _calc_hash_sum(filename, method, is_base64=False):
+    hash_sum = getattr(hashlib, method)()
     with open(filename, "rb") as f:
         for byte_block in iter(lambda: f.read(4096), b""):
             hash_sum.update(byte_block)
-    return hash_sum.hexdigest()
+    if is_base64:
+        return base64.encodebytes(hash_sum.digest()).decode('utf-8').strip()
+    else:
+        return hash_sum.hexdigest()
 
 
-def add_hash_to_filename(filename: str, hash_sum: str) -> str:
-    hash_to_name = hash_sum[:18]
-    parts = filename.split('.')
-    if len(parts) == 1:
-        return f"{filename}-{hash_to_name}"
-    return f"{''.join(parts[:-1])}-{hash_to_name}.{parts[-1]}"
-
-
-def add_uuid_to_filename(uuid: str, filename: str) -> str:
-    """Adds uuid suffix to file."""
-    suffix = f"_{uuid[:4]}"
-    filepath, extension = os.path.splitext(filename)
-    new_filename = f"{filepath}{suffix}{extension}"
-    os.rename(filename, new_filename)
-    return new_filename
+def get_product_bucket(volatile: bool = False) -> str:
+    return 'cloudnet-product-volatile' if volatile else 'cloudnet-product'
 
 
 def is_volatile_file(filename: str) -> bool:
@@ -193,6 +180,15 @@ def is_volatile_file(filename: str) -> bool:
     return is_missing_pid
 
 
-def replace_path(filename: str, new_path: str) -> str:
-    """Replaces path of file."""
-    return filename.replace(os.path.dirname(filename), new_path)
+class MiscError(Exception):
+    """Internal exception class."""
+    def __init__(self, msg: str):
+        self.message = msg
+        super().__init__(self.message)
+
+
+class RawDataMissingError(Exception):
+    """Internal exception class."""
+    def __init__(self, msg: str):
+        self.message = msg
+        super().__init__(self.message)

@@ -1,6 +1,4 @@
-from configparser import SectionProxy
 from typing import Tuple
-
 import netCDF4
 import requests
 from requests import HTTPError
@@ -8,8 +6,8 @@ from requests import HTTPError
 
 class PidUtils:
 
-    def __init__(self, config: SectionProxy):
-        self._pid_service_url = config['url']
+    def __init__(self, config: dict):
+        self._pid_service_url = config['PID-SERVICE']['url']
 
     def add_pid_to_file(self, filepath: str) -> Tuple[str, str]:
         """Queries PID service and adds the PID to NC file metadata."""
