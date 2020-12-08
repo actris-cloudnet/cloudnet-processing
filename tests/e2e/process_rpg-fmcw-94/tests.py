@@ -23,7 +23,7 @@ class TestRPGFMCW94Processing:
         data = f.readlines()
         assert len(data) == 0
 
-    def test_that_reports_successful_processing(self):
+    def test_that_reports_volatile_file_creation(self):
         assert 'Created: Volatile file' in self.output
 
     def test_attributes(self):

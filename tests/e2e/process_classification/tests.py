@@ -16,7 +16,7 @@ class TestClassificationProcessing:
         self.output = params['output']
         self.full_path = params['full_path']
 
-    def test_that_refuses_to_process_correctly(self):
+    def test_that_reports_volatile_file_creation(self):
         assert 'Created: Volatile file' in self.output
 
     @pytest.mark.reprocess
