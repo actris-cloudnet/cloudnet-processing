@@ -1,11 +1,67 @@
+import os
 from typing import Union
 import netCDF4
+from data_processing import utils
 from cloudnetpy.utils import get_uuid, get_time
 
-MAJOR = 0
-MINOR = 2
-PATCH = 0
-VERSION = '%d.%d.%d' % (MAJOR, MINOR, PATCH)
+
+def fix_legacy_file(full_path: str,
+                    temp_file: str) -> str:
+    """Fix legacy netCDF file."""
+
+    def _get_date():
+        year = filename[:4]
+        month = filename[4:6]
+        day = filename[6:8]
+        if int(nc.year) != int(year) or int(nc.month) != int(month) or int(nc.day) != int(day):
+            nc.close()
+            raise utils.MiscError('Not sure which date this is')
+        return f'{year}-{month}-{day}'
+
+    def _get_cloudnet_file_type():
+        if 'iwc-Z-T-method' in filename:
+            return 'iwc'
+        if 'lwc-scaled-adiabatic' in filename:
+            return 'lwc'
+        for file_type in ('drizzle', 'classification', 'categorize'):
+            if file_type in filename:
+                return file_type
+        nc.close()
+        raise utils.MiscError('Undetected legacy file')
+
+    uuid = get_uuid()
+    filename = os.path.basename(full_path)
+    nc = netCDF4.Dataset(full_path, 'a')
+    date_str = _get_date()
+    cloudnet_file_type = _get_cloudnet_file_type()
+    history = _get_history(nc)
+
+    nc_new = netCDF4.Dataset(temp_file, 'w', format='NETCDF4_CLASSIC')
+    copy_file_contents(nc, nc_new)
+    nc.close()
+
+    # New / modified global attributes:
+    nc_new.file_uuid = uuid
+    nc_new.history = history
+    nc_new.cloudnet_file_type = cloudnet_file_type
+    nc_new.close()
+
+    return date_str
+
+
+def copy_file_contents(source: netCDF4.Dataset, target: netCDF4.Dataset) -> None:
+    for key, dimension in source.dimensions.items():
+        target.createDimension(key, dimension.size)
+    for var_name, variable in source.variables.items():
+        var_out = target.createVariable(var_name, variable.datatype, variable.dimensions,
+                                        zlib=True)
+        attr = {k: variable.getncattr(k) for k in variable.ncattrs()}
+        if '_FillValue' in attr:
+            del attr['_FillValue']
+        var_out.setncatts(attr)
+        var_out[:] = variable[:]
+    for attr_name in source.ncattrs():
+        setattr(target, attr_name, source.getncattr(attr_name))
 
 
 def fix_mwr_file(full_path: str,
