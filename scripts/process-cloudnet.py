@@ -48,7 +48,7 @@ def main(args, storage_session=requests.session()):
                     uuid, identifier = getattr(process, f'process_{product}')(uuid)
                 process.upload_product_and_images(temp_file.name, product, uuid, identifier)
                 process.print_info(uuid)
-            except (RawDataMissingError, MiscError) as err:
+            except (RawDataMissingError, MiscError, RuntimeError) as err:
                 print(err)
 
 
