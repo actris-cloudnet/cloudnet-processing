@@ -60,7 +60,7 @@ def fix_model_file(full_path: str,
 
 def _get_history(nc: netCDF4.Dataset) -> str:
     old_history = getattr(nc, 'history', '')
-    new_record = f"{get_time()} - global attributes fixed using attribute_modifier {VERSION}\n"
+    new_record = f"{get_time()} - File content harmonized by the CLU unit.\n"
     return f"{new_record}{old_history}"
 
 
