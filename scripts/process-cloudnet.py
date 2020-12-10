@@ -227,6 +227,7 @@ class Process:
             'dateFrom': self.date_str,
             'dateTo': self.date_str,
             'site': self._site,
+            'developer': True
         }
         if args:
             for key, value in args.items():
