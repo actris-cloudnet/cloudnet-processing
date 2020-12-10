@@ -4,7 +4,7 @@ from cloudnetpy.utils import get_uuid, get_time
 
 
 def fix_legacy_file(full_path: str,
-                    temp_file: str) -> None:
+                    temp_file: str) -> str:
     """Fix legacy netCDF file."""
 
     uuid = get_uuid()
@@ -21,6 +21,7 @@ def fix_legacy_file(full_path: str,
     nc_new.history = history
 
     nc_new.close()
+    return uuid
 
 
 def copy_file_contents(source: netCDF4.Dataset, target: netCDF4.Dataset) -> None:

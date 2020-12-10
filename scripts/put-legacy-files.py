@@ -58,19 +58,20 @@ def main():
                 print(s3key)
 
                 temp_file = NamedTemporaryFile()
-                fix_legacy_file(file, temp_file.name)
+                uuid = fix_legacy_file(file, temp_file.name)
 
                 pid_utils.add_pid_to_file(temp_file.name)
                 upload_info = storage_api.upload_product(temp_file.name, s3key)
-                #img_metadata = storage_api.create_and_upload_images(temp_file.name,
-                #                                                    s3key,
-                #                                                    file_info['uuid'],
-                #                                                    file_info['product'])
+                img_metadata = storage_api.create_and_upload_images(temp_file.name,
+                                                                    s3key,
+                                                                    uuid,
+                                                                    info['product'],
+                                                                    legacy=True)
                 payload = utils.create_product_put_payload(temp_file.name, upload_info)
                 payload['legacy'] = True
                 md_api.put(s3key, payload)
-                #for data in img_metadata:
-                #    md_api.put_img(data, file_info['product'])
+                for data in img_metadata:
+                    md_api.put_img(data, uuid)
 
 
 class LegacyFile:
