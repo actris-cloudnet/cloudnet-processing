@@ -1,39 +1,15 @@
-import os
 from typing import Union
 import netCDF4
-from data_processing import utils
 from cloudnetpy.utils import get_uuid, get_time
 
 
 def fix_legacy_file(full_path: str,
-                    temp_file: str) -> str:
+                    temp_file: str) -> None:
     """Fix legacy netCDF file."""
 
-    def _get_date():
-        year = filename[:4]
-        month = filename[4:6]
-        day = filename[6:8]
-        if int(nc.year) != int(year) or int(nc.month) != int(month) or int(nc.day) != int(day):
-            nc.close()
-            raise utils.MiscError('Not sure which date this is')
-        return f'{year}-{month}-{day}'
-
-    def _get_cloudnet_file_type():
-        if 'iwc-Z-T-method' in filename:
-            return 'iwc'
-        if 'lwc-scaled-adiabatic' in filename:
-            return 'lwc'
-        for file_type in ('drizzle', 'classification', 'categorize'):
-            if file_type in filename:
-                return file_type
-        nc.close()
-        raise utils.MiscError('Undetected legacy file')
-
     uuid = get_uuid()
-    filename = os.path.basename(full_path)
+
     nc = netCDF4.Dataset(full_path, 'a')
-    date_str = _get_date()
-    cloudnet_file_type = _get_cloudnet_file_type()
     history = _get_history(nc)
 
     nc_new = netCDF4.Dataset(temp_file, 'w', format='NETCDF4_CLASSIC')
@@ -43,10 +19,8 @@ def fix_legacy_file(full_path: str,
     # New / modified global attributes:
     nc_new.file_uuid = uuid
     nc_new.history = history
-    nc_new.cloudnet_file_type = cloudnet_file_type
-    nc_new.close()
 
-    return date_str
+    nc_new.close()
 
 
 def copy_file_contents(source: netCDF4.Dataset, target: netCDF4.Dataset) -> None:
