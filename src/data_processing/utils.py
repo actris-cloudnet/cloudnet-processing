@@ -9,11 +9,14 @@ import base64
 import netCDF4
 
 
-def create_product_put_payload(full_path: str, storage_service_response: dict) -> dict:
+def create_product_put_payload(full_path: str,
+                               storage_service_response: dict,
+                               product: str = None,
+                               site: str = None) -> dict:
     nc = netCDF4.Dataset(full_path, 'r')
     payload = {
-        'product': nc.cloudnet_file_type,
-        'site': nc.location.lower().replace('-', ''),
+        'product': product or nc.cloudnet_file_type,
+        'site': site or nc.location.lower().replace('-', ''),
         'measurementDate': f'{nc.year}-{nc.month}-{nc.day}',
         'format': get_file_format(nc),
         'checksum': sha256sum(full_path),

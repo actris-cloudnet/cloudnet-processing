@@ -62,7 +62,8 @@ def main():
             upload_info = storage_api.upload_product(temp_file.name, s3key)
             img_metadata = storage_api.create_and_upload_images(temp_file.name, s3key, uuid,
                                                                 info['product'], legacy=True)
-            payload = utils.create_product_put_payload(temp_file.name, upload_info)
+            payload = utils.create_product_put_payload(temp_file.name, upload_info,
+                                                       product=info['product'], site=site)
             payload['legacy'] = True
             md_api.put(s3key, payload)
             for data in img_metadata:
