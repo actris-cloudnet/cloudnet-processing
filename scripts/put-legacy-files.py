@@ -107,6 +107,7 @@ def _check_if_exists(md_api, info: dict):
         'dateFrom': info['date_str'],
         'dateTo': info['date_str'],
         'product': info['product'],
+        'developer': True,
         'showLegacy': True
     }
     try:
