@@ -38,7 +38,11 @@ def main():
 
     freeze.main([f"--config-dir=tests/data/config"], storage_session=session)
 
-    subprocess.call(['pytest', '-v', f'{SCRIPT_PATH}/tests.py', '--full_path', temp_file.name])
+    try:
+        subprocess.check_call(['pytest', '-v', f'{SCRIPT_PATH}/tests.py',
+                               '--full_path', temp_file.name])
+    except subprocess.CalledProcessError:
+        raise
 
 
 if __name__ == "__main__":

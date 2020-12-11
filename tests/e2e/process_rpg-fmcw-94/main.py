@@ -49,7 +49,10 @@ def main():
     output = utils.reset_output(*std_args)
     pytest_args = ['pytest', '-v', f'{SCRIPT_PATH}/tests.py', '--output', output,
                    '--full_path', temp_file.name]
-    subprocess.call(pytest_args)
+    try:
+        subprocess.check_call(pytest_args)
+    except subprocess.CalledProcessError:
+        raise
 
 
 if __name__ == "__main__":

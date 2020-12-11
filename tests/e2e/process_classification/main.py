@@ -54,8 +54,12 @@ def _process(main_extra_args=()):
     std_args = utils.start_output_capturing()
     process_cloudnet.main(args + list(main_extra_args), storage_session=session)
     output = utils.reset_output(*std_args)
-    subprocess.call(['pytest', '-v', f'{SCRIPT_PATH}/tests.py', '--output', output,
-                     '--full_path', temp_file.name])
+
+    try:
+        subprocess.call(['pytest', '-v', f'{SCRIPT_PATH}/tests.py', '--output', output,
+                         '--full_path', temp_file.name])
+    except subprocess.CalledProcessError:
+        raise
 
 
 if __name__ == "__main__":
