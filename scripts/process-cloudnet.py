@@ -157,7 +157,7 @@ class Process:
         module = importlib.import_module(f'cloudnetpy.products.{product}')
         fun = getattr(module, f'generate_{product}')
         uuid.product = fun(categorize_file, temp_file.name, uuid=uuid.volatile)
-        identifier = _get_product_identifier(product)
+        identifier = utils.get_product_identifier(product)
         return uuid, identifier
 
     def check_product_status(self, product: str) -> Union[str, None, bool]:
@@ -239,15 +239,6 @@ class Process:
 
     def _is_new_version(self, uuid: Uuid) -> bool:
         return self.is_reprocess and uuid.volatile is False
-
-
-def _get_product_identifier(product: str) -> str:
-    if product == 'iwc':
-        return 'iwc-Z-T-method'
-    elif product == 'lwc':
-        return 'lwc-scaled-adiabatic'
-    else:
-        return product
 
 
 def _get_valid_uuids(uuids: list, full_paths: list, valid_full_paths: list) -> list:

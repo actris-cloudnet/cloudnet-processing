@@ -2,10 +2,41 @@ from typing import Union
 import netCDF4
 from cloudnetpy.utils import get_uuid, get_time
 
-MAJOR = 0
-MINOR = 2
-PATCH = 0
-VERSION = '%d.%d.%d' % (MAJOR, MINOR, PATCH)
+
+def fix_legacy_file(full_path: str,
+                    temp_file: str) -> str:
+    """Fix legacy netCDF file."""
+
+    uuid = get_uuid()
+
+    nc = netCDF4.Dataset(full_path, 'a')
+    history = _get_history(nc)
+
+    nc_new = netCDF4.Dataset(temp_file, 'w', format='NETCDF4_CLASSIC')
+    copy_file_contents(nc, nc_new)
+    nc.close()
+
+    # New / modified global attributes:
+    nc_new.file_uuid = uuid
+    nc_new.history = history
+
+    nc_new.close()
+    return uuid
+
+
+def copy_file_contents(source: netCDF4.Dataset, target: netCDF4.Dataset) -> None:
+    for key, dimension in source.dimensions.items():
+        target.createDimension(key, dimension.size)
+    for var_name, variable in source.variables.items():
+        var_out = target.createVariable(var_name, variable.datatype, variable.dimensions,
+                                        zlib=True)
+        attr = {k: variable.getncattr(k) for k in variable.ncattrs()}
+        if '_FillValue' in attr:
+            del attr['_FillValue']
+        var_out.setncatts(attr)
+        var_out[:] = variable[:]
+    for attr_name in source.ncattrs():
+        setattr(target, attr_name, source.getncattr(attr_name))
 
 
 def fix_mwr_file(full_path: str,
@@ -60,7 +91,7 @@ def fix_model_file(full_path: str,
 
 def _get_history(nc: netCDF4.Dataset) -> str:
     old_history = getattr(nc, 'history', '')
-    new_record = f"{get_time()} - global attributes fixed using attribute_modifier {VERSION}\n"
+    new_record = f"{get_time()} - File content harmonized by the CLU unit.\n"
     return f"{new_record}{old_history}"
 
 

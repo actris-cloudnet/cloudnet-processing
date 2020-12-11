@@ -2,7 +2,7 @@
 from os import path
 import requests
 from data_processing import utils
-from cloudnetpy.plotting import generate_figure
+from cloudnetpy.plotting import generate_figure, generate_legacy_figure
 from tempfile import NamedTemporaryFile
 from typing import Union
 
@@ -54,7 +54,8 @@ class StorageApi:
                                  nc_file_full_path: str,
                                  product_key: str,
                                  uuid: str,
-                                 product: str) -> list:
+                                 product: str,
+                                 legacy: bool = False) -> list:
         """Create and upload images."""
         temp_file = NamedTemporaryFile(suffix='.png')
         try:
@@ -64,8 +65,12 @@ class StorageApi:
             return []
         visualizations = []
         for field in fields:
-            generate_figure(nc_file_full_path, [field], show=False, image_name=temp_file.name,
-                            max_y=max_alt, sub_title=False, title=False, dpi=120)
+            if legacy:
+                generate_legacy_figure(nc_file_full_path, product, field, image_name=temp_file.name,
+                                       max_y=max_alt, dpi=120)
+            else:
+                generate_figure(nc_file_full_path, [field], show=False, image_name=temp_file.name,
+                                max_y=max_alt, sub_title=False, title=False, dpi=120)
             s3key = product_key.replace('.nc', f"-{uuid[:8]}-{field}.png")
             url = path.join(self._url, 'cloudnet-img', s3key)
             headers = self._get_headers(temp_file.name)

@@ -180,6 +180,15 @@ def is_volatile_file(filename: str) -> bool:
     return is_missing_pid
 
 
+def get_product_identifier(product: str) -> str:
+    if product == 'iwc':
+        return 'iwc-Z-T-method'
+    elif product == 'lwc':
+        return 'lwc-scaled-adiabatic'
+    else:
+        return product
+
+
 class MiscError(Exception):
     """Internal exception class."""
     def __init__(self, msg: str):
