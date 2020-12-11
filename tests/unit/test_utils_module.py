@@ -96,3 +96,32 @@ class TestHash:
     def test_sha256sum2(self):
         hash_sum = utils.sha256sum(self.file)
         assert hash_sum == '48e006f769a9352a42bf41beac449eae62aea545f4d3ba46bffd35759d8982ca'
+
+
+class TestsCreateProductPutPayload:
+
+    storage_response = {'size': 66, 'version': 'abc'}
+
+    def test_with_legacy_file(self):
+        file = 'tests/data/products/legacy_classification.nc'
+        payload = utils.create_product_put_payload(file, self.storage_response,
+                                                   product='classification',
+                                                   site='schneefernerhaus',
+                                                   date_str='2020-07-06')
+        assert payload['measurementDate'] == '2020-07-06'
+        assert payload['format'] == 'NetCDF3'
+        assert payload['pid'] == ''
+        assert len(payload['cloudnetpyVersion']) == 0
+        assert payload['volatile'] is True
+        assert payload['site'] == 'schneefernerhaus'
+        assert payload['product'] == 'classification'
+
+    def test_with_cloudnetpy_file(self):
+        file = 'tests/data/products/20201022_bucharest_categorize.nc'
+        payload = utils.create_product_put_payload(file, self.storage_response)
+        assert payload['measurementDate'] == '2020-10-22'
+        assert payload['format'] == 'HDF5 (NetCDF4)'
+        assert payload['volatile'] is True
+        assert payload['site'] == 'bucharest'
+        assert payload['product'] == 'categorize'
+        assert len(payload['cloudnetpyVersion']) == 5
