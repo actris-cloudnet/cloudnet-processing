@@ -9,18 +9,18 @@ def fix_legacy_file(full_path: str,
 
     uuid = get_uuid()
 
-    nc = netCDF4.Dataset(full_path, 'a')
+    nc = netCDF4.Dataset(full_path, 'r')
+    nc_new = netCDF4.Dataset(temp_file, 'w', format='NETCDF4_CLASSIC')
+
+    copy_file_contents(nc, nc_new)
     history = _get_history(nc)
 
-    nc_new = netCDF4.Dataset(temp_file, 'w', format='NETCDF4_CLASSIC')
-    copy_file_contents(nc, nc_new)
-    nc.close()
-
-    # New / modified global attributes:
     nc_new.file_uuid = uuid
     nc_new.history = history
 
+    nc.close()
     nc_new.close()
+
     return uuid
 
 
