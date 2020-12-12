@@ -72,6 +72,8 @@ def main():
             for data in img_metadata:
                 md_api.put_img(data, uuid)
 
+            temp_file.close()
+
 
 class LegacyFile:
     def __init__(self, full_path: str):
