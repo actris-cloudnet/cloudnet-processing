@@ -3,22 +3,21 @@ import netCDF4
 from cloudnetpy.utils import get_uuid, get_time
 
 
-def fix_legacy_file(full_path: str,
-                    temp_file: str) -> str:
+def fix_legacy_file(legacy_file_full_path: str, target_full_path: str) -> str:
     """Fix legacy netCDF file."""
 
     uuid = get_uuid()
 
-    nc = netCDF4.Dataset(full_path, 'r')
-    nc_new = netCDF4.Dataset(temp_file, 'w', format='NETCDF4_CLASSIC')
+    nc_legacy = netCDF4.Dataset(legacy_file_full_path, 'r')
+    nc_new = netCDF4.Dataset(target_full_path, 'w', format='NETCDF4_CLASSIC')
 
-    copy_file_contents(nc, nc_new)
-    history = _get_history(nc)
+    copy_file_contents(nc_legacy, nc_new)
+    history = _get_history(nc_legacy)
 
     nc_new.file_uuid = uuid
     nc_new.history = history
 
-    nc.close()
+    nc_legacy.close()
     nc_new.close()
 
     return uuid
