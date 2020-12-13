@@ -95,10 +95,14 @@ class TestMetadataApi:
              'instrument': None, 's3key': 'key6', 'filename': 'foo.nc'}
         ]
         md_api = metadata_api.MetadataApi(config, session)
-        assert md_api.screen_metadata(metadata)[0]['s3key'] == 'key6'
-        assert md_api.screen_metadata(metadata, 'chm15k')[0]['s3key'] == 'key1'
-        assert md_api.screen_metadata(metadata, 'hatpro')[0]['s3key'] == 'key3'
-        assert md_api.screen_metadata(metadata, 'xyz') == []
+        assert md_api.screen_metadata(metadata, model='ecmwf')[0]['s3key'] == 'key5'
+        assert md_api.screen_metadata(metadata, model='icon')[0]['s3key'] == 'key6'
+        meta = md_api.screen_metadata(metadata, instrument='chm15k')
+        for row, key in zip(meta, ('key1', 'key2', 'key4')):
+            assert key == row['s3key']
+        assert md_api.screen_metadata(metadata, instrument='hatpro')[0]['s3key'] == 'key3'
+        assert md_api.screen_metadata(metadata, instrument='xyz') == []
+        assert md_api.screen_metadata(metadata, model='xyz') == []
 
     def test_calls_files_with_proper_params_and_parses_response_correctly(self):
         url = f'{mock_addr}api/files(.*?)'
