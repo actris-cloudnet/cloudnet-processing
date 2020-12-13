@@ -194,6 +194,10 @@ def get_product_identifier(product: str) -> str:
     return product
 
 
+def get_model_identifier(filename: str) -> str:
+    return filename.split('_')[-1][:-3]
+
+
 class MiscError(Exception):
     """Internal exception class."""
     def __init__(self, msg: str):

@@ -125,3 +125,12 @@ class TestsCreateProductPutPayload:
         assert payload['site'] == 'bucharest'
         assert payload['product'] == 'categorize'
         assert len(payload['cloudnetpyVersion']) == 5
+
+
+@pytest.mark.parametrize("filename, identifier", [
+    ('20201022_bucharest_gdas1.nc', 'gdas1'),
+    ('20201022_bucharest_ecmwf.nc', 'ecmwf'),
+    ('20200101_potenza_icon-iglo-12-23.nc', 'icon-iglo-12-23')
+])
+def test_get_model_identifier(filename, identifier):
+    assert utils.get_model_identifier(filename) == identifier

@@ -80,7 +80,7 @@ class Process:
     def process_model(self, uuid: Uuid) -> Tuple[Uuid, str]:
         uuid.raw, upload_filename = self._get_daily_raw_file(temp_file.name)
         uuid.product = nc_header_augmenter.fix_model_file(temp_file.name, self._site, uuid.volatile)
-        identifier = upload_filename.split('_')[-1][:-3]
+        identifier = utils.get_model_identifier(upload_filename)
         return uuid, identifier
 
     def process_mwr(self, uuid: Uuid) -> Tuple[Uuid, str]:
