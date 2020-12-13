@@ -70,6 +70,12 @@ def get_product_types(level: int = None) -> list:
     return l1_types + ['categorize'] + l2_types
 
 
+def get_model_types() -> list:
+    url = f"https://cloudnet.fmi.fi/api/models"
+    models = requests.get(url=url).json()
+    return [model['id'] for model in models]
+
+
 def date_string_to_date(date_string: str) -> datetime.date:
     """Convert YYYY-MM-DD to Python date."""
     date = [int(x) for x in date_string.split('-')]
