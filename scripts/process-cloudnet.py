@@ -1,24 +1,24 @@
 #!/usr/bin/env python3
 """Master script for CloudnetPy processing."""
-import argparse
-import importlib
 import os
-import shutil
 import sys
-import warnings
-from tempfile import NamedTemporaryFile
-from tempfile import TemporaryDirectory
-from typing import Tuple, Union
 import requests
-from cloudnetpy.categorize import generate_categorize
+import argparse
+from typing import Tuple, Union
+import shutil
+import warnings
+import importlib
+from tempfile import TemporaryDirectory
+from tempfile import NamedTemporaryFile
 from cloudnetpy.instruments import rpg2nc, ceilo2nc, mira2nc
+from cloudnetpy.categorize import generate_categorize
 from cloudnetpy.utils import date_range
-from data_processing import concat_lib
-from data_processing import nc_header_augmenter
 from data_processing import utils
 from data_processing.metadata_api import MetadataApi
-from data_processing.pid_utils import PidUtils
 from data_processing.storage_api import StorageApi
+from data_processing.pid_utils import PidUtils
+from data_processing import concat_lib
+from data_processing import nc_header_augmenter
 from data_processing.utils import MiscError, RawDataMissingError
 
 warnings.simplefilter("ignore", UserWarning)
@@ -42,7 +42,18 @@ def main(args, storage_session=requests.session()):
                 print(f'{product.ljust(15)}', end='\t')
                 uuid = Uuid()
                 uuid.volatile = process.check_product_status(product)
-                if product in utils.get_product_types(level=2):
+
+                if product == 'model':
+                    for model_type in utils.get_model_types():
+                        try:
+                            uuid = process.process_model(uuid, model_type)
+                            process.upload_product_and_images(temp_file.name, product, uuid,
+                                                              model_type)
+                        except (RawDataMissingError, MiscError) as err:
+                            print(err)
+                    continue
+
+                elif product in utils.get_product_types(level=2):
                     uuid, identifier = process.process_level2(uuid, product)
                 else:
                     uuid, identifier = getattr(process, f'process_{product}')(uuid)
@@ -77,55 +88,54 @@ class Process:
         self._temp_dir = TemporaryDirectory()
         self._site = self.site_meta['id']
 
-    def process_model(self, uuid: Uuid) -> Tuple[Uuid, str]:
-        uuid.raw, upload_filename = self._get_daily_raw_file(temp_file.name)
+    def process_model(self, uuid: Uuid, model: str) -> Uuid:
+        uuid.raw, upload_filename = self._get_daily_raw_file(temp_file.name, model=model)
         uuid.product = nc_header_augmenter.fix_model_file(temp_file.name, self._site, uuid.volatile)
-        identifier = utils.get_model_identifier(upload_filename)
-        return uuid, identifier
+        return uuid
 
     def process_mwr(self, uuid: Uuid) -> Tuple[Uuid, str]:
-        identifier = 'hatpro'
-        uuid.raw, upload_filename = self._get_daily_raw_file(temp_file.name, identifier)
+        instrument = 'hatpro'
+        uuid.raw, upload_filename = self._get_daily_raw_file(temp_file.name, instrument=instrument)
         uuid.product = nc_header_augmenter.fix_mwr_file(temp_file.name, upload_filename,
                                                         self.date_str, self._site, uuid.volatile)
-        return uuid, identifier
+        return uuid, instrument
 
     def process_radar(self, uuid: Uuid) -> Tuple[Uuid, str]:
         try:
-            identifier = 'rpg-fmcw-94'
-            full_paths, uuids = self._download_raw_data(instrument=identifier)
+            instrument = 'rpg-fmcw-94'
+            full_paths, uuids = self._download_raw_data(instrument=instrument)
             uuid.product, valid_full_paths = rpg2nc(self._temp_dir.name, temp_file.name,
                                                     self.site_meta, uuid=uuid.volatile,
                                                     date=self.date_str)
             uuid.raw = _get_valid_uuids(uuids, full_paths, valid_full_paths)
 
         except RawDataMissingError:
-            identifier = 'mira'
+            instrument = 'mira'
             raw_daily_file = NamedTemporaryFile()
-            uuid.raw, _ = self._get_daily_raw_file(raw_daily_file.name, identifier)
+            uuid.raw, _ = self._get_daily_raw_file(raw_daily_file.name, instrument=instrument)
             uuid.product = mira2nc(raw_daily_file.name, temp_file.name, self.site_meta,
                                    uuid=uuid.volatile)
-        return uuid, identifier
+        return uuid, instrument
 
     def process_lidar(self, uuid: Uuid) -> Tuple[Uuid, str]:
 
         def _concatenate_chm15k() -> list:
-            full_paths, uuids = self._download_raw_data(instrument=identifier)
+            full_paths, uuids = self._download_raw_data(instrument=instrument)
             valid_full_paths = concat_lib.concat_chm15k_files(full_paths, self.date_str,
                                                               raw_daily_file.name)
             return _get_valid_uuids(uuids, full_paths, valid_full_paths)
         try:
-            identifier = 'chm15k'
+            instrument = 'chm15k'
             raw_daily_file = NamedTemporaryFile(suffix='.nc')
             uuid.raw = _concatenate_chm15k()
         except RawDataMissingError:
-            identifier = 'cl51'
+            instrument = 'cl51'
             raw_daily_file = NamedTemporaryFile(suffix='.DAT')
-            uuid.raw, _ = self._get_daily_raw_file(raw_daily_file.name, identifier)
+            uuid.raw, _ = self._get_daily_raw_file(raw_daily_file.name, instrument=instrument)
 
         uuid.product = ceilo2nc(raw_daily_file.name, temp_file.name, self.site_meta,
                                 uuid=uuid.volatile)
-        return uuid, identifier
+        return uuid, instrument
 
     def process_categorize(self, uuid: Uuid) -> Tuple[Uuid, str]:
         l1_products = utils.get_product_types(level=1)
@@ -194,23 +204,23 @@ class Process:
     def print_info(self, uuid: Uuid) -> None:
         print(f'Created: {"New version" if self._is_new_version(uuid) else "Volatile file"}')
 
-    def _get_daily_raw_file(self, raw_daily_file: str, instrument: str = None) -> Tuple[list, str]:
-        full_path, uuid = self._download_raw_data(instrument=instrument, largest_file_only=True)
+    def _get_daily_raw_file(self,
+                            raw_daily_file: str,
+                            instrument: str = None,
+                            model: str = None) -> Tuple[list, str]:
+        full_path, uuid = self._download_raw_data(instrument=instrument, model=model)
+        assert len(full_path) == 1 and len(uuid) == 1
         shutil.move(full_path[0], raw_daily_file)
         original_filename = os.path.basename(full_path[0])
         return uuid, original_filename
 
-    def _download_raw_data(self, instrument: str = None,
-                           largest_file_only: bool = False) -> Tuple[list, list]:
+    def _download_raw_data(self, instrument: str = None, model: str = None) -> Tuple[list, list]:
         payload = self._get_payload()
         all_upload_metadata = self._md_api.get('upload-metadata', payload)
-        upload_metadata = self._md_api.screen_metadata(all_upload_metadata, instrument=instrument)
+        upload_metadata = self._md_api.screen_metadata(all_upload_metadata,
+                                                       instrument=instrument,
+                                                       model=model)
         self._check_raw_data_status(upload_metadata)
-        if largest_file_only:
-            if len(upload_metadata) > 1:
-                print('Warning: several daily raw files (probably submitted without '
-                      '"allowUpdate")', end='\t')
-            upload_metadata = [upload_metadata[0]]
         full_paths = self._storage_api.download_raw_files(upload_metadata, self._temp_dir.name)
         uuids = [row['uuid'] for row in upload_metadata]
         return full_paths, uuids
