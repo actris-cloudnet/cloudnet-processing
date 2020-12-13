@@ -16,20 +16,23 @@ session, adapter, mock_addr = utils.init_test_session()
 def register_storage_urls(temp_file):
 
     def save_product(request):
-        with open(temp_file.name, mode='wb') as file:
-            file.write(request.body.read())
+        with open(temp_file.name, mode='wb') as f:
+            f.write(request.body.read())
         return True
 
-    # raw data:
-    uuid = 'eb176ca3-374e-471c-9c82-fc9a45578883'
-    filename = '20201022_bucharest_ecmwf.nc'
-    url = f'{mock_addr}cloudnet-upload/bucharest/{uuid}/{filename}'
-    adapter.register_uri('GET', url, body=open(f'tests/data/raw/ecmwf/{filename}', 'rb'))
+    raw_data = [
+        ('eb176ca3-374e-471c-9c82-fc9a45578883', '20201022_bucharest_ecmwf.nc'),
+        ('80c2fab5-2dc5-4692-bafe-a7274071770e', '20201022_bucharest_gdas1.nc'),
+    ]
+    for uuid, filename in raw_data:
+        url = f'{mock_addr}cloudnet-upload/bucharest/{uuid}/{filename}'
+        adapter.register_uri('GET', url, body=open(f'tests/data/raw/model/{filename}', 'rb'))
 
-    # product file:
-    url = f'{mock_addr}cloudnet-product-volatile/20201022_bucharest_ecmwf.nc'
-    adapter.register_uri('PUT', url, additional_matcher=save_product,
-                         json={'size': 667, 'version': 'abc'})
+    product_files = ('20201022_bucharest_ecmwf.nc', '20201022_bucharest_gdas1.nc')
+    for file in product_files:
+        url = f'{mock_addr}cloudnet-product-volatile/{file}'
+        adapter.register_uri('PUT', url, additional_matcher=save_product,
+                             json={'size': 667, 'version': 'abc'})
     # images:
     adapter.register_uri('PUT', re.compile(f'{mock_addr}cloudnet-img/(.*?)'))
 
@@ -37,11 +40,12 @@ def register_storage_urls(temp_file):
 def main():
     utils.start_server(5000, 'tests/data/server/metadata/process_model', f'{SCRIPT_PATH}/md.log')
 
-    # Processes new volatile file (with existing volatile file):
+    # Processes new volatile files of ALL existing raw model files
+    # (one of them has existing volatile file):
     _process()
 
     # Should work identically with -reprocess flag:
-    _process(main_extra_args=('-r',))
+    #_process(main_extra_args=('-r',))
 
 
 def _process(main_extra_args=()):
