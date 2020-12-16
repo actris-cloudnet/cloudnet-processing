@@ -93,7 +93,7 @@ class Process:
     def process_radar(self, uuid: Uuid) -> Tuple[Uuid, str]:
         try:
             identifier = 'rpg-fmcw-94'
-            full_paths, uuids = self._download_raw_data(identifier)
+            full_paths, uuids = self._download_raw_data(instrument=identifier)
             uuid.product, valid_full_paths = rpg2nc(self._temp_dir.name, temp_file.name,
                                                     self.site_meta, uuid=uuid.volatile,
                                                     date=self.date_str)
@@ -110,7 +110,7 @@ class Process:
     def process_lidar(self, uuid: Uuid) -> Tuple[Uuid, str]:
 
         def _concatenate_chm15k() -> list:
-            full_paths, uuids = self._download_raw_data(identifier)
+            full_paths, uuids = self._download_raw_data(instrument=identifier)
             valid_full_paths = concat_lib.concat_chm15k_files(full_paths, self.date_str,
                                                               raw_daily_file.name)
             return _get_valid_uuids(uuids, full_paths, valid_full_paths)
@@ -195,8 +195,9 @@ class Process:
         print(f'Created: {"New version" if self._is_new_version(uuid) else "Volatile file"}')
 
     def _get_daily_raw_file(self, raw_daily_file: str, instrument: str = None) -> Tuple[list, str]:
-        full_path, uuid = self._download_raw_data(instrument)
-        assert len(full_path) == 1 and len(uuid) == 1
+        full_path, uuid = self._download_raw_data(instrument=instrument)
+        if len(full_path) > 1:
+            print('Warning: several daily raw files (probably submitted without "allowUpdate")')
         shutil.move(full_path[0], raw_daily_file)
         original_filename = os.path.basename(full_path[0])
         return uuid, original_filename
