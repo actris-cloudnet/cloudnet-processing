@@ -29,9 +29,9 @@ def create_product_put_payload(full_path: str,
         'cloudnetpyVersion': getattr(nc, 'cloudnetpy_version', ''),
         ** storage_service_response
     }
-    source = getattr(nc, 'source_file_uuids', None)
-    if source:
-        payload['sourceFileIds'] = source.replace(' ', '').split(',')
+    source_uuids = getattr(nc, 'source_file_uuids', None)
+    if source_uuids:
+        payload['sourceFileIds'] = source_uuids.split(',')
     nc.close()
     return payload
 
@@ -40,7 +40,7 @@ def get_file_format(nc: netCDF4.Dataset):
     file_format = nc.file_format.lower()
     if 'netcdf4' in file_format:
         return 'HDF5 (NetCDF4)'
-    elif 'netcdf3' in file_format:
+    if 'netcdf3' in file_format:
         return 'NetCDF3'
     raise RuntimeError('Unknown file type')
 
@@ -65,10 +65,9 @@ def get_product_types(level: int = None) -> list:
     l1_types.remove('categorize')
     if level == 1:
         return l1_types
-    elif level == 2:
+    if level == 2:
         return l2_types
-    else:
-        return l1_types + ['categorize'] + l2_types
+    return l1_types + ['categorize'] + l2_types
 
 
 def date_string_to_date(date_string: str) -> datetime.date:
@@ -172,8 +171,7 @@ def _calc_hash_sum(filename, method, is_base64=False):
             hash_sum.update(byte_block)
     if is_base64:
         return base64.encodebytes(hash_sum.digest()).decode('utf-8').strip()
-    else:
-        return hash_sum.hexdigest()
+    return hash_sum.hexdigest()
 
 
 def get_product_bucket(volatile: bool = False) -> str:
@@ -191,10 +189,9 @@ def is_volatile_file(filename: str) -> bool:
 def get_product_identifier(product: str) -> str:
     if product == 'iwc':
         return 'iwc-Z-T-method'
-    elif product == 'lwc':
+    if product == 'lwc':
         return 'lwc-scaled-adiabatic'
-    else:
-        return product
+    return product
 
 
 class MiscError(Exception):

@@ -1,8 +1,8 @@
 from typing import Union
+import shutil
+from tempfile import NamedTemporaryFile
 import netCDF4
 from cloudnetpy.utils import get_uuid, get_time
-from tempfile import NamedTemporaryFile
-import shutil
 
 
 def fix_legacy_file(legacy_file_full_path: str, target_full_path: str) -> str:

@@ -1,24 +1,24 @@
 #!/usr/bin/env python3
 """Master script for CloudnetPy processing."""
-import os
-import sys
-import requests
 import argparse
-from typing import Tuple, Union
-import shutil
-import warnings
 import importlib
-from tempfile import TemporaryDirectory
+import os
+import shutil
+import sys
+import warnings
 from tempfile import NamedTemporaryFile
-from cloudnetpy.instruments import rpg2nc, ceilo2nc, mira2nc
+from tempfile import TemporaryDirectory
+from typing import Tuple, Union
+import requests
 from cloudnetpy.categorize import generate_categorize
+from cloudnetpy.instruments import rpg2nc, ceilo2nc, mira2nc
 from cloudnetpy.utils import date_range
-from data_processing import utils
-from data_processing.metadata_api import MetadataApi
-from data_processing.storage_api import StorageApi
-from data_processing.pid_utils import PidUtils
 from data_processing import concat_lib
 from data_processing import nc_header_augmenter
+from data_processing import utils
+from data_processing.metadata_api import MetadataApi
+from data_processing.pid_utils import PidUtils
+from data_processing.storage_api import StorageApi
 from data_processing.utils import MiscError, RawDataMissingError
 
 warnings.simplefilter("ignore", UserWarning)
@@ -208,7 +208,8 @@ class Process:
         self._check_raw_data_status(upload_metadata)
         if largest_file_only:
             if len(upload_metadata) > 1:
-                print('Warning: several daily raw files (probably submitted without "allowUpdate")')
+                print('Warning: several daily raw files (probably submitted without '
+                      '"allowUpdate")', end='\t')
             upload_metadata = [upload_metadata[0]]
         full_paths = self._storage_api.download_raw_files(upload_metadata, self._temp_dir.name)
         uuids = [row['uuid'] for row in upload_metadata]

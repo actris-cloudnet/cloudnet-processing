@@ -1,10 +1,10 @@
 """Metadata API for Cloudnet files."""
 from os import path
-import requests
-from data_processing import utils
-from cloudnetpy.plotting import generate_figure, generate_legacy_figure
-from tempfile import NamedTemporaryFile
 from typing import Union
+from tempfile import NamedTemporaryFile
+import requests
+from cloudnetpy.plotting import generate_figure, generate_legacy_figure
+from data_processing import utils
 
 
 class StorageApi:
