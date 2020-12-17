@@ -15,6 +15,7 @@ def create_product_put_payload(full_path: str,
                                site: str = None,
                                date_str: str = None) -> dict:
     nc = netCDF4.Dataset(full_path, 'r')
+
     payload = {
         'product': product or nc.cloudnet_file_type,
         'site': site or nc.location.lower().replace('-', ''),
@@ -25,10 +26,12 @@ def create_product_put_payload(full_path: str,
         'uuid': getattr(nc, 'file_uuid', ''),
         'pid': getattr(nc, 'pid', ''),
         'history': getattr(nc, 'history', ''),
-        'sourceFileIds': getattr(nc, 'source_file_uuids', None),
         'cloudnetpyVersion': getattr(nc, 'cloudnetpy_version', ''),
         ** storage_service_response
     }
+    source = getattr(nc, 'source_file_uuids', None)
+    if source:
+        payload['sourceFileIds'] = source.replace(' ', '').split(',')
     nc.close()
     return payload
 
