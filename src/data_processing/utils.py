@@ -25,6 +25,7 @@ def create_product_put_payload(full_path: str,
         'uuid': getattr(nc, 'file_uuid', ''),
         'pid': getattr(nc, 'pid', ''),
         'history': getattr(nc, 'history', ''),
+        'sourceFileIds': getattr(nc, 'source_file_uuids', None),
         'cloudnetpyVersion': getattr(nc, 'cloudnetpy_version', ''),
         ** storage_service_response
     }
