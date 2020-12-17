@@ -195,18 +195,21 @@ class Process:
         print(f'Created: {"New version" if self._is_new_version(uuid) else "Volatile file"}')
 
     def _get_daily_raw_file(self, raw_daily_file: str, instrument: str = None) -> Tuple[list, str]:
-        full_path, uuid = self._download_raw_data(instrument=instrument)
-        if len(full_path) > 1:
-            print('Warning: several daily raw files (probably submitted without "allowUpdate")')
+        full_path, uuid = self._download_raw_data(instrument=instrument, largest_file_only=True)
         shutil.move(full_path[0], raw_daily_file)
         original_filename = os.path.basename(full_path[0])
         return uuid, original_filename
 
-    def _download_raw_data(self, instrument: str = None) -> Tuple[list, list]:
+    def _download_raw_data(self, instrument: str = None,
+                           largest_file_only: bool = False) -> Tuple[list, list]:
         payload = self._get_payload()
         all_upload_metadata = self._md_api.get('upload-metadata', payload)
         upload_metadata = self._md_api.screen_metadata(all_upload_metadata, instrument=instrument)
         self._check_raw_data_status(upload_metadata)
+        if largest_file_only:
+            if len(upload_metadata) > 1:
+                print('Warning: several daily raw files (probably submitted without "allowUpdate")')
+            upload_metadata = [upload_metadata[0]]
         full_paths = self._storage_api.download_raw_files(upload_metadata, self._temp_dir.name)
         uuids = [row['uuid'] for row in upload_metadata]
         return full_paths, uuids
