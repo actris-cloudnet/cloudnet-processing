@@ -38,34 +38,33 @@ def main(args, storage_session=requests.session()):
         print(f'{date_str}')
         process = Process(args, date_str, config, storage_session)
         for product in args.products:
-            try:
-                print(f'{product.ljust(20)}', end='\t')
+            print(f'{product.ljust(20)}', end='\t')
+            if product == 'model':
+                print('')
+                for model in utils.get_model_types():
+                    print(f'{model.ljust(20)}', end='\t')
+                    uuid = Uuid()
+                    try:
+                        uuid.volatile = process.check_product_status(product, model=model)
+                        uuid = process.process_model(uuid, model)
+                        process.upload_product_and_images(temp_file.name, product, uuid,
+                                                          model=model)
+                        process.print_info(uuid)
+                    except (RawDataMissingError, MiscError) as err:
+                        print(err)
+            else:
                 uuid = Uuid()
-                uuid.volatile = process.check_product_status(product)
-
-                if product == 'model':
-                    print('')
-                    for model_type in utils.get_model_types():
-                        print(f'{model_type.ljust(20)}', end='\t')
-                        try:
-                            uuid = Uuid()
-                            uuid = process.process_model(uuid, model_type)
-                            process.upload_product_and_images(temp_file.name, product, uuid,
-                                                              model=model_type)
-                            print('')
-                        except (RawDataMissingError, MiscError) as err:
-                            print(err)
-                    continue
-
-                elif product in utils.get_product_types(level=2):
-                    uuid, identifier = process.process_level2(uuid, product)
-                else:
-                    uuid, identifier = getattr(process, f'process_{product}')(uuid)
-                process.upload_product_and_images(temp_file.name, product, uuid,
-                                                  product_type=identifier)
-                process.print_info(uuid)
-            except (RawDataMissingError, MiscError, RuntimeError) as err:
-                print(err)
+                try:
+                    uuid.volatile = process.check_product_status(product)
+                    if product in utils.get_product_types(level=2):
+                        uuid, identifier = process.process_level2(uuid, product)
+                    else:
+                        uuid, identifier = getattr(process, f'process_{product}')(uuid)
+                    process.upload_product_and_images(temp_file.name, product, uuid,
+                                                      product_type=identifier)
+                    process.print_info(uuid)
+                except (RawDataMissingError, MiscError, RuntimeError) as err:
+                    print(err)
 
 
 class Uuid:
@@ -175,8 +174,10 @@ class Process:
         identifier = utils.get_product_identifier(product)
         return uuid, identifier
 
-    def check_product_status(self, product: str) -> Union[str, None, bool]:
+    def check_product_status(self, product: str, model: str = None) -> Union[str, None, bool]:
         payload = self._get_payload()
+        if model:
+            payload['model'] = model
         all_metadata = self._md_api.get('api/files', payload)
         metadata = self._md_api.screen_metadata(all_metadata, product=product)
         assert len(metadata) <= 1
