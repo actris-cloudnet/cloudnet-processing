@@ -13,7 +13,8 @@ def create_product_put_payload(full_path: str,
                                storage_service_response: dict,
                                product: str = None,
                                site: str = None,
-                               date_str: str = None) -> dict:
+                               date_str: str = None,
+                               model: str = None) -> dict:
     nc = netCDF4.Dataset(full_path, 'r')
 
     payload = {
@@ -32,6 +33,8 @@ def create_product_put_payload(full_path: str,
     source_uuids = getattr(nc, 'source_file_uuids', None)
     if source_uuids:
         payload['sourceFileIds'] = source_uuids.split(',')
+    if model:
+        payload['model'] = model
     nc.close()
     return payload
 
