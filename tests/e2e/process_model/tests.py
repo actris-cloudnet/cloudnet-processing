@@ -11,6 +11,7 @@ class TestModelProcessing:
     product = 'model'
     instrument = 'ecmwf'
     images = utils.get_fields_for_plot(product)[0]
+    n_models = len(utils.get_model_types())
 
     @pytest.fixture(autouse=True)
     def _fetch_params(self, params):
@@ -36,15 +37,36 @@ class TestModelProcessing:
     def test_that_calls_metadata_api(self):
         f = open(f'{SCRIPT_PATH}/md.log')
         data = f.readlines()
-        n_img = len(self.images)
-        n_gets = 2
-        n_puts = 1
-        n_posts = 1
-        assert len(data) == n_gets + n_puts + n_img + n_posts
-        suffix = 'dateFrom=2020-10-22&dateTo=2020-10-22&site=bucharest&developer=True'
-        assert f'GET /api/files?{suffix} HTTP/1.1" 200' in data[0]
-        assert f'GET /upload-metadata?{suffix}' in data[1]
-        assert f'PUT /files/20201022_bucharest_{self.instrument}.nc HTTP/1.1" 201' in data[2]
-        for row in data[n_gets+1:-1]:
-            assert f'PUT /visualizations/20201022_bucharest_{self.instrument}' in row
-        assert f'POST /upload-metadata HTTP/1.1" 200' in data[-1]
+
+        n_valid_metadata = 2
+
+        n_upload_gets = self.n_models
+        n_file_puts = n_valid_metadata
+        n_metadata_posts = n_valid_metadata
+        n_img_puts = len(self.images) * n_valid_metadata - 1  # -1 because of gdas1
+        n_api_files_gets = self.n_models
+
+        assert len(data) == (n_upload_gets + n_file_puts + n_metadata_posts
+                             + n_img_puts + n_api_files_gets)
+
+        def count_strings(string: str, n_expected: int):
+            n = 0
+            for row in data:
+                if string in row:
+                    n += 1
+            assert n == n_expected
+
+        s = '"GET /api/files?dateFrom=2020-10-22&dateTo=2020-10-22&site=bucharest&developer=True&model='
+        count_strings(s, n_api_files_gets)
+
+        s = '"PUT /visualizations/20201022_bucharest_'
+        count_strings(s, n_img_puts)
+
+        s = '"POST /upload-metadata HTTP/1.1" 200'
+        count_strings(s, n_metadata_posts)
+
+        s = '"GET /upload-metadata?dateFrom=2020-10-22&dateTo=2020-10-22&site=bucharest&developer=True HTTP/1.1" 200'
+        count_strings(s, n_upload_gets)
+
+        s = '"PUT /files/20201022_bucharest_'
+        count_strings(s, n_file_puts)

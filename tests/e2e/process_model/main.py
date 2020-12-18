@@ -45,7 +45,7 @@ def main():
     _process()
 
     # Should work identically with -reprocess flag:
-    #_process(main_extra_args=('-r',))
+    _process(main_extra_args=('-r',))
 
 
 def _process(main_extra_args=()):
