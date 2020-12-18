@@ -39,16 +39,20 @@ def main(args, storage_session=requests.session()):
         process = Process(args, date_str, config, storage_session)
         for product in args.products:
             try:
-                print(f'{product.ljust(15)}', end='\t')
+                print(f'{product.ljust(20)}', end='\t')
                 uuid = Uuid()
                 uuid.volatile = process.check_product_status(product)
 
                 if product == 'model':
+                    print('')
                     for model_type in utils.get_model_types():
+                        print(f'{model_type.ljust(20)}', end='\t')
                         try:
+                            uuid = Uuid()
                             uuid = process.process_model(uuid, model_type)
                             process.upload_product_and_images(temp_file.name, product, uuid,
-                                                              model_type)
+                                                              model=model_type)
+                            print('')
                         except (RawDataMissingError, MiscError) as err:
                             print(err)
                     continue
@@ -57,7 +61,8 @@ def main(args, storage_session=requests.session()):
                     uuid, identifier = process.process_level2(uuid, product)
                 else:
                     uuid, identifier = getattr(process, f'process_{product}')(uuid)
-                process.upload_product_and_images(temp_file.name, product, uuid, identifier)
+                process.upload_product_and_images(temp_file.name, product, uuid,
+                                                  product_type=identifier)
                 process.print_info(uuid)
             except (RawDataMissingError, MiscError, RuntimeError) as err:
                 print(err)
@@ -185,16 +190,21 @@ class Process:
         return None
 
     def upload_product_and_images(self, full_path: str, product: str, uuid: Uuid,
-                                  identifier: str) -> None:
+                                  product_type: str = None, model: str = None) -> None:
+
+        assert product_type is not None or model is not None
+        identifier = product_type if product_type else model
+
         if self._is_new_version(uuid):
             self._pid_utils.add_pid_to_file(full_path)
+
         s3key = self._get_product_key(identifier)
         file_info = self._storage_api.upload_product(full_path, s3key)
 
         img_metadata = self._storage_api.create_and_upload_images(full_path, s3key, uuid.product,
                                                                   product)
 
-        payload = utils.create_product_put_payload(full_path, file_info)
+        payload = utils.create_product_put_payload(full_path, file_info, model=model)
         self._md_api.put(s3key, payload)
         for data in img_metadata:
             self._md_api.put_img(data, uuid.product)
