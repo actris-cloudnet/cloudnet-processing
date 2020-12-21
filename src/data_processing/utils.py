@@ -32,7 +32,7 @@ def create_product_put_payload(full_path: str,
     }
     source_uuids = getattr(nc, 'source_file_uuids', None)
     if source_uuids:
-        payload['sourceFileIds'] = source_uuids.split(',')
+        payload['sourceFileIds'] = source_uuids.replace(' ', '').split(',')
     if model:
         payload['model'] = model
     nc.close()
