@@ -65,15 +65,16 @@ class StorageApi:
             return []
         visualizations = []
         for field in fields:
-            if legacy:
-                try:
+            try:
+                if legacy:
                     generate_legacy_figure(nc_file_full_path, product, field,
                                            image_name=temp_file.name, max_y=max_alt, dpi=120)
-                except IndexError:
-                    continue
-            else:
-                generate_figure(nc_file_full_path, [field], show=False, image_name=temp_file.name,
-                                max_y=max_alt, sub_title=False, title=False, dpi=120)
+                else:
+                    generate_figure(nc_file_full_path, [field], show=False,
+                                    image_name=temp_file.name, max_y=max_alt, sub_title=False,
+                                    title=False, dpi=120)
+            except (IndexError, ValueError):
+                continue
             s3key = product_key.replace('.nc', f"-{uuid[:8]}-{field}.png")
             url = path.join(self._url, 'cloudnet-img', s3key)
             headers = self._get_headers(temp_file.name)

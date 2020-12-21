@@ -13,7 +13,8 @@ def create_product_put_payload(full_path: str,
                                storage_service_response: dict,
                                product: str = None,
                                site: str = None,
-                               date_str: str = None) -> dict:
+                               date_str: str = None,
+                               model: str = None) -> dict:
     nc = netCDF4.Dataset(full_path, 'r')
 
     payload = {
@@ -32,6 +33,8 @@ def create_product_put_payload(full_path: str,
     source_uuids = getattr(nc, 'source_file_uuids', None)
     if source_uuids:
         payload['sourceFileIds'] = source_uuids.split(',')
+    if model:
+        payload['model'] = model
     nc.close()
     return payload
 
@@ -68,6 +71,12 @@ def get_product_types(level: int = None) -> list:
     if level == 2:
         return l2_types
     return l1_types + ['categorize'] + l2_types
+
+
+def get_model_types() -> list:
+    url = f"https://cloudnet.fmi.fi/api/models"
+    models = requests.get(url=url).json()
+    return [model['id'] for model in models]
 
 
 def date_string_to_date(date_string: str) -> datetime.date:
@@ -192,6 +201,10 @@ def get_product_identifier(product: str) -> str:
     if product == 'lwc':
         return 'lwc-scaled-adiabatic'
     return product
+
+
+def get_model_identifier(filename: str) -> str:
+    return filename.split('_')[-1][:-3]
 
 
 class MiscError(Exception):

@@ -1,24 +1,24 @@
 #!/usr/bin/env python3
 """Master script for CloudnetPy processing."""
-import argparse
-import importlib
 import os
-import shutil
 import sys
-import warnings
-from tempfile import NamedTemporaryFile
-from tempfile import TemporaryDirectory
-from typing import Tuple, Union
 import requests
-from cloudnetpy.categorize import generate_categorize
+import argparse
+from typing import Tuple, Union
+import shutil
+import warnings
+import importlib
+from tempfile import TemporaryDirectory
+from tempfile import NamedTemporaryFile
 from cloudnetpy.instruments import rpg2nc, ceilo2nc, mira2nc
+from cloudnetpy.categorize import generate_categorize
 from cloudnetpy.utils import date_range
-from data_processing import concat_lib
-from data_processing import nc_header_augmenter
 from data_processing import utils
 from data_processing.metadata_api import MetadataApi
-from data_processing.pid_utils import PidUtils
 from data_processing.storage_api import StorageApi
+from data_processing.pid_utils import PidUtils
+from data_processing import concat_lib
+from data_processing import nc_header_augmenter
 from data_processing.utils import MiscError, RawDataMissingError
 
 warnings.simplefilter("ignore", UserWarning)
@@ -38,18 +38,33 @@ def main(args, storage_session=requests.session()):
         print(f'{date_str}')
         process = Process(args, date_str, config, storage_session)
         for product in args.products:
-            try:
-                print(f'{product.ljust(15)}', end='\t')
+            print(f'{product.ljust(20)}', end='\t')
+            if product == 'model':
+                print('')
+                for model in utils.get_model_types():
+                    print(f'{model.ljust(20)}', end='\t')
+                    uuid = Uuid()
+                    try:
+                        uuid.volatile = process.check_product_status(product, model=model)
+                        uuid = process.process_model(uuid, model)
+                        process.upload_product_and_images(temp_file.name, product, uuid,
+                                                          model=model)
+                        process.print_info(uuid)
+                    except (RawDataMissingError, MiscError) as err:
+                        print(err)
+            else:
                 uuid = Uuid()
-                uuid.volatile = process.check_product_status(product)
-                if product in utils.get_product_types(level=2):
-                    uuid, identifier = process.process_level2(uuid, product)
-                else:
-                    uuid, identifier = getattr(process, f'process_{product}')(uuid)
-                process.upload_product_and_images(temp_file.name, product, uuid, identifier)
-                process.print_info(uuid)
-            except (RawDataMissingError, MiscError, RuntimeError) as err:
-                print(err)
+                try:
+                    uuid.volatile = process.check_product_status(product)
+                    if product in utils.get_product_types(level=2):
+                        uuid, identifier = process.process_level2(uuid, product)
+                    else:
+                        uuid, identifier = getattr(process, f'process_{product}')(uuid)
+                    process.upload_product_and_images(temp_file.name, product, uuid,
+                                                      product_type=identifier)
+                    process.print_info(uuid)
+                except (RawDataMissingError, MiscError, RuntimeError) as err:
+                    print(err)
 
 
 class Uuid:
@@ -77,55 +92,54 @@ class Process:
         self._temp_dir = TemporaryDirectory()
         self._site = self.site_meta['id']
 
-    def process_model(self, uuid: Uuid) -> Tuple[Uuid, str]:
-        uuid.raw, upload_filename = self._get_daily_raw_file(temp_file.name)
+    def process_model(self, uuid: Uuid, model: str) -> Uuid:
+        uuid.raw, upload_filename = self._get_daily_raw_file(temp_file.name, model=model)
         uuid.product = nc_header_augmenter.fix_model_file(temp_file.name, self._site, uuid.volatile)
-        identifier = upload_filename.split('_')[-1][:-3]
-        return uuid, identifier
+        return uuid
 
     def process_mwr(self, uuid: Uuid) -> Tuple[Uuid, str]:
-        identifier = 'hatpro'
-        uuid.raw, upload_filename = self._get_daily_raw_file(temp_file.name, identifier)
+        instrument = 'hatpro'
+        uuid.raw, upload_filename = self._get_daily_raw_file(temp_file.name, instrument=instrument)
         uuid.product = nc_header_augmenter.fix_mwr_file(temp_file.name, upload_filename,
                                                         self.date_str, self._site, uuid.volatile)
-        return uuid, identifier
+        return uuid, instrument
 
     def process_radar(self, uuid: Uuid) -> Tuple[Uuid, str]:
         try:
-            identifier = 'rpg-fmcw-94'
-            full_paths, uuids = self._download_raw_data(instrument=identifier)
+            instrument = 'rpg-fmcw-94'
+            full_paths, uuids = self._download_raw_data(instrument=instrument)
             uuid.product, valid_full_paths = rpg2nc(self._temp_dir.name, temp_file.name,
                                                     self.site_meta, uuid=uuid.volatile,
                                                     date=self.date_str)
             uuid.raw = _get_valid_uuids(uuids, full_paths, valid_full_paths)
 
         except RawDataMissingError:
-            identifier = 'mira'
+            instrument = 'mira'
             raw_daily_file = NamedTemporaryFile()
-            uuid.raw, _ = self._get_daily_raw_file(raw_daily_file.name, identifier)
+            uuid.raw, _ = self._get_daily_raw_file(raw_daily_file.name, instrument=instrument)
             uuid.product = mira2nc(raw_daily_file.name, temp_file.name, self.site_meta,
                                    uuid=uuid.volatile)
-        return uuid, identifier
+        return uuid, instrument
 
     def process_lidar(self, uuid: Uuid) -> Tuple[Uuid, str]:
 
         def _concatenate_chm15k() -> list:
-            full_paths, uuids = self._download_raw_data(instrument=identifier)
+            full_paths, uuids = self._download_raw_data(instrument=instrument)
             valid_full_paths = concat_lib.concat_chm15k_files(full_paths, self.date_str,
                                                               raw_daily_file.name)
             return _get_valid_uuids(uuids, full_paths, valid_full_paths)
         try:
-            identifier = 'chm15k'
+            instrument = 'chm15k'
             raw_daily_file = NamedTemporaryFile(suffix='.nc')
             uuid.raw = _concatenate_chm15k()
         except RawDataMissingError:
-            identifier = 'cl51'
+            instrument = 'cl51'
             raw_daily_file = NamedTemporaryFile(suffix='.DAT')
-            uuid.raw, _ = self._get_daily_raw_file(raw_daily_file.name, identifier)
+            uuid.raw, _ = self._get_daily_raw_file(raw_daily_file.name, instrument=instrument)
 
         uuid.product = ceilo2nc(raw_daily_file.name, temp_file.name, self.site_meta,
                                 uuid=uuid.volatile)
-        return uuid, identifier
+        return uuid, instrument
 
     def process_categorize(self, uuid: Uuid) -> Tuple[Uuid, str]:
         l1_products = utils.get_product_types(level=1)
@@ -160,8 +174,10 @@ class Process:
         identifier = utils.get_product_identifier(product)
         return uuid, identifier
 
-    def check_product_status(self, product: str) -> Union[str, None, bool]:
+    def check_product_status(self, product: str, model: str = None) -> Union[str, None, bool]:
         payload = self._get_payload()
+        if model:
+            payload['model'] = model
         all_metadata = self._md_api.get('api/files', payload)
         metadata = self._md_api.screen_metadata(all_metadata, product=product)
         assert len(metadata) <= 1
@@ -175,16 +191,21 @@ class Process:
         return None
 
     def upload_product_and_images(self, full_path: str, product: str, uuid: Uuid,
-                                  identifier: str) -> None:
+                                  product_type: str = None, model: str = None) -> None:
+
+        assert product_type is not None or model is not None
+        identifier = product_type if product_type else model
+
         if self._is_new_version(uuid):
             self._pid_utils.add_pid_to_file(full_path)
+
         s3key = self._get_product_key(identifier)
         file_info = self._storage_api.upload_product(full_path, s3key)
 
         img_metadata = self._storage_api.create_and_upload_images(full_path, s3key, uuid.product,
                                                                   product)
 
-        payload = utils.create_product_put_payload(full_path, file_info)
+        payload = utils.create_product_put_payload(full_path, file_info, model=model)
         self._md_api.put(s3key, payload)
         for data in img_metadata:
             self._md_api.put_img(data, uuid.product)
@@ -194,17 +215,25 @@ class Process:
     def print_info(self, uuid: Uuid) -> None:
         print(f'Created: {"New version" if self._is_new_version(uuid) else "Volatile file"}')
 
-    def _get_daily_raw_file(self, raw_daily_file: str, instrument: str = None) -> Tuple[list, str]:
-        full_path, uuid = self._download_raw_data(instrument=instrument, largest_file_only=True)
+    def _get_daily_raw_file(self,
+                            raw_daily_file: str,
+                            instrument: str = None,
+                            model: str = None) -> Tuple[list, str]:
+        full_path, uuid = self._download_raw_data(instrument=instrument, model=model,
+                                                  largest_file_only=True)
         shutil.move(full_path[0], raw_daily_file)
         original_filename = os.path.basename(full_path[0])
         return uuid, original_filename
 
-    def _download_raw_data(self, instrument: str = None,
+    def _download_raw_data(self,
+                           instrument: str = None,
+                           model: str = None,
                            largest_file_only: bool = False) -> Tuple[list, list]:
         payload = self._get_payload()
         all_upload_metadata = self._md_api.get('upload-metadata', payload)
-        upload_metadata = self._md_api.screen_metadata(all_upload_metadata, instrument=instrument)
+        upload_metadata = self._md_api.screen_metadata(all_upload_metadata,
+                                                       instrument=instrument,
+                                                       model=model)
         self._check_raw_data_status(upload_metadata)
         if largest_file_only:
             if len(upload_metadata) > 1:
