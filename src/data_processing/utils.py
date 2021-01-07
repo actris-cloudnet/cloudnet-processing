@@ -53,7 +53,7 @@ def read_site_info(site_name: str) -> dict:
     url = f"https://cloudnet.fmi.fi/api/sites?modelSites"
     sites = requests.get(url=url).json()
     for site in sites:
-        if site['id'] == site_name.replace('-', ''):
+        if site['id'] == site_name:
             site['id'] = site_name
             site['name'] = site.pop('humanReadableName')
             return site
