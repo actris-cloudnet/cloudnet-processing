@@ -205,7 +205,8 @@ class Process:
         img_metadata = self._storage_api.create_and_upload_images(full_path, s3key, uuid.product,
                                                                   product)
 
-        payload = utils.create_product_put_payload(full_path, file_info, model=model)
+        payload = utils.create_product_put_payload(full_path, file_info, model=model,
+                                                   site=self._site)
         self._md_api.put(s3key, payload)
         for data in img_metadata:
             self._md_api.put_img(data, uuid.product)

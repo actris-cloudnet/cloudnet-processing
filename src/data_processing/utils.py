@@ -19,7 +19,7 @@ def create_product_put_payload(full_path: str,
 
     payload = {
         'product': product or nc.cloudnet_file_type,
-        'site': site or nc.location.lower().replace('-', ''),
+        'site': site or nc.location.lower(),
         'measurementDate': date_str or f'{nc.year}-{nc.month}-{nc.day}',
         'format': get_file_format(nc),
         'checksum': sha256sum(full_path),
