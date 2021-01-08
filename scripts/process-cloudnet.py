@@ -151,8 +151,8 @@ class Process:
             if metadata:
                 input_files[product] = self._storage_api.download_product(metadata[0],
                                                                           self._temp_dir.name)
-        if not input_files['mwr']:
-            input_files['mwr'] = input_files['radar']  # This is OK with RPG radar but not with MIRA
+        if not input_files['mwr'] and 'rpg-fmcw-94' in input_files['radar']:
+            input_files['mwr'] = input_files['radar']
         missing = [product for product in l1_products if not input_files[product]]
         if missing:
             raise MiscError(f'Missing required input files: {", ".join(missing)}')
