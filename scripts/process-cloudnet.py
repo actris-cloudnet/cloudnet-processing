@@ -8,6 +8,7 @@ from typing import Tuple, Union
 import shutil
 import warnings
 import importlib
+import glob
 from tempfile import TemporaryDirectory
 from tempfile import NamedTemporaryFile
 from cloudnetpy.instruments import rpg2nc, ceilo2nc, mira2nc
@@ -25,6 +26,7 @@ warnings.simplefilter("ignore", UserWarning)
 warnings.simplefilter("ignore", RuntimeWarning)
 
 temp_file = NamedTemporaryFile()
+temp_dir = TemporaryDirectory()
 
 
 def main(args, storage_session=requests.session()):
@@ -32,11 +34,12 @@ def main(args, storage_session=requests.session()):
     config = utils.read_main_conf(args)
     start_date = utils.date_string_to_date(args.start)
     stop_date = utils.date_string_to_date(args.stop)
+    process = Process(args, config, storage_session)
 
     for date in date_range(start_date, stop_date):
         date_str = date.strftime("%Y-%m-%d")
+        process.date_str = date_str
         print(f'{date_str}')
-        process = Process(args, date_str, config, storage_session)
         for product in args.products:
             print(f'{product.ljust(20)}', end='\t')
             if product == 'model':
@@ -65,6 +68,7 @@ def main(args, storage_session=requests.session()):
                     process.print_info(uuid)
                 except (RawDataMissingError, MiscError, RuntimeError) as err:
                     print(err)
+        _clean_temp_dir()
 
 
 class Uuid:
@@ -80,16 +84,14 @@ class Uuid:
 class Process:
     def __init__(self,
                  args,
-                 date_str: str,
                  config: dict,
                  storage_session):
         self.site_meta = utils.read_site_info(args.site[0])
-        self.date_str = date_str  # YYYY-MM-DD
         self.is_reprocess = args.reprocess
+        self.date_str = None
         self._md_api = MetadataApi(config)
         self._storage_api = StorageApi(config, storage_session)
         self._pid_utils = PidUtils(config)
-        self._temp_dir = TemporaryDirectory()
         self._site = self.site_meta['id']
 
     def process_model(self, uuid: Uuid, model: str) -> Uuid:
@@ -108,7 +110,7 @@ class Process:
         try:
             instrument = 'rpg-fmcw-94'
             full_paths, uuids = self._download_raw_data(instrument=instrument)
-            uuid.product, valid_full_paths = rpg2nc(self._temp_dir.name, temp_file.name,
+            uuid.product, valid_full_paths = rpg2nc(temp_dir.name, temp_file.name,
                                                     self.site_meta, uuid=uuid.volatile,
                                                     date=self.date_str)
             uuid.raw = _get_valid_uuids(uuids, full_paths, valid_full_paths)
@@ -150,7 +152,7 @@ class Process:
             metadata = self._md_api.screen_metadata(all_metadata, product=product)
             if metadata:
                 input_files[product] = self._storage_api.download_product(metadata[0],
-                                                                          self._temp_dir.name)
+                                                                          temp_dir.name)
         if not input_files['mwr'] and 'rpg-fmcw-94' in input_files['radar']:
             input_files['mwr'] = input_files['radar']
         missing = [product for product in l1_products if not input_files[product]]
@@ -165,7 +167,7 @@ class Process:
         metadata = self._md_api.screen_metadata(all_metadata, product='categorize')
         assert len(metadata) <= 1
         if metadata:
-            categorize_file = self._storage_api.download_product(metadata[0], self._temp_dir.name)
+            categorize_file = self._storage_api.download_product(metadata[0], temp_dir.name)
         else:
             raise MiscError(f'Missing input categorize file')
         module = importlib.import_module(f'cloudnetpy.products.{product}')
@@ -241,7 +243,7 @@ class Process:
                 print('Warning: several daily raw files (probably submitted without '
                       '"allowUpdate")', end='\t')
             upload_metadata = [upload_metadata[0]]
-        full_paths = self._storage_api.download_raw_files(upload_metadata, self._temp_dir.name)
+        full_paths = self._storage_api.download_raw_files(upload_metadata, temp_dir.name)
         uuids = [row['uuid'] for row in upload_metadata]
         return full_paths, uuids
 
@@ -278,6 +280,11 @@ class Process:
 
 def _get_valid_uuids(uuids: list, full_paths: list, valid_full_paths: list) -> list:
     return [uuid for uuid, full_path in zip(uuids, full_paths) if full_path in valid_full_paths]
+
+
+def _clean_temp_dir():
+    for filename in glob.glob(f'{temp_dir.name}/*'):
+        os.remove(filename)
 
 
 def _parse_args(args):
