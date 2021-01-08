@@ -109,4 +109,7 @@ def _get_history(nc: netCDF4.Dataset) -> str:
 
 
 def _get_title(nc: netCDF4.Dataset) -> str:
-    return f"{nc.cloudnet_file_type.capitalize()} file from {nc.location.capitalize()}"
+    file_type = nc.cloudnet_file_type.capitalize()
+    if nc.location:
+        return f"{file_type} file from {nc.location.capitalize()}"
+    return file_type
