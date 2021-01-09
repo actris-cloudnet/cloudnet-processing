@@ -21,6 +21,7 @@ from data_processing.pid_utils import PidUtils
 from data_processing import concat_lib
 from data_processing import nc_header_augmenter
 from data_processing.utils import MiscError, RawDataMissingError
+from requests.exceptions import HTTPError, ConnectionError
 
 warnings.simplefilter("ignore", UserWarning)
 warnings.simplefilter("ignore", RuntimeWarning)
@@ -53,7 +54,7 @@ def main(args, storage_session=requests.session()):
                         process.upload_product_and_images(temp_file.name, product, uuid,
                                                           model=model)
                         process.print_info(uuid)
-                    except (RawDataMissingError, MiscError) as err:
+                    except (RawDataMissingError, MiscError, HTTPError, ConnectionError) as err:
                         print(err)
             else:
                 uuid = Uuid()
@@ -66,7 +67,8 @@ def main(args, storage_session=requests.session()):
                     process.upload_product_and_images(temp_file.name, product, uuid,
                                                       product_type=identifier)
                     process.print_info(uuid)
-                except (RawDataMissingError, MiscError, RuntimeError) as err:
+                except (RawDataMissingError, MiscError, HTTPError, ConnectionError,
+                        RuntimeError) as err:
                     print(err)
         _clean_temp_dir()
 
