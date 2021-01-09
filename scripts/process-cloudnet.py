@@ -39,7 +39,7 @@ def main(args, storage_session=requests.session()):
     for date in date_range(start_date, stop_date):
         date_str = date.strftime("%Y-%m-%d")
         process.date_str = date_str
-        print(f'{date_str}')
+        print(f'{args.site[0]} {date_str}')
         for product in args.products:
             print(f'{product.ljust(20)}', end='\t')
             if product == 'model':
