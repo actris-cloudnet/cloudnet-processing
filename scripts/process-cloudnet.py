@@ -46,7 +46,7 @@ def main(args, storage_session=requests.session()):
             if product == 'model':
                 print('')
                 for model in utils.get_model_types():
-                    print(f'{model.ljust(20)}', end='\t')
+                    print(f'  {model.ljust(20)}', end='\t')
                     uuid = Uuid()
                     try:
                         uuid.volatile = process.check_product_status(product, model=model)
