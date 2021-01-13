@@ -90,6 +90,7 @@ class Process:
                  storage_session):
         self.site_meta = utils.read_site_info(args.site[0])
         self.is_reprocess = args.reprocess
+        self.plot_images = not args.no_img
         self.date_str = None
         self._md_api = MetadataApi(config)
         self._storage_api = StorageApi(config, storage_session)
@@ -206,8 +207,11 @@ class Process:
         s3key = self._get_product_key(identifier)
         file_info = self._storage_api.upload_product(full_path, s3key)
 
-        img_metadata = self._storage_api.create_and_upload_images(full_path, s3key, uuid.product,
-                                                                  product)
+        if self.plot_images:
+            img_metadata = self._storage_api.create_and_upload_images(full_path, s3key,
+                                                                      uuid.product, product)
+        else:
+            img_metadata = []
 
         payload = utils.create_product_put_payload(full_path, file_info, model=model,
                                                    site=self._site)
@@ -320,6 +324,11 @@ def _parse_args(args):
                              'classification',
                         type=lambda s: s.split(','),
                         default=utils.get_product_types())
+    parser.add_argument('--no-img',
+                        dest='no_img',
+                        action='store_true',
+                        help='Skip image creation.',
+                        default=False)
     return parser.parse_args(args)
 
 
