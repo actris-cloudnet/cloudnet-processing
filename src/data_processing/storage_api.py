@@ -73,7 +73,7 @@ class StorageApi:
                     generate_figure(nc_file_full_path, [field], show=False,
                                     image_name=temp_file.name, max_y=max_alt, sub_title=False,
                                     title=False, dpi=120)
-            except (IndexError, ValueError):
+            except (IndexError, ValueError, TypeError):
                 continue
             s3key = product_key.replace('.nc', f"-{uuid[:8]}-{field}.png")
             url = path.join(self._url, 'cloudnet-img', s3key)

@@ -46,7 +46,7 @@ def main():
                     'site': site
                 }
                 _check_if_exists(md_api, info)
-            except (MiscError, HTTPError) as err:
+            except (MiscError, HTTPError, ValueError) as err:
                 print(err)
                 continue
             finally:
