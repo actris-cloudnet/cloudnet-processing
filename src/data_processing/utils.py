@@ -50,7 +50,7 @@ def get_file_format(nc: netCDF4.Dataset):
 
 def read_site_info(site_name: str) -> dict:
     """Read site information from Cloudnet http API."""
-    url = f"https://cloudnet.fmi.fi/api/sites?modelSites"
+    url = f"https://cloudnet.fmi.fi/api/sites?developer"
     sites = requests.get(url=url).json()
     for site in sites:
         if site['id'] == site_name:
