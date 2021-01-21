@@ -90,12 +90,18 @@ class Process:
                  storage_session):
         self.site_meta = utils.read_site_info(args.site[0])
         self.is_reprocess = args.reprocess
-        self.plot_images = not args.no_img
+        self.plot_images = self.check_if_plot_images(args)
         self.date_str = None
         self._md_api = MetadataApi(config)
         self._storage_api = StorageApi(config, storage_session)
         self._pid_utils = PidUtils(config)
         self._site = self.site_meta['id']
+
+    def check_if_plot_images(self, args) -> bool:
+        plot_images = not args.no_img
+        if 'hidden' in self.site_meta['type']:
+            plot_images = False
+        return plot_images
 
     def process_model(self, uuid: Uuid, model: str) -> Uuid:
         uuid.raw, upload_filename = self._get_daily_raw_file(temp_file.name, model=model)
