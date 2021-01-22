@@ -11,7 +11,6 @@ class TestModelProcessing:
     product = 'model'
     instrument = 'ecmwf'
     images = utils.get_fields_for_plot(product)[0]
-    n_models = len(utils.get_model_types())
 
     @pytest.fixture(autouse=True)
     def _fetch_params(self, params):
@@ -40,11 +39,11 @@ class TestModelProcessing:
 
         n_valid_metadata = 2
 
-        n_upload_gets = self.n_models
+        n_upload_gets = 1 + n_valid_metadata  # +1 because of initial check for valid models
         n_file_puts = n_valid_metadata
         n_metadata_posts = n_valid_metadata
         n_img_puts = len(self.images) * n_valid_metadata - 1  # -1 because of gdas1
-        n_api_files_gets = self.n_models
+        n_api_files_gets = n_valid_metadata
 
         assert len(data) == (n_upload_gets + n_file_puts + n_metadata_posts
                              + n_img_puts + n_api_files_gets)
@@ -66,7 +65,7 @@ class TestModelProcessing:
         count_strings(s, n_metadata_posts)
 
         s = '"GET /upload-metadata?dateFrom=2020-10-22&dateTo=2020-10-22&site=bucharest&developer=True HTTP/1.1" 200'
-        count_strings(s, n_upload_gets)
+        count_strings(s, n_upload_gets - 1)
 
         s = '"PUT /files/20201022_bucharest_'
         count_strings(s, n_file_puts)

@@ -37,6 +37,9 @@ def main(args, storage_session=requests.session()):
     stop_date = utils.date_string_to_date(args.stop)
     process = Process(args, config, storage_session)
 
+    if 'model' in args.products:
+        models_to_process = process.get_models_to_process(args)
+
     for date in date_range(start_date, stop_date):
         date_str = date.strftime("%Y-%m-%d")
         process.date_str = date_str
@@ -45,7 +48,7 @@ def main(args, storage_session=requests.session()):
             print(f'{product.ljust(20)}', end='\t')
             if product == 'model':
                 print('')
-                for model in utils.get_model_types():
+                for model in models_to_process:
                     print(f'  {model.ljust(20)}', end='\t')
                     uuid = Uuid()
                     try:
@@ -226,6 +229,19 @@ class Process:
             self._md_api.put_img(data, uuid.product)
         if product in utils.get_product_types(level=1):
             self._update_statuses(uuid.raw)
+
+    def get_models_to_process(self, args) -> list:
+        payload = {
+            'site': self._site,
+            'dateFrom': args.start,
+            'dateTo': args.stop,
+        }
+        if not self.is_reprocess:
+            payload['status'] = 'uploaded'
+        metadata = self._md_api.get('upload-metadata', payload)
+        model_metadata = [row for row in metadata if row['model'] is not None]
+        model_ids = [row['model']['id'] for row in model_metadata]
+        return list(set(model_ids))
 
     def print_info(self, uuid: Uuid) -> None:
         print(f'Created: {"New version" if self._is_new_version(uuid) else "Volatile file"}')
