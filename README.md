@@ -51,12 +51,43 @@ Behavior of the `--reprocess` flag:
 
 | Existing file | `--reprocess` | Action          |
 | :---          | :---          | :---            |
-| -             | `False`       | Create volatile file |
-| -             | `True`        | Create volatile file |
-| `volatile`    | `False`       | Reprocess the volatile file (Level 1 products only if new raw data)|
-| `volatile`    | `True`        | Reprocess the volatile file |
-| `stable`      | `False`       | - |
-| `stable`      | `True`        | Create new stable file version|
+| -             | `False`       | Create volatile file. |
+| -             | `True`        | Create volatile file. |
+| `volatile`    | `False`       | Reprocess the volatile file (Level 1 products only if new raw data).|
+| `volatile`    | `True`        | Reprocess the volatile file. |
+| `stable` (legacy or not)      | `False`       | - |
+| `stable`      | `True`        | Create new stable file version.|
+
+### `put-legacy-files.py`
+
+Upload Matlab processed legacy products (`categorize`, and level 2 products) to data portal.
+
+```
+usage: put-legacy-files.py [-h] [--config-dir /FOO/BAR] PATH
+```
+
+Positional arguments:
+
+| Name   | Description | 
+| :---   | :---        |
+| `path` | Root path of the site containing legacy data, e.g, `/foo/bar/munich/`. |
+
+Optional arguments:
+
+| Short | Long             | Default     | Description                                | 
+| :---  | :---             | :---        | :---                                       |
+| `-h`  | `--help`         |             | Show help and exit.                        |
+|       | `--config-dir`   | `./config`  | Path to directory containing config files. |
+
+Behavior:
+
+| Existing file          | Action          |
+| :---                   | :---            |
+| -                      | Add stable legacy file. |
+| `volatile`             | - |
+| `stable` (legacy)      | - |
+| `stable` (non-legacy)  | Add stable legacy file as oldest version. |
+
 
 
 
