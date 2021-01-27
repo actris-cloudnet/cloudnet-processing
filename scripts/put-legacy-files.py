@@ -114,14 +114,20 @@ def _check_if_exists(md_api, info: dict):
         'dateTo': info['date_str'],
         'product': info['product'],
         'developer': True,
-        'showLegacy': True
+        'showLegacy': True,
+        'allVersions': True
     }
     try:
         metadata = md_api.get('api/files', payload)
     except HTTPError as err:
         raise err
+
     if metadata:
-        raise MiscError(f'{info["site"]} {info["date_str"]} {info["product"]} already uploaded')
+        if metadata[0]['volatile']:
+            raise MiscError(f'{info["site"]} {info["date_str"]} {info["product"]} Not allowed: '
+                            f'volatile file exists')
+        if metadata[-1]['legacy']:
+            raise MiscError(f'{info["site"]} {info["date_str"]} {info["product"]} Already uploaded')
 
 
 def _get_s3key(info: dict) -> str:
