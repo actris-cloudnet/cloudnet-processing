@@ -329,13 +329,13 @@ def _parse_args(args):
     parser.add_argument('--start',
                         type=str,
                         metavar='YYYY-MM-DD',
-                        help='Starting date. Default is current day - 7.',
-                        default=utils.get_date_from_past(7))
+                        help='Starting date. Default is current day - 5 (included).',
+                        default=utils.get_date_from_past(5))
     parser.add_argument('--stop',
                         type=str,
                         metavar='YYYY-MM-DD',
-                        help='Stopping date. Default is current day - 1.',
-                        default=utils.get_date_from_past(1))
+                        help='Stopping date. Default is current day + 1 (excluded).',
+                        default=utils.get_date_from_past(-1))
     parser.add_argument('-r', '--reprocess',
                         action='store_true',
                         help='Process new version of the stable files and reprocess volatile '
