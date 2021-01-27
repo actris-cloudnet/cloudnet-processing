@@ -189,12 +189,11 @@ class Process:
         return uuid, identifier
 
     def check_product_status(self, product: str, model: str = None) -> Union[str, None, bool]:
-        payload = self._get_payload()
+        payload = self._get_payload({'showLegacy': True})
         if model:
             payload['model'] = model
         all_metadata = self._md_api.get('api/files', payload)
         metadata = self._md_api.screen_metadata(all_metadata, product=product)
-        assert len(metadata) <= 1
         if metadata:
             if not metadata[0]['volatile'] and not self.is_reprocess:
                 raise MiscError('Existing freezed file and no "reprocess" flag')
