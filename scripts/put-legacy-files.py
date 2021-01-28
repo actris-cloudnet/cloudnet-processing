@@ -115,7 +115,8 @@ def _check_if_exists(md_api, info: dict):
         'product': info['product'],
         'developer': True,
         'showLegacy': True,
-        'allVersions': True
+        'allVersions': True,
+        'allModels': True
     }
     try:
         metadata = md_api.get('api/files', payload)
