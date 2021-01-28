@@ -68,7 +68,9 @@ class MetadataApi:
         elif instrument:
             metadata = self._select_by(metadata, 'instrument', instrument)
             if instrument == 'hatpro':
-                metadata = self._select_lwp(metadata)
+                metadata = self._select_by_extension(metadata, '.lwp.nc')
+            if instrument == 'rpg-fmcw-94':
+                metadata = self._select_by_extension(metadata, '.lv1')
         return metadata
 
     @staticmethod
@@ -76,5 +78,5 @@ class MetadataApi:
         return [row for row in metadata if row[identifier] and row[identifier]['id'] == value]
 
     @staticmethod
-    def _select_lwp(metadata: list) -> list:
-        return [row for row in metadata if row['filename'].lower().endswith('.lwp.nc')]
+    def _select_by_extension(metadata: list, extension: str) -> list:
+        return [row for row in metadata if row['filename'].lower().endswith(extension.lower())]
