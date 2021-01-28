@@ -32,6 +32,9 @@ def main():
         'products/drizzle/',
         'products/classification/'
     ]
+    if ARGS.year is not None:
+        dir_names = [f'{dir_name}{ARGS.year}' for dir_name in dir_names]
+
     for dir_name in dir_names:
         files = _get_files(ARGS.path[0], dir_name)
 
@@ -151,5 +154,11 @@ if __name__ == "__main__":
                         metavar='/FOO/BAR',
                         help='Path to directory containing config files. Default: ./config.',
                         default='./config')
+    parser.add_argument('--year',
+                        '-y',
+                        type=int,
+                        help='Year to be processed. Default is all years.',
+                        default=None)
+
     ARGS = parser.parse_args()
     main()

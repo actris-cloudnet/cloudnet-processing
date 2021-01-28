@@ -63,7 +63,7 @@ Behavior of the `--reprocess` flag:
 Upload Matlab processed legacy products (`categorize`, and level 2 products) to data portal.
 
 ```
-usage: put-legacy-files.py [-h] [--config-dir /FOO/BAR] PATH
+usage: put-legacy-files.py [-h] [-y YYYY] [--config-dir /FOO/BAR] PATH
 ```
 
 Positional arguments:
@@ -78,6 +78,7 @@ Optional arguments:
 | :---  | :---             | :---        | :---                                       |
 | `-h`  | `--help`         |             | Show help and exit.                        |
 |       | `--config-dir`   | `./config`  | Path to directory containing config files. |
+|  `-y` | `--year`         | all         | Process only some certain year.            |
 
 Behavior:
 
