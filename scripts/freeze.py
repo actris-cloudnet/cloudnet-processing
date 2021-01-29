@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 """A script for assigning PIDs for data files."""
+import os
+import sys
 import argparse
 import requests
+import glob
 from tempfile import TemporaryDirectory
 from data_processing.utils import read_main_conf
 from data_processing import metadata_api
 from data_processing.pid_utils import PidUtils
 from data_processing.storage_api import StorageApi
 from data_processing import utils
-import sys
 
 
 def main(args, storage_session=requests.session()):
@@ -38,6 +40,8 @@ def main(args, storage_session=requests.session()):
             storage_api.delete_volatile_product(s3key)
         except OSError as e:
             print(f'Error: corrupted file in pid-freezing: {full_path}\n{e}', file=sys.stderr)
+        for filename in glob.glob(f'{temp_dir.name}/*'):
+            os.remove(filename)
 
 
 def _parse_args(args):
