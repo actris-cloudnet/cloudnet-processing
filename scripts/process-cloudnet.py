@@ -18,7 +18,7 @@ from data_processing import utils
 from data_processing.metadata_api import MetadataApi
 from data_processing.storage_api import StorageApi
 from data_processing.pid_utils import PidUtils
-from data_processing import concat_lib
+from data_processing import concat_wrapper
 from data_processing import nc_header_augmenter
 from data_processing.utils import MiscError, RawDataMissingError
 from requests.exceptions import HTTPError, ConnectionError
@@ -139,8 +139,8 @@ class Process:
 
         def _concatenate_chm15k() -> list:
             full_paths, uuids = self._download_raw_data(instrument=instrument)
-            valid_full_paths = concat_lib.concat_chm15k_files(full_paths, self.date_str,
-                                                              raw_daily_file.name)
+            valid_full_paths = concat_wrapper.concat_chm15k_files(full_paths, self.date_str,
+                                                                  raw_daily_file.name)
             return _get_valid_uuids(uuids, full_paths, valid_full_paths)
         try:
             instrument = 'chm15k'

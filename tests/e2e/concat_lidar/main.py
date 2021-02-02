@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import pytest
 import glob
-from data_processing.concat_lib import concat_chm15k_files
+from data_processing.concat_wrapper import concat_chm15k_files
 from tempfile import NamedTemporaryFile
 
 

@@ -43,9 +43,9 @@ class TestChm15kProcessing:
     @pytest.mark.reprocess
     def test_attributes(self):
         nc = netCDF4.Dataset(self.full_path)
-        assert nc.year == '2020'
-        assert nc.month == '10'
-        assert nc.day == '22'
+        assert nc.year == 2020
+        assert nc.month == 10
+        assert nc.day == 22
         assert nc.title == f'Ceilometer file from Bucharest'
         assert nc.cloudnet_file_type == self.product
         assert nc.Conventions == 'CF-1.7'
