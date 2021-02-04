@@ -39,7 +39,12 @@ def main():
         files = _get_files(ARGS.path[0], dir_name)
 
         for file in files:
-            legacy_file = LegacyFile(file)
+
+            try:
+                legacy_file = LegacyFile(file)
+            except OSError as err:
+                print(err)
+                continue
 
             try:
                 info = {
