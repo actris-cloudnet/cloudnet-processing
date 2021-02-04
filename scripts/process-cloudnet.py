@@ -9,6 +9,7 @@ import shutil
 import warnings
 import importlib
 import glob
+import gzip
 from tempfile import TemporaryDirectory
 from tempfile import NamedTemporaryFile
 from cloudnetpy.instruments import rpg2nc, ceilo2nc, mira2nc
@@ -129,9 +130,9 @@ class Process:
 
         except RawDataMissingError:
             instrument = 'mira'
-            raw_daily_file = NamedTemporaryFile()
-            uuid.raw, _ = self._get_daily_raw_file(raw_daily_file.name, instrument=instrument)
-            uuid.product = mira2nc(raw_daily_file.name, temp_file.name, self.site_meta,
+            full_paths, uuid.raw = self._download_raw_data(instrument=instrument)
+            dir_name = _unzip_gz_files(full_paths)
+            uuid.product = mira2nc(dir_name, temp_file.name, self.site_meta, date=self.date_str,
                                    uuid=uuid.volatile)
         return uuid, instrument
 
@@ -312,6 +313,16 @@ def _get_valid_uuids(uuids: list, full_paths: list, valid_full_paths: list) -> l
 def _clean_temp_dir():
     for filename in glob.glob(f'{temp_dir.name}/*'):
         os.remove(filename)
+
+
+def _unzip_gz_files(full_paths: list) -> str:
+    for full_path in full_paths:
+        if full_path.endswith('.gz'):
+            filename = full_path.replace('.gz', '')
+            with gzip.open(full_path, 'rb') as file_in:
+                with open(filename, 'wb') as file_out:
+                    shutil.copyfileobj(file_in, file_out)
+    return os.path.dirname(full_paths[0])
 
 
 def _parse_args(args):
