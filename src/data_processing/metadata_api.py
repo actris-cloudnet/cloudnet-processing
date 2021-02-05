@@ -52,6 +52,7 @@ class MetadataApi:
         updated_before = datetime.now() - timedelta(**freeze_after)
         payload = {
             'volatile': True,
+            'allModels': True,
             'releasedBefore': updated_before
         }
         return self.get('api/files', payload)
