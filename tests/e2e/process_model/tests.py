@@ -29,7 +29,6 @@ class TestModelProcessing:
         assert hasattr(nc, 'pid') is False
         assert nc.title == f'{self.product.capitalize()} file from Bucharest'
         assert nc.cloudnet_file_type == self.product
-        assert nc.Conventions == 'CF-1.7'
         assert 'netcdf4' in nc.file_format.lower()
         nc.close()
 

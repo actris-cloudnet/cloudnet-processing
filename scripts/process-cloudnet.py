@@ -108,15 +108,12 @@ class Process:
         return plot_images
 
     def process_model(self, uuid: Uuid, model: str) -> Uuid:
-        uuid.raw, upload_filename = self._get_daily_raw_file(temp_file.name, model=model)
-        uuid.product = nc_header_augmenter.fix_model_file(temp_file.name, self._site, uuid.volatile)
+        uuid = self._fix_calibrated_daily_file(uuid, 'model', model=model)
         return uuid
 
     def process_mwr(self, uuid: Uuid) -> Tuple[Uuid, str]:
         instrument = 'hatpro'
-        uuid.raw, upload_filename = self._get_daily_raw_file(temp_file.name, instrument=instrument)
-        uuid.product = nc_header_augmenter.fix_mwr_file(temp_file.name, upload_filename,
-                                                        self.date_str, self._site, uuid.volatile)
+        uuid = self._fix_calibrated_daily_file(uuid, 'mwr', instrument=instrument)
         return uuid, instrument
 
     def process_radar(self, uuid: Uuid) -> Tuple[Uuid, str]:
@@ -148,12 +145,18 @@ class Process:
             raw_daily_file = NamedTemporaryFile(suffix='.nc')
             uuid.raw = _concatenate_chm15k()
         except RawDataMissingError:
-            instrument = 'cl51'
-            raw_daily_file = NamedTemporaryFile(suffix='.DAT')
-            uuid.raw, _ = self._get_daily_raw_file(raw_daily_file.name, instrument=instrument)
+            try:
+                instrument = 'cl51'
+                raw_daily_file = NamedTemporaryFile(suffix='.DAT')
+                uuid.raw, _ = self._get_daily_raw_file(raw_daily_file.name, instrument=instrument)
+            except RawDataMissingError:
+                instrument = 'halo-doppler-lidar'
+                uuid = self._fix_calibrated_daily_file(uuid, 'lidar', instrument=instrument)
+                raw_daily_file = temp_file
 
-        uuid.product = ceilo2nc(raw_daily_file.name, temp_file.name, self.site_meta,
-                                uuid=uuid.volatile)
+        if instrument != 'halo-doppler-lidar':
+            uuid.product = ceilo2nc(raw_daily_file.name, temp_file.name, self.site_meta,
+                                    uuid=uuid.volatile)
         return uuid, instrument
 
     def process_categorize(self, uuid: Uuid) -> Tuple[Uuid, str]:
@@ -252,6 +255,7 @@ class Process:
                             model: str = None) -> Tuple[list, str]:
         full_path, uuid = self._download_raw_data(instrument=instrument, model=model,
                                                   largest_file_only=True)
+
         shutil.move(full_path[0], raw_daily_file)
         original_filename = os.path.basename(full_path[0])
         return uuid, original_filename
@@ -298,6 +302,23 @@ class Process:
             for key, value in args.items():
                 payload[key] = value
         return payload
+
+    def _fix_calibrated_daily_file(self, uuid: Uuid, file_type: str, instrument: str = None,
+                                   model: str = None) -> Uuid:
+        uuid.raw, upload_filename = self._get_daily_raw_file(temp_file.name, instrument=instrument,
+                                                             model=model)
+        data = self._get_harmonize_data(uuid, file_type, instrument, upload_filename)
+        uuid.product = nc_header_augmenter.harmonize_nc_file(data)
+        return uuid
+
+    def _get_harmonize_data(self, uuid, file_type: str, instrument: str, filename: str) -> dict:
+        return {'site_name': self._site,
+                'date': self.date_str,
+                'uuid': uuid.volatile,
+                'full_path': temp_file.name,
+                'cloudnet_file_type': file_type,
+                'instrument': instrument,
+                'original_filename': filename}
 
     def _get_product_key(self, identifier: str) -> str:
         return f"{self.date_str.replace('-', '')}_{self._site}_{identifier}.nc"

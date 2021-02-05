@@ -1,4 +1,3 @@
-from typing import Union
 import shutil
 from tempfile import NamedTemporaryFile
 import netCDF4
@@ -7,84 +6,67 @@ from cloudnetpy.utils import get_uuid, get_time
 
 def fix_legacy_file(legacy_file_full_path: str, target_full_path: str) -> str:
     """Fix legacy netCDF file."""
-
     uuid = get_uuid()
-
     nc_legacy = netCDF4.Dataset(legacy_file_full_path, 'r')
     nc_new = netCDF4.Dataset(target_full_path, 'w', format='NETCDF4_CLASSIC')
-
     copy_file_contents(nc_legacy, nc_new)
     history = _get_history(nc_legacy)
-
     nc_new.file_uuid = uuid
     nc_new.history = history
-
     nc_legacy.close()
     nc_new.close()
-
     return uuid
 
 
-def fix_mwr_file(full_path: str,
-                 original_filename: str,
-                 date_str: str,
-                 site_name: str,
-                 uuid: Union[str, bool, None]) -> str:
-    """Fixes global attributes of raw MWR netCDF file."""
-
-    def _get_date():
-        year = f'20{original_filename[:2]}'
-        month = f'{original_filename[2:4]}'
-        day = f'{original_filename[4:6]}'
-        assert f'{year}-{month}-{day}' == date_str
-        return year, month, day
-
-    nc = netCDF4.Dataset(full_path, 'a')
-    uuid = uuid or get_uuid()
-    nc.file_uuid = uuid
-    nc.cloudnet_file_type = 'mwr'
-    nc.history = _get_history(nc)
-    nc.year, nc.month, nc.day = _get_date()
-    nc.location = site_name
-    nc.title = _get_title(nc)
-    if not hasattr(nc, 'Conventions'):
-        nc.Conventions = 'CF-1.0'
-    nc.close()
-    return uuid
-
-
-def fix_model_file(full_path: str,
-                   site_name: str,
-                   uuid: Union[str, bool, None]) -> str:
-    """Fixes global attributes of raw model netCDF file."""
-
-    def _get_date():
-        date_string = nc.variables['time'].units
-        the_date = date_string.split()[2]
-        return the_date.split('-')
-
+def harmonize_nc_file(data: dict) -> str:
+    """Compresses and harmonizes metadata of a "calibrated" Cloudnet netCDF file."""
     temp_file = NamedTemporaryFile()
-
-    nc_raw = netCDF4.Dataset(full_path, 'r')
+    nc_raw = netCDF4.Dataset(data['full_path'], 'r')
     nc = netCDF4.Dataset(temp_file.name, 'w', format='NETCDF4_CLASSIC')
-
     copy_file_contents(nc_raw, nc)
-
-    uuid = uuid or get_uuid()
+    uuid = data['uuid'] or get_uuid()
     nc.file_uuid = uuid
-    nc.cloudnet_file_type = 'model'
-    nc.year, nc.month, nc.day = _get_date()
+    nc.cloudnet_file_type = data['cloudnet_file_type']
+    if data['cloudnet_file_type'] == 'model':
+        nc.year, nc.month, nc.day = _get_model_date(nc)
+    if data['instrument'] == 'hatpro':
+        nc.year, nc.month, nc.day = _get_hatpro_date(data)
+    if data['instrument'] == 'halo-doppler-lidar':
+        nc.year, nc.month, nc.day = _get_halo_date(data)
+        nc.renameVariable('height_asl', 'height')
     nc.history = _get_history(nc)
+    nc.location = _get_location(nc, data)
     nc.title = _get_title(nc)
-    nc.location = site_name
-    nc.Conventions = 'CF-1.7'
-
+    if data['cloudnet_file_type'] in ('model', 'lidar'):  # HATPRO files contain multiple problems
+        nc.Conventions = 'CF-1.7'
     nc.close()
     nc_raw.close()
-
-    shutil.copy(temp_file.name, full_path)
-
+    shutil.copy(temp_file.name, data['full_path'])
     return uuid
+
+
+def _get_hatpro_date(data: dict) -> tuple:
+    original_filename = data['original_filename']
+    year = f'20{original_filename[:2]}'
+    month = f'{original_filename[2:4]}'
+    day = f'{original_filename[4:6]}'
+    assert f'{year}-{month}-{day}' == data['date']
+    return year, month, day
+
+
+def _get_halo_date(data: dict) -> tuple:
+    original_filename = data['original_filename']
+    year = f'{original_filename[:4]}'
+    month = f'{original_filename[4:6]}'
+    day = f'{original_filename[6:8]}'
+    assert f'{year}-{month}-{day}' == data['date']
+    return year, month, day
+
+
+def _get_model_date(nc: netCDF4.Dataset) -> list:
+    date_string = nc.variables['time'].units
+    the_date = date_string.split()[2]
+    return the_date.split('-')
 
 
 def copy_file_contents(source: netCDF4.Dataset, target: netCDF4.Dataset) -> None:
@@ -110,6 +92,10 @@ def _get_history(nc: netCDF4.Dataset) -> str:
 
 def _get_title(nc: netCDF4.Dataset) -> str:
     file_type = nc.cloudnet_file_type.capitalize()
-    if nc.location:
-        return f"{file_type} file from {nc.location.capitalize()}"
-    return file_type
+    return f"{file_type} file from {nc.location.capitalize()}"
+
+
+def _get_location(nc: netCDF4.Dataset, data: dict) -> str:
+    if hasattr(nc, 'location'):
+        return nc.location
+    return data['site_name'].capitalize()
