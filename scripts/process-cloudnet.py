@@ -255,7 +255,6 @@ class Process:
                             model: str = None) -> Tuple[list, str]:
         full_path, uuid = self._download_raw_data(instrument=instrument, model=model,
                                                   largest_file_only=True)
-
         shutil.move(full_path[0], raw_daily_file)
         original_filename = os.path.basename(full_path[0])
         return uuid, original_filename

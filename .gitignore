@@ -5,6 +5,7 @@ venv/
 *pycache*
 .vscode/
 *.log
+*~
 processed_data/*
 !processed_data/touch
 tests/data/public/*
