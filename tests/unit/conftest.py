@@ -31,6 +31,7 @@ def mwr_file(tmpdir_factory):
     file_name = tmpdir_factory.mktemp("data").join("201023.LWP.NC")
     root_grp = netCDF4.Dataset(file_name, "w", format="NETCDF3_CLASSIC")
     root_grp.createDimension('time', 10)
+    root_grp.Conventions = 'CF-1.0'
     root_grp.close()
     return file_name
 
@@ -45,5 +46,26 @@ def model_file(tmpdir_factory):
     root_grp.title = 'ECMWF single-site output over Bucharest'
     root_grp.location = 'Bucharest'
     root_grp.history = 'Model history'
+    root_grp.Conventions = 'CF-1.0'
+    root_grp.close()
+    return file_name
+
+
+@pytest.fixture(scope='session')
+def halo_file(tmpdir_factory):
+    file_name = tmpdir_factory.mktemp("data").join("20201014_fajdlfksfdjl")
+    root_grp = netCDF4.Dataset(file_name, "w", format="NETCDF3_CLASSIC")
+    root_grp.createDimension('time', 10)
+    time = root_grp.createVariable('time', 'f8')
+    time.units = 'hours since 2020-10-14 00:00:00 +00:00'
+    root_grp.createDimension('range', 3)
+    range = root_grp.createVariable('range', 'f8', ('range',))
+    range[:] = [2, 4, 6]
+    height_asl = root_grp.createVariable('height_asl', 'f8', ('range',))
+    height_asl[:] = [1, 2, 3]
+    root_grp.title = 'FMI HALO Doppler lidar'
+    root_grp.location = 'Hyytiälä'
+    root_grp.history = '28 Jan 2021 05:16:27 - Created by Antti Manninen <antti.manninen@fmi.fi>'
+    root_grp.Conventions = 'CF-1.0'
     root_grp.close()
     return file_name
