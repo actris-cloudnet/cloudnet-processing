@@ -1,9 +1,8 @@
 """Metadata API for Cloudnet files."""
 from datetime import timedelta, datetime
-from typing import Union
+from typing import Union, Optional
 from os import path
 import requests
-from data_processing import utils
 
 
 class MetadataApi:
@@ -58,15 +57,15 @@ class MetadataApi:
         return self.get('api/files', payload)
 
     def screen_metadata(self, metadata: list,
-                        instrument: str = None,
-                        product: str = None,
-                        model: str = None) -> list:
+                        instrument: Optional[str] = None,
+                        product: Optional[str] = None,
+                        model: Optional[str] = None) -> list:
         """Return metadata suitable for processing."""
-        if product:
+        if product is not None:
             metadata = self._select_by(metadata, 'product', product)
-        elif model:
+        elif model is not None:
             metadata = self._select_by(metadata, 'model', model)
-        elif instrument:
+        elif instrument is not None:
             metadata = self._select_by(metadata, 'instrument', instrument)
             if instrument == 'hatpro':
                 metadata = self._select_by_extension(metadata, '.lwp.nc')

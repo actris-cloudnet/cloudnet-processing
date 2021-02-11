@@ -1,6 +1,6 @@
 """Metadata API for Cloudnet files."""
 from os import path
-from typing import Union
+from typing import Optional
 from tempfile import NamedTemporaryFile
 import requests
 from cloudnetpy.plotting import generate_figure, generate_legacy_figure
@@ -55,7 +55,7 @@ class StorageApi:
                                  product_key: str,
                                  uuid: str,
                                  product: str,
-                                 legacy: bool = False) -> list:
+                                 legacy: Optional[bool] = False) -> list:
         """Create and upload images."""
         temp_file = NamedTemporaryFile(suffix='.png')
         try:
@@ -85,8 +85,7 @@ class StorageApi:
             })
         return visualizations
 
-    def _put(self, url: str, full_path: str,
-             headers: Union[dict, None] = None) -> requests.Response:
+    def _put(self, url: str, full_path: str, headers: Optional[dict] = None) -> requests.Response:
         res = self.session.put(url, data=open(full_path, 'rb'), auth=self._auth, headers=headers)
         res.raise_for_status()
         return res

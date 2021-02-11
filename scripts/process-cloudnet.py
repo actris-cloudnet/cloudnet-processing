@@ -4,7 +4,7 @@ import os
 import sys
 import requests
 import argparse
-from typing import Tuple, Union
+from typing import Tuple, Union, Optional
 import shutil
 import warnings
 import importlib
@@ -192,7 +192,8 @@ class Process:
         identifier = utils.get_product_identifier(product)
         return uuid, identifier
 
-    def check_product_status(self, product: str, model: str = None) -> Union[str, None, bool]:
+    def check_product_status(self, product: str,
+                             model: Optional[str] = None) -> Union[str, None, bool]:
         payload = self._get_payload({'showLegacy': True})
         if model:
             payload['model'] = model
@@ -208,7 +209,8 @@ class Process:
         return None
 
     def upload_product_and_images(self, full_path: str, product: str, uuid: Uuid,
-                                  product_type: str = None, model: str = None) -> None:
+                                  product_type: Optional[str] = None,
+                                  model: Optional[str] = None) -> None:
 
         assert product_type is not None or model is not None
         identifier = product_type if product_type else model
@@ -251,8 +253,8 @@ class Process:
 
     def _get_daily_raw_file(self,
                             raw_daily_file: str,
-                            instrument: str = None,
-                            model: str = None) -> Tuple[list, str]:
+                            instrument: Optional[str] = None,
+                            model: Optional[str] = None) -> Tuple[list, str]:
         full_path, uuid = self._download_raw_data(instrument=instrument, model=model,
                                                   largest_file_only=True)
         shutil.move(full_path[0], raw_daily_file)
@@ -260,9 +262,9 @@ class Process:
         return uuid, original_filename
 
     def _download_raw_data(self,
-                           instrument: str = None,
-                           model: str = None,
-                           largest_file_only: bool = False) -> Tuple[list, list]:
+                           instrument: Optional[str] = None,
+                           model: Optional[str] = None,
+                           largest_file_only: Optional[bool] = False) -> Tuple[list, list]:
         payload = self._get_payload()
         all_upload_metadata = self._md_api.get('upload-metadata', payload)
         upload_metadata = self._md_api.screen_metadata(all_upload_metadata,
@@ -290,7 +292,7 @@ class Process:
             payload = {'uuid': uuid, 'status': 'processed'}
             self._md_api.post('upload-metadata', payload)
 
-    def _get_payload(self, args: dict = None) -> dict:
+    def _get_payload(self, args: Optional[dict] = None) -> dict:
         payload = {
             'dateFrom': self.date_str,
             'dateTo': self.date_str,
@@ -302,22 +304,22 @@ class Process:
                 payload[key] = value
         return payload
 
-    def _fix_calibrated_daily_file(self, uuid: Uuid, file_type: str, instrument: str = None,
-                                   model: str = None) -> Uuid:
+    def _fix_calibrated_daily_file(self, uuid: Uuid, file_type: str,
+                                   instrument: Optional[str] = None,
+                                   model: Optional[str] = None) -> Uuid:
         uuid.raw, upload_filename = self._get_daily_raw_file(temp_file.name, instrument=instrument,
                                                              model=model)
-        data = self._get_harmonize_data(uuid, file_type, instrument, upload_filename)
+        data = {
+            'site_name': self._site,
+            'date': self.date_str,
+            'uuid': uuid.volatile,
+            'full_path': temp_file.name,
+            'cloudnet_file_type': file_type,
+            'instrument': instrument,
+            'original_filename': upload_filename
+            }
         uuid.product = nc_header_augmenter.harmonize_nc_file(data)
         return uuid
-
-    def _get_harmonize_data(self, uuid, file_type: str, instrument: str, filename: str) -> dict:
-        return {'site_name': self._site,
-                'date': self.date_str,
-                'uuid': uuid.volatile,
-                'full_path': temp_file.name,
-                'cloudnet_file_type': file_type,
-                'instrument': instrument,
-                'original_filename': filename}
 
     def _get_product_key(self, identifier: str) -> str:
         return f"{self.date_str.replace('-', '')}_{self._site}_{identifier}.nc"

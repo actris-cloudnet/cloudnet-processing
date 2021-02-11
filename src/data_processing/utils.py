@@ -2,7 +2,7 @@ import datetime
 import configparser
 import hashlib
 import requests
-from typing import Tuple, Union
+from typing import Tuple, Union, Optional
 from cloudnetpy.utils import get_time
 from cloudnetpy.plotting.plot_meta import ATTRIBUTES as ATTR
 import base64
@@ -11,10 +11,10 @@ import netCDF4
 
 def create_product_put_payload(full_path: str,
                                storage_service_response: dict,
-                               product: str = None,
-                               site: str = None,
-                               date_str: str = None,
-                               model: str = None) -> dict:
+                               product: Optional[str] = None,
+                               site: Optional[str] = None,
+                               date_str: Optional[str] = None,
+                               model: Optional[str] = None) -> dict:
     nc = netCDF4.Dataset(full_path, 'r')
 
     payload = {
@@ -59,7 +59,7 @@ def read_site_info(site_name: str) -> dict:
             return site
 
 
-def get_product_types(level: int = None) -> list:
+def get_product_types(level: Optional[int] = None) -> list:
     """Return Cloudnet processing types."""
     url = f"https://cloudnet.fmi.fi/api/products"
     products = requests.get(url=url).json()
@@ -85,7 +85,7 @@ def date_string_to_date(date_string: str) -> datetime.date:
     return datetime.date(*date)
 
 
-def get_date_from_past(n: int, reference_date: str = None) -> str:
+def get_date_from_past(n: int, reference_date: Optional[str] = None) -> str:
     """Return date N-days ago.
 
     Args:
@@ -168,12 +168,12 @@ def sha256sum(filename: str) -> str:
     return _calc_hash_sum(filename, 'sha256')
 
 
-def md5sum(filename: str, is_base64=False) -> str:
+def md5sum(filename: str, is_base64: Optional[bool] = False) -> str:
     """Calculates hash of file using md5."""
     return _calc_hash_sum(filename, 'md5', is_base64)
 
 
-def _calc_hash_sum(filename, method, is_base64=False):
+def _calc_hash_sum(filename, method, is_base64: Optional[bool] = False) -> str:
     hash_sum = getattr(hashlib, method)()
     with open(filename, "rb") as f:
         for byte_block in iter(lambda: f.read(4096), b""):
@@ -183,7 +183,7 @@ def _calc_hash_sum(filename, method, is_base64=False):
     return hash_sum.hexdigest()
 
 
-def get_product_bucket(volatile: bool = False) -> str:
+def get_product_bucket(volatile: Optional[bool] = False) -> str:
     return 'cloudnet-product-volatile' if volatile else 'cloudnet-product'
 
 
