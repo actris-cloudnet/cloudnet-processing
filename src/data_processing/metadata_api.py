@@ -51,10 +51,12 @@ class MetadataApi:
         updated_before = datetime.now() - timedelta(**freeze_after)
         payload = {
             'volatile': True,
-            'allModels': True,
             'releasedBefore': updated_before
         }
-        return self.get('api/files', payload)
+        regular_files = self.get('api/files', payload)
+        payload['allModels'] = True
+        model_files = self.get('api/model-files', payload)
+        return regular_files + model_files
 
     def screen_metadata(self, metadata: list,
                         instrument: Optional[str] = None,

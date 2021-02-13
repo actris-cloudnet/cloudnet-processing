@@ -105,9 +105,10 @@ class TestMetadataApi:
         assert md_api.screen_metadata(metadata, model='xyz') == []
 
     def test_calls_files_with_proper_params_and_parses_response_correctly(self):
-        url = f'{mock_addr}api/files(.*?)'
-        adapter.register_uri('GET', re.compile(url), json=json.loads(files_response))
+        for end_point in ('files', 'model-files'):
+            url = f'{mock_addr}api/{end_point}(.*?)'
+            adapter.register_uri('GET', re.compile(url), json=json.loads(files_response))
         md_api = metadata_api.MetadataApi(config, session)
         r = md_api.find_volatile_files_to_freeze()
-        assert len(r) == 1
+        assert len(r) == 2
         assert r[0]['filename'] == '20200513_granada_rpg-fmcw-94.nc'
