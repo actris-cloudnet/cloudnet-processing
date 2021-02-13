@@ -54,7 +54,7 @@ class TestModelProcessing:
                     n += 1
             assert n == n_expected
 
-        s = '"GET /api/files?dateFrom=2020-10-22&dateTo=2020-10-22&site=bucharest&developer=True&showLegacy=True&model='
+        s = '"GET /api/model-files?dateFrom=2020-10-22&dateTo=2020-10-22&site=bucharest&developer=True&model='
         count_strings(s, n_valid_metadata)
 
         s = '"PUT /visualizations/20201022_bucharest_'

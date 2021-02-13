@@ -194,10 +194,14 @@ class Process:
 
     def check_product_status(self, product: str,
                              model: Optional[str] = None) -> Union[str, None, bool]:
-        payload = self._get_payload({'showLegacy': True})
-        if model:
+        payload = self._get_payload()
+        if model is not None:
+            end_point = 'model-files'
             payload['model'] = model
-        all_metadata = self._md_api.get('api/files', payload)
+        else:
+            end_point = 'files'
+            payload['showLegacy'] = True
+        all_metadata = self._md_api.get(f'api/{end_point}', payload)
         metadata = self._md_api.screen_metadata(all_metadata, product=product)
         if metadata:
             if not metadata[0]['volatile'] and not self.is_reprocess:
@@ -229,7 +233,9 @@ class Process:
 
         payload = utils.create_product_put_payload(full_path, file_info, model=model,
                                                    site=self._site)
+
         self._md_api.put(s3key, payload)
+
         for data in img_metadata:
             self._md_api.put_img(data, uuid.product)
         if product in utils.get_product_types(level=1):
