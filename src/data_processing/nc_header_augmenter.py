@@ -96,6 +96,6 @@ def _get_title(nc: netCDF4.Dataset) -> str:
 
 
 def _get_location(nc: netCDF4.Dataset, data: dict) -> str:
-    if hasattr(nc, 'location'):
+    if hasattr(nc, 'location') and len(nc.location) > 0:
         return nc.location
     return data['site_name'].capitalize()

@@ -44,7 +44,7 @@ def model_file(tmpdir_factory):
     time = root_grp.createVariable('time', 'f8')
     time.units = 'hours since 2020-10-14 00:00:00 +00:00'
     root_grp.title = 'ECMWF single-site output over Bucharest'
-    root_grp.location = 'Bucharest'
+    root_grp.location = ''
     root_grp.history = 'Model history'
     root_grp.Conventions = 'CF-1.0'
     root_grp.close()
