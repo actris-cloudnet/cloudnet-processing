@@ -82,17 +82,17 @@ class TestMetadataApi:
     def test_screen_metadata(self):
         metadata = [
             {'instrument': {'id': 'chm15k', 'type': 'lidar'},
-             'model': None, 's3key': 'key1', 'filename': 'foo.nc'},
+             's3key': 'key1', 'filename': 'foo.nc'},
             {'instrument': {'id': 'chm15k', 'type': 'radar'},
-             'model': None, 's3key': 'key2', 'filename': 'foo.nc'},
+             's3key': 'key2', 'filename': 'foo.nc'},
             {'instrument': {'id': 'hatpro', 'type': 'mwr'},
-             'model': None, 's3key': 'key3', 'filename': 'foo.lwp.nc'},
+             's3key': 'key3', 'filename': 'foo.lwp.nc'},
             {'instrument': {'id': 'chm15k', 'type': 'hatpro'},
-             'model': None, 's3key': 'key4', 'filename': 'foo.iwc.nc'},
+             's3key': 'key4', 'filename': 'foo.iwc.nc'},
             {'model': {'id': 'ecmwf', 'optimumOrder': '1'},
-             'instrument': None, 's3key': 'key5', 'filename': 'foo.nc'},
+             's3key': 'key5', 'filename': 'foo.nc'},
             {'model': {'id': 'icon', 'optimumOrder': '0'},
-             'instrument': None, 's3key': 'key6', 'filename': 'foo.nc'}
+             's3key': 'key6', 'filename': 'foo.nc'}
         ]
         md_api = metadata_api.MetadataApi(config, session)
         assert md_api.screen_metadata(metadata, model='ecmwf')[0]['s3key'] == 'key5'

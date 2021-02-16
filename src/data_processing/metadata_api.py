@@ -77,7 +77,7 @@ class MetadataApi:
 
     @staticmethod
     def _select_by(metadata: list, identifier: str, value: str) -> list:
-        return [row for row in metadata if row[identifier] and row[identifier]['id'] == value]
+        return [row for row in metadata if identifier in row and row[identifier]['id'] == value]
 
     @staticmethod
     def _select_by_extension(metadata: list, extension: str) -> list:
