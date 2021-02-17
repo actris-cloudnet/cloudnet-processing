@@ -46,7 +46,7 @@ class TestCategorizeProcessing:
         suffix = 'dateFrom=2020-10-22&dateTo=2020-10-22&site=bucharest&developer=True'
         assert f'GET /api/files?{suffix}&showLegacy=True HTTP/1.1" 200' in data[0]
         for row in data[1:n_gets]:
-            assert f'GET /api/files?{suffix} HTTP/1.1" 200' in row
+            assert f'GET /api/files?{suffix} HTTP/1.1" 200' in row or f'GET /api/model-files?{suffix} HTTP/1.1" 200' in row
         assert f'PUT /files/20201022_bucharest_{self.product}.nc HTTP/1.1" 201' in data[n_gets]
         for row in data[n_gets+1:]:
             assert f'PUT /visualizations/20201022_bucharest_{self.product}' in row

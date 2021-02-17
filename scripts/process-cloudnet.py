@@ -164,7 +164,11 @@ class Process:
         input_files = {key: '' for key in l1_products}
         for product in l1_products:
             payload = self._get_payload()
-            all_metadata = self._md_api.get('api/files', payload)
+            if product == 'model':
+                end_point = 'model-files'
+            else:
+                end_point = 'files'
+            all_metadata = self._md_api.get(f'api/{end_point}', payload)
             metadata = self._md_api.screen_metadata(all_metadata, product=product)
             if metadata:
                 input_files[product] = self._storage_api.download_product(metadata[0],
