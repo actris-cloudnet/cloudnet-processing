@@ -250,7 +250,7 @@ class Process:
         if not self.is_reprocess:
             payload['status'] = 'uploaded'
         metadata = self._md_api.get('upload-metadata', payload)
-        model_metadata = [row for row in metadata if row['model'] is not None]
+        model_metadata = [row for row in metadata if 'model' in row]
         model_ids = [row['model']['id'] for row in model_metadata]
         return list(set(model_ids))
 
