@@ -1,28 +1,28 @@
 #!/usr/bin/env python3
 """Master script for CloudnetPy processing."""
-import os
-import sys
-import requests
 import argparse
-from typing import Tuple, Union, Optional
-import shutil
-import warnings
-import importlib
 import glob
 import gzip
-from tempfile import TemporaryDirectory
+import importlib
+import os
+import shutil
+import sys
+import warnings
 from tempfile import NamedTemporaryFile
-from cloudnetpy.instruments import rpg2nc, ceilo2nc, mira2nc
+from tempfile import TemporaryDirectory
+from typing import Tuple, Union, Optional
+import requests
 from cloudnetpy.categorize import generate_categorize
+from cloudnetpy.instruments import rpg2nc, ceilo2nc, mira2nc, basta2nc
 from cloudnetpy.utils import date_range
-from data_processing import utils
-from data_processing.metadata_api import MetadataApi
-from data_processing.storage_api import StorageApi
-from data_processing.pid_utils import PidUtils
+from requests.exceptions import HTTPError, ConnectionError
 from data_processing import concat_wrapper
 from data_processing import nc_header_augmenter
+from data_processing import utils
+from data_processing.metadata_api import MetadataApi
+from data_processing.pid_utils import PidUtils
+from data_processing.storage_api import StorageApi
 from data_processing.utils import MiscError, RawDataMissingError
-from requests.exceptions import HTTPError, ConnectionError
 
 warnings.simplefilter("ignore", UserWarning)
 warnings.simplefilter("ignore", RuntimeWarning)
@@ -119,21 +119,25 @@ class Process:
         try:
             instrument = 'rpg-fmcw-94'
             full_paths, uuids = self._download_raw_data(instrument=instrument)
-            uuid.product, valid_full_paths = rpg2nc(temp_dir.name, temp_file.name,
-                                                    self.site_meta, uuid=uuid.volatile,
-                                                    date=self.date_str)
+            uuid.product, valid_full_paths = rpg2nc(temp_dir.name, temp_file.name, self.site_meta,
+                                                    uuid=uuid.volatile, date=self.date_str)
             uuid.raw = _get_valid_uuids(uuids, full_paths, valid_full_paths)
-
         except RawDataMissingError:
-            instrument = 'mira'
-            full_paths, uuid.raw = self._download_raw_data(instrument=instrument)
-            dir_name = _unzip_gz_files(full_paths)
-            uuid.product = mira2nc(dir_name, temp_file.name, self.site_meta, date=self.date_str,
-                                   uuid=uuid.volatile)
+            try:
+                instrument = 'mira'
+                full_paths, uuid.raw = self._download_raw_data(instrument=instrument)
+                dir_name = _unzip_gz_files(full_paths)
+                uuid.product = mira2nc(dir_name, temp_file.name, self.site_meta,
+                                       date=self.date_str, uuid=uuid.volatile)
+            except RawDataMissingError:
+                instrument = 'basta'
+                full_paths, uuid.raw = self._download_raw_data(instrument=instrument,
+                                                               largest_file_only=True)
+                uuid.product = basta2nc(full_paths[0], temp_file.name, self.site_meta,
+                                        date=self.date_str, uuid=uuid.volatile)
         return uuid, instrument
 
     def process_lidar(self, uuid: Uuid) -> Tuple[Uuid, str]:
-
         def _concatenate_chm15k() -> list:
             full_paths, uuids = self._download_raw_data(instrument=instrument)
             valid_full_paths = concat_wrapper.concat_chm15k_files(full_paths, self.date_str,
@@ -236,9 +240,7 @@ class Process:
 
         payload = utils.create_product_put_payload(full_path, file_info, model=model,
                                                    site=self._site)
-
         self._md_api.put(s3key, payload)
-
         for data in img_metadata:
             self._md_api.put_img(data, uuid.product)
         if product in utils.get_product_types(level=1):
