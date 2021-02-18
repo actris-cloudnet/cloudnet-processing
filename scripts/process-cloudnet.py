@@ -92,18 +92,17 @@ class Process:
                  args,
                  config: dict,
                  storage_session):
-        self.site_meta = utils.read_site_info(args.site[0])
+        self.site_meta, self._site, self._site_type = _read_site_info(args)
         self.is_reprocess = args.reprocess
         self.plot_images = self.check_if_plot_images(args)
         self.date_str = None
         self._md_api = MetadataApi(config)
         self._storage_api = StorageApi(config, storage_session)
         self._pid_utils = PidUtils(config)
-        self._site = self.site_meta['id']
 
     def check_if_plot_images(self, args) -> bool:
         plot_images = not args.no_img
-        if 'hidden' in self.site_meta['type']:
+        if 'hidden' in self._site_type:
             plot_images = False
         return plot_images
 
@@ -355,6 +354,14 @@ def _unzip_gz_files(full_paths: list) -> str:
                 with open(filename, 'wb') as file_out:
                     shutil.copyfileobj(file_in, file_out)
     return os.path.dirname(full_paths[0])
+
+
+def _read_site_info(args) -> tuple:
+    site_info = utils.read_site_info(args.site[0])
+    site_id = site_info['id']
+    site_type = site_info['type']
+    site_meta = {key: site_info[key] for key in ('latitude', 'longitude', 'altitude', 'name')}
+    return site_meta, site_id, site_type
 
 
 def _parse_args(args):

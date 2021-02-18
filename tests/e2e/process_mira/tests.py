@@ -34,7 +34,16 @@ class TestMIRAProcessing:
         assert nc.title == f'{self.product.capitalize()} file from Jülich'
         assert nc.cloudnet_file_type == self.product
         assert nc.Conventions == 'CF-1.7'
+        assert nc.source == 'METEK MIRA-35'
+        assert nc.references == 'https://doi.org/10.21105/joss.02123'
         assert hasattr(nc, 'pid') is False
+        nc.close()
+
+    def test_data_values(self):
+        nc = netCDF4.Dataset(self.full_path)
+        assert (nc.variables['latitude'][:] - 50.906) < 0.01
+        assert (nc.variables['longitude'][:] - 6.407) < 0.01
+        assert (nc.variables['altitude'][:] - 108) < 0.01
         nc.close()
 
     def test_that_calls_metadata_api(self):
