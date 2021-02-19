@@ -2,6 +2,7 @@
 from datetime import timedelta, datetime
 from typing import Union, Optional
 from os import path
+import re
 import requests
 
 
@@ -70,9 +71,9 @@ class MetadataApi:
         elif instrument is not None:
             metadata = self._select_by(metadata, 'instrument', instrument)
             if instrument == 'hatpro':
-                metadata = self._select_by_extension(metadata, '.lwp.nc')
+                metadata = self._select_by_pattern(metadata, 'lwp.*.nc$')
             if instrument == 'rpg-fmcw-94':
-                metadata = self._select_by_extension(metadata, '.lv1')
+                metadata = self._select_by_pattern(metadata, '.lv1$')
         return metadata
 
     @staticmethod
@@ -80,5 +81,5 @@ class MetadataApi:
         return [row for row in metadata if identifier in row and row[identifier]['id'] == value]
 
     @staticmethod
-    def _select_by_extension(metadata: list, extension: str) -> list:
-        return [row for row in metadata if row['filename'].lower().endswith(extension.lower())]
+    def _select_by_pattern(metadata: list, pattern: str) -> list:
+        return [row for row in metadata if re.search(pattern.lower(), row['filename'].lower())]
