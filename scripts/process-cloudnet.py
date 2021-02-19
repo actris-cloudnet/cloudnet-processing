@@ -71,8 +71,8 @@ def main(args, storage_session=requests.session()):
                     process.upload_product_and_images(temp_file.name, product, uuid,
                                                       product_type=identifier)
                     process.print_info(uuid)
-                except (RawDataMissingError, MiscError, HTTPError, ConnectionError,
-                        RuntimeError) as err:
+                except (RawDataMissingError, MiscError, HTTPError, ConnectionError, RuntimeError,
+                        KeyError) as err:
                     print(err)
         _clean_temp_dir()
 
