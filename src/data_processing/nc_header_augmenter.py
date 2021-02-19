@@ -1,7 +1,7 @@
 import shutil
 from tempfile import NamedTemporaryFile
 import netCDF4
-from cloudnetpy.utils import get_uuid, get_time
+from cloudnetpy.utils import get_uuid, get_time, seconds2date
 
 
 def fix_legacy_file(legacy_file_full_path: str, target_full_path: str) -> str:
@@ -30,7 +30,7 @@ def harmonize_nc_file(data: dict) -> str:
     if data['cloudnet_file_type'] == 'model':
         nc.year, nc.month, nc.day = _get_model_date(nc)
     if data['instrument'] == 'hatpro':
-        nc.year, nc.month, nc.day = _get_hatpro_date(data)
+        nc.year, nc.month, nc.day = _get_hatpro_date(data, nc_raw)
     if data['instrument'] == 'halo-doppler-lidar':
         nc.year, nc.month, nc.day = _get_halo_date(data)
         nc.renameVariable('height_asl', 'height')
@@ -45,13 +45,11 @@ def harmonize_nc_file(data: dict) -> str:
     return uuid
 
 
-def _get_hatpro_date(data: dict) -> tuple:
-    original_filename = data['original_filename']
-    year = f'20{original_filename[:2]}'
-    month = f'{original_filename[2:4]}'
-    day = f'{original_filename[4:6]}'
-    assert f'{year}-{month}-{day}' == data['date']
-    return year, month, day
+def _get_hatpro_date(data: dict, nc: netCDF4.Dataset) -> tuple:
+    time_stamps = nc.variables['time'][:]
+    for t in time_stamps[:-1]:
+        assert seconds2date(t)[:3] == data['date'].split('-')
+    return seconds2date(time_stamps[0])[:3]
 
 
 def _get_halo_date(data: dict) -> tuple:

@@ -30,7 +30,10 @@ def nc_file_with_pid(tmpdir_factory):
 def mwr_file(tmpdir_factory):
     file_name = tmpdir_factory.mktemp("data").join("201023.LWP.NC")
     root_grp = netCDF4.Dataset(file_name, "w", format="NETCDF3_CLASSIC")
-    root_grp.createDimension('time', 10)
+    root_grp.createDimension('time', None)
+    time = root_grp.createVariable('time', 'i4', ('time',))
+    time[:] = [625190101, 625190102, 625190103, 625190104, 625190105]
+    time.units = 'seconds since 1.1.2001, 00:00:00'
     root_grp.Conventions = 'CF-1.0'
     root_grp.close()
     return file_name
@@ -41,7 +44,7 @@ def model_file(tmpdir_factory):
     file_name = tmpdir_factory.mktemp("data").join("xkljslfksef")
     root_grp = netCDF4.Dataset(file_name, "w", format="NETCDF3_CLASSIC")
     root_grp.createDimension('time', 10)
-    time = root_grp.createVariable('time', 'f8')
+    time = root_grp.createVariable('time', 'f8', ('time',))
     time.units = 'hours since 2020-10-14 00:00:00 +00:00'
     root_grp.title = 'ECMWF single-site output over Bucharest'
     root_grp.location = ''
