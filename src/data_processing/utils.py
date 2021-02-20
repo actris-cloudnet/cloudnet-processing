@@ -205,6 +205,12 @@ def get_product_identifier(product: str) -> str:
     return product
 
 
+def get_level1b_type(instrument_id: str) -> str:
+    url = f"https://cloudnet.fmi.fi/api/instruments"
+    data = requests.get(url=url).json()
+    return [instru['type'] for instru in data if instrument_id == instru['id']][0]
+
+
 def get_model_identifier(filename: str) -> str:
     return filename.split('_')[-1][:-3]
 
