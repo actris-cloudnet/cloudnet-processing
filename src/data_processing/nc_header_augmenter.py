@@ -2,6 +2,7 @@ import shutil
 from tempfile import NamedTemporaryFile
 import netCDF4
 from cloudnetpy.utils import get_uuid, get_time, seconds2date
+from data_processing import utils
 
 
 def fix_legacy_file(legacy_file_full_path: str, target_full_path: str) -> str:
@@ -26,8 +27,9 @@ def harmonize_nc_file(data: dict) -> str:
     copy_file_contents(nc_raw, nc)
     uuid = data['uuid'] or get_uuid()
     nc.file_uuid = uuid
-    nc.cloudnet_file_type = data['cloudnet_file_type']
-    if data['cloudnet_file_type'] == 'model':
+    file_type = _get_file_type(data)
+    nc.cloudnet_file_type = file_type
+    if file_type == 'model':
         nc.year, nc.month, nc.day = _get_model_date(nc)
     if data['instrument'] == 'hatpro':
         nc.year, nc.month, nc.day = _get_hatpro_date(data, nc_raw)
@@ -37,12 +39,18 @@ def harmonize_nc_file(data: dict) -> str:
     nc.history = _get_history(nc)
     nc.location = _get_location(nc, data)
     nc.title = _get_title(nc)
-    if data['cloudnet_file_type'] in ('model', 'lidar'):  # HATPRO files contain multiple problems
+    if file_type in ('model', 'lidar'):  # HATPRO files contain multiple problems
         nc.Conventions = 'CF-1.7'
     nc.close()
     nc_raw.close()
     shutil.copy(temp_file.name, data['full_path'])
     return uuid
+
+
+def _get_file_type(data: dict) -> str:
+    if data['instrument'] is None:
+        return 'model'
+    return utils.get_level1b_type(data['instrument'])
 
 
 def _get_hatpro_date(data: dict, nc: netCDF4.Dataset) -> tuple:

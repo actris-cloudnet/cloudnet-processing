@@ -1,6 +1,6 @@
 """Metadata API for Cloudnet files."""
 from os import path
-from typing import Optional
+from typing import Optional, Tuple
 from tempfile import NamedTemporaryFile
 import requests
 from cloudnetpy.plotting import generate_figure, generate_legacy_figure
@@ -26,13 +26,14 @@ class StorageApi:
         return {'version': res.get('version', ''),
                 'size': int(res['size'])}
 
-    def download_raw_files(self, metadata: list, dir_name: str) -> list:
+    def download_raw_files(self, metadata: list, dir_name: str) -> Tuple[list, list]:
         """Download raw files."""
         urls = [path.join(self._url, 'cloudnet-upload', row['s3key']) for row in metadata]
         full_paths = [path.join(dir_name, row['filename']) for row in metadata]
         for args in zip(urls, full_paths):
             self._get(*args)
-        return full_paths
+        uuids = [row['uuid'] for row in metadata]
+        return full_paths, uuids
 
     def download_product(self, metadata: dict, dir_name: str) -> str:
         """Download a product."""
@@ -73,7 +74,8 @@ class StorageApi:
                     generate_figure(nc_file_full_path, [field], show=False,
                                     image_name=temp_file.name, max_y=max_alt, sub_title=False,
                                     title=False, dpi=120)
-            except (IndexError, ValueError, TypeError):
+            except (IndexError, ValueError, TypeError) as err:
+                print(err)
                 continue
             s3key = product_key.replace('.nc', f"-{uuid[:8]}-{field}.png")
             url = path.join(self._url, 'cloudnet-img', s3key)
