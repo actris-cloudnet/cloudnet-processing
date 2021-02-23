@@ -57,7 +57,8 @@ def _get_file_type(data: dict) -> str:
 
 def _get_hatpro_date(data: dict, nc: netCDF4.Dataset) -> tuple:
     time_stamps = nc.variables['time'][:]
-    for t in time_stamps[:-1]:
+    # Some of the last timestamps might go to next day. Deal with this later.
+    for t in time_stamps[:-10]:
         assert seconds2date(t)[:3] == data['date'].split('-')
     return seconds2date(time_stamps[0])[:3]
 
