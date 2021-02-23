@@ -33,6 +33,8 @@ def harmonize_nc_file(data: dict) -> str:
         nc.year, nc.month, nc.day = _get_model_date(nc)
     if data['instrument'] == 'hatpro':
         nc.year, nc.month, nc.day = _get_hatpro_date(data, nc_raw)
+        if 'LWP_data' in nc_raw.variables:
+            nc.renameVariable('LWP_data', 'LWP')
     if data['instrument'] == 'halo-doppler-lidar':
         nc.year, nc.month, nc.day = _get_halo_date(data)
         nc.renameVariable('height_asl', 'height')
