@@ -59,7 +59,8 @@ def _get_hatpro_date(data: dict, nc: netCDF4.Dataset) -> tuple:
     time_stamps = nc.variables['time'][:]
     # Some of the last timestamps might go to next day. Deal with this later.
     for t in time_stamps[:-10]:
-        assert seconds2date(t)[:3] == data['date'].split('-')
+        if seconds2date(t)[:3] != data['date'].split('-'):
+            raise RuntimeError('Bad HATPRO dates.')
     return seconds2date(time_stamps[0])[:3]
 
 
