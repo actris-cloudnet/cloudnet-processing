@@ -44,7 +44,7 @@ class TestMwr:
         self.data['full_path'] = mwr_file
         self.data['original_filename'] = os.path.basename(mwr_file)
         self.data['date'] = '2020-10-24'
-        with pytest.raises(AssertionError):
+        with pytest.raises(RuntimeError):
             nca.harmonize_nc_file(self.data)
 
 
@@ -55,7 +55,7 @@ class TestModel:
         'date': '2020-10-14',
         'uuid': None,
         'cloudnet_file_type': 'model',
-        'instrument': 'ecmwf',
+        'instrument': None,
     }
 
     def test_model_fix(self, model_file):

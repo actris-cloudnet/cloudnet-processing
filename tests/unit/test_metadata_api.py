@@ -79,31 +79,6 @@ class TestMetadataApi:
         with pytest.raises(requests.exceptions.HTTPError):
             md_api.put('s3key_fail', self.payload)
 
-    def test_screen_metadata(self):
-        metadata = [
-            {'instrument': {'id': 'chm15k', 'type': 'lidar'},
-             's3key': 'key1', 'filename': 'foo.nc'},
-            {'instrument': {'id': 'chm15k', 'type': 'radar'},
-             's3key': 'key2', 'filename': 'foo.nc'},
-            {'instrument': {'id': 'hatpro', 'type': 'mwr'},
-             's3key': 'key3', 'filename': 'foo.lwp.nc'},
-            {'instrument': {'id': 'chm15k', 'type': 'hatpro'},
-             's3key': 'key4', 'filename': 'foo.iwc.nc'},
-            {'model': {'id': 'ecmwf', 'optimumOrder': '1'},
-             's3key': 'key5', 'filename': 'foo.nc'},
-            {'model': {'id': 'icon', 'optimumOrder': '0'},
-             's3key': 'key6', 'filename': 'foo.nc'}
-        ]
-        md_api = metadata_api.MetadataApi(config, session)
-        assert md_api.screen_metadata(metadata, model='ecmwf')[0]['s3key'] == 'key5'
-        assert md_api.screen_metadata(metadata, model='icon')[0]['s3key'] == 'key6'
-        meta = md_api.screen_metadata(metadata, instrument='chm15k')
-        for row, key in zip(meta, ('key1', 'key2', 'key4')):
-            assert key == row['s3key']
-        assert md_api.screen_metadata(metadata, instrument='hatpro')[0]['s3key'] == 'key3'
-        assert md_api.screen_metadata(metadata, instrument='xyz') == []
-        assert md_api.screen_metadata(metadata, model='xyz') == []
-
     def test_calls_files_with_proper_params_and_parses_response_correctly(self):
         for end_point in ('files', 'model-files'):
             url = f'{mock_addr}api/{end_point}(.*?)'

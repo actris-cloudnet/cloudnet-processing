@@ -32,7 +32,7 @@ def mwr_file(tmpdir_factory):
     root_grp = netCDF4.Dataset(file_name, "w", format="NETCDF3_CLASSIC")
     root_grp.createDimension('time', None)
     time = root_grp.createVariable('time', 'i4', ('time',))
-    time[:] = [625190101, 625190102, 625190103, 625190104, 625190105]
+    time[:] = [625190101, 625190102, 625190103, 625190104, 625190105] + 6*[626190105]  # Last timestamps are not validated
     time.units = 'seconds since 1.1.2001, 00:00:00'
     root_grp.Conventions = 'CF-1.0'
     root_grp.close()
