@@ -13,12 +13,23 @@ class Server(BaseHTTPRequestHandler):
     def do_HEAD(self):
         self._set_headers(200)
 
-    def do_POST(self, code=200):
+    def do_POST(self, code=200, separate_product_responses=False):
 
         root = argv[1]
 
-        # Ignore params
-        self.path = self.path.split('?')[0]
+        # Separate response for each ?product query
+        if separate_product_responses and '&product=' in self.path:
+            ind1 = self.path.index('&product=') + len('&product=')
+            try:
+                ind2 = self.path[ind1:].index('&')
+            except ValueError:
+                ind2 = len(self.path[ind1:])
+            product = self.path[ind1:ind1+ind2]
+            folder = f'/?product={product}'
+        else:
+            folder = ''
+
+        self.path = self.path.split('?')[0] + folder
 
         # Connection refused if request not read
         if 'Content-Length' in self.headers:
@@ -42,7 +53,7 @@ class Server(BaseHTTPRequestHandler):
         return self.do_POST(code=201)
 
     def do_GET(self):
-        return self.do_POST()
+        return self.do_POST(code=200, separate_product_responses=True)
 
     def do_DELETE(self):
         return self.do_POST()
