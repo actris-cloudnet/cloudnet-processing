@@ -1,6 +1,7 @@
 import netCDF4
 from os import path
 from data_processing import utils
+from test_utils.utils import count_strings
 import pytest
 
 SCRIPT_PATH = path.dirname(path.realpath(__file__))
@@ -10,7 +11,7 @@ class TestRPGFMCW94Processing:
 
     product = 'radar'
     instrument = 'rpg-fmcw-94'
-    images = utils.get_fields_for_plot(product)[0]
+    n_img = len(utils.get_fields_for_plot(product)[0])
 
     @pytest.fixture(autouse=True)
     def _fetch_params(self, params):
@@ -40,16 +41,28 @@ class TestRPGFMCW94Processing:
     def test_that_calls_metadata_api(self):
         f = open(f'{SCRIPT_PATH}/md.log')
         data = f.readlines()
-        n_img = len(self.images)
-        n_gets = 2
-        n_puts = 1
-        n_posts = 2
-        assert len(data) == n_gets + n_puts + n_img + n_posts
-        suffix = 'dateFrom=2020-10-22&dateTo=2020-10-22&site=bucharest'
-        assert f'GET /api/files?{suffix}' in data[0]
-        assert f'GET /upload-metadata?{suffix}' in data[1]
-        assert f'PUT /files/20201022_bucharest_{self.instrument}.nc HTTP/1.1" 201' in data[2]
-        for row in data[3:3+n_img]:
-            assert f'PUT /visualizations/20201022_bucharest_{self.instrument}' in row
-        for row in data[3+n_img:]:
-            assert f'POST /upload-metadata HTTP/1.1" 200' in row
+        n_raw_files = 2
+        n_gets = 2  # product check + rpg-fmcw-94 raw
+        n_puts = 1 + self.n_img  # file + images
+        n_posts = n_raw_files
+
+        assert len(data) == n_gets + n_puts + n_posts
+
+        # Check product status
+        assert '"GET /api/files?dateFrom=2020-10-22&dateTo=2020-10-22&site=bucharest' \
+               '&developer=True&product=radar&showLegacy=True HTTP/1.1" 200 -' in data[0]
+
+        # GET RPG raw data
+        assert '"GET /upload-metadata?dateFrom=2020-10-22&dateTo=2020-10-22&site=bucharest' \
+               '&developer=True&instrument=rpg-fmcw-94 HTTP/1.1" 200 -' in data[1]
+
+        # PUT file
+        assert '"PUT /files/20201022_bucharest_rpg-fmcw-94.nc HTTP/1.1" 201 -' in data[2]
+
+        # PUT images
+        img_put = '"PUT /visualizations/20201022_bucharest_rpg-fmcw-94-'
+        assert count_strings(data, img_put) == self.n_img
+
+        # POST metadata
+        file_post = '"POST /upload-metadata HTTP/1.1" 200 -'
+        assert count_strings(data, file_post) == n_raw_files

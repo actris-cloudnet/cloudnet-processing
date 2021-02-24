@@ -88,3 +88,11 @@ def start_server(port, document_root, log_path):
     wait_for_port(port)
 
     return md_server
+
+
+def count_strings(data: list, string: str) -> int:
+    n = 0
+    for row in data:
+        if string in row:
+            n += 1
+    return n

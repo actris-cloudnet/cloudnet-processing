@@ -114,33 +114,33 @@ class Process:
     def process_mwr(self, uuid: Uuid) -> Tuple[Uuid, str]:
         instrument = 'hatpro'
         try:
-            full_paths, raw_uuids = self._download(instrument, '.lwp$')
+            full_paths, raw_uuids = self._download_instrument(instrument, '.lwp$')
             uuid.product, valid_full_paths = hatpro2nc(temp_dir.name, temp_file.name,
                                                        self.site_meta, uuid=uuid.volatile,
                                                        date=self.date_str)
             uuid.raw = _get_valid_uuids(raw_uuids, full_paths, valid_full_paths)
         except RawDataMissingError:
-            full_path, uuid.raw = self._download(instrument, '.lwp.*.nc$', largest_only=True)
+            full_path, uuid.raw = self._download_instrument(instrument, '.lwp.*.nc$', True)
             uuid.product = self._fix_calibrated_daily_file(uuid, full_path, instrument=instrument)
         return uuid, instrument
 
     def process_radar(self, uuid: Uuid) -> Tuple[Uuid, str]:
         try:
             instrument = 'rpg-fmcw-94'
-            full_paths, raw_uuids = self._download(instrument, '.lv1$')
+            full_paths, raw_uuids = self._download_instrument(instrument, '.lv1$')
             uuid.product, valid_full_paths = rpg2nc(temp_dir.name, temp_file.name, self.site_meta,
                                                     uuid=uuid.volatile, date=self.date_str)
             uuid.raw = _get_valid_uuids(raw_uuids, full_paths, valid_full_paths)
         except RawDataMissingError:
             try:
                 instrument = 'mira'
-                full_paths, uuid.raw = self._download(instrument)
+                full_paths, uuid.raw = self._download_instrument(instrument)
                 dir_name = _unzip_gz_files(full_paths)
                 uuid.product = mira2nc(dir_name, temp_file.name, self.site_meta, uuid=uuid.volatile,
                                        date=self.date_str)
             except RawDataMissingError:
                 instrument = 'basta'
-                full_path, uuid.raw = self._download(instrument, largest_only=True)
+                full_path, uuid.raw = self._download_instrument(instrument, largest_only=True)
                 uuid.product = basta2nc(full_path, temp_file.name, self.site_meta,
                                         uuid=uuid.volatile, date=self.date_str)
         return uuid, instrument
@@ -149,7 +149,7 @@ class Process:
         try:
             instrument = 'chm15k'
             raw_daily_file = NamedTemporaryFile(suffix='.nc')
-            full_paths, raw_uuids = self._download(instrument)
+            full_paths, raw_uuids = self._download_instrument(instrument)
             valid_full_paths = concat_wrapper.concat_chm15k_files(full_paths, self.date_str,
                                                                   raw_daily_file.name)
             uuid.raw = _get_valid_uuids(raw_uuids, full_paths, valid_full_paths)
@@ -157,10 +157,10 @@ class Process:
             try:
                 instrument = 'cl51'
                 raw_daily_file = NamedTemporaryFile(suffix='.DAT')
-                full_path, uuid.raw = self._download(instrument, largest_only=True)
+                full_path, uuid.raw = self._download_instrument(instrument, largest_only=True)
             except RawDataMissingError:
                 instrument = 'halo-doppler-lidar'
-                full_path, uuid.raw = self._download(instrument, largest_only=True)
+                full_path, uuid.raw = self._download_instrument(instrument, largest_only=True)
                 uuid.product = self._fix_calibrated_daily_file(uuid, full_path)
                 raw_daily_file = None
 
@@ -216,6 +216,8 @@ class Process:
             payload = self._get_payload(product=product)
             payload['showLegacy'] = True
         metadata = self._md_api.get(f'api/{end_point}', payload)
+
+        assert len(metadata) <= 1
         if metadata:
             if not metadata[0]['volatile'] and not self.is_reprocess:
                 raise MiscError('Existing freezed file and no "reprocess" flag')
@@ -273,10 +275,10 @@ class Process:
     def print_info(self, uuid: Uuid) -> None:
         print(f'Created: {"New version" if self._is_new_version(uuid) else "Volatile file"}')
 
-    def _download(self,
-                  instrument: str,
-                  pattern: Optional[str] = None,
-                  largest_only: Optional[bool] = False) -> Tuple[Union[list, str], list]:
+    def _download_instrument(self,
+                             instrument: str,
+                             pattern: Optional[str] = None,
+                             largest_only: Optional[bool] = False) -> Tuple[Union[list, str], list]:
         payload = self._get_payload(instrument=instrument)
         upload_metadata = self._md_api.get('upload-metadata', payload)
         if pattern is not None:

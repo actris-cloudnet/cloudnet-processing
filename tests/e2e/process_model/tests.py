@@ -2,6 +2,7 @@ from os import path
 import pytest
 import netCDF4
 from data_processing import utils
+from test_utils.utils import count_strings
 
 SCRIPT_PATH = path.dirname(path.realpath(__file__))
 
@@ -9,7 +10,6 @@ SCRIPT_PATH = path.dirname(path.realpath(__file__))
 class TestModelProcessing:
 
     product = 'model'
-    instrument = 'ecmwf'
     images = utils.get_fields_for_plot(product)[0]
 
     @pytest.fixture(autouse=True)
@@ -20,7 +20,6 @@ class TestModelProcessing:
     def test_that_reports_volatile_file_creation(self):
         assert 'Created: Volatile file' in self.output
 
-    @pytest.mark.reprocess
     def test_that_has_correct_attributes(self):
         nc = netCDF4.Dataset(self.full_path)
         assert nc.year == '2020'
@@ -36,35 +35,31 @@ class TestModelProcessing:
         f = open(f'{SCRIPT_PATH}/md.log')
         data = f.readlines()
 
-        n_valid_metadata = 2
+        n_gets = 3
+        n_file_puts = 1
+        n_img_puts = len(self.images)
+        n_metadata_posts = 1
 
-        n_upload_gets = 1 + n_valid_metadata  # +1 because of initial check for valid models
-        n_file_puts = n_valid_metadata
-        n_metadata_posts = n_valid_metadata
-        n_img_puts = len(self.images) * n_valid_metadata - 1  # -1 because of gdas1
-        n_api_files_gets = n_valid_metadata
+        assert len(data) == n_gets + n_file_puts + n_img_puts + n_metadata_posts
 
-        assert len(data) == (n_upload_gets + n_file_puts + n_metadata_posts
-                             + n_img_puts + n_api_files_gets)
+        # Check existing (not-processed) model metadata for the whole period
+        assert '"GET /upload-model-metadata?site=bucharest&dateFrom=2020-10-22&dateTo=2020-10-23' \
+               '&status=uploaded HTTP/1.1" 200 -' in data[0]
 
-        def count_strings(string: str, n_expected: int):
-            n = 0
-            for row in data:
-                if string in row:
-                    n += 1
-            assert n == n_expected
+        # Check product status
+        assert '"GET /api/model-files?dateFrom=2020-10-22&dateTo=2020-10-22&site=bucharest' \
+               '&developer=True&model=ecmwf HTTP/1.1" 200 -' in data[1]
 
-        s = '"GET /api/model-files?dateFrom=2020-10-22&dateTo=2020-10-22&site=bucharest&developer=True&model='
-        count_strings(s, n_valid_metadata)
+        # GET certain day / model
+        assert '"GET /upload-model-metadata?dateFrom=2020-10-22&dateTo=2020-10-22&site=bucharest' \
+               '&developer=True&model=ecmwf HTTP/1.1" 200 -' in data[2]
 
-        s = '"PUT /visualizations/20201022_bucharest_'
-        count_strings(s, n_img_puts)
+        # PUT file
+        assert '"PUT /files/20201022_bucharest_ecmwf.nc HTTP/1.1" 201 -' in data[3]
 
-        s = '"POST /upload-metadata HTTP/1.1" 200'
-        count_strings(s, n_metadata_posts)
+        # PUT images
+        img_put = '"PUT /visualizations/20201022_bucharest_ecmwf-'
+        assert count_strings(data, img_put) == n_img_puts
 
-        s = '"GET /upload-metadata?dateFrom=2020-10-22&dateTo=2020-10-22&site=bucharest&developer=True HTTP/1.1" 200'
-        count_strings(s, n_upload_gets - 1)
-
-        s = '"PUT /files/20201022_bucharest_'
-        count_strings(s, n_file_puts)
+        # POST metadata
+        assert '"POST /upload-metadata HTTP/1.1" 200 -' in data[-1]

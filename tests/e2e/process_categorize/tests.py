@@ -2,6 +2,7 @@ import pytest
 import netCDF4
 from os import path
 from data_processing import utils
+from test_utils.utils import count_strings
 
 SCRIPT_PATH = path.dirname(path.realpath(__file__))
 
@@ -9,13 +10,12 @@ SCRIPT_PATH = path.dirname(path.realpath(__file__))
 class TestCategorizeProcessing:
 
     product = 'categorize'
-    images = utils.get_fields_for_plot(product)[0]
+    n_img = len(utils.get_fields_for_plot(product)[0])
 
     @pytest.fixture(autouse=True)
     def _fetch_params(self, params):
         self.full_path = params['full_path']
 
-    @pytest.mark.reprocess
     def test_that_has_correct_attributes(self):
         nc = netCDF4.Dataset(self.full_path)
         assert nc.year == '2020'
@@ -39,14 +39,23 @@ class TestCategorizeProcessing:
     def test_that_calls_metadata_api(self):
         f = open(f'{SCRIPT_PATH}/md.log')
         data = f.readlines()
-        n_img = len(self.images)
         n_gets = len(utils.get_product_types(level=1)) + 1
         n_puts = 1
-        assert len(data) == n_gets + n_img + n_puts
-        suffix = 'dateFrom=2020-10-22&dateTo=2020-10-22&site=bucharest&developer=True'
-        assert f'GET /api/files?{suffix}&showLegacy=True HTTP/1.1" 200' in data[0]
-        for row in data[1:n_gets]:
-            assert f'GET /api/files?{suffix} HTTP/1.1" 200' in row or f'GET /api/model-files?{suffix} HTTP/1.1" 200' in row
-        assert f'PUT /files/20201022_bucharest_{self.product}.nc HTTP/1.1" 201' in data[n_gets]
-        for row in data[n_gets+1:]:
-            assert f'PUT /visualizations/20201022_bucharest_{self.product}' in row
+        assert len(data) == n_gets + self.n_img + n_puts
+
+        # Check product status
+        assert '"GET /api/files?dateFrom=2020-10-22&dateTo=2020-10-22&site=bucharest' \
+               '&developer=True&product=categorize&showLegacy=True HTTP/1.1" 200 -' in data[0]
+
+        # GET input files
+        sub_str = 'dateFrom=2020-10-22&dateTo=2020-10-22&site=bucharest&developer=True'
+        for prod in ('radar', 'lidar', 'mwr'):
+            assert count_strings(data, f'"GET /api/files?{sub_str}&product={prod} HTTP/1.1" 200 -') == 1
+        assert count_strings(data, f'"GET /api/model-files?{sub_str} HTTP/1.1" 200 -') == 1
+
+        # PUT file
+        assert '"PUT /files/20201022_bucharest_categorize.nc HTTP/1.1" 201 -' in data[5]
+
+        # PUT images
+        img_put = '"PUT /visualizations/20201022_bucharest_categorize-'
+        assert count_strings(data, img_put) == self.n_img

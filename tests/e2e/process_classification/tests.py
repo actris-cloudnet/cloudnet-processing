@@ -2,6 +2,7 @@ from os import path
 import pytest
 import netCDF4
 from data_processing import utils
+from test_utils.utils import count_strings
 
 SCRIPT_PATH = path.dirname(path.realpath(__file__))
 
@@ -9,7 +10,7 @@ SCRIPT_PATH = path.dirname(path.realpath(__file__))
 class TestClassificationProcessing:
 
     product = 'classification'
-    images = utils.get_fields_for_plot(product)[0]
+    n_img = len(utils.get_fields_for_plot(product)[0])
 
     @pytest.fixture(autouse=True)
     def _fetch_params(self, params):
@@ -19,7 +20,6 @@ class TestClassificationProcessing:
     def test_that_reports_volatile_file_creation(self):
         assert 'Created: Volatile file' in self.output
 
-    @pytest.mark.reprocess
     def test_that_has_correct_attributes(self):
         nc = netCDF4.Dataset(self.full_path)
         assert nc.year == '2020'
@@ -34,14 +34,21 @@ class TestClassificationProcessing:
     def test_that_calls_metadata_api(self):
         f = open(f'{SCRIPT_PATH}/md.log')
         data = f.readlines()
-        n_img = len(self.images)
         n_gets = 2
         n_puts = 1
-        assert len(data) == n_gets + n_puts + n_img
-        suffix = 'dateFrom=2020-10-22&dateTo=2020-10-22&site=bucharest&developer=True'
-        assert f'GET /api/files?{suffix}&showLegacy=True HTTP/1.1" 200' in data[0]
-        for row in data[1:n_gets]:
-            assert f'GET /api/files?{suffix} HTTP/1.1" 200' in row
-        assert f'PUT /files/20201022_bucharest_{self.product}.nc' in data[n_gets]
-        for row in data[n_gets+1:]:
-            assert f'PUT /visualizations/20201022_bucharest_{self.product}' in row
+        assert len(data) == n_gets + n_puts + self.n_img
+
+        # Check product status
+        assert '"GET /api/files?dateFrom=2020-10-22&dateTo=2020-10-22&site=bucharest' \
+               '&developer=True&product=classification&showLegacy=True HTTP/1.1" 200 -' in data[0]
+
+        # GET input file
+        assert '"GET /api/files?dateFrom=2020-10-22&dateTo=2020-10-22&site=bucharest' \
+               '&developer=True&product=categorize HTTP/1.1" 200 -' in data[1]
+
+        # PUT file
+        assert '"PUT /files/20201022_bucharest_classification.nc HTTP/1.1" 201 -' in data[2]
+
+        # PUT images
+        img_put = '"PUT /visualizations/20201022_bucharest_classification-'
+        assert count_strings(data, img_put) == self.n_img

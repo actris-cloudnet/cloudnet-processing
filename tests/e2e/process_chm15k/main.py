@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import subprocess
-import os
 from os import path
 import sys
 import re
@@ -45,6 +44,9 @@ def main():
 
     # This should fail because we have existing stable product:
     _process(extra_pytest_args=('-m', 'first_run'))
+
+    # Reset log file
+    open(f'{SCRIPT_PATH}/md.log', 'w').close()
 
     # Processes new version:
     _process(extra_main_args=['-r'], extra_pytest_args=('-m', 'reprocess'))

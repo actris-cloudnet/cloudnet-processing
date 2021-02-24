@@ -39,13 +39,7 @@ def register_storage_urls(temp_file):
 
 def main():
     utils.start_server(5000, 'tests/data/server/metadata/process_model', f'{SCRIPT_PATH}/md.log')
-
-    # Processes new volatile files of ALL existing raw model files
-    # (one of them has existing volatile file):
     _process()
-
-    # Should work identically with -reprocess flag:
-    _process(main_extra_args=('-r',))
 
 
 def _process(main_extra_args=()):

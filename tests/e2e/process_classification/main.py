@@ -40,10 +40,6 @@ def main():
     # Processes new volatile file (no prior file):
     _process()
 
-    # Should work identically with -reprocess flag:
-    _process(main_extra_args=('-r',))
-
-
 def _process(main_extra_args=()):
     with open(f'{SCRIPT_PATH}/md.log', 'w'):
         pass
