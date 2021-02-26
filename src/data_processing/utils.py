@@ -1,12 +1,12 @@
 import datetime
 import configparser
 import hashlib
-import requests
+import base64
 from typing import Tuple, Union, Optional
+import netCDF4
+import requests
 from cloudnetpy.utils import get_time
 from cloudnetpy.plotting.plot_meta import ATTRIBUTES as ATTR
-import base64
-import netCDF4
 
 
 def create_product_put_payload(full_path: str,
