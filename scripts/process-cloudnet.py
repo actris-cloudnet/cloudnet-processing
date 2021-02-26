@@ -108,7 +108,7 @@ class Process:
         payload = self._get_payload(model=model)
         upload_metadata = self._md_api.get('upload-model-metadata', payload)
         full_path, uuid.raw = self._download_raw_files(upload_metadata, True)
-        uuid.product = self._fix_calibrated_daily_file(uuid, full_path)
+        uuid.product = self._fix_calibrated_daily_file(uuid, full_path, model=model)
         return uuid
 
     def process_mwr(self, uuid: Uuid) -> Tuple[Uuid, str]:
@@ -161,7 +161,7 @@ class Process:
             except RawDataMissingError:
                 instrument = 'halo-doppler-lidar'
                 full_path, uuid.raw = self._download_instrument(instrument, largest_only=True)
-                uuid.product = self._fix_calibrated_daily_file(uuid, full_path)
+                uuid.product = self._fix_calibrated_daily_file(uuid, full_path, instrument=instrument)
                 raw_daily_file = None
 
         if instrument != 'halo-doppler-lidar':
@@ -303,13 +303,15 @@ class Process:
     def _fix_calibrated_daily_file(self,
                                    uuid: Uuid,
                                    full_path: str,
-                                   instrument: Optional[str] = None) -> str:
+                                   instrument: Optional[str] = None,
+                                   model: Optional[str] = None) -> str:
         data = {
             'site_name': self._site,
             'date': self.date_str,
             'uuid': uuid.volatile,
             'full_path': full_path,
             'instrument': instrument,
+            'model': model
             }
         uuid_product = nc_header_augmenter.harmonize_nc_file(data)
         return uuid_product

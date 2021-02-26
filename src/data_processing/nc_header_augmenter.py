@@ -3,6 +3,7 @@ from tempfile import NamedTemporaryFile
 import netCDF4
 from cloudnetpy.utils import get_uuid, get_time, seconds2date
 from data_processing import utils
+from data_processing.utils import MiscError
 
 
 def fix_legacy_file(legacy_file_full_path: str, target_full_path: str) -> str:
@@ -30,6 +31,12 @@ def harmonize_nc_file(data: dict) -> str:
     file_type = _get_file_type(data)
     nc.cloudnet_file_type = file_type
     if file_type == 'model':
+        try:
+            _check_time_dimension(nc_raw, data)
+        except ValueError:
+            nc.close()
+            nc_raw.close()
+            raise MiscError('Incomplete model file.')
         nc.year, nc.month, nc.day = _get_model_date(nc)
     if data['instrument'] == 'hatpro':
         nc.year, nc.month, nc.day = _get_hatpro_date(data, nc_raw)
@@ -47,6 +54,32 @@ def harmonize_nc_file(data: dict) -> str:
     nc_raw.close()
     shutil.copy(temp_file.name, data['full_path'])
     return uuid
+
+
+def copy_file_contents(source: netCDF4.Dataset, target: netCDF4.Dataset) -> None:
+    for key, dimension in source.dimensions.items():
+        target.createDimension(key, dimension.size)
+    for var_name, variable in source.variables.items():
+        var_out = target.createVariable(var_name, variable.datatype, variable.dimensions,
+                                        zlib=True)
+        attr = {k: variable.getncattr(k) for k in variable.ncattrs()}
+        if '_FillValue' in attr:
+            del attr['_FillValue']
+        var_out.setncatts(attr)
+        var_out[:] = variable[:]
+    for attr_name in source.ncattrs():
+        setattr(target, attr_name, source.getncattr(attr_name))
+
+
+def _check_time_dimension(nc: netCDF4.Dataset, data: dict) -> None:
+    n_time_steps = len(nc.dimensions['time'])
+    n_steps_expected = [
+        ('ecmwf', 25),
+        ('gdas1', 9)
+    ]
+    for model, n_steps in n_steps_expected:
+        if model == data['model'] and n_time_steps != n_steps:
+            raise ValueError
 
 
 def _get_file_type(data: dict) -> str:
@@ -77,21 +110,6 @@ def _get_model_date(nc: netCDF4.Dataset) -> list:
     date_string = nc.variables['time'].units
     the_date = date_string.split()[2]
     return the_date.split('-')
-
-
-def copy_file_contents(source: netCDF4.Dataset, target: netCDF4.Dataset) -> None:
-    for key, dimension in source.dimensions.items():
-        target.createDimension(key, dimension.size)
-    for var_name, variable in source.variables.items():
-        var_out = target.createVariable(var_name, variable.datatype, variable.dimensions,
-                                        zlib=True)
-        attr = {k: variable.getncattr(k) for k in variable.ncattrs()}
-        if '_FillValue' in attr:
-            del attr['_FillValue']
-        var_out.setncatts(attr)
-        var_out[:] = variable[:]
-    for attr_name in source.ncattrs():
-        setattr(target, attr_name, source.getncattr(attr_name))
 
 
 def _get_history(nc: netCDF4.Dataset) -> str:

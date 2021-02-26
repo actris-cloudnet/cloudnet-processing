@@ -1,6 +1,7 @@
 import netCDF4
 import os
 from data_processing import nc_header_augmenter as nca
+from data_processing.utils import MiscError
 import pytest
 
 
@@ -10,8 +11,8 @@ class TestMwr:
         'site_name': 'bucharest',
         'date': '2020-10-23',
         'uuid': None,
-        'cloudnet_file_type': 'mwr',
         'instrument': 'hatpro',
+        'model': None
     }
 
     def test_standard_fix(self, mwr_file):
@@ -54,8 +55,8 @@ class TestModel:
         'site_name': 'bucharest',
         'date': '2020-10-14',
         'uuid': None,
-        'cloudnet_file_type': 'model',
         'instrument': None,
+        'model': 'ecmwf'
     }
 
     def test_model_fix(self, model_file):
@@ -72,6 +73,13 @@ class TestModel:
         assert nc.Conventions == 'CF-1.7'
         nc.close()
 
+    def test_bad_model_file(self, bad_gdas1_file):
+        self.data['full_path'] = bad_gdas1_file
+        self.data['original_filename'] = os.path.basename(bad_gdas1_file)
+        self.data['model'] = 'gdas1'
+        with pytest.raises(MiscError):
+            nca.harmonize_nc_file(self.data)
+
 
 class TestHalo:
 
@@ -79,7 +87,6 @@ class TestHalo:
         'site_name': 'hyytiala',
         'date': '2020-10-14',
         'uuid': None,
-        'cloudnet_file_type': 'lidar',
         'instrument': 'halo-doppler-lidar',
     }
 

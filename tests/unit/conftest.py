@@ -43,10 +43,25 @@ def mwr_file(tmpdir_factory):
 def model_file(tmpdir_factory):
     file_name = tmpdir_factory.mktemp("data").join("xkljslfksef")
     root_grp = netCDF4.Dataset(file_name, "w", format="NETCDF3_CLASSIC")
-    root_grp.createDimension('time', 10)
+    root_grp.createDimension('time', 25)
     time = root_grp.createVariable('time', 'f8', ('time',))
     time.units = 'hours since 2020-10-14 00:00:00 +00:00'
     root_grp.title = 'ECMWF single-site output over Bucharest'
+    root_grp.location = ''
+    root_grp.history = 'Model history'
+    root_grp.Conventions = 'CF-1.0'
+    root_grp.close()
+    return file_name
+
+
+@pytest.fixture(scope='session')
+def bad_gdas1_file(tmpdir_factory):
+    file_name = tmpdir_factory.mktemp("data").join("xkljslfksef")
+    root_grp = netCDF4.Dataset(file_name, "w", format="NETCDF3_CLASSIC")
+    root_grp.createDimension('time', 1)
+    time = root_grp.createVariable('time', 'f8', ('time',))
+    time.units = 'hours since 2020-10-14 00:00:00 +00:00'
+    root_grp.title = 'GDAS1 single-site output over Bucharest'
     root_grp.location = ''
     root_grp.history = 'Model history'
     root_grp.Conventions = 'CF-1.0'
