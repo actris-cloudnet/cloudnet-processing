@@ -13,12 +13,12 @@ class Server(BaseHTTPRequestHandler):
     def do_HEAD(self):
         self._set_headers(200)
 
-    def do_POST(self, code=200):
+    def do_POST(self, code=200, separate_product_responses=False):
 
         root = argv[1]
 
-        # Ignore params
-        self.path = self.path.split('?')[0]
+        folder = self._get_product_folder(separate_product_responses)
+        self.path = self.path.split('?')[0] + folder
 
         # Connection refused if request not read
         if 'Content-Length' in self.headers:
@@ -42,7 +42,7 @@ class Server(BaseHTTPRequestHandler):
         return self.do_POST(code=201)
 
     def do_GET(self):
-        return self.do_POST()
+        return self.do_POST(separate_product_responses=True)
 
     def do_DELETE(self):
         return self.do_POST()
@@ -57,6 +57,18 @@ class Server(BaseHTTPRequestHandler):
         except FileNotFoundError:
             return None
         return file
+
+    def _get_product_folder(self, separate_product_responses: bool):
+        prefix = '&product='
+        if separate_product_responses and prefix in self.path:
+            ind1 = self.path.index(prefix) + len(prefix)
+            try:
+                ind2 = self.path[ind1:].index('&')
+            except ValueError:
+                ind2 = len(self.path[ind1:])
+            product = self.path[ind1:ind1+ind2]
+            return f'/?product={product}'
+        return ''
 
 
 def run(server_class=HTTPServer, handler_class=Server):

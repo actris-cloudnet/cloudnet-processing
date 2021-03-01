@@ -2,6 +2,8 @@ import shutil
 from tempfile import NamedTemporaryFile
 import netCDF4
 from cloudnetpy.utils import get_uuid, get_time, seconds2date
+from data_processing import utils
+from data_processing.utils import MiscError
 
 
 def fix_legacy_file(legacy_file_full_path: str, target_full_path: str) -> str:
@@ -26,18 +28,27 @@ def harmonize_nc_file(data: dict) -> str:
     copy_file_contents(nc_raw, nc)
     uuid = data['uuid'] or get_uuid()
     nc.file_uuid = uuid
-    nc.cloudnet_file_type = data['cloudnet_file_type']
-    if data['cloudnet_file_type'] == 'model':
+    file_type = _get_file_type(data)
+    nc.cloudnet_file_type = file_type
+    if file_type == 'model':
+        try:
+            _check_time_dimension(nc_raw, data)
+        except ValueError:
+            nc.close()
+            nc_raw.close()
+            raise MiscError('Incomplete model file.')
         nc.year, nc.month, nc.day = _get_model_date(nc)
     if data['instrument'] == 'hatpro':
         nc.year, nc.month, nc.day = _get_hatpro_date(data, nc_raw)
+        if 'LWP_data' in nc_raw.variables:
+            nc.renameVariable('LWP_data', 'LWP')
     if data['instrument'] == 'halo-doppler-lidar':
         nc.year, nc.month, nc.day = _get_halo_date(data)
         nc.renameVariable('height_asl', 'height')
     nc.history = _get_history(nc)
     nc.location = _get_location(nc, data)
     nc.title = _get_title(nc)
-    if data['cloudnet_file_type'] in ('model', 'lidar'):  # HATPRO files contain multiple problems
+    if file_type in ('model', 'lidar'):  # HATPRO files contain multiple problems
         nc.Conventions = 'CF-1.7'
     nc.close()
     nc_raw.close()
@@ -45,10 +56,44 @@ def harmonize_nc_file(data: dict) -> str:
     return uuid
 
 
+def copy_file_contents(source: netCDF4.Dataset, target: netCDF4.Dataset) -> None:
+    for key, dimension in source.dimensions.items():
+        target.createDimension(key, dimension.size)
+    for var_name, variable in source.variables.items():
+        var_out = target.createVariable(var_name, variable.datatype, variable.dimensions,
+                                        zlib=True)
+        attr = {k: variable.getncattr(k) for k in variable.ncattrs()}
+        if '_FillValue' in attr:
+            del attr['_FillValue']
+        var_out.setncatts(attr)
+        var_out[:] = variable[:]
+    for attr_name in source.ncattrs():
+        setattr(target, attr_name, source.getncattr(attr_name))
+
+
+def _check_time_dimension(nc: netCDF4.Dataset, data: dict) -> None:
+    n_time_steps = len(nc.dimensions['time'])
+    n_steps_expected = [
+        ('ecmwf', 25),
+        ('gdas1', 9)
+    ]
+    for model, n_steps in n_steps_expected:
+        if model == data['model'] and n_time_steps != n_steps:
+            raise ValueError
+
+
+def _get_file_type(data: dict) -> str:
+    if data['instrument'] is None:
+        return 'model'
+    return utils.get_level1b_type(data['instrument'])
+
+
 def _get_hatpro_date(data: dict, nc: netCDF4.Dataset) -> tuple:
     time_stamps = nc.variables['time'][:]
-    for t in time_stamps[:-1]:
-        assert seconds2date(t)[:3] == data['date'].split('-')
+    # Some of the last timestamps might go to next day. Deal with this later.
+    for t in time_stamps[:-10]:
+        if seconds2date(t)[:3] != data['date'].split('-'):
+            raise RuntimeError('Bad HATPRO dates.')
     return seconds2date(time_stamps[0])[:3]
 
 
@@ -65,21 +110,6 @@ def _get_model_date(nc: netCDF4.Dataset) -> list:
     date_string = nc.variables['time'].units
     the_date = date_string.split()[2]
     return the_date.split('-')
-
-
-def copy_file_contents(source: netCDF4.Dataset, target: netCDF4.Dataset) -> None:
-    for key, dimension in source.dimensions.items():
-        target.createDimension(key, dimension.size)
-    for var_name, variable in source.variables.items():
-        var_out = target.createVariable(var_name, variable.datatype, variable.dimensions,
-                                        zlib=True)
-        attr = {k: variable.getncattr(k) for k in variable.ncattrs()}
-        if '_FillValue' in attr:
-            del attr['_FillValue']
-        var_out.setncatts(attr)
-        var_out[:] = variable[:]
-    for attr_name in source.ncattrs():
-        setattr(target, attr_name, source.getncattr(attr_name))
 
 
 def _get_history(nc: netCDF4.Dataset) -> str:

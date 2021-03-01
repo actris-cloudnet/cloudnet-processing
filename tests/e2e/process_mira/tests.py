@@ -2,6 +2,7 @@ import netCDF4
 from os import path
 from data_processing import utils
 import pytest
+from test_utils.utils import count_strings
 
 SCRIPT_PATH = path.dirname(path.realpath(__file__))
 
@@ -10,7 +11,7 @@ class TestMIRAProcessing:
 
     product = 'radar'
     instrument = 'mira'
-    images = utils.get_fields_for_plot(product)[0]
+    n_img = len(utils.get_fields_for_plot(product)[0])
 
     @pytest.fixture(autouse=True)
     def _fetch_params(self, params):
@@ -49,20 +50,31 @@ class TestMIRAProcessing:
     def test_that_calls_metadata_api(self):
         f = open(f'{SCRIPT_PATH}/md.log')
         data = f.readlines()
-        n_img = len(self.images)
-        n_gets = 3
-        n_puts = 1
-        n_posts = 2
-        date = '2021-01-27'
-        date2 = date.replace('-', '')
-        site = 'juelich'
-        assert len(data) == n_gets + n_puts + n_img + n_posts
-        suffix = f'dateFrom={date}&dateTo={date}&site={site}'
-        assert f'GET /api/files?{suffix}' in data[0]
-        assert f'GET /upload-metadata?{suffix}' in data[1]
-        assert f'GET /upload-metadata?{suffix}' in data[2]
-        assert f'PUT /files/{date2}_{site}_{self.instrument}.nc HTTP/1.1" 201' in data[3]
-        for row in data[4:4+n_img]:
-            assert f'PUT /visualizations/{date2}_{site}_{self.instrument}' in row
-        for row in data[4+n_img:]:
-            assert f'POST /upload-metadata HTTP/1.1" 200' in row
+        n_raw_files = 2
+        n_gets = 3  # product check + rpg-fmcw-94 raw + mira raw
+        n_puts = 1 + self.n_img  # file + images
+        n_posts = n_raw_files
+
+        assert len(data) == n_gets + n_puts + n_posts
+
+        prefix = '?dateFrom=2021-01-27&dateTo=2021-01-27&site=juelich&developer=True&'
+
+        # Check product status
+        assert f'"GET /api/files{prefix}product=radar&showLegacy=True HTTP/1.1" 200 -' in data[0]
+
+        # GET RPG raw data
+        assert f'"GET /upload-metadata{prefix}instrument=rpg-fmcw-94 HTTP/1.1" 200 -' in data[1]
+
+        # GET MIRA raw data
+        assert f'"GET /upload-metadata{prefix}instrument=mira HTTP/1.1" 200 -' in data[2]
+
+        # PUT file
+        assert '"PUT /files/20210127_juelich_mira.nc HTTP/1.1" 201 -' in data[3]
+
+        # PUT images
+        img_put = '"PUT /visualizations/20210127_juelich_mira-'
+        assert count_strings(data, img_put) == self.n_img
+
+        # POST metadata
+        file_put = '"POST /upload-metadata HTTP/1.1" 200 -'
+        assert count_strings(data, file_put) == n_raw_files

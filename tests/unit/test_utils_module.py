@@ -60,6 +60,16 @@ def test_get_plottable_variables_info():
     assert res == expected
 
 
+@pytest.mark.parametrize("instrument, file_type", [
+    ('hatpro', 'mwr'),
+    ('mira', 'radar'),
+    ('chm15k', 'lidar'),
+    ('parsivel', 'disdrometer'),
+])
+def test_get_level1b_type(instrument, file_type):
+    assert utils.get_level1b_type(instrument) == file_type
+
+
 def test_read_main_conf():
     Args = namedtuple('args', 'config_dir')
     args = Args(config_dir=f"{test_file_path}/../../config")

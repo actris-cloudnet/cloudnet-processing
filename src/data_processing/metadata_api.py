@@ -59,27 +59,4 @@ class MetadataApi:
         model_files = self.get('api/model-files', payload)
         return regular_files + model_files
 
-    def screen_metadata(self, metadata: list,
-                        instrument: Optional[str] = None,
-                        product: Optional[str] = None,
-                        model: Optional[str] = None) -> list:
-        """Return metadata suitable for processing."""
-        if product is not None:
-            metadata = self._select_by(metadata, 'product', product)
-        elif model is not None:
-            metadata = self._select_by(metadata, 'model', model)
-        elif instrument is not None:
-            metadata = self._select_by(metadata, 'instrument', instrument)
-            if instrument == 'hatpro':
-                metadata = self._select_by_pattern(metadata, 'lwp.*.nc$')
-            if instrument == 'rpg-fmcw-94':
-                metadata = self._select_by_pattern(metadata, '.lv1$')
-        return metadata
 
-    @staticmethod
-    def _select_by(metadata: list, identifier: str, value: str) -> list:
-        return [row for row in metadata if identifier in row and row[identifier]['id'] == value]
-
-    @staticmethod
-    def _select_by_pattern(metadata: list, pattern: str) -> list:
-        return [row for row in metadata if re.search(pattern.lower(), row['filename'].lower())]
