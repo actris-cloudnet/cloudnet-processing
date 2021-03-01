@@ -17,18 +17,7 @@ class Server(BaseHTTPRequestHandler):
 
         root = argv[1]
 
-        # Separate response for each ?product query
-        if separate_product_responses and '&product=' in self.path:
-            ind1 = self.path.index('&product=') + len('&product=')
-            try:
-                ind2 = self.path[ind1:].index('&')
-            except ValueError:
-                ind2 = len(self.path[ind1:])
-            product = self.path[ind1:ind1+ind2]
-            folder = f'/?product={product}'
-        else:
-            folder = ''
-
+        folder = self._get_product_folder(separate_product_responses)
         self.path = self.path.split('?')[0] + folder
 
         # Connection refused if request not read
@@ -53,7 +42,7 @@ class Server(BaseHTTPRequestHandler):
         return self.do_POST(code=201)
 
     def do_GET(self):
-        return self.do_POST(code=200, separate_product_responses=True)
+        return self.do_POST(separate_product_responses=True)
 
     def do_DELETE(self):
         return self.do_POST()
@@ -68,6 +57,18 @@ class Server(BaseHTTPRequestHandler):
         except FileNotFoundError:
             return None
         return file
+
+    def _get_product_folder(self, separate_product_responses: bool):
+        prefix = '&product='
+        if separate_product_responses and prefix in self.path:
+            ind1 = self.path.index(prefix) + len(prefix)
+            try:
+                ind2 = self.path[ind1:].index('&')
+            except ValueError:
+                ind2 = len(self.path[ind1:])
+            product = self.path[ind1:ind1+ind2]
+            return f'/?product={product}'
+        return ''
 
 
 def run(server_class=HTTPServer, handler_class=Server):
