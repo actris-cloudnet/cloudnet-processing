@@ -30,7 +30,7 @@ class ProcessBase:
                  config: dict,
                  storage_session):
         self.site_meta, self._site, self._site_type = _read_site_info(args)
-        self.is_reprocess = args.reprocess
+        self.is_reprocess = getattr(args, 'reprocess', False)
         self.date_str = None
         self._md_api = MetadataApi(config)
         self._storage_api = StorageApi(config, storage_session)
@@ -121,19 +121,4 @@ def add_default_arguments(parser):
                         metavar='/FOO/BAR',
                         help='Path to directory containing config files. Default: ./config.',
                         default='./config')
-    parser.add_argument('--start',
-                        type=str,
-                        metavar='YYYY-MM-DD',
-                        help='Starting date. Default is current day - 5 (included).',
-                        default=utils.get_date_from_past(5))
-    parser.add_argument('--stop',
-                        type=str,
-                        metavar='YYYY-MM-DD',
-                        help='Stopping date. Default is current day + 1 (excluded).',
-                        default=utils.get_date_from_past(-1))
-    parser.add_argument('-r', '--reprocess',
-                        action='store_true',
-                        help='Process new version of the stable files and reprocess volatile '
-                             'files.',
-                        default=False)
     return parser

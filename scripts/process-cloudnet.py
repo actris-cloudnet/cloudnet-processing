@@ -226,6 +226,21 @@ def _screen_by_filename(metadata: list, pattern: str) -> list:
 def _parse_args(args):
     parser = argparse.ArgumentParser(description='Process Cloudnet Level 1 and 2 data.')
     parser = processing_tools.add_default_arguments(parser)
+    parser.add_argument('--start',
+                        type=str,
+                        metavar='YYYY-MM-DD',
+                        help='Starting date. Default is current day - 5 (included).',
+                        default=utils.get_date_from_past(5))
+    parser.add_argument('--stop',
+                        type=str,
+                        metavar='YYYY-MM-DD',
+                        help='Stopping date. Default is current day + 1 (excluded).',
+                        default=utils.get_date_from_past(-1))
+    parser.add_argument('-r', '--reprocess',
+                        action='store_true',
+                        help='Process new version of the stable files and reprocess volatile '
+                             'files.',
+                        default=False)
     parser.add_argument('-p', '--products',
                         help='Products to be processed, e.g., radar,lidar,mwr,categorize,iwc',
                         type=lambda s: s.split(','),

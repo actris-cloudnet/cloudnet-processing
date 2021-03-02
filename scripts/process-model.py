@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Master script for CloudnetPy processing."""
+"""Master script for Cloudnet model processing."""
 import argparse
 import sys
 import warnings
@@ -7,7 +7,6 @@ from tempfile import NamedTemporaryFile
 from tempfile import TemporaryDirectory
 from typing import Union
 import requests
-from cloudnetpy.utils import date_range
 from requests.exceptions import HTTPError
 from data_processing import nc_header_augmenter
 from data_processing import utils
@@ -26,32 +25,30 @@ temp_dir = TemporaryDirectory()
 def main(args, storage_session=requests.session()):
     args = _parse_args(args)
     config = utils.read_main_conf(args)
-    start_date = utils.date_string_to_date(args.start)
-    stop_date = utils.date_string_to_date(args.stop)
     process = ProcessModel(args, config, storage_session)
-    models_to_process = process.get_models_to_process(args)
-
-    for date in date_range(start_date, stop_date):
-        date_str = date.strftime("%Y-%m-%d")
+    for date_str, model in process.get_models_to_process():
         process.date_str = date_str
         print(f'{args.site[0]} {date_str}')
-        for model in models_to_process:
-            print(f'  {model.ljust(20)}', end='\t')
-            uuid = Uuid()
-            try:
-                uuid.volatile = process.check_product_status(model)
-                uuid = process.process_model(uuid, model)
-                process.upload_product_and_images(temp_file.name, uuid, model)
-                process.print_info(uuid)
-            except (RawDataMissingError, MiscError, HTTPError, ConnectionError) as err:
-                print(err)
-        processing_tools.clean_dir(temp_dir.name)
+        print(f'  {model.ljust(20)}', end='\t')
+        uuid = Uuid()
+        try:
+            uuid.volatile = process.check_product_status(model)
+            uuid = process.process_model(uuid, model)
+            process.upload_product_and_images(temp_file.name, uuid, model)
+            process.print_info(uuid)
+        except (RawDataMissingError, MiscError, HTTPError, ConnectionError) as err:
+            print(err)
 
 
 class ProcessModel(ProcessBase):
-    def __init__(self, args, config: dict, storage_session):
-        super().__init__(args, config, storage_session)
-        self.plot_images = self.check_if_plot_images()
+
+    def get_models_to_process(self) -> list:
+        payload = {
+            'site': self._site,
+            'status': 'uploaded'
+        }
+        metadata = self._md_api.get('upload-model-metadata', payload)
+        return [(row['measurementDate'], row['model']['id']) for row in metadata]
 
     def process_model(self, uuid: Uuid, model: str) -> Uuid:
         payload = self._get_payload(model=model)
@@ -72,12 +69,9 @@ class ProcessModel(ProcessBase):
                                   full_path: str,
                                   uuid: Uuid,
                                   identifier: str) -> None:
-
-        if self._is_new_version(uuid):
-            self._pid_utils.add_pid_to_file(full_path)
         s3key = self._get_product_key(identifier)
         file_info = self._storage_api.upload_product(full_path, s3key)
-        if self.plot_images:
+        if 'hidden' not in self._site_type:
             img_metadata = self._storage_api.create_and_upload_images(full_path, s3key,
                                                                       uuid.product, 'model')
         else:
@@ -88,24 +82,6 @@ class ProcessModel(ProcessBase):
         for data in img_metadata:
             self._md_api.put_img(data, uuid.product)
         self._update_statuses(uuid.raw)
-
-    def get_models_to_process(self, args) -> list:
-        payload = {
-            'site': self._site,
-            'dateFrom': args.start,
-            'dateTo': args.stop,
-        }
-        if not self.is_reprocess:
-            payload['status'] = 'uploaded'
-        metadata = self._md_api.get('upload-model-metadata', payload)
-        model_ids = [row['model']['id'] for row in metadata]
-        unique_models = list(set(model_ids))
-        return unique_models
-
-    def check_if_plot_images(self) -> bool:
-        if 'hidden' in self._site_type:
-            return False
-        return True
 
     def check_product_status(self, model: str) -> Union[str, None, bool]:
         payload = self._get_payload(model=model)
