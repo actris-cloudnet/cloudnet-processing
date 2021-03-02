@@ -7,7 +7,7 @@ import test_utils.utils as utils
 from tempfile import NamedTemporaryFile
 import re
 sys.path.append('scripts/')
-process_cloudnet = __import__("process-cloudnet")
+process_cloudnet = __import__("process-model")
 
 SCRIPT_PATH = path.dirname(path.realpath(__file__))
 session, adapter, mock_addr = utils.init_test_session()
@@ -46,7 +46,7 @@ def _process(main_extra_args=()):
     with open(f'{SCRIPT_PATH}/md.log', 'w'):
         pass
     args = ['bucharest', f"--config-dir=tests/data/config", f"--start=2020-10-22",
-            f"--stop=2020-10-23", '-p=model']
+            f"--stop=2020-10-23"]
     temp_file = NamedTemporaryFile()
     register_storage_urls(temp_file)
     std_args = utils.start_output_capturing()
