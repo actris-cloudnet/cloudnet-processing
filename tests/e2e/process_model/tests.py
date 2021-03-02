@@ -43,8 +43,8 @@ class TestModelProcessing:
         assert len(data) == n_gets + n_file_puts + n_img_puts + n_metadata_posts
 
         # Check existing (not-processed) model metadata for the whole period
-        assert '"GET /upload-model-metadata?site=bucharest&dateFrom=2020-10-22&dateTo=2020-10-23' \
-               '&status=uploaded HTTP/1.1" 200 -' in data[0]
+        assert '"GET /upload-model-metadata?site=bucharest&status=uploaded HTTP/1.1" 200 -' \
+               in data[0]
 
         # Check product status
         assert '"GET /api/model-files?dateFrom=2020-10-22&dateTo=2020-10-22&site=bucharest' \
