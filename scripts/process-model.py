@@ -34,7 +34,7 @@ def main(args, storage_session=requests.session()):
         try:
             uuid.volatile = process.check_product_status(model)
             uuid = process.process_model(uuid, model)
-            process.upload_product_and_images(temp_file.name, uuid, model)
+            process.upload_product_and_images(temp_file.name, 'model', uuid, model)
             process.print_info(uuid)
         except (RawDataMissingError, MiscError, HTTPError, ConnectionError) as err:
             print(err)
@@ -64,24 +64,6 @@ class ProcessModel(ProcessBase):
             }
         uuid.product = nc_header_augmenter.harmonize_nc_file(data)
         return uuid
-
-    def upload_product_and_images(self,
-                                  full_path: str,
-                                  uuid: Uuid,
-                                  identifier: str) -> None:
-        s3key = self._get_product_key(identifier)
-        file_info = self._storage_api.upload_product(full_path, s3key)
-        if 'hidden' not in self._site_type:
-            img_metadata = self._storage_api.create_and_upload_images(full_path, s3key,
-                                                                      uuid.product, 'model')
-        else:
-            img_metadata = []
-        payload = utils.create_product_put_payload(full_path, file_info, site=self._site)
-        payload['model'] = identifier
-        self._md_api.put(s3key, payload)
-        for data in img_metadata:
-            self._md_api.put_img(data, uuid.product)
-        self._update_statuses(uuid.raw)
 
     def check_product_status(self, model: str) -> Union[str, None, bool]:
         payload = self._get_payload(model=model)

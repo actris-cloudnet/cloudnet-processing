@@ -42,7 +42,9 @@ def main(args, storage_session=requests.session()):
         process.date_str = date_str
         print(f'{args.site[0]} {date_str}')
         for product in args.products:
-            if product not in utils.get_product_types() or product == 'model':
+            if product not in utils.get_product_types():
+                raise ValueError('No such product')
+            if product == 'model':
                 continue
             print(f'{product.ljust(20)}', end='\t')
             uuid = Uuid()
@@ -52,6 +54,7 @@ def main(args, storage_session=requests.session()):
                     uuid, identifier = process.process_level2(uuid, product)
                 else:
                     uuid, identifier = getattr(process, f'process_{product}')(uuid)
+                process.add_pid(temp_file.name, uuid)
                 process.upload_product_and_images(temp_file.name, product, uuid, identifier)
                 process.print_info(uuid)
             except (RawDataMissingError, MiscError, HTTPError, ConnectionError, RuntimeError,
@@ -163,23 +166,9 @@ class ProcessCloudnet(ProcessBase):
         metadata = self._md_api.get(f'api/files', payload)
         return self._check_meta(metadata)
 
-    def upload_product_and_images(self,
-                                  full_path: str,
-                                  product: str,
-                                  uuid: Uuid,
-                                  identifier: str) -> None:
+    def add_pid(self, full_path: str, uuid: Uuid) -> None:
         if self._is_new_version(uuid):
             self._pid_utils.add_pid_to_file(full_path)
-        s3key = self._get_product_key(identifier)
-        file_info = self._storage_api.upload_product(full_path, s3key)
-        img_metadata = self._storage_api.create_and_upload_images(full_path, s3key, uuid.product,
-                                                                  product)
-        payload = utils.create_product_put_payload(full_path, file_info, site=self._site)
-        self._md_api.put(s3key, payload)
-        for data in img_metadata:
-            self._md_api.put_img(data, uuid.product)
-        if product in utils.get_product_types(level=1):
-            self._update_statuses(uuid.raw)
 
     def _download_instrument(self,
                              instrument: str,

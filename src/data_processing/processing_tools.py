@@ -39,6 +39,27 @@ class ProcessBase:
     def print_info(self, uuid: Uuid) -> None:
         print(f'Created: {"New version" if self._is_new_version(uuid) else "Volatile file"}')
 
+    def upload_product_and_images(self,
+                                  full_path: str,
+                                  product: str,
+                                  uuid: Uuid,
+                                  model_or_product_id: str) -> None:
+        s3key = self._get_product_key(model_or_product_id)
+        file_info = self._storage_api.upload_product(full_path, s3key)
+        if 'hidden' not in self._site_type:
+            img_metadata = self._storage_api.create_and_upload_images(full_path, s3key,
+                                                                      uuid.product, product)
+        else:
+            img_metadata = []
+        payload = utils.create_product_put_payload(full_path, file_info, site=self._site)
+        if product == 'model':
+            payload['model'] = model_or_product_id
+        self._md_api.put(s3key, payload)
+        for data in img_metadata:
+            self._md_api.put_img(data, uuid.product)
+        if product in utils.get_product_types(level=1):
+            self._update_statuses(uuid.raw)
+
     def _check_meta(self, metadata: list) -> Union[str, None, bool]:
         assert len(metadata) <= 1
         if metadata:
