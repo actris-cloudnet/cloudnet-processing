@@ -42,6 +42,8 @@ def main(args, storage_session=requests.session()):
         process.date_str = date_str
         print(f'{args.site[0]} {date_str}')
         for product in args.products:
+            if product not in utils.get_product_types() or product == 'model':
+                continue
             print(f'{product.ljust(20)}', end='\t')
             uuid = Uuid()
             try:
