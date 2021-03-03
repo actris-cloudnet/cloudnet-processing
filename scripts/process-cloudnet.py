@@ -68,7 +68,7 @@ class ProcessCloudnet(ProcessBase):
     def process_mwr(self, uuid: Uuid) -> Tuple[Uuid, str]:
         instrument = 'hatpro'
         try:
-            full_paths, raw_uuids = self._download_instrument(instrument, '.lwp$')
+            full_paths, raw_uuids = self._download_instrument(instrument, '^(?!.*scan).*\.lwp$')
             uuid.product, valid_full_paths = hatpro2nc(temp_dir.name, temp_file.name,
                                                        self.site_meta, uuid=uuid.volatile,
                                                        date=self.date_str)
