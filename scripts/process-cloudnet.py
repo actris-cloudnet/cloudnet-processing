@@ -158,6 +158,7 @@ class Process:
                 instrument = 'cl51'
                 raw_daily_file = NamedTemporaryFile(suffix='.DAT')
                 full_path, uuid.raw = self._download_instrument(instrument, largest_only=True)
+                shutil.move(full_path, raw_daily_file.name)
             except RawDataMissingError:
                 instrument = 'halo-doppler-lidar'
                 full_path, uuid.raw = self._download_instrument(instrument, largest_only=True)
