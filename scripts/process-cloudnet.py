@@ -134,7 +134,7 @@ class ProcessCloudnet(ProcessBase):
             else:
                 payload = self._get_payload(product=product)
                 metadata = self._md_api.get('api/files', payload)
-            assert len(metadata) <= 1
+            self._check_response_length(metadata)
             if metadata:
                 input_files[product] = self._storage_api.download_product(metadata[0],
                                                                           temp_dir.name)
@@ -149,7 +149,7 @@ class ProcessCloudnet(ProcessBase):
     def process_level2(self, uuid: Uuid, product: str) -> Tuple[Uuid, str]:
         payload = self._get_payload(product='categorize')
         metadata = self._md_api.get('api/files', payload)
-        assert len(metadata) <= 1
+        self._check_response_length(metadata)
         if metadata:
             categorize_file = self._storage_api.download_product(metadata[0], temp_dir.name)
         else:

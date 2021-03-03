@@ -61,7 +61,7 @@ class ProcessBase:
             self._update_statuses(uuid.raw)
 
     def _check_meta(self, metadata: list) -> Union[str, None, bool]:
-        assert len(metadata) <= 1
+        self._check_response_length(metadata)
         if metadata:
             if not metadata[0]['volatile'] and not self.is_reprocess:
                 raise MiscError('Existing freezed file and no "reprocess" flag')
@@ -122,6 +122,11 @@ class ProcessBase:
 
     def _is_new_version(self, uuid: Uuid) -> bool:
         return self.is_reprocess and uuid.volatile is False
+
+    @staticmethod
+    def _check_response_length(metadata: list) -> None:
+        if len(metadata) > 1:
+            print('Warning: API responded with several files')
 
 
 def _read_site_info(args) -> tuple:
