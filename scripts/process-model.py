@@ -26,7 +26,7 @@ def main(args, storage_session=requests.session()):
     args = _parse_args(args)
     config = utils.read_main_conf(args)
     process = ProcessModel(args, config, storage_session)
-    for date_str, model in process.get_models_to_process():
+    for date_str, model in process.get_models_to_process(args):
         process.date_str = date_str
         print(f'{args.site[0]} {date_str}')
         print(f'  {model.ljust(20)}', end='\t')
@@ -42,11 +42,13 @@ def main(args, storage_session=requests.session()):
 
 class ProcessModel(ProcessBase):
 
-    def get_models_to_process(self) -> list:
+    def get_models_to_process(self, args) -> list:
         payload = {
             'site': self._site,
             'status': 'uploaded'
         }
+        if hasattr(args, 'start'):
+            payload['dateFrom'] = args.start
         metadata = self._md_api.get('upload-model-metadata', payload)
         return [(row['measurementDate'], row['model']['id']) for row in metadata]
 
@@ -74,6 +76,10 @@ class ProcessModel(ProcessBase):
 def _parse_args(args):
     parser = argparse.ArgumentParser(description='Process Cloudnet model data.')
     parser = processing_tools.add_default_arguments(parser)
+    parser.add_argument('--start',
+                        type=str,
+                        metavar='YYYY-MM-DD',
+                        help='Starting date.')
     return parser.parse_args(args)
 
 
