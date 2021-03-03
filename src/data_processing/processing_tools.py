@@ -53,6 +53,7 @@ class ProcessBase:
             img_metadata = []
         payload = utils.create_product_put_payload(full_path, file_info, site=self._site)
         if product == 'model':
+            del payload['cloudnetpyVersion']
             payload['model'] = model_or_product_id
         self._md_api.put(s3key, payload)
         for data in img_metadata:
