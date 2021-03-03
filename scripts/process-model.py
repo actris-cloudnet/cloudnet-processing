@@ -1,0 +1,81 @@
+#!/usr/bin/env python3
+"""Master script for Cloudnet model processing."""
+import argparse
+import sys
+import warnings
+from tempfile import NamedTemporaryFile
+from tempfile import TemporaryDirectory
+from typing import Union
+import requests
+from requests.exceptions import HTTPError
+from data_processing import nc_header_augmenter
+from data_processing import utils
+from data_processing.utils import MiscError, RawDataMissingError
+from data_processing import processing_tools
+from data_processing.processing_tools import Uuid, ProcessBase
+
+
+warnings.simplefilter("ignore", UserWarning)
+warnings.simplefilter("ignore", RuntimeWarning)
+
+temp_file = NamedTemporaryFile()
+temp_dir = TemporaryDirectory()
+
+
+def main(args, storage_session=requests.session()):
+    args = _parse_args(args)
+    config = utils.read_main_conf(args)
+    process = ProcessModel(args, config, storage_session)
+    for date_str, model in process.get_models_to_process():
+        process.date_str = date_str
+        print(f'{args.site[0]} {date_str}')
+        print(f'  {model.ljust(20)}', end='\t')
+        uuid = Uuid()
+        try:
+            uuid.volatile = process.check_product_status(model)
+            uuid = process.process_model(uuid, model)
+            process.upload_product_and_images(temp_file.name, 'model', uuid, model)
+            process.print_info(uuid)
+        except (RawDataMissingError, MiscError, HTTPError, ConnectionError) as err:
+            print(err)
+
+
+class ProcessModel(ProcessBase):
+
+    def get_models_to_process(self) -> list:
+        payload = {
+            'site': self._site,
+            'status': 'uploaded'
+        }
+        metadata = self._md_api.get('upload-model-metadata', payload)
+        return [(row['measurementDate'], row['model']['id']) for row in metadata]
+
+    def process_model(self, uuid: Uuid, model: str) -> Uuid:
+        payload = self._get_payload(model=model)
+        upload_metadata = self._md_api.get('upload-model-metadata', payload)
+        full_path, uuid.raw = self._download_raw_files(upload_metadata, temp_dir, temp_file)
+        data = {
+            'site_name': self._site,
+            'date': self.date_str,
+            'uuid': uuid.volatile,
+            'full_path': full_path,
+            'model': model,
+            'instrument': None
+            }
+        uuid.product = nc_header_augmenter.harmonize_nc_file(data)
+        return uuid
+
+    def check_product_status(self, model: str) -> Union[str, None, bool]:
+        payload = self._get_payload(model=model)
+        metadata = self._md_api.get(f'api/model-files', payload)
+        return self._check_meta(metadata)
+
+
+def _parse_args(args):
+    parser = argparse.ArgumentParser(description='Process Cloudnet model data.')
+    parser = processing_tools.add_default_arguments(parser)
+    return parser.parse_args(args)
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])

@@ -58,6 +58,28 @@ Behavior of the `--reprocess` flag:
 | `stable` (legacy or not)      | `False`       | - |
 | `stable`      | `True`        | Create new stable file version.|
 
+### `process-model.py`
+Create Cloudnet model products.
+
+```
+usage: process-model.py [-h] [--config-dir /FOO/BAR] SITE
+```
+
+Positional arguments:
+
+| Name   | Description | 
+| :---   | :---        |
+| `site` |  Site name.|
+
+Optional arguments:
+
+| Short | Long             | Default           | Description                                | 
+| :---  | :----------             | :---              | :---                                       |
+| `-h`  | `--help`         |                   | Show help and exit. |
+|       | `--config-dir`   | `./config`        | Path to directory containing config files. |
+
+
+
 ### `put-legacy-files.py`
 
 Upload Matlab processed legacy products (`categorize`, and level 2 products) to data portal.

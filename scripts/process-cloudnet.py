@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Master script for CloudnetPy processing."""
 import argparse
-import glob
 import gzip
 import importlib
 import os
@@ -20,10 +19,9 @@ from requests.exceptions import HTTPError
 from data_processing import concat_wrapper
 from data_processing import nc_header_augmenter
 from data_processing import utils
-from data_processing.metadata_api import MetadataApi
-from data_processing.pid_utils import PidUtils
-from data_processing.storage_api import StorageApi
 from data_processing.utils import MiscError, RawDataMissingError
+from data_processing import processing_tools
+from data_processing.processing_tools import Uuid, ProcessBase
 
 
 warnings.simplefilter("ignore", UserWarning)
@@ -38,78 +36,34 @@ def main(args, storage_session=requests.session()):
     config = utils.read_main_conf(args)
     start_date = utils.date_string_to_date(args.start)
     stop_date = utils.date_string_to_date(args.stop)
-    process = Process(args, config, storage_session)
-
-    if 'model' in args.products:
-        models_to_process = process.get_models_to_process(args)
-    else:
-        models_to_process = None
-
+    process = ProcessCloudnet(args, config, storage_session)
     for date in date_range(start_date, stop_date):
         date_str = date.strftime("%Y-%m-%d")
         process.date_str = date_str
         print(f'{args.site[0]} {date_str}')
         for product in args.products:
-            print(f'{product.ljust(20)}', end='\t')
+            if product not in utils.get_product_types():
+                raise ValueError('No such product')
             if product == 'model':
-                print('')
-                for model in models_to_process:
-                    print(f'  {model.ljust(20)}', end='\t')
-                    uuid = Uuid()
-                    try:
-                        uuid.volatile = process.check_product_status(product, model=model)
-                        uuid = process.process_model(uuid, model)
-                        process.upload_product_and_images(temp_file.name, product, uuid,
-                                                          model=model)
-                        process.print_info(uuid)
-                    except (RawDataMissingError, MiscError, HTTPError, ConnectionError) as err:
-                        print(err)
-            else:
-                uuid = Uuid()
-                try:
-                    uuid.volatile = process.check_product_status(product)
-                    if product in utils.get_product_types(level=2):
-                        uuid, identifier = process.process_level2(uuid, product)
-                    else:
-                        uuid, identifier = getattr(process, f'process_{product}')(uuid)
-                    process.upload_product_and_images(temp_file.name, product, uuid,
-                                                      product_type=identifier)
-                    process.print_info(uuid)
-                except (RawDataMissingError, MiscError, HTTPError, ConnectionError, RuntimeError,
-                        KeyError) as err:
-                    print(err)
-        _clean_temp_dir()
+                continue
+            print(f'{product.ljust(20)}', end='\t')
+            uuid = Uuid()
+            try:
+                uuid.volatile = process.check_product_status(product)
+                if product in utils.get_product_types(level=2):
+                    uuid, identifier = process.process_level2(uuid, product)
+                else:
+                    uuid, identifier = getattr(process, f'process_{product}')(uuid)
+                process.add_pid(temp_file.name, uuid)
+                process.upload_product_and_images(temp_file.name, product, uuid, identifier)
+                process.print_info(uuid)
+            except (RawDataMissingError, MiscError, HTTPError, ConnectionError, RuntimeError,
+                    KeyError) as err:
+                print(err)
+        processing_tools.clean_dir(temp_dir.name)
 
 
-class Uuid:
-
-    __slots__ = ['raw', 'product', 'volatile']
-
-    def __init__(self):
-        self.raw: list = []
-        self.product: str = ''
-        self.volatile: Union[str, bool, None] = None
-
-
-class Process:
-    def __init__(self,
-                 args,
-                 config: dict,
-                 storage_session):
-        self.site_meta, self._site, self._site_type = _read_site_info(args)
-        self.is_reprocess = args.reprocess
-        self.plot_images = self.check_if_plot_images(args)
-        self.date_str = None
-        self._md_api = MetadataApi(config)
-        self._storage_api = StorageApi(config, storage_session)
-        self._pid_utils = PidUtils(config)
-
-    def process_model(self, uuid: Uuid, model: str) -> Uuid:
-        payload = self._get_payload(model=model)
-        upload_metadata = self._md_api.get('upload-model-metadata', payload)
-        full_path, uuid.raw = self._download_raw_files(upload_metadata, True)
-        uuid.product = self._fix_calibrated_daily_file(uuid, full_path, model=model)
-        return uuid
+class ProcessCloudnet(ProcessBase):
 
     def process_mwr(self, uuid: Uuid) -> Tuple[Uuid, str]:
         instrument = 'hatpro'
@@ -121,7 +75,7 @@ class Process:
             uuid.raw = _get_valid_uuids(raw_uuids, full_paths, valid_full_paths)
         except RawDataMissingError:
             full_path, uuid.raw = self._download_instrument(instrument, '.lwp.*.nc$', True)
-            uuid.product = self._fix_calibrated_daily_file(uuid, full_path, instrument=instrument)
+            uuid.product = self._fix_calibrated_daily_file(uuid, full_path, instrument)
         return uuid, instrument
 
     def process_radar(self, uuid: Uuid) -> Tuple[Uuid, str]:
@@ -162,7 +116,7 @@ class Process:
             except RawDataMissingError:
                 instrument = 'halo-doppler-lidar'
                 full_path, uuid.raw = self._download_instrument(instrument, largest_only=True)
-                uuid.product = self._fix_calibrated_daily_file(uuid, full_path, instrument=instrument)
+                uuid.product = self._fix_calibrated_daily_file(uuid, full_path, instrument)
                 raw_daily_file = None
 
         if instrument != 'halo-doppler-lidar':
@@ -206,75 +160,15 @@ class Process:
         identifier = utils.get_product_identifier(product)
         return uuid, identifier
 
-    def check_product_status(self,
-                             product: Optional[str] = None,
-                             model: Optional[str] = None) -> Union[str, None, bool]:
-        if model is not None:
-            end_point = 'model-files'
-            payload = self._get_payload(model=model)
-        else:
-            end_point = 'files'
-            payload = self._get_payload(product=product)
-            payload['showLegacy'] = True
-        metadata = self._md_api.get(f'api/{end_point}', payload)
+    def check_product_status(self, product: str) -> Union[str, None, bool]:
+        payload = self._get_payload(product=product)
+        payload['showLegacy'] = True
+        metadata = self._md_api.get(f'api/files', payload)
+        return self._check_meta(metadata)
 
-        assert len(metadata) <= 1
-        if metadata:
-            if not metadata[0]['volatile'] and not self.is_reprocess:
-                raise MiscError('Existing freezed file and no "reprocess" flag')
-            if metadata[0]['volatile']:
-                return metadata[0]['uuid']
-            else:
-                return False
-        return None
-
-    def upload_product_and_images(self,
-                                  full_path: str,
-                                  product: str,
-                                  uuid: Uuid,
-                                  product_type: Optional[str] = None,
-                                  model: Optional[str] = None) -> None:
-
-        assert product_type is not None or model is not None
-        identifier = product_type if product_type else model
+    def add_pid(self, full_path: str, uuid: Uuid) -> None:
         if self._is_new_version(uuid):
             self._pid_utils.add_pid_to_file(full_path)
-        s3key = self._get_product_key(identifier)
-        file_info = self._storage_api.upload_product(full_path, s3key)
-        if self.plot_images:
-            img_metadata = self._storage_api.create_and_upload_images(full_path, s3key,
-                                                                      uuid.product, product)
-        else:
-            img_metadata = []
-        payload = utils.create_product_put_payload(full_path, file_info, model=model,
-                                                   site=self._site)
-        self._md_api.put(s3key, payload)
-        for data in img_metadata:
-            self._md_api.put_img(data, uuid.product)
-        if product in utils.get_product_types(level=1):
-            self._update_statuses(uuid.raw)
-
-    def get_models_to_process(self, args) -> list:
-        payload = {
-            'site': self._site,
-            'dateFrom': args.start,
-            'dateTo': args.stop,
-        }
-        if not self.is_reprocess:
-            payload['status'] = 'uploaded'
-        metadata = self._md_api.get('upload-model-metadata', payload)
-        model_ids = [row['model']['id'] for row in metadata]
-        unique_models = list(set(model_ids))
-        return unique_models
-
-    def check_if_plot_images(self, args) -> bool:
-        plot_images = not args.no_img
-        if 'hidden' in self._site_type:
-            plot_images = False
-        return plot_images
-
-    def print_info(self, uuid: Uuid) -> None:
-        print(f'Created: {"New version" if self._is_new_version(uuid) else "Volatile file"}')
 
     def _download_instrument(self,
                              instrument: str,
@@ -284,83 +178,26 @@ class Process:
         upload_metadata = self._md_api.get('upload-metadata', payload)
         if pattern is not None:
             upload_metadata = _screen_by_filename(upload_metadata, pattern)
-        return self._download_raw_files(upload_metadata, largest_only)
-
-    def _download_raw_files(self,
-                            upload_metadata: list,
-                            largest_only: bool) -> Tuple[Union[list, str], list]:
-        self._check_raw_data_status(upload_metadata)
-        if largest_only:
-            if len(upload_metadata) > 1:
-                print('Warning: several daily raw files (probably submitted without '
-                      '"allowUpdate")', end='\t')
-            upload_metadata = [upload_metadata[0]]
-        full_paths, uuids = self._storage_api.download_raw_files(upload_metadata, temp_dir.name)
-        if largest_only:
-            shutil.move(full_paths[0], temp_file.name)
-            full_paths = temp_file.name
-        return full_paths, uuids
+        arg = temp_file if largest_only else None
+        return self._download_raw_files(upload_metadata, temp_dir, arg)
 
     def _fix_calibrated_daily_file(self,
                                    uuid: Uuid,
                                    full_path: str,
-                                   instrument: Optional[str] = None,
-                                   model: Optional[str] = None) -> str:
+                                   instrument: str) -> str:
         data = {
             'site_name': self._site,
             'date': self.date_str,
             'uuid': uuid.volatile,
             'full_path': full_path,
             'instrument': instrument,
-            'model': model
             }
         uuid_product = nc_header_augmenter.harmonize_nc_file(data)
         return uuid_product
 
-    def _check_raw_data_status(self, metadata: list) -> None:
-        if not metadata:
-            raise RawDataMissingError('No raw data')
-        is_unprocessed_data = any([row['status'] == 'uploaded' for row in metadata])
-        if not is_unprocessed_data and not self.is_reprocess:
-            raise MiscError('Raw data already processed')
-
-    def _update_statuses(self, uuids: list) -> None:
-        for uuid in uuids:
-            payload = {'uuid': uuid, 'status': 'processed'}
-            self._md_api.post('upload-metadata', payload)
-
-    def _get_payload(self,
-                     instrument: Optional[str] = None,
-                     model: Optional[str] = None,
-                     product: Optional[str] = None) -> dict:
-        payload = {
-            'dateFrom': self.date_str,
-            'dateTo': self.date_str,
-            'site': self._site,
-            'developer': True
-        }
-        if instrument is not None:
-            payload['instrument'] = instrument
-        if model is not None:
-            payload['model'] = model
-        if product is not None:
-            payload['product'] = product
-        return payload
-
-    def _get_product_key(self, identifier: str) -> str:
-        return f"{self.date_str.replace('-', '')}_{self._site}_{identifier}.nc"
-
-    def _is_new_version(self, uuid: Uuid) -> bool:
-        return self.is_reprocess and uuid.volatile is False
-
 
 def _get_valid_uuids(uuids: list, full_paths: list, valid_full_paths: list) -> list:
     return [uuid for uuid, full_path in zip(uuids, full_paths) if full_path in valid_full_paths]
-
-
-def _clean_temp_dir():
-    for filename in glob.glob(f'{temp_dir.name}/*'):
-        os.remove(filename)
 
 
 def _unzip_gz_files(full_paths: list) -> str:
@@ -373,29 +210,13 @@ def _unzip_gz_files(full_paths: list) -> str:
     return os.path.dirname(full_paths[0])
 
 
-def _read_site_info(args) -> tuple:
-    site_info = utils.read_site_info(args.site[0])
-    site_id = site_info['id']
-    site_type = site_info['type']
-    site_meta = {key: site_info[key] for key in ('latitude', 'longitude', 'altitude', 'name')}
-    return site_meta, site_id, site_type
-
-
 def _screen_by_filename(metadata: list, pattern: str) -> list:
     return [row for row in metadata if re.search(pattern.lower(), row['filename'].lower())]
 
 
 def _parse_args(args):
-    parser = argparse.ArgumentParser(description='Process Cloudnet data.')
-    parser.add_argument('site',
-                        nargs='+',
-                        help='Site Name')
-    parser.add_argument('--config-dir',
-                        dest='config_dir',
-                        type=str,
-                        metavar='/FOO/BAR',
-                        help='Path to directory containing config files. Default: ./config.',
-                        default='./config')
+    parser = argparse.ArgumentParser(description='Process Cloudnet Level 1 and 2 data.')
+    parser = processing_tools.add_default_arguments(parser)
     parser.add_argument('--start',
                         type=str,
                         metavar='YYYY-MM-DD',
@@ -412,15 +233,9 @@ def _parse_args(args):
                              'files.',
                         default=False)
     parser.add_argument('-p', '--products',
-                        help='Products to be processed, e.g., radar,lidar,model,categorize,'
-                             'classification',
+                        help='Products to be processed, e.g., radar,lidar,mwr,categorize,iwc',
                         type=lambda s: s.split(','),
                         default=utils.get_product_types())
-    parser.add_argument('--no-img',
-                        dest='no_img',
-                        action='store_true',
-                        help='Skip image creation.',
-                        default=False)
     return parser.parse_args(args)
 
 
