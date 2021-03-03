@@ -1,8 +1,7 @@
 """Metadata API for Cloudnet files."""
 from datetime import timedelta, datetime
-from typing import Union, Optional
+from typing import Union
 from os import path
-import re
 import requests
 
 
@@ -46,17 +45,26 @@ class MetadataApi:
         res.raise_for_status()
         return res
 
-    def find_volatile_files_to_freeze(self) -> list:
+    def find_volatile_regular_files_to_freeze(self) -> list:
         """Find volatile files released before certain time limit."""
-        freeze_after = {key: int(value) for key, value in self.config['FREEZE_AFTER'].items()}
-        updated_before = datetime.now() - timedelta(**freeze_after)
-        payload = {
+        updated_before = self._get_freeze_limit('FREEZE_AFTER')
+        payload = self._get_freeze_payload(updated_before)
+        return self.get('api/files', payload)
+
+    def find_volatile_model_files_to_freeze(self) -> list:
+        """Find volatile model files released before certain time limit."""
+        updated_before = self._get_freeze_limit('FREEZE_MODEL_AFTER')
+        payload = self._get_freeze_payload(updated_before)
+        payload['allModels'] = True
+        return self.get('api/model-files', payload)
+
+    def _get_freeze_limit(self, key: str) -> datetime:
+        freeze_after = {key: int(value) for key, value in self.config[key].items()}
+        return datetime.now() - timedelta(**freeze_after)
+
+    @staticmethod
+    def _get_freeze_payload(updated_before: datetime) -> dict:
+        return {
             'volatile': True,
             'releasedBefore': updated_before
         }
-        regular_files = self.get('api/files', payload)
-        payload['allModels'] = True
-        model_files = self.get('api/model-files', payload)
-        return regular_files + model_files
-
-

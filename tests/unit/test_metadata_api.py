@@ -11,7 +11,8 @@ session.mount('http://', adapter)
 mock_addr = 'http://test/'
 config = {
     'METADATASERVER': {'url': mock_addr},
-    'FREEZE_AFTER': {'days': 2}
+    'FREEZE_AFTER': {'days': 2},
+    'FREEZE_MODEL_AFTER': {'days': 3}
 }
 
 files_response = '''
@@ -84,6 +85,7 @@ class TestMetadataApi:
             url = f'{mock_addr}api/{end_point}(.*?)'
             adapter.register_uri('GET', re.compile(url), json=json.loads(files_response))
         md_api = metadata_api.MetadataApi(config, session)
-        r = md_api.find_volatile_files_to_freeze()
-        assert len(r) == 2
-        assert r[0]['filename'] == '20200513_granada_rpg-fmcw-94.nc'
+        regular_files = md_api.find_volatile_regular_files_to_freeze()
+        model_files = md_api.find_volatile_regular_files_to_freeze()
+        assert len(regular_files + model_files) == 2
+        assert regular_files[0]['filename'] == '20200513_granada_rpg-fmcw-94.nc'

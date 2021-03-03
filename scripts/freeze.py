@@ -19,7 +19,9 @@ def main(args, storage_session=requests.session()):
     pid_utils = PidUtils(config)
     md_api = metadata_api.MetadataApi(config)
     storage_api = StorageApi(config, storage_session)
-    metadata = md_api.find_volatile_files_to_freeze()
+    regular_files = md_api.find_volatile_regular_files_to_freeze()
+    model_files = md_api.find_volatile_model_files_to_freeze()
+    metadata = regular_files + model_files
     print(f'Found {len(metadata)} files to freeze.')
     temp_dir = TemporaryDirectory()
     for row in metadata:
