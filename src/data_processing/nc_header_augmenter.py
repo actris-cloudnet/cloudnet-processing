@@ -72,14 +72,13 @@ def copy_file_contents(source: netCDF4.Dataset, target: netCDF4.Dataset) -> None
 
 
 def _check_time_dimension(nc: netCDF4.Dataset, data: dict) -> None:
-    n_time_steps = len(nc.dimensions['time'])
-    n_steps_expected = [
-        ('ecmwf', 25),
-        ('gdas1', 9)
-    ]
-    for model, n_steps in n_steps_expected:
-        if model == data['model'] and n_time_steps != n_steps:
-            raise ValueError
+    n_steps = len(nc.dimensions['time'])
+    n_steps_expected = 25
+    n_steps_expected_gdas1 = 9
+    if data['model'] == 'gdas1' and n_steps != n_steps_expected_gdas1:
+        raise ValueError
+    elif n_steps != n_steps_expected:
+        raise ValueError
 
 
 def _get_file_type(data: dict) -> str:
