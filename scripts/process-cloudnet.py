@@ -74,7 +74,8 @@ class ProcessCloudnet(ProcessBase):
                                                        date=self.date_str)
             uuid.raw = _get_valid_uuids(raw_uuids, full_paths, valid_full_paths)
         except RawDataMissingError:
-            full_path, uuid.raw = self._download_instrument(instrument, '.lwp.*.nc$', True)
+            pattern = '(clwvi.*.nc$|.lwp.*.nc$)'
+            full_path, uuid.raw = self._download_instrument(instrument, pattern, True)
             uuid.product = self._fix_calibrated_daily_file(uuid, full_path, instrument)
         return uuid, instrument
 
