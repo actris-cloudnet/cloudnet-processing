@@ -20,6 +20,7 @@ class TestMwr:
         self.data['original_filename'] = os.path.basename(mwr_file)
         uuid = nca.harmonize_nc_file(self.data)
         nc = netCDF4.Dataset(mwr_file)
+        assert len(nc.variables['time'][:]) == 5
         assert len(uuid) == 32
         assert nc.file_uuid == uuid
         assert nc.year == '2020'
@@ -104,3 +105,20 @@ class TestHalo:
         assert nc.Conventions == 'CF-1.7'
         assert 'height' in nc.variables
         nc.close()
+
+
+@pytest.mark.parametrize('arg, expected', [
+    ('seconds from 2020-01-15 00:00:00', (2020, 1, 15)),
+    ('seconds from 2020.1.15', (2020, 1, 15)),
+    ('seconds from bad-times 00:00:00', (2001, 1, 1)),
+    ('blabla', (2001, 1, 1)),
+])
+def test_get_epoch(arg, expected):
+    assert nca._get_epoch(arg) == expected
+
+
+def test_harmonize_hatpro_file(mwr_file):
+    nc = netCDF4.Dataset(mwr_file)
+    nc = nca._harmonize_hatpro_file(nc)
+    assert 'LWP' in nc.variables
+    assert nc.variables['LWP'].units == 'g m-2'
