@@ -3,6 +3,7 @@ import os
 from data_processing import nc_header_augmenter as nca
 from data_processing.utils import MiscError
 import pytest
+import numpy as np
 
 
 class TestMwr:
@@ -118,7 +119,10 @@ def test_get_epoch(arg, expected):
 
 
 def test_harmonize_hatpro_file(mwr_file):
-    nc = netCDF4.Dataset(mwr_file)
+    nc = netCDF4.Dataset(mwr_file, 'r+')
     nc = nca._harmonize_hatpro_file(nc)
     assert 'LWP' in nc.variables
     assert nc.variables['LWP'].units == 'g m-2'
+    time = nc.variables['time'][:]
+    assert np.all(np.diff(time) >= 0)
+    nc.close()

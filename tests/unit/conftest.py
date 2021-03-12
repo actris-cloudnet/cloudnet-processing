@@ -26,13 +26,13 @@ def nc_file_with_pid(tmpdir_factory):
     return file_name
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope='function')
 def mwr_file(tmpdir_factory):
     file_name = tmpdir_factory.mktemp("data").join("201023.LWP.NC")
     root_grp = netCDF4.Dataset(file_name, "w", format="NETCDF3_CLASSIC")
     root_grp.createDimension('time', None)
     time = root_grp.createVariable('time', 'i4', ('time',))
-    time[:] = [625190101, 625190102, 625190103, 625190104, 625190105] + 10*[627190105]
+    time[:] = [625190102, 625190101, 625190103, 625190104, 625190105] + 10*[627190105]
     time.units = 'seconds since 1.1.2001, 00:00:00'
     lwp = root_grp.createVariable('LWP_data', 'f4', ('time',))
     lwp[:] = 15*[1.2]

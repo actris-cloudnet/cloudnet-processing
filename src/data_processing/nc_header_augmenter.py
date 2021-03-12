@@ -138,6 +138,16 @@ def _harmonize_hatpro_file(nc: netCDF4.Dataset) -> netCDF4.Dataset:
     if valid_name in nc.variables and 'kg' in nc.variables[valid_name].units:
         nc.variables[valid_name][:] *= 1000
         nc.variables[valid_name].units = 'g m-2'
+    nc = _sort_time(nc, valid_name)
+    return nc
+
+
+def _sort_time(nc: netCDF4.Dataset, key: str) -> netCDF4.Dataset:
+    time = nc.variables['time'][:]
+    array = nc.variables[key][:]
+    ind = time.argsort()
+    nc.variables['time'][:] = time[ind]
+    nc.variables[key][:] = array[ind]
     return nc
 
 
