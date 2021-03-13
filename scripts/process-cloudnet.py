@@ -9,7 +9,6 @@ import sys
 import re
 import warnings
 from tempfile import NamedTemporaryFile
-from tempfile import TemporaryDirectory
 from typing import Tuple, Union, Optional
 import requests
 from cloudnetpy.categorize import generate_categorize
@@ -28,7 +27,6 @@ warnings.simplefilter("ignore", UserWarning)
 warnings.simplefilter("ignore", RuntimeWarning)
 
 temp_file = NamedTemporaryFile()
-temp_dir = TemporaryDirectory()
 
 
 def main(args, storage_session=requests.session()):
@@ -60,7 +58,7 @@ def main(args, storage_session=requests.session()):
             except (RawDataMissingError, MiscError, HTTPError, ConnectionError, RuntimeError,
                     KeyError) as err:
                 print(err)
-        processing_tools.clean_dir(temp_dir.name)
+        processing_tools.clean_dir(process.temp_dir.name)
 
 
 class ProcessCloudnet(ProcessBase):
@@ -69,7 +67,7 @@ class ProcessCloudnet(ProcessBase):
         instrument = 'hatpro'
         try:
             full_paths, raw_uuids = self._download_instrument(instrument, '^(?!.*scan).*\.lwp$')
-            uuid.product, valid_full_paths = hatpro2nc(temp_dir.name, temp_file.name,
+            uuid.product, valid_full_paths = hatpro2nc(self.temp_dir.name, temp_file.name,
                                                        self.site_meta, uuid=uuid.volatile,
                                                        date=self.date_str)
             uuid.raw = _get_valid_uuids(raw_uuids, full_paths, valid_full_paths)
@@ -83,7 +81,7 @@ class ProcessCloudnet(ProcessBase):
         try:
             instrument = 'rpg-fmcw-94'
             full_paths, raw_uuids = self._download_instrument(instrument, '.lv1$')
-            uuid.product, valid_full_paths = rpg2nc(temp_dir.name, temp_file.name, self.site_meta,
+            uuid.product, valid_full_paths = rpg2nc(self.temp_dir.name, temp_file.name, self.site_meta,
                                                     uuid=uuid.volatile, date=self.date_str)
             uuid.raw = _get_valid_uuids(raw_uuids, full_paths, valid_full_paths)
         except RawDataMissingError:
@@ -138,7 +136,7 @@ class ProcessCloudnet(ProcessBase):
             self._check_response_length(metadata)
             if metadata:
                 input_files[product] = self._storage_api.download_product(metadata[0],
-                                                                          temp_dir.name)
+                                                                          self.temp_dir.name)
         if not input_files['mwr'] and 'rpg-fmcw-94' in input_files['radar']:
             input_files['mwr'] = input_files['radar']
         missing = [product for product in l1_products if not input_files[product]]
@@ -152,7 +150,7 @@ class ProcessCloudnet(ProcessBase):
         metadata = self._md_api.get('api/files', payload)
         self._check_response_length(metadata)
         if metadata:
-            categorize_file = self._storage_api.download_product(metadata[0], temp_dir.name)
+            categorize_file = self._storage_api.download_product(metadata[0], self.temp_dir.name)
         else:
             raise MiscError(f'Missing input categorize file')
         module = importlib.import_module(f'cloudnetpy.products.{product}')
@@ -180,7 +178,7 @@ class ProcessCloudnet(ProcessBase):
         if pattern is not None:
             upload_metadata = _screen_by_filename(upload_metadata, pattern)
         arg = temp_file if largest_only else None
-        return self._download_raw_files(upload_metadata, temp_dir, arg)
+        return self._download_raw_files(upload_metadata, arg)
 
     def _fix_calibrated_daily_file(self,
                                    uuid: Uuid,

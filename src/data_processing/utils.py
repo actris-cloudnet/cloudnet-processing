@@ -1,5 +1,6 @@
 import datetime
 import configparser
+from configparser import ConfigParser
 import hashlib
 import base64
 from typing import Tuple, Union, Optional
@@ -99,7 +100,7 @@ def get_date_from_past(n: int, reference_date: Optional[str] = None) -> str:
     return str(date)
 
 
-def read_main_conf(args):
+def read_main_conf(args) -> ConfigParser:
     """Read data-processing main config-file."""
     config_path = f'{args.config_dir}/main.ini'
     config = configparser.ConfigParser()

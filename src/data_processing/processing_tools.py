@@ -8,6 +8,7 @@ from data_processing.utils import MiscError, RawDataMissingError
 from data_processing.metadata_api import MetadataApi
 from data_processing.storage_api import StorageApi
 from data_processing.pid_utils import PidUtils
+from configparser import ConfigParser
 
 
 class Uuid:
@@ -24,10 +25,18 @@ def clean_dir(dir_name: str) -> None:
         os.remove(filename)
 
 
+def _get_temp_dir(config: ConfigParser) -> str:
+    section = 'MISC'
+    fallback = '/tmp'
+    if section not in config:
+        return fallback
+    return config[section].get('temp_dir', fallback)
+
+
 class ProcessBase:
     def __init__(self,
                  args,
-                 config: dict,
+                 config: ConfigParser,
                  storage_session):
         self.site_meta, self._site, self._site_type = _read_site_info(args)
         self.is_reprocess = getattr(args, 'reprocess', False)
@@ -35,6 +44,7 @@ class ProcessBase:
         self._md_api = MetadataApi(config)
         self._storage_api = StorageApi(config, storage_session)
         self._pid_utils = PidUtils(config)
+        self.temp_dir = TemporaryDirectory(dir=_get_temp_dir(config))
 
     def print_info(self, uuid: Uuid) -> None:
         print(f'Created: {"New version" if self._is_new_version(uuid) else "Volatile file"}')
@@ -74,7 +84,6 @@ class ProcessBase:
 
     def _download_raw_files(self,
                             upload_metadata: list,
-                            temp_dir: TemporaryDirectory,
                             temp_file: Optional[NamedTemporaryFile] = None) -> Tuple[Union[list, str], list]:
         self._check_raw_data_status(upload_metadata)
         if temp_file is not None:
@@ -82,7 +91,8 @@ class ProcessBase:
                 print('Warning: several daily raw files (probably submitted without '
                       '"allowUpdate")', end='\t')
             upload_metadata = [upload_metadata[0]]
-        full_paths, uuids = self._storage_api.download_raw_files(upload_metadata, temp_dir.name)
+        full_paths, uuids = self._storage_api.download_raw_files(upload_metadata,
+                                                                 self.temp_dir.name)
         if temp_file is not None:
             shutil.move(full_paths[0], temp_file.name)
             full_paths = temp_file.name

@@ -4,7 +4,6 @@ import argparse
 import sys
 import warnings
 from tempfile import NamedTemporaryFile
-from tempfile import TemporaryDirectory
 from typing import Union
 import requests
 from requests.exceptions import HTTPError
@@ -19,7 +18,6 @@ warnings.simplefilter("ignore", UserWarning)
 warnings.simplefilter("ignore", RuntimeWarning)
 
 temp_file = NamedTemporaryFile()
-temp_dir = TemporaryDirectory()
 
 
 def main(args, storage_session=requests.session()):
@@ -55,7 +53,7 @@ class ProcessModel(ProcessBase):
     def process_model(self, uuid: Uuid, model: str) -> Uuid:
         payload = self._get_payload(model=model)
         upload_metadata = self._md_api.get('upload-model-metadata', payload)
-        full_path, uuid.raw = self._download_raw_files(upload_metadata, temp_dir, temp_file)
+        full_path, uuid.raw = self._download_raw_files(upload_metadata, temp_file)
         data = {
             'site_name': self._site,
             'date': self.date_str,
