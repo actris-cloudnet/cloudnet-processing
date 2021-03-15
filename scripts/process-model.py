@@ -34,7 +34,7 @@ def main(args, storage_session=requests.session()):
             uuid = process.process_model(uuid, model)
             process.upload_product_and_images(temp_file.name, 'model', uuid, model)
             process.print_info(uuid)
-        except (RawDataMissingError, MiscError, HTTPError, ConnectionError) as err:
+        except (RawDataMissingError, MiscError, HTTPError, ConnectionError, RuntimeError) as err:
             print(err)
 
 
