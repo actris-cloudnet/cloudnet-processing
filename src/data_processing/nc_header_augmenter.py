@@ -90,10 +90,11 @@ def _check_time_dimension(nc: netCDF4.Dataset, data: dict) -> None:
     n_steps = len(nc.dimensions['time'])
     n_steps_expected = 25
     n_steps_expected_gdas1 = 9
-    if data['model'] == 'gdas1' and n_steps != n_steps_expected_gdas1:
-        raise ValueError
-    elif n_steps != n_steps_expected:
-        raise ValueError
+    if data['model'] == 'gdas1' and n_steps == n_steps_expected_gdas1:
+        return
+    if data['model'] != 'gdas1' and n_steps == n_steps_expected:
+        return
+    raise ValueError
 
 
 def _get_file_type(data: dict) -> str:
