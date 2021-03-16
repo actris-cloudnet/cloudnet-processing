@@ -13,7 +13,7 @@ from typing import Tuple, Union, Optional
 import requests
 from cloudnetpy.categorize import generate_categorize
 from cloudnetpy.instruments import rpg2nc, ceilo2nc, mira2nc, basta2nc, hatpro2nc
-from cloudnetpy.utils import date_range
+from cloudnetpy.utils import date_range, is_timestamp
 from requests.exceptions import HTTPError
 from data_processing import concat_wrapper
 from data_processing import nc_header_augmenter
@@ -110,8 +110,14 @@ class ProcessCloudnet(ProcessBase):
             try:
                 instrument = 'cl51'
                 raw_daily_file = NamedTemporaryFile(suffix='.DAT')
-                full_path, uuid.raw = self._download_instrument(instrument, largest_only=True)
-                shutil.move(full_path, raw_daily_file.name)
+                if self._site == 'norunda':
+                    full_paths, uuid.raw = self._download_adjoining_daily_files(instrument)
+                    utils.concatenate_text_files(full_paths, raw_daily_file.name)
+                    _fix_cl51_timestamps(raw_daily_file.name, 'Europe/Stockholm')
+                else:
+                    full_path, uuid.raw = self._download_instrument(instrument, largest_only=True)
+                    shutil.move(full_path, raw_daily_file.name)
+
             except RawDataMissingError:
                 instrument = 'halo-doppler-lidar'
                 full_path, uuid.raw = self._download_instrument(instrument, largest_only=True)
@@ -120,7 +126,7 @@ class ProcessCloudnet(ProcessBase):
 
         if instrument != 'halo-doppler-lidar':
             uuid.product = ceilo2nc(raw_daily_file.name, temp_file.name, self.site_meta,
-                                    uuid=uuid.volatile)
+                                    uuid=uuid.volatile, date=self.date_str)
         return uuid, instrument
 
     def process_categorize(self, uuid: Uuid) -> Tuple[Uuid, str]:
@@ -180,6 +186,27 @@ class ProcessCloudnet(ProcessBase):
         arg = temp_file if largest_only else None
         return self._download_raw_files(upload_metadata, arg)
 
+    def _download_adjoining_daily_files(self, instrument: str) -> tuple:
+        next_day = utils.get_date_from_past(-1, self.date_str)
+        payload = self._get_payload(instrument=instrument)
+        files, uuid_of_main_file = [], []
+        for date_str in (self.date_str, next_day):
+            try:
+                payload['dateFrom'] = date_str
+                payload['dateTo'] = date_str
+                upload_metadata = self._md_api.get('upload-metadata', payload)
+                local_file = NamedTemporaryFile()
+                full_path, uuid = self._download_raw_files(upload_metadata, local_file)
+                shutil.copy(full_path, self.temp_dir.name)
+                files.append(f'{self.temp_dir.name}/{os.path.basename(full_path)}')
+                if date_str == self.date_str:
+                    uuid_of_main_file = uuid
+            except (RawDataMissingError, MiscError):
+                continue
+        if not files:
+            raise MiscError('No raw data or all processed')
+        return files, uuid_of_main_file
+
     def _fix_calibrated_daily_file(self,
                                    uuid: Uuid,
                                    full_path: str,
@@ -211,6 +238,18 @@ def _unzip_gz_files(full_paths: list) -> str:
 
 def _screen_by_filename(metadata: list, pattern: str) -> list:
     return [row for row in metadata if re.search(pattern.lower(), row['filename'].lower())]
+
+
+def _fix_cl51_timestamps(filename: str, time_zone: str) -> None:
+    with open(filename, 'r') as file:
+        lines = file.readlines()
+        for ind, line in enumerate(lines):
+            if is_timestamp(line):
+                date_time = line.strip('-').strip('\n')
+                date_time_utc = utils.datetime_to_utc(date_time, time_zone)
+                lines[ind] = f'-{date_time_utc}\n'
+    with open(filename, 'w') as file:
+        file.writelines(lines)
 
 
 def _parse_args(args):

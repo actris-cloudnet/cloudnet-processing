@@ -1,4 +1,6 @@
 import datetime
+import shutil
+import pytz
 import configparser
 from configparser import ConfigParser
 import hashlib
@@ -224,3 +226,22 @@ class RawDataMissingError(Exception):
     def __init__(self, msg: str):
         self.message = msg
         super().__init__(self.message)
+
+
+def datetime_to_utc(date_time: str, time_zone_name: str) -> str:
+    """Converts local datetime at some time zone to UTC."""
+    time_zone = pytz.timezone(time_zone_name)
+    utc_timezone = pytz.timezone('UTC')
+    dt = datetime.datetime.strptime(date_time, "%Y-%m-%d %H:%M:%S")
+    dt = time_zone.localize(dt)
+    dt = dt.astimezone(utc_timezone)
+    dt = dt.strftime("%Y-%m-%d %H:%M:%S")
+    return dt
+
+
+def concatenate_text_files(filenames: list, output_filename: str) -> None:
+    """Concatenates text files."""
+    with open(output_filename, 'wb') as target:
+        for filename in filenames:
+            with open(filename, 'rb') as source:
+                shutil.copyfileobj(source, target)
