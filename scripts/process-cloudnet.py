@@ -13,7 +13,7 @@ from typing import Tuple, Union, Optional
 import requests
 from cloudnetpy.categorize import generate_categorize
 from cloudnetpy.instruments import rpg2nc, ceilo2nc, mira2nc, basta2nc, hatpro2nc
-from cloudnetpy.utils import date_range
+from cloudnetpy.utils import date_range, is_timestamp
 from requests.exceptions import HTTPError
 from data_processing import concat_wrapper
 from data_processing import nc_header_augmenter
@@ -110,8 +110,14 @@ class ProcessCloudnet(ProcessBase):
             try:
                 instrument = 'cl51'
                 raw_daily_file = NamedTemporaryFile(suffix='.DAT')
-                full_path, uuid.raw = self._download_instrument(instrument, largest_only=True)
-                shutil.move(full_path, raw_daily_file.name)
+                if self._site == 'norunda':
+                    full_paths, uuid.raw = self._download_adjoining_daily_files(instrument)
+                    utils.concatenate_text_files(full_paths, raw_daily_file.name)
+                    _fix_cl51_timestamps(raw_daily_file.name, 'Europe/Stockholm')
+                else:
+                    full_path, uuid.raw = self._download_instrument(instrument, largest_only=True)
+                    shutil.move(full_path, raw_daily_file.name)
+
             except RawDataMissingError:
                 instrument = 'halo-doppler-lidar'
                 full_path, uuid.raw = self._download_instrument(instrument, largest_only=True)
@@ -120,7 +126,7 @@ class ProcessCloudnet(ProcessBase):
 
         if instrument != 'halo-doppler-lidar':
             uuid.product = ceilo2nc(raw_daily_file.name, temp_file.name, self.site_meta,
-                                    uuid=uuid.volatile)
+                                    uuid=uuid.volatile, date=self.date_str)
         return uuid, instrument
 
     def process_categorize(self, uuid: Uuid) -> Tuple[Uuid, str]:
@@ -178,7 +184,21 @@ class ProcessCloudnet(ProcessBase):
         if pattern is not None:
             upload_metadata = _screen_by_filename(upload_metadata, pattern)
         arg = temp_file if largest_only else None
+        self._check_raw_data_status(upload_metadata)
         return self._download_raw_files(upload_metadata, arg)
+
+    def _download_adjoining_daily_files(self, instrument: str) -> Tuple[list, list]:
+        next_day = utils.get_date_from_past(-1, self.date_str)
+        payload = self._get_payload(instrument=instrument)
+        payload['dateFrom'] = self.date_str
+        payload['dateTo'] = next_day
+        upload_metadata = self._md_api.get('upload-metadata', payload)
+        upload_metadata = _order_metadata(upload_metadata)
+        if not upload_metadata:
+            raise RawDataMissingError('No raw data')
+        if not self._is_unprocessed_data(upload_metadata) and not self.is_reprocess:
+            raise MiscError('Raw data already processed')
+        return self._download_raw_files(upload_metadata)
 
     def _fix_calibrated_daily_file(self,
                                    uuid: Uuid,
@@ -193,6 +213,13 @@ class ProcessCloudnet(ProcessBase):
             }
         uuid_product = nc_header_augmenter.harmonize_nc_file(data)
         return uuid_product
+
+
+def _order_metadata(metadata: list) -> list:
+    key = 'measurementDate'
+    if len(metadata) == 2 and metadata[0][key] > metadata[1][key]:
+        metadata.reverse()
+    return metadata
 
 
 def _get_valid_uuids(uuids: list, full_paths: list, valid_full_paths: list) -> list:
@@ -211,6 +238,18 @@ def _unzip_gz_files(full_paths: list) -> str:
 
 def _screen_by_filename(metadata: list, pattern: str) -> list:
     return [row for row in metadata if re.search(pattern.lower(), row['filename'].lower())]
+
+
+def _fix_cl51_timestamps(filename: str, time_zone: str) -> None:
+    with open(filename, 'r') as file:
+        lines = file.readlines()
+    for ind, line in enumerate(lines):
+        if is_timestamp(line):
+            date_time = line.strip('-').strip('\n')
+            date_time_utc = utils.datetime_to_utc(date_time, time_zone)
+            lines[ind] = f'-{date_time_utc}\n'
+    with open(filename, 'w') as file:
+        file.writelines(lines)
 
 
 def _parse_args(args):

@@ -53,6 +53,7 @@ class ProcessModel(ProcessBase):
     def process_model(self, uuid: Uuid, model: str) -> Uuid:
         payload = self._get_payload(model=model)
         upload_metadata = self._md_api.get('upload-model-metadata', payload)
+        self._check_raw_data_status(upload_metadata)
         full_path, uuid.raw = self._download_raw_files(upload_metadata, temp_file)
         data = {
             'site_name': self._site,
