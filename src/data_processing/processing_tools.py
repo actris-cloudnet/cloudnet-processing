@@ -85,7 +85,6 @@ class ProcessBase:
     def _download_raw_files(self,
                             upload_metadata: list,
                             temp_file: Optional[NamedTemporaryFile] = None) -> Tuple[Union[list, str], list]:
-        self._check_raw_data_status(upload_metadata)
         if temp_file is not None:
             if len(upload_metadata) > 1:
                 print('Warning: several daily raw files (probably submitted without '
@@ -101,9 +100,13 @@ class ProcessBase:
     def _check_raw_data_status(self, metadata: list) -> None:
         if not metadata:
             raise RawDataMissingError('No raw data')
-        is_unprocessed_data = any([row['status'] == 'uploaded' for row in metadata])
+        is_unprocessed_data = self._is_unprocessed_data(metadata)
         if not is_unprocessed_data and not self.is_reprocess:
             raise MiscError('Raw data already processed')
+
+    @staticmethod
+    def _is_unprocessed_data(metadata: list) -> bool:
+        return any([row['status'] == 'uploaded' for row in metadata])
 
     def _get_payload(self,
                      instrument: Optional[str] = None,

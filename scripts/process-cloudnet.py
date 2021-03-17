@@ -184,28 +184,21 @@ class ProcessCloudnet(ProcessBase):
         if pattern is not None:
             upload_metadata = _screen_by_filename(upload_metadata, pattern)
         arg = temp_file if largest_only else None
+        self._check_raw_data_status(upload_metadata)
         return self._download_raw_files(upload_metadata, arg)
 
-    def _download_adjoining_daily_files(self, instrument: str) -> tuple:
+    def _download_adjoining_daily_files(self, instrument: str) -> Tuple[list, list]:
         next_day = utils.get_date_from_past(-1, self.date_str)
         payload = self._get_payload(instrument=instrument)
-        files, uuid_of_main_file = [], []
-        for date_str in (self.date_str, next_day):
-            try:
-                payload['dateFrom'] = date_str
-                payload['dateTo'] = date_str
-                upload_metadata = self._md_api.get('upload-metadata', payload)
-                local_file = NamedTemporaryFile()
-                full_path, uuid = self._download_raw_files(upload_metadata, local_file)
-                shutil.copy(full_path, self.temp_dir.name)
-                files.append(f'{self.temp_dir.name}/{os.path.basename(full_path)}')
-                if date_str == self.date_str:
-                    uuid_of_main_file = uuid
-            except (RawDataMissingError, MiscError):
-                continue
-        if not files:
-            raise MiscError('No raw data or all processed')
-        return files, uuid_of_main_file
+        payload['dateFrom'] = self.date_str
+        payload['dateTo'] = next_day
+        upload_metadata = self._md_api.get('upload-metadata', payload)
+        upload_metadata = _order_metadata(upload_metadata)
+        if not upload_metadata:
+            raise RawDataMissingError('No raw data')
+        if not self._is_unprocessed_data(upload_metadata) and not self.is_reprocess:
+            raise MiscError('Raw data already processed')
+        return self._download_raw_files(upload_metadata)
 
     def _fix_calibrated_daily_file(self,
                                    uuid: Uuid,
@@ -220,6 +213,13 @@ class ProcessCloudnet(ProcessBase):
             }
         uuid_product = nc_header_augmenter.harmonize_nc_file(data)
         return uuid_product
+
+
+def _order_metadata(metadata: list) -> list:
+    key = 'measurementDate'
+    if len(metadata) == 2 and metadata[0][key] > metadata[1][key]:
+        metadata.reverse()
+    return metadata
 
 
 def _get_valid_uuids(uuids: list, full_paths: list, valid_full_paths: list) -> list:
@@ -243,11 +243,11 @@ def _screen_by_filename(metadata: list, pattern: str) -> list:
 def _fix_cl51_timestamps(filename: str, time_zone: str) -> None:
     with open(filename, 'r') as file:
         lines = file.readlines()
-        for ind, line in enumerate(lines):
-            if is_timestamp(line):
-                date_time = line.strip('-').strip('\n')
-                date_time_utc = utils.datetime_to_utc(date_time, time_zone)
-                lines[ind] = f'-{date_time_utc}\n'
+    for ind, line in enumerate(lines):
+        if is_timestamp(line):
+            date_time = line.strip('-').strip('\n')
+            date_time_utc = utils.datetime_to_utc(date_time, time_zone)
+            lines[ind] = f'-{date_time_utc}\n'
     with open(filename, 'w') as file:
         file.writelines(lines)
 
