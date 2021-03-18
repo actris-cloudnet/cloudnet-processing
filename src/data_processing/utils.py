@@ -74,6 +74,19 @@ def get_product_types(level: Optional[int] = None) -> list:
     return l1_types + ['categorize'] + l2_types
 
 
+def get_calibration_factor(site: str, date: str, instrument: str) -> Union[float, None]:
+    url = f"https://cloudnet.fmi.fi/api/calibration/"
+    payload = {
+        'site': site,
+        'date': date,
+        'instrument': instrument
+    }
+    res = requests.get(url, payload).json()
+    if isinstance(res, dict):
+        return None
+    return res[0].get('calibrationFactor', None)
+
+
 def get_model_types() -> list:
     url = f"https://cloudnet.fmi.fi/api/models"
     models = requests.get(url=url).json()

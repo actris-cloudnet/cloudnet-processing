@@ -125,7 +125,8 @@ class ProcessCloudnet(ProcessBase):
                 raw_daily_file = None
 
         if instrument != 'halo-doppler-lidar':
-            uuid.product = ceilo2nc(raw_daily_file.name, temp_file.name, self.site_meta,
+            site_meta = self._fetch_calibration_factor(instrument)
+            uuid.product = ceilo2nc(raw_daily_file.name, temp_file.name, site_meta=site_meta,
                                     uuid=uuid.volatile, date=self.date_str)
         return uuid, instrument
 
@@ -213,6 +214,12 @@ class ProcessCloudnet(ProcessBase):
             }
         uuid_product = nc_header_augmenter.harmonize_nc_file(data)
         return uuid_product
+
+    def _fetch_calibration_factor(self, instrument: str) -> dict:
+        meta = self.site_meta
+        meta['calibration_factor'] = utils.get_calibration_factor(self._site, self.date_str,
+                                                                  instrument)
+        return meta
 
 
 def _order_metadata(metadata: list) -> list:
