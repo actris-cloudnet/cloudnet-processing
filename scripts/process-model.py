@@ -41,6 +41,7 @@ def main(args, storage_session=requests.session()):
 class ProcessModel(ProcessBase):
 
     def get_models_to_process(self, args) -> list:
+        minimum_size = 20200
         payload = {
             'site': self._site,
             'status': 'uploaded'
@@ -48,7 +49,8 @@ class ProcessModel(ProcessBase):
         if hasattr(args, 'start'):
             payload['dateFrom'] = args.start
         metadata = self._md_api.get('upload-model-metadata', payload)
-        return [(row['measurementDate'], row['model']['id']) for row in metadata]
+        return [(row['measurementDate'], row['model']['id']) for row in metadata
+                if row['size'] > minimum_size]
 
     def process_model(self, uuid: Uuid, model: str) -> Uuid:
         payload = self._get_payload(model=model)
