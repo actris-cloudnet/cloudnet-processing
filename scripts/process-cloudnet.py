@@ -70,11 +70,13 @@ class ProcessCloudnet(ProcessBase):
             uuid.product, valid_full_paths = hatpro2nc(self.temp_dir.name, temp_file.name,
                                                        self.site_meta, uuid=uuid.volatile,
                                                        date=self.date_str)
-            uuid.raw = _get_valid_uuids(raw_uuids, full_paths, valid_full_paths)
         except RawDataMissingError:
             pattern = '(clwvi.*.nc$|.lwp.*.nc$)'
-            full_path, uuid.raw = self._download_instrument(instrument, pattern, True)
-            uuid.product = self._fix_calibrated_daily_file(uuid, full_path, instrument)
+            full_paths, raw_uuids = self._download_instrument(instrument, pattern)
+            valid_full_paths = concat_wrapper.concat_hatpro_files(full_paths, self.date_str,
+                                                                  temp_file.name)
+            uuid.product = self._fix_calibrated_daily_file(uuid, temp_file.name, instrument)
+        uuid.raw = _get_valid_uuids(raw_uuids, full_paths, valid_full_paths)
         return uuid, instrument
 
     def process_radar(self, uuid: Uuid) -> Tuple[Uuid, str]:

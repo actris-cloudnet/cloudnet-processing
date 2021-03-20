@@ -1,6 +1,29 @@
 """Module containing helper functions for CH15k concatenation."""
 import netCDF4
 from cloudnetpy import concat_lib as clib
+from cloudnetpy.utils import get_epoch, seconds2date
+import shutil
+
+
+def concat_hatpro_files(files: list, date: str, output_file: str) -> list:
+    """Concatenates several HATPRO netcdf files into a daily file."""
+    if len(files) == 1:
+        shutil.copy(files[0], output_file)
+        return files
+    valid_files = []
+    for file in files:
+        nc = netCDF4.Dataset(file)
+        time = nc.variables['time']
+        time_array = time[:]
+        time_units = time.units
+        nc.close()
+        epoch = get_epoch(time_units)
+        for timestamp in time_array:
+            if seconds2date(timestamp, epoch)[:3] == date.split('-'):
+                valid_files.append(file)
+                break
+    clib.concatenate_files(valid_files, output_file)
+    return valid_files
 
 
 def concat_chm15k_files(files: list, date: str, output_file: str) -> list:
