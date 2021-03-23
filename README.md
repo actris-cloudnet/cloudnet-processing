@@ -4,20 +4,15 @@
 Various scripts used in Cloudnet data transfer and processing.
 
 ### Installation
-```
-$ git clone git@github.com:actris-cloudnet/data-processing.git
-$ cd data-processing
-$ python3 -m venv venv
-$ source venv/bin/activate
-(venv) $ pip3 install --upgrade pip
-(venv) $ pip3 install .
-```
+The data processing tools are distributed as a docker container as a part of the Cloudnet development toolkit.
+Refer to [README of the dev-toolkit repository](https://github.com/actris-cloudnet/dev-toolkit/) on how to set up the CLU development environment.
 
 ### Scripts
-
+Once the CLU development environment is running, scripts can be run inside the data-processing container with
+the `./run` wrapper.
 The scripts are located in `scripts/` folder and should be run from the root: 
 ```
-$ scripts/<script_name.py> arg1 --arg2=foo ...
+$ ./run scripts/<script_name.py> arg1 --arg2=foo ...
 ```
 The following scripts are provided:
 
@@ -140,12 +135,12 @@ usage: map-variable-names.py
 ### Tests
 Run unit tests
 ```
-$ pytest
+$ ./run pytest
 ```
 
 Run end-to-end tests:
 ```
-$ for f in tests/e2e/*/main.py; do $f; done
+$ ./run for f in tests/e2e/*/main.py; do $f; done
 ```
 
 ### Licence
