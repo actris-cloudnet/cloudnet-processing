@@ -1,4 +1,3 @@
 #!/bin/bash
 
-docker run -t docker-common_data-processing "$@"
-
+docker run -t dev-toolkit_data-processing "$@"
