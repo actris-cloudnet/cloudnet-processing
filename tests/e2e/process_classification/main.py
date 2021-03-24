@@ -43,8 +43,7 @@ def main():
 def _process(main_extra_args=()):
     with open(f'{SCRIPT_PATH}/md.log', 'w'):
         pass
-    args = ['bucharest', f"--config-dir=tests/data/config", f"--start=2020-10-22",
-            f"--stop=2020-10-23", '-p=classification']
+    args = ['bucharest', f"--config-dir=tests/data/config", f"-d=2020-10-22", '-p=classification']
     temp_file = NamedTemporaryFile()
     register_storage_urls(temp_file)
     std_args = utils.start_output_capturing()

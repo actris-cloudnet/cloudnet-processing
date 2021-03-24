@@ -26,7 +26,7 @@ The following scripts are provided:
 Create Cloudnet products.
 
 ```
-usage: process-cloudnet.py [-h] [-r] [--config-dir /FOO/BAR] [--start YYYY-MM-DD]
+usage: process-cloudnet.py [-h] [-r] [--config-dir /FOO/BAR] [-d YYYY-MM-DD] [--start YYYY-MM-DD]
                            [--stop YYYY-MM-DD] [-p ...] SITE
 ```
 
@@ -43,6 +43,7 @@ Optional arguments:
 | `-h`  | `--help`         |                   | Show help and exit. |
 | `-r`  | `--reprocess`    | `False`           | See below. |
 |       | `--config-dir`   | `./config`        | Path to directory containing config files. |
+| `-d`  | `--date`         |                   | Single date to be processed. Alternatively `--start` and `--stop` can be defined.|
 |       | `--start`        | `current day - 7` | Starting date. |
 |       | `--stop`         | `current day - 1 `| Stopping date. |
 | `-p`  | `--products`     | all             | Processed products, e.g, `radar,lidar,categorize,classification`. |

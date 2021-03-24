@@ -32,8 +32,7 @@ temp_file = NamedTemporaryFile()
 def main(args, storage_session=requests.session()):
     args = _parse_args(args)
     config = utils.read_main_conf(args)
-    start_date = utils.date_string_to_date(args.start)
-    stop_date = utils.date_string_to_date(args.stop)
+    start_date, stop_date = _get_processing_dates(args)
     process = ProcessCloudnet(args, config, storage_session)
     for date in date_range(start_date, stop_date):
         date_str = date.strftime("%Y-%m-%d")
@@ -249,6 +248,18 @@ def _screen_by_filename(metadata: list, pattern: str) -> list:
     return [row for row in metadata if re.search(pattern.lower(), row['filename'].lower())]
 
 
+def _get_processing_dates(args):
+    if args.date is not None:
+        start_date = args.date
+        stop_date = utils.get_date_from_past(-1, start_date)
+    else:
+        start_date = args.start
+        stop_date = args.stop
+    start_date = utils.date_string_to_date(start_date)
+    stop_date = utils.date_string_to_date(stop_date)
+    return start_date, stop_date
+
+
 def _fix_cl51_timestamps(filename: str, time_zone: str) -> None:
     with open(filename, 'r') as file:
         lines = file.readlines()
@@ -274,6 +285,10 @@ def _parse_args(args):
                         metavar='YYYY-MM-DD',
                         help='Stopping date. Default is current day + 1 (excluded).',
                         default=utils.get_date_from_past(-1))
+    parser.add_argument('-d', '--date',
+                        type=str,
+                        metavar='YYYY-MM-DD',
+                        help='Single date to be processed.')
     parser.add_argument('-r', '--reprocess',
                         action='store_true',
                         help='Process new version of the stable files and reprocess volatile '
