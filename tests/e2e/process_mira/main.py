@@ -41,7 +41,7 @@ def main():
     utils.start_server(5001, 'tests/data/server/pid', f'{SCRIPT_PATH}/pid.log')
     register_storage_urls()
 
-    main_args = ['juelich', f"--config-dir=tests/data/config", f"--start=2021-01-27",
+    main_args = ['juelich', f"--start=2021-01-27",
                  f"--stop=2021-01-28", '-p=radar', '-r']
     std_args = utils.start_output_capturing()
     process_cloudnet.main(main_args, storage_session=session)

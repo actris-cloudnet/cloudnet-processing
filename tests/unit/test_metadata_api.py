@@ -10,9 +10,9 @@ session = requests.Session()
 session.mount('http://', adapter)
 mock_addr = 'http://test/'
 config = {
-    'METADATASERVER': {'url': mock_addr},
-    'FREEZE_AFTER': {'days': 2},
-    'FREEZE_MODEL_AFTER': {'days': 3}
+    'DATAPORTAL_URL': mock_addr,
+    'FREEZE_AFTER_DAYS': 2,
+    'FREEZE_MODEL_AFTER_DAYS': 3
 }
 
 files_response = '''

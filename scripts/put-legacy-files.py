@@ -18,7 +18,7 @@ from data_processing.utils import MiscError
 def main():
     """The main function."""
 
-    config = utils.read_main_conf(ARGS)
+    config = utils.read_main_conf()
     md_api = MetadataApi(config)
     storage_api = StorageApi(config)
     pid_utils = PidUtils(config)
@@ -154,11 +154,6 @@ if __name__ == "__main__":
                         nargs='+',
                         help='Path to the specific site directory containing legacy products '
                              'in the subdirectories, e.g., /ibrix/arch/dmz/cloudnet/data/arm-sgp')
-    parser.add_argument('--config-dir',
-                        type=str,
-                        metavar='/FOO/BAR',
-                        help='Path to directory containing config files. Default: ./config.',
-                        default='./config')
     parser.add_argument('--year',
                         '-y',
                         type=int,

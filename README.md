@@ -21,7 +21,7 @@ The following scripts are provided:
 Create Cloudnet products.
 
 ```
-usage: process-cloudnet.py [-h] [-r] [--config-dir /FOO/BAR] [-d YYYY-MM-DD] [--start YYYY-MM-DD]
+usage: process-cloudnet.py [-h] [-r] [-d YYYY-MM-DD] [--start YYYY-MM-DD]
                            [--stop YYYY-MM-DD] [-p ...] SITE
 ```
 
@@ -37,7 +37,6 @@ Optional arguments:
 | :---  | :----------             | :---              | :---                                       |
 | `-h`  | `--help`         |                   | Show help and exit. |
 | `-r`  | `--reprocess`    | `False`           | See below. |
-|       | `--config-dir`   | `./config`        | Path to directory containing config files. |
 | `-d`  | `--date`         |                   | Single date to be processed. Alternatively `--start` and `--stop` can be defined.|
 |       | `--start`        | `current day - 7` | Starting date. |
 |       | `--stop`         | `current day - 1 `| Stopping date. |
@@ -58,7 +57,7 @@ Behavior of the `--reprocess` flag:
 Create Cloudnet model products.
 
 ```
-usage: process-model.py [-h] [--config-dir /FOO/BAR] SITE
+usage: process-model.py [-h] SITE
 ```
 
 Positional arguments:
@@ -72,7 +71,6 @@ Optional arguments:
 | Short | Long             | Default           | Description                                | 
 | :---  | :----------             | :---              | :---                                       |
 | `-h`  | `--help`         |                   | Show help and exit. |
-|       | `--config-dir`   | `./config`        | Path to directory containing config files. |
 
 
 
@@ -81,7 +79,7 @@ Optional arguments:
 Upload Matlab processed legacy products (`categorize`, and level 2 products) to data portal.
 
 ```
-usage: put-legacy-files.py [-h] [-y YYYY] [--config-dir /FOO/BAR] PATH
+usage: put-legacy-files.py [-h] [-y YYYY] PATH
 ```
 
 Positional arguments:
@@ -95,7 +93,6 @@ Optional arguments:
 | Short | Long             | Default     | Description                                | 
 | :---  | :---             | :---        | :---                                       |
 | `-h`  | `--help`         |             | Show help and exit.                        |
-|       | `--config-dir`   | `./config`  | Path to directory containing config files. |
 |  `-y` | `--year`         | all         | Process only some certain year.            |
 
 Behavior:
@@ -114,7 +111,7 @@ Behavior:
 Freeze selected files.
 
 ```
-usage: freeze.py [-h] [--config-dir /FOO/BAR]
+usage: freeze.py [-h]
 ```
 
 Optional arguments:
@@ -122,7 +119,6 @@ Optional arguments:
 | Short | Long             | Default     | Description                                | 
 | :---  | :---             | :---        | :---                                       |
 | `-h`  | `--help`         |             | Show help and exit.                        |
-|       | `--config-dir`   | `./config`  | Path to directory containing config files. |
 
 
 ### `map-variable-names.py`

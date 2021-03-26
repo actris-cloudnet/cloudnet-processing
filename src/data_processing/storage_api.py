@@ -12,9 +12,9 @@ class StorageApi:
 
     def __init__(self, config: dict, session=requests.Session()):
         self.session = session
-        self._url = config['STORAGE-SERVICE']['url']
-        self._auth = (config['STORAGE-SERVICE']['username'],
-                      config['STORAGE-SERVICE']['password'])
+        self._url = config['STORAGE_SERVICE_URL']
+        self._auth = (config['STORAGE_SERVICE_USER'],
+                      config['STORAGE_SERVICE_PASSWORD'])
 
     def upload_product(self, full_path: str, s3key: str) -> dict:
         """Upload a processed Cloudnet file."""

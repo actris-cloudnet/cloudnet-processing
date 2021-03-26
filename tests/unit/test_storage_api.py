@@ -6,11 +6,9 @@ from test_utils import utils as utils
 session, adapter, mock_addr = utils.init_test_session()
 
 config = {
-    'STORAGE-SERVICE': {
-        'url': mock_addr,
-        'username': 'test',
-        'password': 'test'
-    },
+    'STORAGE_SERVICE_URL': mock_addr,
+    'STORAGE_SERVICE_USER': 'test',
+    'STORAGE_SERVICE_PASSWORD': 'test'
 }
 
 

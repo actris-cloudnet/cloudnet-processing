@@ -14,10 +14,10 @@ jobs:
         run: docker build -t test .
 
       - name: Test
-        run: docker run test pytest
+        run: docker run --env-file test.env test pytest
 
       - name: Run e2e tests
-        run: docker run test /bin/sh -c 'for f in tests/e2e/*/main.py; do $f; done'
+        run: docker run --env-file test.env test /bin/sh -c 'for f in tests/e2e/*/main.py; do $f; done'
 
       - name: Lint
-        run: docker run test pylint **/*.py --errors-only --ignored-modules=netCDF4
+        run: docker run --env-file test.env test pylint **/*.py --errors-only --ignored-modules=netCDF4

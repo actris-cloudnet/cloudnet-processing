@@ -47,7 +47,7 @@ def main():
 
     # Processes new version of existing stable categorize file:
 
-    args = ['bucharest', f"--config-dir=tests/data/config", f"--start=2020-10-22",
+    args = ['bucharest', f"--start=2020-10-22",
             f"--stop=2020-10-23", '-p=categorize', '-r']
     process_cloudnet.main(args, storage_session=session)
 

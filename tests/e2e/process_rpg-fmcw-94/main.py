@@ -42,7 +42,7 @@ def main():
     utils.start_server(5001, 'tests/data/server/pid', f'{SCRIPT_PATH}/pid.log')
     register_storage_urls()
 
-    main_args = ['bucharest', f"--config-dir=tests/data/config", f"--start=2020-10-22",
+    main_args = ['bucharest', f"--start=2020-10-22",
                  f"--stop=2020-10-23", '-p=radar']
     std_args = utils.start_output_capturing()
     process_cloudnet.main(main_args, storage_session=session)

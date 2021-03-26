@@ -31,7 +31,7 @@ temp_file = NamedTemporaryFile()
 
 def main(args, storage_session=requests.session()):
     args = _parse_args(args)
-    config = utils.read_main_conf(args)
+    config = utils.read_main_conf()
     start_date, stop_date = _get_processing_dates(args)
     process = ProcessCloudnet(args, config, storage_session)
     for date in date_range(start_date, stop_date):
