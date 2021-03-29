@@ -11,7 +11,7 @@ class MetadataApi:
     def __init__(self, config: dict, session=requests.Session()):
         self.config = config
         self.session = session
-        self._url = config['METADATASERVER']['url']
+        self._url = config['DATAPORTAL_URL']
 
     def get(self, end_point: str, payload: dict) -> Union[list, dict]:
         """Get Cloudnet metadata."""
@@ -47,20 +47,20 @@ class MetadataApi:
 
     def find_volatile_regular_files_to_freeze(self) -> list:
         """Find volatile files released before certain time limit."""
-        updated_before = self._get_freeze_limit('FREEZE_AFTER')
+        updated_before = self._get_freeze_limit('FREEZE_AFTER_DAYS')
         payload = self._get_freeze_payload(updated_before)
         return self.get('api/files', payload)
 
     def find_volatile_model_files_to_freeze(self) -> list:
         """Find volatile model files released before certain time limit."""
-        updated_before = self._get_freeze_limit('FREEZE_MODEL_AFTER')
+        updated_before = self._get_freeze_limit('FREEZE_MODEL_AFTER_DAYS')
         payload = self._get_freeze_payload(updated_before)
         payload['allModels'] = True
         return self.get('api/model-files', payload)
 
     def _get_freeze_limit(self, key: str) -> datetime:
-        freeze_after = {key: int(value) for key, value in self.config[key].items()}
-        return datetime.now() - timedelta(**freeze_after)
+        freeze_after_days = self.config[key]
+        return datetime.now() - timedelta(days=freeze_after_days)
 
     @staticmethod
     def _get_freeze_payload(updated_before: datetime) -> dict:

@@ -70,13 +70,6 @@ def test_get_level1b_type(instrument, file_type):
     assert utils.get_level1b_type(instrument) == file_type
 
 
-def test_read_main_conf():
-    Args = namedtuple('args', 'config_dir')
-    args = Args(config_dir=f"{test_file_path}/../../config")
-    conf = utils.read_main_conf(args)
-    assert 'username' in conf['STORAGE-SERVICE']
-
-
 def test_is_volatile_file():
     file = 'tests/data/products/20201121_bucharest_classification.nc'
     assert utils.is_volatile_file(file) is True

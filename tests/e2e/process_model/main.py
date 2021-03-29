@@ -45,7 +45,7 @@ def main():
 def _process(main_extra_args=()):
     with open(f'{SCRIPT_PATH}/md.log', 'w'):
         pass
-    args = ['bucharest', f"--config-dir=tests/data/config"]
+    args = ['bucharest']
     temp_file = NamedTemporaryFile()
     register_storage_urls(temp_file)
     std_args = utils.start_output_capturing()

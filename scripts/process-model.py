@@ -22,7 +22,7 @@ temp_file = NamedTemporaryFile()
 
 def main(args, storage_session=requests.session()):
     args = _parse_args(args)
-    config = utils.read_main_conf(args)
+    config = utils.read_main_conf()
     process = ProcessModel(args, config, storage_session)
     for date_str, model in process.get_models_to_process(args):
         process.date_str = date_str

@@ -7,12 +7,12 @@ from requests import HTTPError
 class PidUtils:
 
     def __init__(self, config: dict):
-        self._pid_service_url = config['PID-SERVICE']['url']
+        self._pid_service_url = config['PID_SERVICE_URL']
         self._is_production = self._get_env(config)
 
     @staticmethod
     def _get_env(config) -> bool:
-        is_test_env = config['PID-SERVICE'].get('test_env', False)
+        is_test_env = config['PID_SERVICE_TEST_ENV']
         return not bool(is_test_env)
 
     def add_pid_to_file(self, filepath: str) -> Tuple[str, str]:

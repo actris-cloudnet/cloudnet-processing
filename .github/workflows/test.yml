@@ -1,38 +1,23 @@
-name: Cloudnet processing CI
-
+name: Test and lint
 on: [push]
 
 jobs:
-  build:
-
-    timeout-minutes: 5
-
+  test:
+    name: Run test suite
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        python-version: [3.6, 3.7, 3.8]
-
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
-      run: |
-        sudo apt-get install netcdf-bin
-        pip install --upgrade pip
-        pip install .
-    - name: Lint with pylint
-      run: |
-        pip install pylint
-        pylint **/*.py --errors-only --ignored-modules=netCDF4
-    - name: Test with pytest
-      run: |
-        pip install pytest
-        pytest
-    - name: Run e2e tests
-      run: |
-        for f in tests/e2e/*/main.py; do $f; done
+      - name: Checkout code
+        uses: actions/checkout@v2
 
+      - name: Build docker image
+        run: docker build -t test .
+
+      - name: Test
+        run: docker run --env-file test.env test pytest
+
+      - name: Run e2e tests
+        run: docker run --env-file test.env test /bin/sh -c 'for f in tests/e2e/*/main.py; do $f; done'
+
+      - name: Lint
+        run: docker run --env-file test.env test pylint **/*.py --errors-only --ignored-modules=netCDF4

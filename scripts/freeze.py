@@ -13,9 +13,8 @@ from data_processing.storage_api import StorageApi
 from data_processing import utils
 
 
-def main(args, storage_session=requests.session()):
-    args = _parse_args(args)
-    config = read_main_conf(args)
+def main(storage_session=requests.session()):
+    config = read_main_conf()
     pid_utils = PidUtils(config)
     md_api = metadata_api.MetadataApi(config)
     storage_api = StorageApi(config, storage_session)
@@ -46,16 +45,5 @@ def main(args, storage_session=requests.session()):
             os.remove(filename)
 
 
-def _parse_args(args):
-    parser = argparse.ArgumentParser(description='Process Cloudnet data.')
-    parser.add_argument('--config-dir',
-                        dest='config_dir',
-                        type=str,
-                        metavar='/FOO/BAR',
-                        help='Path to directory containing config files. Default: ./config.',
-                        default='./config')
-    return parser.parse_args(args)
-
-
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    main()

@@ -10,7 +10,7 @@ from tempfile import TemporaryDirectory
 def main():
     """The main function."""
 
-    config = utils.read_main_conf(ARGS)
+    config = utils.read_main_conf()
     md_api = MetadataApi(config)
     storage_api = StorageApi(config)
 
@@ -41,9 +41,6 @@ def main():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Put missing image files to database.')
-    parser.add_argument('--config-dir', type=str, metavar='/FOO/BAR',
-                        help='Path to directory containing config files. Default: ./config.',
-                        default='./config')
 
     ARGS = parser.parse_args()
     main()

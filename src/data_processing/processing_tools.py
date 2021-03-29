@@ -8,7 +8,6 @@ from data_processing.utils import MiscError, RawDataMissingError
 from data_processing.metadata_api import MetadataApi
 from data_processing.storage_api import StorageApi
 from data_processing.pid_utils import PidUtils
-from configparser import ConfigParser
 
 
 class Uuid:
@@ -25,7 +24,7 @@ def clean_dir(dir_name: str) -> None:
         os.remove(filename)
 
 
-def _get_temp_dir(config: ConfigParser) -> str:
+def _get_temp_dir(config: dict) -> str:
     section = 'MISC'
     fallback = '/tmp'
     if section not in config:
@@ -36,7 +35,7 @@ def _get_temp_dir(config: ConfigParser) -> str:
 class ProcessBase:
     def __init__(self,
                  args,
-                 config: ConfigParser,
+                 config: dict,
                  storage_session):
         self.site_meta, self._site, self._site_type = _read_site_info(args)
         self.is_reprocess = getattr(args, 'reprocess', False)
@@ -155,10 +154,4 @@ def add_default_arguments(parser):
     parser.add_argument('site',
                         nargs='+',
                         help='Site Name')
-    parser.add_argument('--config-dir',
-                        dest='config_dir',
-                        type=str,
-                        metavar='/FOO/BAR',
-                        help='Path to directory containing config files. Default: ./config.',
-                        default='./config')
     return parser
