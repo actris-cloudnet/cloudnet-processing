@@ -1,5 +1,5 @@
 # ACTRIS Cloudnet data-processing
-![](https://github.com/actris-cloudnet/data-processing/workflows/Cloudnet%20processing%20CI/badge.svg)
+![](https://github.com/actris-cloudnet/data-processing/workflows/Test%20and%20lint/badge.svg)
 
 Various scripts used in Cloudnet data transfer and processing.
 
