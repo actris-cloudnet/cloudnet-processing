@@ -109,7 +109,7 @@ def _get_valid_hatpro_timestamps(data: dict, nc: netCDF4.Dataset) -> list:
     expected_date = data['date'].split('-')
     valid_ind = []
     for ind, t in enumerate(time_stamps):
-        if seconds2date(t, epoch)[:3] == expected_date:
+        if (0 < t < 24 and epoch == expected_date) or (seconds2date(t, epoch)[:3] == expected_date):
             valid_ind.append(ind)
     if not valid_ind:
         raise RuntimeError('All HATPRO dates differ from expected.')
@@ -133,7 +133,7 @@ def _get_model_date(nc: netCDF4.Dataset) -> list:
 
 def _harmonize_hatpro_file(nc: netCDF4.Dataset) -> netCDF4.Dataset:
     valid_name = 'LWP'
-    for invalid_name in ('LWP_data', 'clwvi'):
+    for invalid_name in ('LWP_data', 'clwvi', 'atmosphere_liquid_water_content'):
         if invalid_name in nc.variables:
             nc.renameVariable(invalid_name, valid_name)
     if valid_name in nc.variables and 'kg' in nc.variables[valid_name].units:
@@ -185,6 +185,6 @@ def _get_epoch(units: str) -> tuple:
             return fallback
     year, month, day = date_components
     current_year = datetime.datetime.today().year
-    if (1900 < year < current_year) and (0 < month < 13) and (0 < day < 32):
+    if (1900 < year <= current_year) and (0 < month < 13) and (0 < day < 32):
         return tuple(date_components)
     return fallback

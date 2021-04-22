@@ -70,7 +70,7 @@ class ProcessCloudnet(ProcessBase):
                                                        self.site_meta, uuid=uuid.volatile,
                                                        date=self.date_str)
         except RawDataMissingError:
-            pattern = '(clwvi.*.nc$|.lwp.*.nc$)'
+            pattern = '(ufs_l2a.nc$|clwvi.*.nc$|.lwp.*.nc$)'
             full_paths, raw_uuids = self._download_instrument(instrument, pattern)
             valid_full_paths = concat_wrapper.concat_hatpro_files(full_paths, self.date_str,
                                                                   temp_file.name)
