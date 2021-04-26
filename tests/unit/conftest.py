@@ -82,8 +82,7 @@ def halo_file(tmpdir_factory):
     root_grp.createDimension('range', 3)
     range = root_grp.createVariable('range', 'f8', ('range',))
     range[:] = [2, 4, 6]
-    height_asl = root_grp.createVariable('height_asl', 'f8', ('range',))
-    height_asl[:] = [1, 2, 3]
+    root_grp.createVariable('altitude', 'f8')[:] = 10
     root_grp.title = 'FMI HALO Doppler lidar'
     root_grp.location = 'Hyytiälä'
     root_grp.history = '28 Jan 2021 05:16:27 - Created by Antti Manninen <antti.manninen@fmi.fi>'

@@ -48,8 +48,9 @@ def harmonize_nc_file(data: dict) -> str:
         nc.year, nc.month, nc.day = data['date'].split('-')
         nc = _harmonize_hatpro_file(nc)
     if data['instrument'] == 'halo-doppler-lidar':
-        nc.year, nc.month, nc.day = _get_halo_date(data)
-        nc.renameVariable('height_asl', 'height')
+        nc.year, nc.month, nc.day = data['date'].split('-')
+        nc.renameVariable('range', 'height')
+        nc.variables['height'][:] += nc.variables['altitude']
     nc.history = _get_history(nc)
     nc.location = _get_location(nc, data)
     nc.title = _get_title(nc)
@@ -114,15 +115,6 @@ def _get_valid_hatpro_timestamps(data: dict, nc: netCDF4.Dataset) -> list:
     if not valid_ind:
         raise RuntimeError('All HATPRO dates differ from expected.')
     return valid_ind
-
-
-def _get_halo_date(data: dict) -> tuple:
-    original_filename = data['original_filename']
-    year = f'{original_filename[:4]}'
-    month = f'{original_filename[4:6]}'
-    day = f'{original_filename[6:8]}'
-    assert f'{year}-{month}-{day}' == data['date']
-    return year, month, day
 
 
 def _get_model_date(nc: netCDF4.Dataset) -> list:
