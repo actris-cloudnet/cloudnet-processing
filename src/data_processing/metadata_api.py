@@ -59,7 +59,7 @@ class MetadataApi:
         return self.get('api/model-files', payload)
 
     def _get_freeze_limit(self, key: str) -> datetime:
-        freeze_after_days = self.config[key]
+        freeze_after_days = int(self.config[key])
         return datetime.now() - timedelta(days=freeze_after_days)
 
     @staticmethod
