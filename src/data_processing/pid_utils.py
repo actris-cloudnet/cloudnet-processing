@@ -12,8 +12,8 @@ class PidUtils:
 
     @staticmethod
     def _get_env(config) -> bool:
-        is_test_env = config['PID_SERVICE_TEST_ENV']
-        return not bool(is_test_env)
+        is_test_env = config['PID_SERVICE_TEST_ENV'].lower() == 'true'
+        return not is_test_env
 
     def add_pid_to_file(self, filepath: str) -> Tuple[str, str]:
         """Queries PID service and adds the PID to NC file metadata."""
