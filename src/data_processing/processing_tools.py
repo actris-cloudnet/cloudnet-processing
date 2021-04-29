@@ -25,11 +25,7 @@ def clean_dir(dir_name: str) -> None:
 
 
 def _get_temp_dir(config: dict) -> str:
-    section = 'MISC'
-    fallback = '/tmp'
-    if section not in config:
-        return fallback
-    return config[section].get('temp_dir', fallback)
+    return config.get('TEMP_DIR', '/tmp')
 
 
 class ProcessBase:
