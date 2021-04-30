@@ -2,7 +2,6 @@
 """A script for assigning PIDs for data files."""
 import os
 import sys
-import argparse
 import requests
 import glob
 from tempfile import TemporaryDirectory
@@ -11,6 +10,7 @@ from data_processing import metadata_api
 from data_processing.pid_utils import PidUtils
 from data_processing.storage_api import StorageApi
 from data_processing import utils
+from requests.exceptions import HTTPError
 
 
 def main(storage_session=requests.session()):
@@ -24,7 +24,11 @@ def main(storage_session=requests.session()):
     print(f'Found {len(metadata)} files to freeze.')
     temp_dir = TemporaryDirectory()
     for row in metadata:
-        full_path = storage_api.download_product(row, temp_dir.name)
+        try:
+            full_path = storage_api.download_product(row, temp_dir.name)
+        except HTTPError as e:
+            print(f'Problem with downloading volatile file \n{e}')
+            continue
         s3key = row['filename']
         try:
             uuid, pid = pid_utils.add_pid_to_file(full_path)
