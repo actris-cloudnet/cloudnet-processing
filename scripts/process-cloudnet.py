@@ -118,12 +118,17 @@ class ProcessCloudnet(ProcessBase):
                 else:
                     full_path, uuid.raw = self._download_instrument(instrument, largest_only=True)
                     shutil.move(full_path, raw_daily_file.name)
-
             except RawDataMissingError:
-                instrument = 'halo-doppler-lidar'
-                full_path, uuid.raw = self._download_instrument(instrument, largest_only=True)
-                uuid.product = self._fix_calibrated_daily_file(uuid, full_path, instrument)
-                raw_daily_file = None
+                try:
+                    instrument = 'ct25k'
+                    raw_daily_file = NamedTemporaryFile(suffix='.dat')
+                    full_path, uuid.raw = self._download_instrument(instrument, largest_only=True)
+                    shutil.move(full_path, raw_daily_file.name)
+                except RawDataMissingError:
+                    instrument = 'halo-doppler-lidar'
+                    full_path, uuid.raw = self._download_instrument(instrument, largest_only=True)
+                    uuid.product = self._fix_calibrated_daily_file(uuid, full_path, instrument)
+                    raw_daily_file = None
 
         if instrument != 'halo-doppler-lidar':
             site_meta = self._fetch_calibration_factor(instrument)
