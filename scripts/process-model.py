@@ -50,7 +50,7 @@ class ProcessModel(ProcessBase):
             payload['dateFrom'] = args.start
         metadata = self._md_api.get('upload-model-metadata', payload)
         return [(row['measurementDate'], row['model']['id']) for row in metadata
-                if row['size'] > minimum_size]
+                if int(row['size']) > minimum_size]
 
     def process_model(self, uuid: Uuid, model: str) -> Uuid:
         payload = self._get_payload(model=model)
