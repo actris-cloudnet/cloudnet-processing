@@ -126,7 +126,8 @@ class ProcessCloudnet(ProcessBase):
                     shutil.move(full_path, raw_daily_file.name)
                 except RawDataMissingError:
                     instrument = 'halo-doppler-lidar'
-                    full_path, uuid.raw = self._download_instrument(instrument, largest_only=True)
+                    full_path, uuid.raw = self._download_instrument(instrument, pattern='.nc$',
+                                                                    largest_only=True)
                     uuid.product = self._fix_calibrated_daily_file(uuid, full_path, instrument)
                     raw_daily_file = None
 
