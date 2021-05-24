@@ -53,8 +53,7 @@ def main():
 
 
 def _process(extra_main_args=(), extra_pytest_args=()):
-    main_args = ['bucharest', f"--start=2020-10-22",
-                 f"--stop=2020-10-23", '-p=lidar']
+    main_args = ['bucharest', f"--start=2020-10-22", f"--stop=2020-10-23", '-p=lidar']
     std_args = utils.start_output_capturing()
     process_cloudnet.main(main_args + list(extra_main_args), storage_session=session)
     output = utils.reset_output(*std_args)
