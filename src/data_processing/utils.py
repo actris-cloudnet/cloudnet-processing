@@ -2,7 +2,6 @@ import os
 import datetime
 import shutil
 import pytz
-from configparser import ConfigParser
 import hashlib
 import base64
 from typing import Tuple, Union, Optional
@@ -60,18 +59,17 @@ def read_site_info(site_name: str) -> dict:
             return site
 
 
-def get_product_types(level: Optional[int] = None) -> list:
+def get_product_types(level: Optional[str] = None) -> list:
     """Return Cloudnet processing types."""
     url = f"https://cloudnet.fmi.fi/api/products"
     products = requests.get(url=url).json()
-    l1_types = [product['id'] for product in products if int(product['level']) == 1]
-    l2_types = [product['id'] for product in products if int(product['level']) == 2]
-    l1_types.remove('categorize')
-    if level == 1:
-        return l1_types
-    if level == 2:
+    l1b_types = [product['id'] for product in products if product['level'] == '1b']
+    l2_types = [product['id'] for product in products if product['level'] == '2']
+    if level == '1b':
+        return l1b_types
+    if level == '2':
         return l2_types
-    return l1_types + ['categorize'] + l2_types
+    return l1b_types + ['categorize'] + l2_types
 
 
 def get_calibration_factor(site: str, date: str, instrument: str) -> Union[float, None]:

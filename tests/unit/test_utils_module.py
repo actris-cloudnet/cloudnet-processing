@@ -83,8 +83,8 @@ def test_get_product_bucket():
 def test_get_product_types():
     l1_types = ['lidar', 'model', 'mwr', 'radar']
     l2_types = ['classification', 'drizzle', 'iwc', 'lwc']
-    assert utils.get_product_types(level=1) == l1_types
-    assert utils.get_product_types(level=2) == l2_types
+    assert utils.get_product_types(level='1b') == l1_types
+    assert utils.get_product_types(level='2') == l2_types
     assert utils.get_product_types() == l1_types + ['categorize'] + l2_types
 
 

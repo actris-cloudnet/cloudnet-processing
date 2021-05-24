@@ -47,7 +47,7 @@ def main(args, storage_session=requests.session()):
             uuid = Uuid()
             try:
                 uuid.volatile = process.check_product_status(product)
-                if product in utils.get_product_types(level=2):
+                if product in utils.get_product_types(level='2'):
                     uuid, identifier = process.process_level2(uuid, product)
                 else:
                     uuid, identifier = getattr(process, f'process_{product}')(uuid)
@@ -138,7 +138,7 @@ class ProcessCloudnet(ProcessBase):
         return uuid, instrument
 
     def process_categorize(self, uuid: Uuid) -> Tuple[Uuid, str]:
-        l1_products = utils.get_product_types(level=1)
+        l1_products = utils.get_product_types(level='1b')
         input_files = {key: '' for key in l1_products}
         for product in l1_products:
             if product == 'model':

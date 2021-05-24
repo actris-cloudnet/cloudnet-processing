@@ -63,7 +63,7 @@ class ProcessBase:
         self._md_api.put(s3key, payload)
         for data in img_metadata:
             self._md_api.put_img(data, uuid.product)
-        if product in utils.get_product_types(level=1):
+        if product in utils.get_product_types(level='1b'):
             self._update_statuses(uuid.raw)
 
     def _check_meta(self, metadata: list) -> Union[str, None, bool]:
