@@ -247,6 +247,12 @@ def datetime_to_utc(date_time: str, time_zone_name: str) -> str:
     return dt
 
 
+def get_helsinki_datetime() -> datetime.datetime:
+    time_zone = pytz.timezone('Europe/Helsinki')
+    dt = datetime.datetime.now()
+    return dt.astimezone(time_zone)
+
+
 def concatenate_text_files(filenames: list, output_filename: str) -> None:
     """Concatenates text files."""
     with open(output_filename, 'wb') as target:

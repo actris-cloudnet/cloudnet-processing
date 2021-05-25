@@ -3,6 +3,7 @@ from datetime import timedelta, datetime
 from typing import Union
 from os import path
 import requests
+from data_processing import utils
 
 
 class MetadataApi:
@@ -60,7 +61,7 @@ class MetadataApi:
 
     def _get_freeze_limit(self, key: str) -> datetime:
         freeze_after_days = int(self.config[key])
-        return datetime.now() - timedelta(days=freeze_after_days)
+        return utils.get_helsinki_datetime() - timedelta(days=freeze_after_days)
 
     @staticmethod
     def _get_freeze_payload(updated_before: datetime) -> dict:
