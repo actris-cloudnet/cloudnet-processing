@@ -26,8 +26,10 @@ def main(storage_session=requests.session()):
     for row in metadata:
         try:
             full_path = storage_api.download_product(row, temp_dir.name)
-        except HTTPError as e:
-            print(f'Problem with downloading volatile file \n{e}')
+        except HTTPError as err:
+            utils.send_slack_alert(config, row['site']['id'], row['measurementDate'],
+                                   row['product']['id'], err, 'pid')
+            print(f'Problem with downloading volatile file \n{err}')
             continue
         s3key = row['filename']
         try:
@@ -43,8 +45,10 @@ def main(storage_session=requests.session()):
             }
             md_api.post('files', payload)
             storage_api.delete_volatile_product(s3key)
-        except OSError as e:
-            print(f'Error: corrupted file in pid-freezing: {full_path}\n{e}', file=sys.stderr)
+        except OSError as err:
+            print(f'Error: corrupted file in pid-freezing: {full_path}\n{err}', file=sys.stderr)
+            utils.send_slack_alert(config, row['site']['id'], row['measurementDate'],
+                                   row['product']['id'], err, 'pid')
         for filename in glob.glob(f'{temp_dir.name}/*'):
             os.remove(filename)
 

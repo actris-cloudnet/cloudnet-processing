@@ -1,14 +1,15 @@
-import os
-import datetime
-import shutil
-import pytz
-import hashlib
 import base64
-from typing import Tuple, Union, Optional
+import datetime
+import hashlib
+import os
+import shutil
+from typing import Tuple, Optional
+from typing import Union
 import netCDF4
+import pytz
 import requests
-from cloudnetpy.utils import get_time
 from cloudnetpy.plotting.plot_meta import ATTRIBUTES as ATTR
+from cloudnetpy.utils import get_time
 
 
 def create_product_put_payload(full_path: str,
@@ -111,6 +112,72 @@ def get_date_from_past(n: int, reference_date: Optional[str] = None) -> str:
     reference = reference_date or get_time().split()[0]
     date = date_string_to_date(reference) - datetime.timedelta(n)
     return str(date)
+
+
+def send_slack_alert(config: dict,
+                     site: str,
+                     date: str,
+                     product: str,
+                     error_msg,
+                     error_source: str) -> None:
+    key = 'SLACK_NOTIFICATION_URL'
+    if key not in config or config[key] == '':
+        return
+
+    if error_source == 'model':
+        label = ':earth_africa: Model processing'
+    elif error_source == 'pid':
+        label = ':id: PID generation'
+    elif error_source == 'data':
+        label = ':parking: Data processing'
+    else:
+        raise ValueError('Unknown error source')
+
+    blocks = [
+        {
+            "type": "section",
+            "text": {
+                "type": "plain_text",
+                "text": label,
+                "emoji": True
+            }
+        },
+        {
+            "type": "section",
+            "fields": [
+                {
+                    "type": "mrkdwn",
+                    "text": f"*Site:*\n{site}"
+                },
+                {
+                    "type": "mrkdwn",
+                    "text": f"*Date:*\n{date}"
+                }
+            ]
+        },
+        {
+            "type": "section",
+            "fields": [
+                {
+                    "type": "mrkdwn",
+                    "text": f"*Product:*\n{product}"
+                },
+                {
+                    "type": "mrkdwn",
+                    "text": f"*Timestamp:*\n{get_helsinki_datetime()}"
+                }
+            ]
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": f"*Error msg:*\n{error_msg}"
+            }
+        }
+    ]
+    payload = {'blocks': blocks}
+    requests.post(config[key], json=payload)
 
 
 def read_main_conf() -> dict:

@@ -34,7 +34,10 @@ def main(args, storage_session=requests.session()):
             uuid = process.process_model(uuid, model)
             process.upload_product_and_images(temp_file.name, 'model', uuid, model)
             process.print_info(uuid)
-        except (RawDataMissingError, MiscError, HTTPError, ConnectionError, RuntimeError) as err:
+        except MiscError as err:
+            print(err)
+        except (HTTPError, ConnectionError, RuntimeError) as err:
+            utils.send_slack_alert(config, args.site[0], date_str, model, err, 'model')
             print(err)
 
 

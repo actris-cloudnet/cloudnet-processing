@@ -54,8 +54,10 @@ def main(args, storage_session=requests.session()):
                 process.add_pid(temp_file.name, uuid)
                 process.upload_product_and_images(temp_file.name, product, uuid, identifier)
                 process.print_info(uuid)
-            except (RawDataMissingError, MiscError, HTTPError, ConnectionError, RuntimeError,
-                    KeyError, ValueError) as err:
+            except (RawDataMissingError, MiscError) as err:
+                print(err)
+            except (HTTPError, ConnectionError, RuntimeError, KeyError, ValueError) as err:
+                utils.send_slack_alert(config, args.site[0], date, product, err, 'data')
                 print(err)
         processing_tools.clean_dir(process.temp_dir.name)
 
