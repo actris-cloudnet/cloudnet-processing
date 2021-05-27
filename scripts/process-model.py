@@ -6,10 +6,11 @@ import warnings
 from tempfile import NamedTemporaryFile
 from typing import Union
 import requests
+import logging
 from requests.exceptions import HTTPError
 from data_processing import nc_header_augmenter
 from data_processing import utils
-from data_processing.utils import MiscError, RawDataMissingError
+from data_processing.utils import MiscError
 from data_processing import processing_tools
 from data_processing.processing_tools import Uuid, ProcessBase
 
@@ -22,12 +23,12 @@ temp_file = NamedTemporaryFile()
 
 def main(args, storage_session=requests.session()):
     args = _parse_args(args)
+    utils.init_logger(args)
     config = utils.read_main_conf()
     process = ProcessModel(args, config, storage_session)
     for date_str, model in process.get_models_to_process(args):
         process.date_str = date_str
-        print(f'{args.site[0]} {date_str}')
-        print(f'  {model.ljust(20)}', end='\t')
+        logging.info(f'{args.site}, {date_str}, {model}')
         uuid = Uuid()
         try:
             uuid.volatile = process.check_product_status(model)
@@ -35,10 +36,9 @@ def main(args, storage_session=requests.session()):
             process.upload_product_and_images(temp_file.name, 'model', uuid, model)
             process.print_info(uuid)
         except MiscError as err:
-            print(err)
+            logging.error(err)
         except (HTTPError, ConnectionError, RuntimeError) as err:
-            utils.send_slack_alert(config, args.site[0], date_str, model, err, 'model')
-            print(err)
+            utils.send_slack_alert(config, args.site, date_str, model, err, 'model')
 
 
 class ProcessModel(ProcessBase):

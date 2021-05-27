@@ -8,6 +8,8 @@ from typing import Union
 import netCDF4
 import pytz
 import requests
+import logging
+import inspect
 from cloudnetpy.plotting.plot_meta import ATTRIBUTES as ATTR
 from cloudnetpy.utils import get_time
 
@@ -120,6 +122,7 @@ def send_slack_alert(config: dict,
                      product: str,
                      error_msg,
                      error_source: str) -> None:
+    logging.critical(error_msg)
     key = 'SLACK_NOTIFICATION_URL'
     if key not in config or config[key] == '':
         return
@@ -326,3 +329,13 @@ def concatenate_text_files(filenames: list, output_filename: str) -> None:
         for filename in filenames:
             with open(filename, 'rb') as source:
                 shutil.copyfileobj(source, target)
+
+
+def init_logger(args: Optional = None) -> None:
+    logging.basicConfig(level=logging.INFO,
+                        format='%(asctime)s - %(levelname)s - %(message)s',
+                        datefmt='%Y-%m-%d %H:%M:%S')
+    script_name = inspect.stack()[2][1]
+    msg = f'Starting {script_name}'
+    msg += f' with args {vars(args)}' if args is not None else ''
+    logging.info(msg)
