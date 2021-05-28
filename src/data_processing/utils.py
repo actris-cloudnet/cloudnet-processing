@@ -116,12 +116,12 @@ def get_date_from_past(n: int, reference_date: Optional[str] = None) -> str:
     return str(date)
 
 
-def send_slack_alert(config: dict,
-                     site: str,
-                     date: str,
-                     product: str,
-                     error_msg,
-                     error_source: str) -> None:
+def send_slack_alert(error_msg,
+                     error_source: str,
+                     site: Optional[str] = None,
+                     date: Optional[str] = None,
+                     product: Optional[str] = None) -> None:
+    config = read_main_conf()
     logging.critical(error_msg)
     key = 'SLACK_NOTIFICATION_URL'
     if key not in config or config[key] == '':
@@ -132,7 +132,9 @@ def send_slack_alert(config: dict,
     elif error_source == 'pid':
         label = ':id: PID generation'
     elif error_source == 'data':
-        label = ':parking: Data processing'
+        label = ':desktop_computer: Data processing'
+    elif error_source == 'wrapper':
+        label = ':fire: Main wrapper'
     else:
         raise ValueError('Unknown error source')
 
@@ -150,23 +152,6 @@ def send_slack_alert(config: dict,
             "fields": [
                 {
                     "type": "mrkdwn",
-                    "text": f"*Site:*\n{site}"
-                },
-                {
-                    "type": "mrkdwn",
-                    "text": f"*Date:*\n{date}"
-                }
-            ]
-        },
-        {
-            "type": "section",
-            "fields": [
-                {
-                    "type": "mrkdwn",
-                    "text": f"*Product:*\n{product}"
-                },
-                {
-                    "type": "mrkdwn",
                     "text": f"*Timestamp:*\n{get_helsinki_datetime()}"
                 }
             ]
@@ -177,8 +162,35 @@ def send_slack_alert(config: dict,
                 "type": "mrkdwn",
                 "text": f"*Error msg:*\n{error_msg}"
             }
+        },
+        {
+            "type": "divider"
         }
     ]
+
+    if product is not None:
+        field = {
+            "type": "mrkdwn",
+            "text": f"*Product:*\n{product}"
+        }
+        blocks[1]['fields'].insert(0, field)
+
+    if site is not None or date is not None:
+        section = {
+            "type": "section",
+            "fields": [
+                {
+                    "type": "mrkdwn",
+                    "text": f"*Site:*\n{site}"
+                },
+                {
+                    "type": "mrkdwn",
+                    "text": f"*Date:*\n{date}"
+                }
+            ]
+        }
+        blocks.insert(1, section)
+
     payload = {'blocks': blocks}
     requests.post(config[key], json=payload)
 

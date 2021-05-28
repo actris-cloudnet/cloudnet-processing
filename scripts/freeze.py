@@ -28,8 +28,8 @@ def main(storage_session=requests.session()):
         try:
             full_path = storage_api.download_product(row, temp_dir.name)
         except HTTPError as err:
-            utils.send_slack_alert(config, row['site']['id'], row['measurementDate'],
-                                   row['product']['id'], err, 'pid')
+            utils.send_slack_alert(err, 'pid', row['site']['id'], row['measurementDate'],
+                                   row['product']['id'])
             continue
         s3key = row['filename']
         try:
@@ -46,8 +46,8 @@ def main(storage_session=requests.session()):
             md_api.post('files', payload)
             storage_api.delete_volatile_product(s3key)
         except OSError as err:
-            utils.send_slack_alert(config, row['site']['id'], row['measurementDate'],
-                                   row['product']['id'], err, 'pid')
+            utils.send_slack_alert(err, 'pid', row['site']['id'], row['measurementDate'],
+                                   row['product']['id'])
         for filename in glob.glob(f'{temp_dir.name}/*'):
             os.remove(filename)
 

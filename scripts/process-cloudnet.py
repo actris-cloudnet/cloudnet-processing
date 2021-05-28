@@ -58,7 +58,7 @@ def main(args, storage_session=requests.session()):
             except (RawDataMissingError, MiscError) as err:
                 logging.error(err)
             except (HTTPError, ConnectionError, RuntimeError, KeyError, ValueError) as err:
-                utils.send_slack_alert(config, args.site, date, product, err, 'data')
+                utils.send_slack_alert(err, 'data', args.site, date, product)
         processing_tools.clean_dir(process.temp_dir.name)
 
 
