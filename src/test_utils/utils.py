@@ -19,15 +19,15 @@ def init_test_session():
 
 
 def start_output_capturing():
-    old_stdout = sys.stdout
-    stdout = io.StringIO()
-    sys.stdout = stdout
-    return old_stdout, stdout
+    old_stderr = sys.stderr
+    stderr = io.StringIO()
+    sys.stderr = stderr
+    return old_stderr, stderr
 
 
-def reset_output(old_stdout, stdout):
-    output = stdout.getvalue()
-    sys.stdout = old_stdout
+def reset_output(old_stderr, stderr):
+    output = stderr.getvalue()
+    sys.stderr = old_stderr
     return output
 
 
@@ -82,8 +82,8 @@ def copy_files(source, target):
 
 def start_server(port, document_root, log_path):
     logfile = open(log_path, 'w')
-    md_server = subprocess.Popen(['python3', '-u', 'src/test_utils/server.py', document_root, str(port)],
-                                 stderr=logfile)
+    md_server = subprocess.Popen(['python3', '-u', 'src/test_utils/server.py', document_root,
+                                  str(port)], stderr=logfile)
     atexit.register(md_server.terminate)
     wait_for_port(port)
 

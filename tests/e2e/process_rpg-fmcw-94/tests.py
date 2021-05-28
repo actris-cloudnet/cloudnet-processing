@@ -17,7 +17,6 @@ class TestRPGFMCW94Processing:
     def _fetch_params(self, params):
         self.output = params['output']
         self.full_path = params['full_path']
-        print(self.output)
 
     def test_that_does_not_call_pid_api(self):
         f = open(f'{SCRIPT_PATH}/pid.log')
