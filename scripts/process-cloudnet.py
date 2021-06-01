@@ -21,6 +21,7 @@ from data_processing import utils
 from data_processing.utils import MiscError, RawDataMissingError
 from data_processing import processing_tools
 from data_processing.processing_tools import Uuid, ProcessBase
+import logging
 
 
 warnings.simplefilter("ignore", UserWarning)
@@ -31,19 +32,19 @@ temp_file = NamedTemporaryFile()
 
 def main(args, storage_session=requests.session()):
     args = _parse_args(args)
+    utils.init_logger(args)
     config = utils.read_main_conf()
     start_date, stop_date = _get_processing_dates(args)
     process = ProcessCloudnet(args, config, storage_session)
     for date in date_range(start_date, stop_date):
         date_str = date.strftime("%Y-%m-%d")
         process.date_str = date_str
-        print(f'{args.site[0]} {date_str}')
         for product in args.products:
             if product not in utils.get_product_types():
                 raise ValueError('No such product')
             if product == 'model':
                 continue
-            print(f'{product.ljust(20)}', end='\t')
+            logging.info(f'Processing {product} product')
             uuid = Uuid()
             try:
                 uuid.volatile = process.check_product_status(product)
@@ -54,9 +55,10 @@ def main(args, storage_session=requests.session()):
                 process.add_pid(temp_file.name, uuid)
                 process.upload_product_and_images(temp_file.name, product, uuid, identifier)
                 process.print_info(uuid)
-            except (RawDataMissingError, MiscError, HTTPError, ConnectionError, RuntimeError,
-                    KeyError, ValueError) as err:
-                print(err)
+            except (RawDataMissingError, MiscError) as err:
+                logging.warning(err)
+            except (HTTPError, ConnectionError, RuntimeError, KeyError, ValueError) as err:
+                utils.send_slack_alert(err, 'data', args.site, date, product)
         processing_tools.clean_dir(process.temp_dir.name)
 
 

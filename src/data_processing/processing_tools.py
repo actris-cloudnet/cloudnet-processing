@@ -1,6 +1,7 @@
 import os
 import glob
 import shutil
+import logging
 from typing import Union, Tuple, Optional
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 from data_processing import utils
@@ -42,7 +43,7 @@ class ProcessBase:
         self.temp_dir = TemporaryDirectory(dir=_get_temp_dir(config))
 
     def print_info(self, uuid: Uuid) -> None:
-        print(f'Created: {"New version" if self._is_new_version(uuid) else "Volatile file"}')
+        logging.info(f'Created: {"New version" if self._is_new_version(uuid) else "Volatile file"}')
 
     def upload_product_and_images(self,
                                   full_path: str,
@@ -82,8 +83,7 @@ class ProcessBase:
                             temp_file: Optional[NamedTemporaryFile] = None) -> Tuple[Union[list, str], list]:
         if temp_file is not None:
             if len(upload_metadata) > 1:
-                print('Warning: several daily raw files (probably submitted without '
-                      '"allowUpdate")', end='\t')
+                logging.warning('Several daily raw files')
             upload_metadata = [upload_metadata[0]]
         full_paths, uuids = self._storage_api.download_raw_files(upload_metadata,
                                                                  self.temp_dir.name)
@@ -135,11 +135,11 @@ class ProcessBase:
     @staticmethod
     def _check_response_length(metadata: list) -> None:
         if len(metadata) > 1:
-            print('Warning: API responded with several files')
+            logging.warning('API responded with several files')
 
 
 def _read_site_info(args) -> tuple:
-    site_info = utils.read_site_info(args.site[0])
+    site_info = utils.read_site_info(args.site)
     site_id = site_info['id']
     site_type = site_info['type']
     site_meta = {key: site_info[key] for key in ('latitude', 'longitude', 'altitude', 'name')}
@@ -147,7 +147,5 @@ def _read_site_info(args) -> tuple:
 
 
 def add_default_arguments(parser):
-    parser.add_argument('site',
-                        nargs='+',
-                        help='Site Name')
+    parser.add_argument('site', help='Site Name')
     return parser

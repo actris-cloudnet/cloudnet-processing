@@ -1,14 +1,18 @@
-import os
-import datetime
-import shutil
-import pytz
-import hashlib
 import base64
-from typing import Tuple, Union, Optional
+import datetime
+import hashlib
+import os
+import sys
+import shutil
+from typing import Tuple, Optional
+from typing import Union
 import netCDF4
+import pytz
 import requests
-from cloudnetpy.utils import get_time
+import logging
+import inspect
 from cloudnetpy.plotting.plot_meta import ATTRIBUTES as ATTR
+from cloudnetpy.utils import get_time
 
 
 def create_product_put_payload(full_path: str,
@@ -111,6 +115,57 @@ def get_date_from_past(n: int, reference_date: Optional[str] = None) -> str:
     reference = reference_date or get_time().split()[0]
     date = date_string_to_date(reference) - datetime.timedelta(n)
     return str(date)
+
+
+def send_slack_alert(error_msg,
+                     error_source: str,
+                     site: Optional[str] = None,
+                     date: Optional[str] = None,
+                     product: Optional[str] = None,
+                     critical: Optional[bool] = False) -> None:
+    config = read_main_conf()
+    if critical is True:
+        logging.critical(error_msg)
+    else:
+        logging.error(error_msg)
+
+    key = 'SLACK_API_TOKEN'
+    if key not in config or config[key] == '':
+        return
+
+    if error_source == 'model':
+        label = ':earth_africa: Model processing'
+    elif error_source == 'pid':
+        label = ':id: PID generation'
+    elif error_source == 'data':
+        label = ':desktop_computer: Data processing'
+    elif error_source == 'wrapper':
+        label = ':fire: Main wrapper'
+    else:
+        raise ValueError('Unknown error source')
+
+    with open('all.log') as file:
+        log = file.readlines()
+
+    margin = ' '*7
+    msg = f'*{label}*\n\n{margin}'
+
+    for name, var in zip(('Site', 'Date', 'Product'), (site, date, product)):
+        if var is not None:
+            msg += f'*{name}:* {var}{margin}'
+
+    timestamp = str(get_helsinki_datetime())[:19]
+    msg += f'*Time:* {timestamp}\n\n'
+    msg += f'{margin}*Error:* {error_msg}'
+
+    payload = {'content': ''.join(log),
+               'channels': 'C022YBMQ2KC',
+               'title': 'Full log',
+               'initial_comment': msg}
+
+    requests.post('https://slack.com/api/files.upload',
+                  data=payload,
+                  headers={"Authorization": f'Bearer {config[key]}'})
 
 
 def read_main_conf() -> dict:
@@ -259,3 +314,20 @@ def concatenate_text_files(filenames: list, output_filename: str) -> None:
         for filename in filenames:
             with open(filename, 'rb') as source:
                 shutil.copyfileobj(source, target)
+
+
+def init_logger(args: Optional = None) -> None:
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    output_file_handler = logging.FileHandler("all.log")
+    output_file_handler.setFormatter(formatter)
+    stderr_handler = logging.StreamHandler(sys.stderr)
+    stderr_handler.setFormatter(formatter)
+    logger.addHandler(output_file_handler)
+    logger.addHandler(stderr_handler)
+
+    script_name = inspect.stack()[2][1]
+    msg = f'Starting {script_name}'
+    msg += f' with args {vars(args)}' if args is not None else ''
+    logging.info(msg)

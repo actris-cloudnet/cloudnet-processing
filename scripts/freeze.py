@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """A script for assigning PIDs for data files."""
 import os
-import sys
 import requests
 import glob
+import logging
 from tempfile import TemporaryDirectory
 from data_processing.utils import read_main_conf
 from data_processing import metadata_api
@@ -14,6 +14,7 @@ from requests.exceptions import HTTPError
 
 
 def main(storage_session=requests.session()):
+    utils.init_logger()
     config = read_main_conf()
     pid_utils = PidUtils(config)
     md_api = metadata_api.MetadataApi(config)
@@ -21,18 +22,19 @@ def main(storage_session=requests.session()):
     regular_files = md_api.find_volatile_regular_files_to_freeze()
     model_files = md_api.find_volatile_model_files_to_freeze()
     metadata = regular_files + model_files
-    print(f'Found {len(metadata)} files to freeze.')
+    logging.info(f'Found {len(metadata)} files to freeze.')
     temp_dir = TemporaryDirectory()
     for row in metadata:
         try:
             full_path = storage_api.download_product(row, temp_dir.name)
-        except HTTPError as e:
-            print(f'Problem with downloading volatile file \n{e}')
+        except HTTPError as err:
+            utils.send_slack_alert(err, 'pid', row['site']['id'], row['measurementDate'],
+                                   row['product']['id'])
             continue
         s3key = row['filename']
         try:
             uuid, pid = pid_utils.add_pid_to_file(full_path)
-            print(f'{uuid} => {pid}')
+            logging.info(f'{uuid} => {pid}')
             response_data = storage_api.upload_product(full_path, s3key)
             payload = {
                 'uuid': uuid,
@@ -43,8 +45,9 @@ def main(storage_session=requests.session()):
             }
             md_api.post('files', payload)
             storage_api.delete_volatile_product(s3key)
-        except OSError as e:
-            print(f'Error: corrupted file in pid-freezing: {full_path}\n{e}', file=sys.stderr)
+        except OSError as err:
+            utils.send_slack_alert(err, 'pid', row['site']['id'], row['measurementDate'],
+                                   row['product']['id'])
         for filename in glob.glob(f'{temp_dir.name}/*'):
             os.remove(filename)
 

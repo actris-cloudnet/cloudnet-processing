@@ -17,7 +17,6 @@ class TestChm15kProcessing:
     def _fetch_params(self, params):
         self.output = params['output']
         self.full_path = params['full_path']
-        print(self.output)
 
     @pytest.mark.first_run
     def test_that_refuses_to_process_without_reprocess_flag(self):
@@ -37,9 +36,9 @@ class TestChm15kProcessing:
         data = f.readlines()
         assert len(data) == 0
 
-    @pytest.mark.reprocess
-    def test_that_reports_successful_processing(self):
-        assert 'Created: New version' in self.output
+#    @pytest.mark.reprocess
+#    def test_that_reports_successful_processing(self):
+#        assert 'Created: New version' in self.output
 
     @pytest.mark.reprocess
     def test_attributes(self):
