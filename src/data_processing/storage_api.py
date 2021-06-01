@@ -3,6 +3,7 @@ from os import path
 from typing import Optional, Tuple
 from tempfile import NamedTemporaryFile
 import requests
+import logging
 from cloudnetpy.plotting import generate_figure, generate_legacy_figure
 from data_processing import utils
 
@@ -62,7 +63,7 @@ class StorageApi:
         try:
             fields, max_alt = utils.get_fields_for_plot(product)
         except NotImplementedError:
-            print(f'Warning: plotting for {product} not implemented', end='\t')
+            logging.warning(f'Plotting for {product} not implemented')
             return []
         visualizations = []
         for field in fields:
@@ -75,7 +76,7 @@ class StorageApi:
                                     image_name=temp_file.name, max_y=max_alt, sub_title=False,
                                     title=False, dpi=120)
             except (IndexError, ValueError, TypeError) as err:
-                print(err)
+                logging.warning(f'Problem with plotting: {err}')
                 continue
             s3key = product_key.replace('.nc', f"-{uuid[:8]}-{field}.png")
             url = path.join(self._url, 'cloudnet-img', s3key)
