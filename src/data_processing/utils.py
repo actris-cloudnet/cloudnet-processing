@@ -320,7 +320,7 @@ def init_logger(args: Optional = None) -> None:
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-    output_file_handler = logging.FileHandler("all.log")
+    output_file_handler = logging.FileHandler("all.log", mode='w')
     output_file_handler.setFormatter(formatter)
     stderr_handler = logging.StreamHandler(sys.stderr)
     stderr_handler.setFormatter(formatter)
