@@ -2,6 +2,7 @@ import base64
 import datetime
 import hashlib
 import os
+import sys
 import shutil
 from typing import Tuple, Optional
 from typing import Union
@@ -120,10 +121,15 @@ def send_slack_alert(error_msg,
                      error_source: str,
                      site: Optional[str] = None,
                      date: Optional[str] = None,
-                     product: Optional[str] = None) -> None:
+                     product: Optional[str] = None,
+                     critical: Optional[bool] = False) -> None:
     config = read_main_conf()
-    logging.critical(error_msg)
-    key = 'SLACK_NOTIFICATION_URL'
+    if critical is True:
+        logging.critical(error_msg)
+    else:
+        logging.error(error_msg)
+
+    key = 'SLACK_API_TOKEN'
     if key not in config or config[key] == '':
         return
 
@@ -138,61 +144,28 @@ def send_slack_alert(error_msg,
     else:
         raise ValueError('Unknown error source')
 
-    blocks = [
-        {
-            "type": "section",
-            "text": {
-                "type": "plain_text",
-                "text": label,
-                "emoji": True
-            }
-        },
-        {
-            "type": "section",
-            "fields": [
-                {
-                    "type": "mrkdwn",
-                    "text": f"*Timestamp:*\n{get_helsinki_datetime()}"
-                }
-            ]
-        },
-        {
-            "type": "section",
-            "text": {
-                "type": "mrkdwn",
-                "text": f"*Error msg:*\n{error_msg}"
-            }
-        },
-        {
-            "type": "divider"
-        }
-    ]
+    with open('all.log') as file:
+        log = file.readlines()
 
-    if product is not None:
-        field = {
-            "type": "mrkdwn",
-            "text": f"*Product:*\n{product}"
-        }
-        blocks[1]['fields'].insert(0, field)
+    margin = ' '*7
+    msg = f'*{label}*\n\n{margin}'
 
-    if site is not None or date is not None:
-        section = {
-            "type": "section",
-            "fields": [
-                {
-                    "type": "mrkdwn",
-                    "text": f"*Site:*\n{site}"
-                },
-                {
-                    "type": "mrkdwn",
-                    "text": f"*Date:*\n{date}"
-                }
-            ]
-        }
-        blocks.insert(1, section)
+    for name, var in zip(('Site', 'Date', 'Product'), (site, date, product)):
+        if var is not None:
+            msg += f'*{name}:* {var}{margin}'
 
-    payload = {'blocks': blocks}
-    requests.post(config[key], json=payload)
+    timestamp = str(get_helsinki_datetime())[:19]
+    msg += f'*Time:* {timestamp}\n\n'
+    msg += f'{margin}*Error:* {error_msg}'
+
+    payload = {'content': ''.join(log),
+               'channels': 'C022YBMQ2KC',
+               'title': 'Full log',
+               'initial_comment': msg}
+
+    requests.post('https://slack.com/api/files.upload',
+                  data=payload,
+                  headers={"Authorization": f'Bearer {config[key]}'})
 
 
 def read_main_conf() -> dict:
@@ -344,9 +317,16 @@ def concatenate_text_files(filenames: list, output_filename: str) -> None:
 
 
 def init_logger(args: Optional = None) -> None:
-    logging.basicConfig(level=logging.INFO,
-                        format='%(asctime)s - %(levelname)s - %(message)s',
-                        datefmt='%Y-%m-%d %H:%M:%S')
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    output_file_handler = logging.FileHandler("all.log")
+    output_file_handler.setFormatter(formatter)
+    stderr_handler = logging.StreamHandler(sys.stderr)
+    stderr_handler.setFormatter(formatter)
+    logger.addHandler(output_file_handler)
+    logger.addHandler(stderr_handler)
+
     script_name = inspect.stack()[2][1]
     msg = f'Starting {script_name}'
     msg += f' with args {vars(args)}' if args is not None else ''

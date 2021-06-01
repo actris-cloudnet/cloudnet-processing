@@ -36,7 +36,7 @@ def main(args, storage_session=requests.session()):
             process.upload_product_and_images(temp_file.name, 'model', uuid, model)
             process.print_info(uuid)
         except MiscError as err:
-            logging.error(err)
+            logging.warning(err)
         except (HTTPError, ConnectionError, RuntimeError) as err:
             utils.send_slack_alert(err, 'model', args.site, date_str, model)
 
