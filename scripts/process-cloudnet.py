@@ -225,7 +225,7 @@ class ProcessCloudnet(ProcessBase):
         return uuid_product
 
     def _fetch_calibration_factor(self, instrument: str) -> dict:
-        meta = self.site_meta
+        meta = self.site_meta.copy()
         meta['calibration_factor'] = utils.get_calibration_factor(self._site, self.date_str,
                                                                   instrument)
         return meta
