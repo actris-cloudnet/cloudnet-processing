@@ -147,16 +147,16 @@ def send_slack_alert(error_msg,
     with open('all.log') as file:
         log = file.readlines()
 
-    margin = ' '*7
-    msg = f'*{label}*\n\n{margin}'
+    padding = ' '*7
+    msg = f'*{label}*\n\n'
 
     for name, var in zip(('Site', 'Date', 'Product'), (site, date, product)):
         if var is not None:
-            msg += f'*{name}:* {var}{margin}'
+            msg += f'*{name}:* {var}{padding}'
 
     timestamp = str(get_helsinki_datetime())[:19]
     msg += f'*Time:* {timestamp}\n\n'
-    msg += f'{margin}*Error:* {error_msg}'
+    msg += f'*Error:* {error_msg}'
 
     payload = {'content': ''.join(log),
                'channels': 'C022YBMQ2KC',
