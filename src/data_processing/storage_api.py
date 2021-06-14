@@ -29,7 +29,7 @@ class StorageApi:
 
     def download_raw_files(self, metadata: list, dir_name: str) -> Tuple[list, list]:
         """Download raw files."""
-        urls = [path.join(self._url, 'cloudnet-upload', row['s3key']) for row in metadata]
+        urls = [path.join(self._url, row['s3path'][1:]) for row in metadata]
         full_paths = [path.join(dir_name, row['filename']) for row in metadata]
         for args in zip(urls, full_paths):
             self._get(*args)
