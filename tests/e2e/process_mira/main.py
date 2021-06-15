@@ -27,7 +27,7 @@ def register_storage_urls():
         ('2c3a10dc-ebab-4fd6-bbb3-f559eb64bc37', '20210127_0106.mmclx.gz'),
     ]
     for uuid, filename in raw_data:
-        url = f'{mock_addr}cloudnet-upload/juelich/{uuid}/{filename}'
+        url = f'{mock_addr}juelich/{uuid}/{filename}'
         adapter.register_uri('GET', url, body=open(f'tests/data/raw/mira/{filename}', 'rb'))
     # product file:
     url = f'{mock_addr}cloudnet-product-volatile/20210127_juelich_mira.nc'

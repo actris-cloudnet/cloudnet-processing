@@ -28,7 +28,7 @@ def register_storage_urls():
         ('d5859d33-c7b0-4f1b-bf40-66a236be76c6', '201023_160000_P06_ZEN.LV1')  # wrong file, should not process this
     ]
     for uuid, filename in raw_data:
-        url = f'{mock_addr}cloudnet-upload/bucharest/{uuid}/{filename}'
+        url = f'{mock_addr}bucharest/{uuid}/{filename}'
         adapter.register_uri('GET', url, body=open(f'tests/data/raw/rpg-fmcw-94/{filename}', 'rb'))
     # product file:
     url = f'{mock_addr}cloudnet-product-volatile/20201022_bucharest_rpg-fmcw-94.nc'

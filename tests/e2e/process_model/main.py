@@ -25,7 +25,7 @@ def register_storage_urls(temp_file):
         ('80c2fab5-2dc5-4692-bafe-a7274071770e', '20201022_bucharest_gdas1.nc'),
     ]
     for uuid, filename in raw_data:
-        url = f'{mock_addr}cloudnet-upload/bucharest/{uuid}/{filename}'
+        url = f'{mock_addr}bucharest/{uuid}/{filename}'
         adapter.register_uri('GET', url, body=open(f'tests/data/raw/model/{filename}', 'rb'))
 
     product_files = ('20201022_bucharest_ecmwf.nc', '20201022_bucharest_gdas1.nc')

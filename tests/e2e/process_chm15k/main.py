@@ -28,7 +28,7 @@ def register_storage_urls():
         ('ada7f659-68e8-45aa-b88d-e5cd54520052', '00100_A202010212350_CHM170137.nc')  # incorrect file, shoud not process this
     ]
     for uuid, filename in raw_data:
-        url = f'{mock_addr}cloudnet-upload/bucharest/{uuid}/{filename}'
+        url = f'{mock_addr}bucharest/{uuid}/{filename}'
         adapter.register_uri('GET', url, body=open(f'tests/data/raw/chm15k/{filename}', 'rb'))
     # product file:
     url = f'{mock_addr}cloudnet-product/20201022_bucharest_chm15k.nc'
@@ -57,7 +57,7 @@ def _process(extra_main_args=(), extra_pytest_args=()):
     std_args = utils.start_output_capturing()
     process_cloudnet.main(main_args + list(extra_main_args), storage_session=session)
     output = utils.reset_output(*std_args)
-    pytest_args = ['pytest', '-v', f'{SCRIPT_PATH}/tests.py', '--output', output,
+    pytest_args = ['pytest', '-v', '-s', f'{SCRIPT_PATH}/tests.py', '--output', output,
                    '--full_path', temp_file.name]
     try:
         subprocess.check_call(pytest_args + list(extra_pytest_args))
