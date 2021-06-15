@@ -33,16 +33,16 @@ class TestStorageApi:
 
     def test_download_raw_files(self):
         filename = '00100_A202010221205_CHM170137.nc'
-        s3key = 'ur_a_nus'
+        s3path = '/ur/a/nus'
         metadata = [
             {
                 'uuid': '1234123',
-                's3key': s3key,
+                's3path': s3path,
                 'filename': filename
             },
         ]
         file = open(f'tests/data/raw/chm15k/{filename}', 'rb')
-        url = f'{mock_addr}cloudnet-upload/{s3key}'
+        url = f'{mock_addr}{s3path[1:]}'
         adapter.register_uri('GET', url, body=file)
         storage_api = StorageApi(config, session)
         full_paths, uuids = storage_api.download_raw_files(metadata, self.temp_dir.name)
