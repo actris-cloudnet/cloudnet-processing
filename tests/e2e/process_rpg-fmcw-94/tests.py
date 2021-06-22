@@ -53,7 +53,7 @@ class TestRPGFMCW94Processing:
 
         # GET RPG raw data
         assert '"GET /upload-metadata?dateFrom=2020-10-22&dateTo=2020-10-22&site=bucharest' \
-               '&developer=True&instrument=rpg-fmcw-94 HTTP/1.1" 200 -' in data[1]
+               '&developer=True&instrument=rpg-fmcw-94&status%5B%5D=uploaded&status%5B%5D=processed HTTP/1.1" 200 -' in data[1]
 
         # PUT file
         assert '"PUT /files/20201022_bucharest_rpg-fmcw-94.nc HTTP/1.1" 201 -' in data[2]

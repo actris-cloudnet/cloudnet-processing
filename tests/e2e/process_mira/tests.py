@@ -63,10 +63,10 @@ class TestMIRAProcessing:
         assert f'"GET /api/files{prefix}product=radar&showLegacy=True HTTP/1.1" 200 -' in data[0]
 
         # GET RPG raw data
-        assert f'"GET /upload-metadata{prefix}instrument=rpg-fmcw-94 HTTP/1.1" 200 -' in data[1]
+        assert f'"GET /upload-metadata{prefix}instrument=rpg-fmcw-94&status%5B%5D=uploaded&status%5B%5D=processed HTTP/1.1" 200 -' in data[1]
 
         # GET MIRA raw data
-        assert f'"GET /upload-metadata{prefix}instrument=mira HTTP/1.1" 200 -' in data[2]
+        assert f'"GET /upload-metadata{prefix}instrument=mira&status%5B%5D=uploaded&status%5B%5D=processed HTTP/1.1" 200 -' in data[2]
 
         # PUT file
         assert '"PUT /files/20210127_juelich_mira.nc HTTP/1.1" 201 -' in data[3]

@@ -78,7 +78,7 @@ class TestChm15kProcessing:
 
         # GET raw data
         assert '"GET /upload-metadata?dateFrom=2020-10-22&dateTo=2020-10-22&site=bucharest' \
-               '&developer=True&instrument=chm15k HTTP/1.1" 200 -' in data[1]
+               '&developer=True&instrument=chm15k&status%5B%5D=uploaded&status%5B%5D=processed HTTP/1.1" 200 -' in data[1]
 
         # PUT file
         assert '"PUT /files/20201022_bucharest_chm15k.nc HTTP/1.1"' in data[2]

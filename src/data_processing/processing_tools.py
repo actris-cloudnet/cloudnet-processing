@@ -106,7 +106,8 @@ class ProcessBase:
     def _get_payload(self,
                      instrument: Optional[str] = None,
                      product: Optional[str] = None,
-                     model: Optional[str] = None) -> dict:
+                     model: Optional[str] = None,
+                     skip_created: Optional[bool] = False) -> dict:
         payload = {
             'dateFrom': self.date_str,
             'dateTo': self.date_str,
@@ -119,6 +120,8 @@ class ProcessBase:
             payload['product'] = product
         if model is not None:
             payload['model'] = model
+        if skip_created is True:
+            payload['status[]'] = ['uploaded', 'processed']
         return payload
 
     def _update_statuses(self, uuids: list) -> None:

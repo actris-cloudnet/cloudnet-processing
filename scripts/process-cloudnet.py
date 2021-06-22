@@ -189,7 +189,7 @@ class ProcessCloudnet(ProcessBase):
                              instrument: str,
                              pattern: Optional[str] = None,
                              largest_only: Optional[bool] = False) -> Tuple[Union[list, str], list]:
-        payload = self._get_payload(instrument=instrument)
+        payload = self._get_payload(instrument=instrument, skip_created=True)
         upload_metadata = self._md_api.get('upload-metadata', payload)
         if pattern is not None:
             upload_metadata = _screen_by_filename(upload_metadata, pattern)
@@ -199,7 +199,7 @@ class ProcessCloudnet(ProcessBase):
 
     def _download_adjoining_daily_files(self, instrument: str) -> Tuple[list, list]:
         next_day = utils.get_date_from_past(-1, self.date_str)
-        payload = self._get_payload(instrument=instrument)
+        payload = self._get_payload(instrument=instrument, skip_created=True)
         payload['dateFrom'] = self.date_str
         payload['dateTo'] = next_day
         upload_metadata = self._md_api.get('upload-metadata', payload)
