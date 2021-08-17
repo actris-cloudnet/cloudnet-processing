@@ -124,9 +124,9 @@ class ProcessBase:
             payload['status[]'] = ['uploaded', 'processed']
         return payload
 
-    def _update_statuses(self, uuids: list) -> None:
+    def _update_statuses(self, uuids: list, status: Optional[str] = 'processed') -> None:
         for uuid in uuids:
-            payload = {'uuid': uuid, 'status': 'processed'}
+            payload = {'uuid': uuid, 'status': status}
             self._md_api.post('upload-metadata', payload)
 
     def _get_product_key(self, identifier: str) -> str:

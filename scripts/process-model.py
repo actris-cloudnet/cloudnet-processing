@@ -74,7 +74,13 @@ class ProcessModel(ProcessBase):
     def check_product_status(self, model: str) -> Union[str, None, bool]:
         payload = self._get_payload(model=model)
         metadata = self._md_api.get(f'api/model-files', payload)
-        return self._check_meta(metadata)
+        try:
+            status = self._check_meta(metadata)
+        except MiscError as err:
+            uuids = [metadata[0]['uuid']]
+            self._update_statuses(uuids, status='invalid')
+            raise err
+        return status
 
 
 def _parse_args(args):
