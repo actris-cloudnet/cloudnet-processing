@@ -7,7 +7,7 @@ import test_utils.utils as utils
 from tempfile import NamedTemporaryFile
 import re
 sys.path.append('scripts/')
-process_cloudnet = __import__("process-model")
+process_model = __import__("process-model")
 
 SCRIPT_PATH = path.dirname(path.realpath(__file__))
 session, adapter, mock_addr = utils.init_test_session()
@@ -49,7 +49,7 @@ def _process(main_extra_args=()):
     temp_file = NamedTemporaryFile()
     register_storage_urls(temp_file)
     std_args = utils.start_output_capturing()
-    process_cloudnet.main(args + list(main_extra_args), storage_session=session)
+    process_model.main(args + list(main_extra_args), storage_session=session)
     output = utils.reset_output(*std_args)
     try:
         subprocess.check_call(['pytest', '-v', f'{SCRIPT_PATH}/tests.py', '--output', output,
