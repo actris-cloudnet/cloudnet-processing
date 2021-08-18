@@ -11,7 +11,7 @@ from data_processing import utils
 class StorageApi:
     """Class for uploading / downloading files from the Cloudnet S3 data archive in Sodankylä."""
 
-    def __init__(self, config: dict, session=requests.Session()):
+    def __init__(self, config: dict, session: requests.Session):
         self.session = session
         self._url = config['STORAGE_SERVICE_URL']
         self._auth = (config['STORAGE_SERVICE_USER'],

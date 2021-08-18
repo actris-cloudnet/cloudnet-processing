@@ -9,7 +9,7 @@ from data_processing import utils
 class MetadataApi:
     """Class handling connection between Cloudnet files and database."""
 
-    def __init__(self, config: dict, session=requests.Session()):
+    def __init__(self, config: dict, session: requests.Session):
         self.config = config
         self.session = session
         self._url = config['DATAPORTAL_URL']

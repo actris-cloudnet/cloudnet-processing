@@ -2,6 +2,7 @@ import os
 import glob
 import shutil
 import logging
+import requests
 from typing import Union, Tuple, Optional
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 from data_processing import utils
@@ -33,11 +34,12 @@ class ProcessBase:
     def __init__(self,
                  args,
                  config: dict,
-                 storage_session):
+                 storage_session: Optional[requests.Session] = requests.Session(),
+                 metadata_session: Optional[requests.Session] = requests.Session()):
         self.site_meta, self._site, self._site_type = _read_site_info(args)
         self.is_reprocess = getattr(args, 'reprocess', False)
         self.date_str = None
-        self._md_api = MetadataApi(config)
+        self._md_api = MetadataApi(config, metadata_session)
         self._storage_api = StorageApi(config, storage_session)
         self._pid_utils = PidUtils(config)
         self.temp_dir = TemporaryDirectory(dir=_get_temp_dir(config))

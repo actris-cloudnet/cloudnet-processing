@@ -6,6 +6,7 @@ from pathlib import Path, PurePath
 from typing import Generator
 from tempfile import NamedTemporaryFile
 import netCDF4
+import requests
 from requests import HTTPError
 from data_processing.metadata_api import MetadataApi
 from data_processing.storage_api import StorageApi
@@ -19,8 +20,8 @@ def main():
     """The main function."""
 
     config = utils.read_main_conf()
-    md_api = MetadataApi(config)
-    storage_api = StorageApi(config)
+    md_api = MetadataApi(config, requests.session())
+    storage_api = StorageApi(config, requests.session())
     pid_utils = PidUtils(config)
 
     site = PurePath(ARGS.path[0]).name
