@@ -34,7 +34,7 @@ def main(args, storage_session=requests.session()):
             uuid.volatile = process.check_product_status(model)
             uuid = process.process_model(uuid, model)
             process.upload_product_and_images(temp_file.name, 'model', uuid, model)
-            process.print_info(uuid)
+            process.print_info()
         except MiscError as err:
             logging.warning(err)
         except (HTTPError, ConnectionError, RuntimeError) as err:

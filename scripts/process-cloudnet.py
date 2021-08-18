@@ -52,9 +52,9 @@ def main(args, storage_session=requests.session()):
                     uuid, identifier = process.process_level2(uuid, product)
                 else:
                     uuid, identifier = getattr(process, f'process_{product}')(uuid)
-                process.add_pid(temp_file.name, uuid)
+                process.add_pid(temp_file.name)
                 process.upload_product_and_images(temp_file.name, product, uuid, identifier)
-                process.print_info(uuid)
+                process.print_info()
             except (RawDataMissingError, MiscError, NotImplementedError) as err:
                 logging.warning(err)
             except (HTTPError, ConnectionError, RuntimeError, ValueError) as err:
@@ -181,8 +181,8 @@ class ProcessCloudnet(ProcessBase):
         metadata = self._md_api.get(f'api/files', payload)
         return self._check_meta(metadata)
 
-    def add_pid(self, full_path: str, uuid: Uuid) -> None:
-        if self._is_new_version(uuid):
+    def add_pid(self, full_path: str) -> None:
+        if self._create_new_version:
             self._pid_utils.add_pid_to_file(full_path)
 
     def _download_instrument(self,
