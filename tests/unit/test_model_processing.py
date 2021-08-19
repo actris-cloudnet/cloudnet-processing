@@ -37,6 +37,7 @@ resp = '''
 ]
 '''
 
+raw_uuid = "3ab72e38-69dc-49c2-9fdb-0f9698c386ca"
 
 def test_upload_with_freezed_product():
     get_url = f'{mock_addr}api/model-files(.*?)'
@@ -45,7 +46,7 @@ def test_upload_with_freezed_product():
 
     process = process_model.ProcessModel(args, config, requests.Session(), session)
     with pytest.raises(MiscError):
-        process.check_product_status('ecmwf')
+        process.check_product_status('ecmwf', raw_uuid)
 
 
 def test_upload_with_freezed_product_reprocess():
@@ -54,7 +55,7 @@ def test_upload_with_freezed_product_reprocess():
     adapter.register_uri('POST', f'{mock_addr}upload-metadata',  text='OK')
     args.reprocess = True
     process = process_model.ProcessModel(args, config, requests.Session(), session)
-    res = process.check_product_status('ecmwf')
+    res = process.check_product_status('ecmwf', raw_uuid)
     assert res is None
     assert process._create_new_version is True
 
@@ -64,7 +65,7 @@ def test_upload_with_no_product():
     get_url = f'{mock_addr}api/model-files(.*?)'
     adapter.register_uri('GET', re.compile(get_url),  json=json.loads(resp))
     process = process_model.ProcessModel(args, config, requests.Session(), session)
-    res = process.check_product_status('ecmwf')
+    res = process.check_product_status('ecmwf', raw_uuid)
     assert res is None
     assert process._create_new_version is False
 
@@ -75,6 +76,6 @@ def test_upload_with_volatile_product():
     get_url = f'{mock_addr}api/model-files(.*?)'
     adapter.register_uri('GET', re.compile(get_url),  json=json.loads(resp))
     process = process_model.ProcessModel(args, config, requests.Session(), session)
-    res = process.check_product_status('ecmwf')
+    res = process.check_product_status('ecmwf', raw_uuid)
     assert res == uuid
     assert process._create_new_version is False
