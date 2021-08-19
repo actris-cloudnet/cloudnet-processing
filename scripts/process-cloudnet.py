@@ -35,7 +35,7 @@ def main(args, storage_session=requests.session()):
     utils.init_logger(args)
     config = utils.read_main_conf()
     start_date, stop_date = _get_processing_dates(args)
-    process = ProcessCloudnet(args, config, storage_session)
+    process = ProcessCloudnet(args, config, storage_session=storage_session)
     for date in date_range(start_date, stop_date):
         date_str = date.strftime("%Y-%m-%d")
         process.date_str = date_str
@@ -47,7 +47,7 @@ def main(args, storage_session=requests.session()):
             logging.info(f'Processing {product} product, {args.site} {date_str}')
             uuid = Uuid()
             try:
-                uuid.volatile = process.check_product_status(product)
+                uuid.volatile = process.fetch_volatile_uuid(product)
                 if product in utils.get_product_types(level='2'):
                     uuid, identifier = process.process_level2(uuid, product)
                 else:
@@ -175,11 +175,13 @@ class ProcessCloudnet(ProcessBase):
         identifier = utils.get_product_identifier(product)
         return uuid, identifier
 
-    def check_product_status(self, product: str) -> Union[str, None, bool]:
+    def fetch_volatile_uuid(self, product: str) -> Union[str, None]:
         payload = self._get_payload(product=product)
         payload['showLegacy'] = True
         metadata = self._md_api.get(f'api/files', payload)
-        return self._check_meta(metadata)
+        uuid = self._read_volatile_uuid(metadata)
+        self._create_new_version = self._is_create_new_version(metadata)
+        return uuid
 
     def add_pid(self, full_path: str) -> None:
         if self._create_new_version:

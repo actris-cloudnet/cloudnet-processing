@@ -25,13 +25,13 @@ def main(args, storage_session=requests.session()):
     args = _parse_args(args)
     utils.init_logger(args)
     config = utils.read_main_conf()
-    process = ProcessModel(args, config, storage_session)
+    process = ProcessModel(args, config, storage_session=storage_session)
     for date_str, model, raw_uuid in process.get_models_to_process(args):
         process.date_str = date_str
         logging.info(f'{args.site}, {date_str}, {model}')
         uuid = Uuid()
         try:
-            uuid.volatile = process.check_product_status(model, raw_uuid)
+            uuid.volatile = process.fetch_volatile_uuid(model, raw_uuid)
             uuid = process.process_model(uuid, model)
             process.upload_product_and_images(temp_file.name, 'model', uuid, model)
             process.print_info()
@@ -71,15 +71,16 @@ class ProcessModel(ProcessBase):
         uuid.product = nc_header_augmenter.harmonize_nc_file(data)
         return uuid
 
-    def check_product_status(self, model: str, raw_uuid: str) -> Union[str, None]:
+    def fetch_volatile_uuid(self, model: str, raw_uuid: str) -> Union[str, None]:
         payload = self._get_payload(model=model)
         metadata = self._md_api.get(f'api/model-files', payload)
         try:
-            status = self._check_meta(metadata)
+            uuid = self._read_volatile_uuid(metadata)
+            self._create_new_version = self._is_create_new_version(metadata)
         except MiscError as err:
             self._update_statuses([raw_uuid], status='invalid')
             raise err
-        return status
+        return uuid
 
 
 def _parse_args(args):

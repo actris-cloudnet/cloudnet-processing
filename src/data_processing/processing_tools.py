@@ -71,31 +71,31 @@ class ProcessBase:
         if product in utils.get_product_types(level='1b'):
             self._update_statuses(uuid.raw)
 
-    def _check_meta(self, metadata: list) -> Union[str, None]:
-        """
-        Returns:
-            None: No existing product OR existing freezed product and reprocess = True
-            uuid: Existing volatile product
+    def _read_volatile_uuid(self, metadata: list) -> Union[str, None]:
+        if self._parse_volatile_value(metadata) is True:
+            uuid = metadata[0]['uuid']
+            assert isinstance(uuid, str) and len(uuid) > 0
+            return uuid
+        return None
 
-        Raises:
-            MiscError: Existing freezed product and reprocess = False
-            RuntimeError: Problem with parsing boolean from metadata
-        """
+    def _is_create_new_version(self, metadata) -> bool:
+        if self._parse_volatile_value(metadata) is False:
+            if self.is_reprocess is True:
+                return True
+            else:
+                raise MiscError('Existing freezed file and no "reprocess" flag')
+        return False
+
+    def _parse_volatile_value(self, metadata: list) -> Union[bool, None]:
         self._check_response_length(metadata)
         if metadata:
-            is_volatile_file = str(metadata[0]['volatile'])
-            if is_volatile_file == 'True':
-                uuid = metadata[0]['uuid']
-                assert isinstance(uuid, str) and len(uuid) > 0
-                return uuid
-            elif is_volatile_file == 'False':
-                if self.is_reprocess is True:
-                    self._create_new_version = True
-                    return None
-                else:
-                    raise MiscError('Existing freezed file and no "reprocess" flag')
+            value = str(metadata[0]['volatile'])
+            if value == 'True':
+                return True
+            elif value == 'False':
+                return False
             else:
-                raise RuntimeError(f'Unexpected value in metadata: {is_volatile_file}')
+                raise RuntimeError(f'Unexpected value in metadata: {value}')
         return None
 
     def _download_raw_files(self,
