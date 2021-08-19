@@ -44,7 +44,7 @@ def main(args, storage_session=requests.session()):
                 raise ValueError('No such product')
             if product == 'model':
                 continue
-            logging.info(f'Processing {product} product')
+            logging.info(f'Processing {product} product, {args.site} {date_str}')
             uuid = Uuid()
             try:
                 uuid.volatile = process.check_product_status(product)

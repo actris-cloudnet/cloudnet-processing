@@ -79,6 +79,7 @@ class ProcessBase:
 
         Raises:
             MiscError: Existing freezed product and reprocess = False
+            RuntimeError: Problem with parsing boolean from metadata
         """
         self._check_response_length(metadata)
         if metadata:
