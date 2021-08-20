@@ -32,7 +32,8 @@ resp = '''
 [
   {
     "uuid": "42d523cc-764f-4334-aefc-35a9ca71f342",
-    "volatile": "False"
+    "volatile": "False",
+    "filename": "20210812_bucharest_ecmwf.nc"
   }
 ]
 '''

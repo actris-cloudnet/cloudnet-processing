@@ -79,7 +79,8 @@ class ProcessModel(ProcessBase):
             self._create_new_version = self._is_create_new_version(metadata)
         except MiscError as err:
             self._update_statuses([raw_uuid], status='invalid')
-            raise err
+            msg = f'{err.message}: Setting status of {metadata[0]["filename"]} to "invalid"'
+            raise MiscError(msg)
         return uuid
 
 
