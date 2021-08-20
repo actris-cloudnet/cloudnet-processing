@@ -17,7 +17,7 @@ def main(storage_session=requests.session()):
     utils.init_logger()
     config = read_main_conf()
     pid_utils = PidUtils(config)
-    md_api = metadata_api.MetadataApi(config)
+    md_api = metadata_api.MetadataApi(config, requests.session())
     storage_api = StorageApi(config, storage_session)
     regular_files = md_api.find_volatile_regular_files_to_freeze()
     model_files = md_api.find_volatile_model_files_to_freeze()

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Script for creating and putting missing images into s3 / database."""
 import argparse
+import requests
 from data_processing.metadata_api import MetadataApi
 from data_processing.storage_api import StorageApi
 from data_processing import utils
@@ -11,8 +12,8 @@ def main():
     """The main function."""
 
     config = utils.read_main_conf()
-    md_api = MetadataApi(config)
-    storage_api = StorageApi(config)
+    md_api = MetadataApi(config, requests.session())
+    storage_api = StorageApi(config, requests.session())
 
     site_metadata = md_api.get('api/sites', {'modelSites': True})
     sites = [site['id'] for site in site_metadata]

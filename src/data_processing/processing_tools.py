@@ -2,6 +2,7 @@ import os
 import glob
 import shutil
 import logging
+import requests
 from typing import Union, Tuple, Optional
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 from data_processing import utils
@@ -17,7 +18,7 @@ class Uuid:
     def __init__(self):
         self.raw: list = []
         self.product: str = ''
-        self.volatile: Union[str, bool, None] = None
+        self.volatile: Union[str, None] = None
 
 
 def clean_dir(dir_name: str) -> None:
@@ -33,17 +34,20 @@ class ProcessBase:
     def __init__(self,
                  args,
                  config: dict,
-                 storage_session):
+                 storage_session: Optional[requests.Session] = requests.Session(),
+                 metadata_session: Optional[requests.Session] = requests.Session()):
         self.site_meta, self._site, self._site_type = _read_site_info(args)
         self.is_reprocess = getattr(args, 'reprocess', False)
         self.date_str = None
-        self._md_api = MetadataApi(config)
+        self.temp_dir = TemporaryDirectory(dir=_get_temp_dir(config))
+        self._md_api = MetadataApi(config, metadata_session)
         self._storage_api = StorageApi(config, storage_session)
         self._pid_utils = PidUtils(config)
-        self.temp_dir = TemporaryDirectory(dir=_get_temp_dir(config))
+        self._create_new_version = False
 
-    def print_info(self, uuid: Uuid) -> None:
-        logging.info(f'Created: {"New version" if self._is_new_version(uuid) else "Volatile file"}')
+    def print_info(self) -> None:
+        logging.info(f'Created: '
+                     f'{"New version" if self._create_new_version is True else "Volatile file"}')
 
     def upload_product_and_images(self,
                                   full_path: str,
@@ -67,15 +71,31 @@ class ProcessBase:
         if product in utils.get_product_types(level='1b'):
             self._update_statuses(uuid.raw)
 
-    def _check_meta(self, metadata: list) -> Union[str, None, bool]:
+    def _read_volatile_uuid(self, metadata: list) -> Union[str, None]:
+        if self._parse_volatile_value(metadata) is True:
+            uuid = metadata[0]['uuid']
+            assert isinstance(uuid, str) and len(uuid) > 0
+            return uuid
+        return None
+
+    def _is_create_new_version(self, metadata) -> bool:
+        if self._parse_volatile_value(metadata) is False:
+            if self.is_reprocess is True:
+                return True
+            else:
+                raise MiscError('Existing freezed file and no "reprocess" flag')
+        return False
+
+    def _parse_volatile_value(self, metadata: list) -> Union[bool, None]:
         self._check_response_length(metadata)
         if metadata:
-            if not metadata[0]['volatile'] and not self.is_reprocess:
-                raise MiscError('Existing freezed file and no "reprocess" flag')
-            if metadata[0]['volatile']:
-                return metadata[0]['uuid']
-            else:
+            value = str(metadata[0]['volatile'])
+            if value == 'True':
+                return True
+            elif value == 'False':
                 return False
+            else:
+                raise RuntimeError(f'Unexpected value in metadata: {value}')
         return None
 
     def _download_raw_files(self,
@@ -124,16 +144,13 @@ class ProcessBase:
             payload['status[]'] = ['uploaded', 'processed']
         return payload
 
-    def _update_statuses(self, uuids: list) -> None:
+    def _update_statuses(self, uuids: list, status: Optional[str] = 'processed') -> None:
         for uuid in uuids:
-            payload = {'uuid': uuid, 'status': 'processed'}
+            payload = {'uuid': uuid, 'status': status}
             self._md_api.post('upload-metadata', payload)
 
     def _get_product_key(self, identifier: str) -> str:
         return f"{self.date_str.replace('-', '')}_{self._site}_{identifier}.nc"
-
-    def _is_new_version(self, uuid: Uuid) -> bool:
-        return self.is_reprocess and uuid.volatile is False
 
     @staticmethod
     def _check_response_length(metadata: list) -> None:

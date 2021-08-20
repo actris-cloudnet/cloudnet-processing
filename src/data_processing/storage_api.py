@@ -11,7 +11,7 @@ from data_processing import utils
 class StorageApi:
     """Class for uploading / downloading files from the Cloudnet S3 data archive in Sodankylä."""
 
-    def __init__(self, config: dict, session=requests.Session()):
+    def __init__(self, config: dict, session: requests.Session):
         self.session = session
         self._url = config['STORAGE_SERVICE_URL']
         self._auth = (config['STORAGE_SERVICE_USER'],
@@ -76,7 +76,7 @@ class StorageApi:
                                     image_name=temp_file.name, max_y=max_alt, sub_title=False,
                                     title=False, dpi=120)
             except (IndexError, ValueError, TypeError) as err:
-                logging.warning(f'Problem with plotting: {err}')
+                logging.warning(err)
                 continue
             s3key = product_key.replace('.nc', f"-{uuid[:8]}-{field}.png")
             url = path.join(self._url, 'cloudnet-img', s3key)
