@@ -46,6 +46,12 @@ class MetadataApi:
         res.raise_for_status()
         return res
 
+    def put_quality_report(self, uuid: str, payload: dict) -> requests.Response:
+        url = path.join(self._url, 'quality', uuid)
+        res = self.session.put(url, json=payload)
+        res.raise_for_status()
+        return res
+
     def find_volatile_regular_files_to_freeze(self) -> list:
         """Find volatile files released before certain time limit."""
         updated_before = self._get_freeze_limit('FREEZE_AFTER_DAYS')

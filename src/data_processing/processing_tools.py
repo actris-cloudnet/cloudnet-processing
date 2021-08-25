@@ -70,6 +70,8 @@ class ProcessBase:
             self._md_api.put_img(data, uuid.product)
         if product in utils.get_product_types(level='1b'):
             self._update_statuses(uuid.raw)
+        quality_report = utils.create_quality_report(full_path)
+        self._md_api.put_quality_report(payload['uuid'], quality_report)
 
     def _read_volatile_uuid(self, metadata: list) -> Union[str, None]:
         if self._parse_volatile_value(metadata) is True:

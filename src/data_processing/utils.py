@@ -13,6 +13,7 @@ import logging
 import inspect
 from cloudnetpy.plotting.plot_meta import ATTRIBUTES as ATTR
 from cloudnetpy.utils import get_time
+from cloudnetpy.quality import Quality
 
 
 def create_product_put_payload(full_path: str,
@@ -331,3 +332,29 @@ def init_logger(args: Optional = None) -> None:
     msg = f'Starting {script_name}'
     msg += f' with args {vars(args)}' if args is not None else ''
     logging.info(msg)
+
+
+def create_quality_report(filename: str) -> dict:
+    quality = Quality(filename)
+    meta_res = quality.check_metadata()
+    data_res = quality.check_data()
+    quality.close()
+    return {
+        'overallScore': _calc_quality(quality),
+        'metadata': _parse_quality_result(meta_res),
+        'data': _parse_quality_result(data_res)}
+
+
+def _parse_quality_result(quality_result: dict) -> dict:
+    parsed_result = {}
+    for key, value in quality_result.items():
+        if len(value) > 0 and isinstance(value[0], tuple):
+            value = [x[0] for x in value]
+        parsed_result[key] = value
+    return parsed_result
+
+
+def _calc_quality(quality: Quality) -> float:
+    n_tests = quality.n_metadata_tests + quality.n_data_tests
+    n_failures = quality.n_metadata_test_failures + quality.n_data_test_failures
+    return round(1 - (n_failures / n_tests), 2)
