@@ -52,7 +52,7 @@ class TestMIRAProcessing:
         data = f.readlines()
         n_raw_files = 2
         n_gets = 3  # product check + rpg-fmcw-94 raw + mira raw
-        n_puts = 1 + self.n_img  # file + images
+        n_puts = 2 + self.n_img
         n_posts = n_raw_files
 
         assert len(data) == n_gets + n_puts + n_posts

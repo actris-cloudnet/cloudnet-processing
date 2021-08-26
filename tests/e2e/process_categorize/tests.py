@@ -40,7 +40,7 @@ class TestCategorizeProcessing:
         f = open(f'{SCRIPT_PATH}/md.log')
         data = f.readlines()
         n_gets = len(utils.get_product_types(level='1b')) + 1
-        n_puts = 1
+        n_puts = 2
         assert len(data) == n_gets + self.n_img + n_puts
 
         # Check product status

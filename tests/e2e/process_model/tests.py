@@ -36,7 +36,7 @@ class TestModelProcessing:
         data = f.readlines()
 
         n_gets = 3
-        n_file_puts = 1
+        n_file_puts = 2
         n_img_puts = len(self.images)
         n_metadata_posts = 1
 
@@ -62,4 +62,4 @@ class TestModelProcessing:
         assert count_strings(data, img_put) == n_img_puts
 
         # POST metadata
-        assert '"POST /upload-metadata HTTP/1.1" 200 -' in data[-1]
+        assert '"POST /upload-metadata HTTP/1.1" 200 -' in data[-2]
