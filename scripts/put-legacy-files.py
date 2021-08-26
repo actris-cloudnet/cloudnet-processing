@@ -77,10 +77,8 @@ def main():
                                                        date_str=info['date_str'],
                                                        site=site)
             payload['legacy'] = True
-            md_api.put(s3key, payload)
-            for data in img_metadata:
-                md_api.put_img(data, uuid)
-
+            md_api.put('files', s3key, payload)
+            md_api.put_images(img_metadata, uuid)
             temp_file.close()
 
 

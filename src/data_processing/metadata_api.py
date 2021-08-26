@@ -21,13 +21,6 @@ class MetadataApi:
         res.raise_for_status()
         return res.json()
 
-    def put(self, s3key: str, payload: dict) -> requests.Response:
-        """Add Cloudnet product metadata."""
-        url = path.join(self._url, 'files', s3key)
-        res = self.session.put(url, json=payload)
-        res.raise_for_status()
-        return res
-
     def post(self, end_point: str, payload: dict) -> requests.Response:
         """Update upload / product metadata."""
         url = path.join(self._url, end_point)
@@ -35,22 +28,20 @@ class MetadataApi:
         res.raise_for_status()
         return res
 
-    def put_img(self, data: dict, uuid: str) -> requests.Response:
-        """Put Cloudnet quicklook file to database."""
-        url = path.join(self._url, 'visualizations', data['s3key'])
-        payload = {
-            'sourceFileId': uuid,
-            'variableId': data['variable_id']
-        }
+    def put(self, end_point: str, resource: str, payload):
+        """Generic PUT to Cloudnet data portal."""
+        url = path.join(self._url, end_point, resource)
         res = self.session.put(url, json=payload)
         res.raise_for_status()
         return res
 
-    def put_quality_report(self, uuid: str, payload: dict) -> requests.Response:
-        url = path.join(self._url, 'quality', uuid)
-        res = self.session.put(url, json=payload)
-        res.raise_for_status()
-        return res
+    def put_images(self, img_metadata: list, product_uuid: str):
+        for data in img_metadata:
+            payload = {
+                'sourceFileId': product_uuid,
+                'variableId': data['variable_id']
+            }
+            self.put('visualizations', data['s3key'], payload)
 
     def find_volatile_regular_files_to_freeze(self) -> list:
         """Find volatile files released before certain time limit."""
@@ -75,3 +66,4 @@ class MetadataApi:
             'volatile': True,
             'releasedBefore': updated_before
         }
+
