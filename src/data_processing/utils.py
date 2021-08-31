@@ -371,7 +371,7 @@ def _parse_quality_result(quality_result: dict) -> list:
         elif test_name == 'invalidUnits':
             for name, expected, unit in value:
                 errors.append({
-                    'attributeName': name,
+                    'variableName': name,
                     'expectedUnit': expected,
                     'unit': unit,
                 })
