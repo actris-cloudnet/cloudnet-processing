@@ -386,11 +386,12 @@ def _parse_quality_result(quality_result: dict) -> list:
 
 
 def _format_test_name(test_name: str) -> str:
-    indices = [i for i, c in enumerate(test_name) if c.isupper()]
-    indices.reverse()
-    chars = [test_name[ind] for ind in indices]
-    for ind, character in zip(indices, chars):
-        test_name = test_name[:ind] + f' {character.lower()}' + test_name[ind + 1:]
+    """Changes 'outOfBounds' to 'Out of bounds', etc."""
+    capitalized_indices = [ind for ind, c in enumerate(test_name) if c.isupper()]
+    capitalized_indices.reverse()
+    chars = [test_name[ind] for ind in capitalized_indices]
+    for ind, char in zip(capitalized_indices, chars):
+        test_name = test_name[:ind] + f' {char.lower()}' + test_name[ind + 1:]
     return test_name.capitalize()
 
 
