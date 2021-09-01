@@ -369,10 +369,10 @@ def _parse_quality_result(quality_result: dict) -> list:
                         diagnostics[exceeding_key] = detected
                 errors.append(diagnostics)
         elif test_name == 'invalidUnits':
-            for name, expected, unit in value:
+            for name, unit, expected_unit in value:
                 errors.append({
                     'variableName': name,
-                    'expectedUnit': expected,
+                    'expectedUnit': expected_unit,
                     'unit': unit,
                 })
         else:
