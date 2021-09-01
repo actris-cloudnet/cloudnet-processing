@@ -71,14 +71,14 @@ class TestMetadataApi:
     def test_put_metadata(self):
         adapter.register_uri('PUT', f'{mock_addr}files/s3key', text='resp')
         md_api = metadata_api.MetadataApi(config, session)
-        res = md_api.put('s3key', self.payload)
+        res = md_api.put('files', 's3key', self.payload)
         assert res.text == 'resp'
 
     def test_raises_error_on_failed_request(self):
         adapter.register_uri('PUT', f'{mock_addr}files/s3key_fail', status_code=500)
         md_api = metadata_api.MetadataApi(config, session)
         with pytest.raises(requests.exceptions.HTTPError):
-            md_api.put('s3key_fail', self.payload)
+            md_api.put('files', 's3key_fail', self.payload)
 
     def test_calls_files_with_proper_params_and_parses_response_correctly(self):
         for end_point in ('files', 'model-files'):

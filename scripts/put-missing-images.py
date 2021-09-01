@@ -36,8 +36,7 @@ def main():
                                                                     row['filename'],
                                                                     product_uuid,
                                                                     row['product']['id'])
-                for data in img_metadata:
-                    md_api.put_img(data, product_uuid)
+                md_api.put_images(img_metadata, product_uuid)
 
 
 if __name__ == "__main__":

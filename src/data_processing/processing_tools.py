@@ -65,11 +65,12 @@ class ProcessBase:
         if product == 'model':
             del payload['cloudnetpyVersion']
             payload['model'] = model_or_product_id
-        self._md_api.put(s3key, payload)
-        for data in img_metadata:
-            self._md_api.put_img(data, uuid.product)
+        self._md_api.put('files', s3key, payload)
+        self._md_api.put_images(img_metadata, uuid.product)
         if product in utils.get_product_types(level='1b'):
             self._update_statuses(uuid.raw)
+        quality_report = utils.create_quality_report(full_path)
+        self._md_api.put('quality', payload['uuid'], quality_report)
 
     def _read_volatile_uuid(self, metadata: list) -> Union[str, None]:
         if self._parse_volatile_value(metadata) is True:

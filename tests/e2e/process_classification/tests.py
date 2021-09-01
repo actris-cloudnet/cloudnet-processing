@@ -35,7 +35,7 @@ class TestClassificationProcessing:
         f = open(f'{SCRIPT_PATH}/md.log')
         data = f.readlines()
         n_gets = 2
-        n_puts = 1
+        n_puts = 2
         assert len(data) == n_gets + n_puts + self.n_img
 
         # Check product status
