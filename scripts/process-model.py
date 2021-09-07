@@ -46,7 +46,7 @@ class ProcessModel(ProcessBase):
     def get_models_to_process(self, args) -> list:
         minimum_size = 20200
         payload = {
-            'site': self._site,
+            'site': self.site,
             'status': 'uploaded'
         }
         if hasattr(args, 'start'):
@@ -61,7 +61,7 @@ class ProcessModel(ProcessBase):
         self._check_raw_data_status(upload_metadata)
         full_path, uuid.raw = self._download_raw_files(upload_metadata, temp_file)
         data = {
-            'site_name': self._site,
+            'site_name': self.site,
             'date': self.date_str,
             'uuid': uuid.volatile,
             'full_path': full_path,

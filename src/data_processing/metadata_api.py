@@ -1,6 +1,6 @@
 """Metadata API for Cloudnet files."""
 from datetime import timedelta, datetime
-from typing import Union
+from typing import Union, Optional
 from os import path
 import requests
 from data_processing import utils
@@ -14,7 +14,7 @@ class MetadataApi:
         self.session = session
         self._url = config['DATAPORTAL_URL']
 
-    def get(self, end_point: str, payload: dict) -> Union[list, dict]:
+    def get(self, end_point: str, payload: Optional[dict] = None) -> Union[list, dict]:
         """Get Cloudnet metadata."""
         url = path.join(self._url, end_point)
         res = self.session.get(url, params=payload)

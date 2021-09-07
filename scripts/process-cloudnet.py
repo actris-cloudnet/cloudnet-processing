@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
 """Master script for CloudnetPy processing."""
 import argparse
-import gzip
 import importlib
-import os
-import shutil
 import sys
 import re
 import warnings
@@ -12,15 +9,14 @@ from tempfile import NamedTemporaryFile
 from typing import Tuple, Union, Optional
 import requests
 from cloudnetpy.categorize import generate_categorize
-from cloudnetpy.instruments import rpg2nc, ceilo2nc, mira2nc, basta2nc, hatpro2nc
-from cloudnetpy.utils import date_range, is_timestamp
+from cloudnetpy.utils import date_range
 from requests.exceptions import HTTPError
-from data_processing import concat_wrapper
 from data_processing import nc_header_augmenter
 from data_processing import utils
 from data_processing.utils import MiscError, RawDataMissingError
 from data_processing import processing_tools
 from data_processing.processing_tools import Uuid, ProcessBase
+from data_processing.instrument_process import ProcessRadar, ProcessLidar, ProcessMwr
 import logging
 
 
@@ -50,8 +46,10 @@ def main(args, storage_session=requests.session()):
                 uuid.volatile = process.fetch_volatile_uuid(product)
                 if product in utils.get_product_types(level='2'):
                     uuid, identifier = process.process_level2(uuid, product)
+                elif product == 'categorize':
+                    uuid, identifier = process.process_categorize(uuid)
                 else:
-                    uuid, identifier = getattr(process, f'process_{product}')(uuid)
+                    uuid, identifier = process.process_instrument(uuid, product)
                 process.add_pid(temp_file.name)
                 process.upload_product_and_images(temp_file.name, product, uuid, identifier)
                 process.print_info()
@@ -63,81 +61,17 @@ def main(args, storage_session=requests.session()):
 
 
 class ProcessCloudnet(ProcessBase):
-
-    def process_mwr(self, uuid: Uuid) -> Tuple[Uuid, str]:
-        instrument = 'hatpro'
-        try:
-            full_paths, raw_uuids = self._download_instrument(instrument, '^(?!.*scan).*\.lwp$')
-            uuid.product, valid_full_paths = hatpro2nc(self.temp_dir.name, temp_file.name,
-                                                       self.site_meta, uuid=uuid.volatile,
-                                                       date=self.date_str)
-        except RawDataMissingError:
-            pattern = '(ufs_l2a.nc$|clwvi.*.nc$|.lwp.*.nc$)'
-            full_paths, raw_uuids = self._download_instrument(instrument, pattern)
-            valid_full_paths = concat_wrapper.concat_hatpro_files(full_paths, self.date_str,
-                                                                  temp_file.name)
-            uuid.product = self._fix_calibrated_daily_file(uuid, temp_file.name, instrument)
-        uuid.raw = _get_valid_uuids(raw_uuids, full_paths, valid_full_paths)
-        return uuid, instrument
-
-    def process_radar(self, uuid: Uuid) -> Tuple[Uuid, str]:
-        try:
-            instrument = 'rpg-fmcw-94'
-            full_paths, raw_uuids = self._download_instrument(instrument, '.lv1$')
-            uuid.product, valid_full_paths = rpg2nc(self.temp_dir.name, temp_file.name, self.site_meta,
-                                                    uuid=uuid.volatile, date=self.date_str)
-            uuid.raw = _get_valid_uuids(raw_uuids, full_paths, valid_full_paths)
-        except RawDataMissingError:
-            try:
-                instrument = 'mira'
-                full_paths, uuid.raw = self._download_instrument(instrument)
-                dir_name = _unzip_gz_files(full_paths)
-                uuid.product = mira2nc(dir_name, temp_file.name, self.site_meta, uuid=uuid.volatile,
-                                       date=self.date_str)
-            except RawDataMissingError:
-                instrument = 'basta'
-                full_path, uuid.raw = self._download_instrument(instrument, largest_only=True)
-                uuid.product = basta2nc(full_path, temp_file.name, self.site_meta,
-                                        uuid=uuid.volatile, date=self.date_str)
-        return uuid, instrument
-
-    def process_lidar(self, uuid: Uuid) -> Tuple[Uuid, str]:
-        try:
-            instrument = 'chm15k'
-            raw_daily_file = NamedTemporaryFile(suffix='.nc')
-            full_paths, raw_uuids = self._download_instrument(instrument)
-            valid_full_paths = concat_wrapper.concat_chm15k_files(full_paths, self.date_str,
-                                                                  raw_daily_file.name)
-            uuid.raw = _get_valid_uuids(raw_uuids, full_paths, valid_full_paths)
-        except RawDataMissingError:
-            try:
-                instrument = 'cl51'
-                raw_daily_file = NamedTemporaryFile(suffix='.DAT')
-                if self._site == 'norunda':
-                    full_paths, uuid.raw = self._download_adjoining_daily_files(instrument)
-                    utils.concatenate_text_files(full_paths, raw_daily_file.name)
-                    _fix_cl51_timestamps(raw_daily_file.name, 'Europe/Stockholm')
-                else:
-                    full_path, uuid.raw = self._download_instrument(instrument, largest_only=True)
-                    shutil.move(full_path, raw_daily_file.name)
-            except RawDataMissingError:
-                try:
-                    instrument = 'ct25k'
-                    raw_daily_file = NamedTemporaryFile(suffix='.dat')
-                    full_path, uuid.raw = self._download_instrument(instrument, largest_only=True)
-                    shutil.move(full_path, raw_daily_file.name)
-                except RawDataMissingError:
-                    instrument = 'halo-doppler-lidar'
-                    full_path, uuid.raw = self._download_instrument(instrument, pattern='.nc$',
-                                                                    largest_only=True)
-                    uuid.product = self._fix_calibrated_daily_file(uuid, full_path, instrument)
-                    raw_daily_file = None
-
-        if instrument != 'halo-doppler-lidar':
-            site_meta = self._fetch_calibration_factor(instrument)
-            uuid.product = ceilo2nc(raw_daily_file.name, temp_file.name, site_meta=site_meta,
-                                    uuid=uuid.volatile, date=self.date_str)
-        return uuid, instrument
+    def process_instrument(self, uuid: Uuid, instrument_type: str):
+        instrument = self._detect_uploaded_instrument(instrument_type)
+        if instrument_type == 'lidar':
+            process_class = ProcessLidar
+        elif instrument_type == 'radar':
+            process_class = ProcessRadar
+        else:
+            process_class = ProcessMwr
+        process = process_class(self, temp_file, uuid)
+        getattr(process, f'process_{instrument.replace("-", "_")}')()
+        return process.uuid, instrument
 
     def process_categorize(self, uuid: Uuid) -> Tuple[Uuid, str]:
         l1_products = utils.get_product_types(level='1b')
@@ -187,10 +121,10 @@ class ProcessCloudnet(ProcessBase):
         if self._create_new_version:
             self._pid_utils.add_pid_to_file(full_path)
 
-    def _download_instrument(self,
-                             instrument: str,
-                             pattern: Optional[str] = None,
-                             largest_only: Optional[bool] = False) -> Tuple[Union[list, str], list]:
+    def download_instrument(self,
+                            instrument: str,
+                            pattern: Optional[str] = None,
+                            largest_only: Optional[bool] = False) -> Tuple[Union[list, str], list]:
         payload = self._get_payload(instrument=instrument, skip_created=True)
         upload_metadata = self._md_api.get('upload-metadata', payload)
         if pattern is not None:
@@ -199,7 +133,7 @@ class ProcessCloudnet(ProcessBase):
         self._check_raw_data_status(upload_metadata)
         return self._download_raw_files(upload_metadata, arg)
 
-    def _download_adjoining_daily_files(self, instrument: str) -> Tuple[list, list]:
+    def download_adjoining_daily_files(self, instrument: str) -> Tuple[list, list]:
         next_day = utils.get_date_from_past(-1, self.date_str)
         payload = self._get_payload(instrument=instrument, skip_created=True)
         payload['dateFrom'] = self.date_str
@@ -212,12 +146,12 @@ class ProcessCloudnet(ProcessBase):
             raise MiscError('Raw data already processed')
         return self._download_raw_files(upload_metadata)
 
-    def _fix_calibrated_daily_file(self,
-                                   uuid: Uuid,
-                                   full_path: str,
-                                   instrument: str) -> str:
+    def fix_calibrated_daily_file(self,
+                                  uuid: Uuid,
+                                  full_path: str,
+                                  instrument: str) -> str:
         data = {
-            'site_name': self._site,
+            'site_name': self.site,
             'date': self.date_str,
             'uuid': uuid.volatile,
             'full_path': full_path,
@@ -226,12 +160,6 @@ class ProcessCloudnet(ProcessBase):
             }
         uuid_product = nc_header_augmenter.harmonize_nc_file(data)
         return uuid_product
-
-    def _fetch_calibration_factor(self, instrument: str) -> dict:
-        meta = self.site_meta.copy()
-        meta['calibration_factor'] = utils.get_calibration_factor(self._site, self.date_str,
-                                                                  instrument)
-        return meta
 
     def _detect_uploaded_instrument(self, instrument_type: str) -> str:
         instrument_metadata = self._md_api.get('api/instruments')
@@ -243,7 +171,7 @@ class ProcessCloudnet(ProcessBase):
         if len(instrument) == 0:
             raise RawDataMissingError('Missing raw data')
         if len(instrument) > 1:
-            logging.warning(f'More that one type of {instrument_type} data')
+            logging.warning(f'More than one type of {instrument_type} data, using {instrument[0]}')
         return instrument[0]
 
 
@@ -256,16 +184,6 @@ def _order_metadata(metadata: list) -> list:
 
 def _get_valid_uuids(uuids: list, full_paths: list, valid_full_paths: list) -> list:
     return [uuid for uuid, full_path in zip(uuids, full_paths) if full_path in valid_full_paths]
-
-
-def _unzip_gz_files(full_paths: list) -> str:
-    for full_path in full_paths:
-        if full_path.endswith('.gz'):
-            filename = full_path.replace('.gz', '')
-            with gzip.open(full_path, 'rb') as file_in:
-                with open(filename, 'wb') as file_out:
-                    shutil.copyfileobj(file_in, file_out)
-    return os.path.dirname(full_paths[0])
 
 
 def _screen_by_filename(metadata: list, pattern: str) -> list:
@@ -282,18 +200,6 @@ def _get_processing_dates(args):
     start_date = utils.date_string_to_date(start_date)
     stop_date = utils.date_string_to_date(stop_date)
     return start_date, stop_date
-
-
-def _fix_cl51_timestamps(filename: str, time_zone: str) -> None:
-    with open(filename, 'r') as file:
-        lines = file.readlines()
-    for ind, line in enumerate(lines):
-        if is_timestamp(line):
-            date_time = line.strip('-').strip('\n')
-            date_time_utc = utils.datetime_to_utc(date_time, time_zone)
-            lines[ind] = f'-{date_time_utc}\n'
-    with open(filename, 'w') as file:
-        file.writelines(lines)
 
 
 def _parse_args(args):
