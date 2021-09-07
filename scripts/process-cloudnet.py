@@ -233,6 +233,19 @@ class ProcessCloudnet(ProcessBase):
                                                                   instrument)
         return meta
 
+    def _detect_uploaded_instrument(self, instrument_type: str) -> str:
+        instrument_metadata = self._md_api.get('api/instruments')
+        possible_instruments = [x['id'] for x in instrument_metadata if x['type'] == instrument_type]
+        payload = self._get_payload()
+        upload_metadata = self._md_api.get('upload-metadata', payload)
+        uploaded_instruments = set([x['instrument']['id'] for x in upload_metadata])
+        instrument = list(set(possible_instruments) & uploaded_instruments)
+        if len(instrument) == 0:
+            raise RawDataMissingError('Missing raw data')
+        if len(instrument) > 1:
+            logging.warning(f'More that one type of {instrument_type} data')
+        return instrument[0]
+
 
 def _order_metadata(metadata: list) -> list:
     key = 'measurementDate'
