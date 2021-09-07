@@ -36,7 +36,7 @@ class ProcessBase:
                  config: dict,
                  storage_session: Optional[requests.Session] = requests.Session(),
                  metadata_session: Optional[requests.Session] = requests.Session()):
-        self.site_meta, self._site, self._site_type = _read_site_info(args)
+        self.site_meta, self.site, self._site_type = _read_site_info(args)
         self.is_reprocess = getattr(args, 'reprocess', False)
         self.date_str = None
         self.temp_dir = TemporaryDirectory(dir=_get_temp_dir(config))
@@ -61,7 +61,7 @@ class ProcessBase:
                                                                       uuid.product, product)
         else:
             img_metadata = []
-        payload = utils.create_product_put_payload(full_path, file_info, site=self._site)
+        payload = utils.create_product_put_payload(full_path, file_info, site=self.site)
         if product == 'model':
             del payload['cloudnetpyVersion']
             payload['model'] = model_or_product_id
@@ -132,7 +132,7 @@ class ProcessBase:
         payload = {
             'dateFrom': self.date_str,
             'dateTo': self.date_str,
-            'site': self._site,
+            'site': self.site,
             'developer': True
         }
         if instrument is not None:
@@ -151,7 +151,7 @@ class ProcessBase:
             self._md_api.post('upload-metadata', payload)
 
     def _get_product_key(self, identifier: str) -> str:
-        return f"{self.date_str.replace('-', '')}_{self._site}_{identifier}.nc"
+        return f"{self.date_str.replace('-', '')}_{self.site}_{identifier}.nc"
 
     @staticmethod
     def _check_response_length(metadata: list) -> None:
