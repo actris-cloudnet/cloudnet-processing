@@ -66,7 +66,7 @@ class TestChm15kProcessing:
 
         n_raw_files = 3
 
-        n_gets = 2
+        n_gets = 4
         n_puts = 2 + self.n_img
         n_posts = n_raw_files
 
@@ -76,12 +76,14 @@ class TestChm15kProcessing:
         assert '"GET /api/files?dateFrom=2020-10-22&dateTo=2020-10-22&site=bucharest&developer=True' \
                '&product=lidar&showLegacy=True HTTP/1.1" 200 -' in data[0]
 
+        # Two API calls the get instrument status...
+
         # GET raw data
         assert '"GET /upload-metadata?dateFrom=2020-10-22&dateTo=2020-10-22&site=bucharest' \
-               '&developer=True&instrument=chm15k&status%5B%5D=uploaded&status%5B%5D=processed HTTP/1.1" 200 -' in data[1]
+               '&developer=True&instrument=chm15k&status%5B%5D=uploaded&status%5B%5D=processed HTTP/1.1" 200 -' in data[3]
 
         # PUT file
-        assert '"PUT /files/20201022_bucharest_chm15k.nc HTTP/1.1"' in data[2]
+        assert '"PUT /files/20201022_bucharest_chm15k.nc HTTP/1.1"' in data[4]
 
         # PUT images
         img_put = '"PUT /visualizations/20201022_bucharest_chm15k-'
