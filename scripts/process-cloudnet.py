@@ -222,6 +222,7 @@ class ProcessCloudnet(ProcessBase):
             'uuid': uuid.volatile,
             'full_path': full_path,
             'instrument': instrument,
+            'altitude': self.site_meta['altitude']
             }
         uuid_product = nc_header_augmenter.harmonize_nc_file(data)
         return uuid_product

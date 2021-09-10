@@ -138,6 +138,16 @@ def _harmonize_hatpro_file(nc: netCDF4.Dataset, data: dict) -> netCDF4.Dataset:
     nc = _sort_time(nc, valid_name)
     nc = _convert_hatpro_time(nc, data)
     _check_time_reference(nc)
+    nc = _add_altitude(nc, data)
+    return nc
+
+
+def _add_altitude(nc: netCDF4.Dataset, data: dict) -> netCDF4.Dataset:
+    key = 'altitude'
+    alt = nc.createVariable(key, 'i4') if key not in nc.variables else nc.variables[key]
+    alt[:] = data[key]
+    alt.units = 'm'
+    alt.long_name = 'Altitude of site'
     return nc
 
 
