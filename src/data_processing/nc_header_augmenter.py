@@ -1,6 +1,7 @@
 import shutil
 from typing import Optional
 from tempfile import NamedTemporaryFile
+import cloudnetpy.utils
 import netCDF4
 import datetime
 from cloudnetpy.utils import get_uuid, get_time, seconds2date
@@ -46,7 +47,7 @@ def harmonize_nc_file(data: dict) -> str:
         nc.year, nc.month, nc.day = _get_model_date(nc)
     if data['instrument'] == 'hatpro':
         nc.year, nc.month, nc.day = data['date'].split('-')
-        nc = _harmonize_hatpro_file(nc)
+        nc = _harmonize_hatpro_file(nc, data)
     if data['instrument'] == 'halo-doppler-lidar':
         nc.year, nc.month, nc.day = data['date'].split('-')
         nc.renameVariable('range', 'height')
@@ -73,7 +74,8 @@ def copy_file_contents(source: netCDF4.Dataset,
             size = dimension.size
         target.createDimension(key, size)
     for var_name, variable in source.variables.items():
-        var_out = target.createVariable(var_name, variable.datatype, variable.dimensions, zlib=True)
+        dtype = 'double' if var_name == 'time' else variable.dtype
+        var_out = target.createVariable(var_name, dtype, variable.dimensions, zlib=True)
         attr = {k: variable.getncattr(k) for k in variable.ncattrs()}
         if '_FillValue' in attr:
             del attr['_FillValue']
@@ -123,16 +125,37 @@ def _get_model_date(nc: netCDF4.Dataset) -> list:
     return the_date.split('-')
 
 
-def _harmonize_hatpro_file(nc: netCDF4.Dataset) -> netCDF4.Dataset:
+def _harmonize_hatpro_file(nc: netCDF4.Dataset, data: dict) -> netCDF4.Dataset:
     valid_name = 'LWP'
+    valid_unit = 'g m-2'
     for invalid_name in ('LWP_data', 'clwvi', 'atmosphere_liquid_water_content'):
         if invalid_name in nc.variables:
             nc.renameVariable(invalid_name, valid_name)
-    if valid_name in nc.variables and 'kg' in nc.variables[valid_name].units:
+    assert valid_name in nc.variables
+    if 'kg' in nc.variables[valid_name].units:
         nc.variables[valid_name][:] *= 1000
-        nc.variables[valid_name].units = 'g m-2'
+    nc.variables[valid_name].units = valid_unit
     nc = _sort_time(nc, valid_name)
+    nc = _convert_hatpro_time(nc, data)
+    _check_time_reference(nc)
     return nc
+
+
+def _convert_hatpro_time(nc: netCDF4.Dataset, data: dict):
+    key = 'time'
+    time = nc.variables[key]
+    if max(time[:]) > 24:
+        fraction_hour = cloudnetpy.utils.seconds2hours(time[:])
+        nc.variables[key][:] = fraction_hour
+    nc.variables[key].long_name = 'Time UTC'
+    nc.variables[key].units = f'hours since {data["date"]} 00:00:00'
+    return nc
+
+
+def _check_time_reference(nc: netCDF4.Dataset):
+    key = 'time_reference'
+    if key in nc.variables:
+        assert nc.variables[key][:] == 1  # 1 = UTC. This check is for Palaiseau HATPRO files.
 
 
 def _sort_time(nc: netCDF4.Dataset, key: str) -> netCDF4.Dataset:
