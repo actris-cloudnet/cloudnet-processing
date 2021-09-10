@@ -8,13 +8,16 @@ import numpy as np
 
 class TestMwr:
 
-    data = {
-        'site_name': 'bucharest',
-        'date': '2020-10-23',
-        'uuid': None,
-        'instrument': 'hatpro',
-        'model': None
-    }
+    @pytest.fixture(autouse=True)
+    def _before_and_after(self):
+        self.data = {
+            'site_name': 'bucharest',
+            'date': '2020-10-23',
+            'uuid': None,
+            'instrument': 'hatpro',
+            'model': None
+        }
+        yield
 
     def test_standard_fix(self, mwr_file):
         self.data['full_path'] = mwr_file
@@ -49,6 +52,19 @@ class TestMwr:
         self.data['date'] = '2020-10-24'
         with pytest.raises(RuntimeError):
             nca.harmonize_nc_file(self.data)
+
+    def test_hatpro_harmonization(self, mwr_file):
+        self.data['full_path'] = mwr_file
+        self.data['original_filename'] = os.path.basename(mwr_file)
+        nca.harmonize_nc_file(self.data)
+        nc = netCDF4.Dataset(mwr_file)
+        assert 'LWP' in nc.variables
+        assert nc.variables['LWP'].units == 'g m-2'
+        time = nc.variables['time'][:]
+        assert nc.variables['time'].units == f'hours since {self.data["date"]} 00:00:00'
+        assert nc.variables['time'].dtype == 'double'
+        assert np.all(np.diff(time) >= 0)
+        nc.close()
 
 
 class TestModel:
@@ -116,13 +132,3 @@ class TestHalo:
 ])
 def test_get_epoch(arg, expected):
     assert nca._get_epoch(arg) == expected
-
-
-def test_harmonize_hatpro_file(mwr_file):
-    nc = netCDF4.Dataset(mwr_file, 'r+')
-    nc = nca._harmonize_hatpro_file(nc)
-    assert 'LWP' in nc.variables
-    assert nc.variables['LWP'].units == 'g m-2'
-    time = nc.variables['time'][:]
-    assert np.all(np.diff(time) >= 0)
-    nc.close()
