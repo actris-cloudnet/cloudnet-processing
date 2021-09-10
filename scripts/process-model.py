@@ -51,13 +51,13 @@ class ProcessModel(ProcessBase):
         }
         if hasattr(args, 'start'):
             payload['dateFrom'] = args.start
-        metadata = self._md_api.get('upload-model-metadata', payload)
+        metadata = self.md_api.get('upload-model-metadata', payload)
         return [(row['measurementDate'], row['model']['id'], row['uuid']) for row in metadata
                 if int(row['size']) > minimum_size]
 
     def process_model(self, uuid: Uuid, model: str) -> Uuid:
         payload = self._get_payload(model=model, skip_created=True)
-        upload_metadata = self._md_api.get('upload-model-metadata', payload)
+        upload_metadata = self.md_api.get('upload-model-metadata', payload)
         self._check_raw_data_status(upload_metadata)
         full_path, uuid.raw = self._download_raw_files(upload_metadata, temp_file)
         data = {
@@ -73,12 +73,12 @@ class ProcessModel(ProcessBase):
 
     def fetch_volatile_uuid(self, model: str, raw_uuid: str) -> Union[str, None]:
         payload = self._get_payload(model=model)
-        metadata = self._md_api.get(f'api/model-files', payload)
+        metadata = self.md_api.get(f'api/model-files', payload)
         try:
             uuid = self._read_volatile_uuid(metadata)
             self._create_new_version = self._is_create_new_version(metadata)
         except MiscError as err:
-            self._update_statuses([raw_uuid], status='invalid')
+            self.update_statuses([raw_uuid], status='invalid')
             msg = f'{err.message}: Setting status of {metadata[0]["filename"]} to "invalid"'
             raise MiscError(msg)
         return uuid

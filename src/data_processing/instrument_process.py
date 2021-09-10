@@ -15,7 +15,7 @@ class ProcessInstrument:
         self.base = process_cloudnet
         self.temp_file = temp_file
         self.uuid = uuid
-        self._daily_file = NamedTemporaryFile(suffix='.nc')  # Remove suffix later
+        self._daily_file = NamedTemporaryFile()
         self._kwargs = self._get_kwargs()
         self._args = self._get_args()
 
@@ -66,7 +66,6 @@ class ProcessLidar(ProcessInstrument):
         self._call_ceilo2nc('ct25k')
 
     def process_cl51(self):
-        self._daily_file = NamedTemporaryFile(suffix='.DAT')  # Get rid of this later
         if self.base.site == 'norunda':
             full_paths, self.uuid.raw = self.base.download_adjoining_daily_files('cl51')
             utils.concatenate_text_files(full_paths, self._daily_file.name)
@@ -84,12 +83,38 @@ class ProcessLidar(ProcessInstrument):
                                                                 'halo-doppler-lidar')
 
     def process_cl61d(self):
+        model = 'cl61d'
+        self._daily_file.name = self._create_daily_file_name(model)
         try:
-            daily_file, daily_file_uuid = self.base.download_instrument('cl61d', pattern='daily')
+            if self.base.is_reprocess:
+                raise RawDataMissingError('Force creation of daily file and process..')
+            tmp_file, uuid = self.base.download_instrument(model, pattern='daily',
+                                                           largest_only=True)
+            full_paths, raw_uuids = self.base.download_uploaded(model, exclude='daily')
+            valid_full_paths = concat_wrapper.update_daily_file(full_paths, tmp_file)
+            shutil.copy(tmp_file, self._daily_file.name)
         except RawDataMissingError:
-            logging.info('No daily cl61d file')
+            full_paths, raw_uuids = self.base.download_instrument(model, exclude='daily')
+            if full_paths:
+                logging.info(f'Creating daily file from {len(full_paths)} files')
+            else:
+                raise RawDataMissingError('Missing raw data')
+            valid_full_paths = concat_wrapper.concat_netcdf_files(full_paths,
+                                                                  self.base.date_str,
+                                                                  self._daily_file.name,
+                                                                  concat_dimension='profile')
+        if not valid_full_paths:
+            raise RawDataMissingError('Missing raw data')
+        self.base.md_api.upload_instrument_file(self._daily_file.name,
+                                                model,
+                                                self.base.date_str,
+                                                self.base.site)
+        self._call_ceilo2nc(model)
+        self.uuid.raw = _get_valid_uuids(raw_uuids, full_paths, valid_full_paths)
 
-        full_paths, raw_uuids = self.base.download_instrument('cl61d')
+    def _create_daily_file_name(self, model: str) -> str:
+        dir_name = os.path.dirname(self._daily_file.name)
+        return f'{dir_name}/{self.base.date_str}_{self.base.site}_{model}_daily.nc'
 
     def _call_ceilo2nc(self, instrument: str):
         site_meta = self._fetch_calibration_factor(instrument)
@@ -110,7 +135,7 @@ class ProcessMwr(ProcessInstrument):
         except RawDataMissingError:
             pattern = '(ufs_l2a.nc$|clwvi.*.nc$|.lwp.*.nc$)'
             full_paths, raw_uuids = self.base.download_instrument('hatpro', pattern)
-            valid_full_paths = concat_wrapper.concat_hatpro_files(full_paths,
+            valid_full_paths = concat_wrapper.concat_netcdf_files(full_paths,
                                                                   self.base.date_str,
                                                                   self.temp_file.name)
             self.uuid.product = self.base.fix_calibrated_daily_file(self.uuid,

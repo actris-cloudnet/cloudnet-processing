@@ -40,7 +40,7 @@ class ProcessBase:
         self.is_reprocess = getattr(args, 'reprocess', False)
         self.date_str = None
         self.temp_dir = TemporaryDirectory(dir=_get_temp_dir(config))
-        self._md_api = MetadataApi(config, metadata_session)
+        self.md_api = MetadataApi(config, metadata_session)
         self._storage_api = StorageApi(config, storage_session)
         self._pid_utils = PidUtils(config)
         self._create_new_version = False
@@ -65,12 +65,12 @@ class ProcessBase:
         if product == 'model':
             del payload['cloudnetpyVersion']
             payload['model'] = model_or_product_id
-        self._md_api.put('files', s3key, payload)
-        self._md_api.put_images(img_metadata, uuid.product)
+        self.md_api.put('files', s3key, payload)
+        self.md_api.put_images(img_metadata, uuid.product)
         if product in utils.get_product_types(level='1b'):
-            self._update_statuses(uuid.raw)
+            self.update_statuses(uuid.raw)
         quality_report = utils.create_quality_report(full_path)
-        self._md_api.put('quality', payload['uuid'], quality_report)
+        self.md_api.put('quality', payload['uuid'], quality_report)
 
     def _read_volatile_uuid(self, metadata: list) -> Union[str, None]:
         if self._parse_volatile_value(metadata) is True:
@@ -145,10 +145,10 @@ class ProcessBase:
             payload['status[]'] = ['uploaded', 'processed']
         return payload
 
-    def _update_statuses(self, uuids: list, status: Optional[str] = 'processed') -> None:
+    def update_statuses(self, uuids: list, status: Optional[str] = 'processed') -> None:
         for uuid in uuids:
             payload = {'uuid': uuid, 'status': status}
-            self._md_api.post('upload-metadata', payload)
+            self.md_api.post('upload-metadata', payload)
 
     def _get_product_key(self, identifier: str) -> str:
         return f"{self.date_str.replace('-', '')}_{self.site}_{identifier}.nc"
