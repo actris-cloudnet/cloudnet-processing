@@ -1,7 +1,8 @@
 """Metadata API for Cloudnet files."""
 from datetime import timedelta, datetime
 from typing import Union, Optional
-from os import path
+import logging
+import os
 import requests
 from data_processing import utils
 
@@ -14,34 +15,75 @@ class MetadataApi:
         self.session = session
         self._url = config['DATAPORTAL_URL']
 
-    def get(self, end_point: str, payload: Optional[dict] = None) -> Union[list, dict]:
+    def get(self,
+            end_point: str,
+            payload: Optional[dict] = None) -> Union[list, dict]:
         """Get Cloudnet metadata."""
-        url = path.join(self._url, end_point)
+        url = os.path.join(self._url, end_point)
         res = self.session.get(url, params=payload)
         res.raise_for_status()
         return res.json()
 
-    def post(self, end_point: str, payload: dict) -> requests.Response:
+    def post(self,
+             end_point: str,
+             payload: dict,
+             auth: Optional[tuple] = None) -> requests.Response:
         """Update upload / product metadata."""
-        url = path.join(self._url, end_point)
-        res = self.session.post(url, json=payload)
+        url = os.path.join(self._url, end_point)
+        res = self.session.post(url, json=payload, auth=auth)
         res.raise_for_status()
         return res
 
-    def put(self, end_point: str, resource: str, payload):
-        """Generic PUT to Cloudnet data portal."""
-        url = path.join(self._url, end_point, resource)
+    def put(self,
+            end_point: str,
+            resource: str,
+            payload: dict) -> requests.Response:
+        """PUT metadata to Cloudnet data portal."""
+        url = os.path.join(self._url, end_point, resource)
         res = self.session.put(url, json=payload)
         res.raise_for_status()
         return res
 
-    def put_images(self, img_metadata: list, product_uuid: str):
+    def put_file(self,
+                 end_point: str,
+                 resource: str,
+                 filename: str,
+                 auth: tuple) -> requests.Response:
+        """PUT file to Cloudnet data portal."""
+        url = os.path.join(self._url, end_point, resource)
+        res = requests.put(url, data=open(filename, 'rb'), auth=auth)
+        res.raise_for_status()
+        return res
+
+    def put_images(self,
+                   img_metadata: list,
+                   product_uuid: str):
         for data in img_metadata:
             payload = {
                 'sourceFileId': product_uuid,
                 'variableId': data['variable_id']
             }
             self.put('visualizations', data['s3key'], payload)
+
+    def upload_instrument_file(self,
+                               filename: str,
+                               instrument: str,
+                               date: str,
+                               site: str):
+        auth = (site, 'letmein')
+        checksum = utils.md5sum(filename)
+        metadata = {
+            'filename': os.path.basename(filename),
+            'checksum': checksum,
+            'instrument': instrument,
+            'measurementDate': date
+        }
+        try:
+            self.post('upload/metadata', metadata, auth=auth)
+        except requests.exceptions.HTTPError as err:
+            logging.info(err)
+            return
+        self.put_file('upload/data', checksum, filename, auth)
 
     def find_volatile_regular_files_to_freeze(self) -> list:
         """Find volatile files released before certain time limit."""

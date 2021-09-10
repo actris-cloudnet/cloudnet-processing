@@ -79,10 +79,10 @@ class ProcessCloudnet(ProcessBase):
         for product in l1_products:
             if product == 'model':
                 payload = self._get_payload()
-                metadata = self._md_api.get('api/model-files', payload)
+                metadata = self.md_api.get('api/model-files', payload)
             else:
                 payload = self._get_payload(product=product)
-                metadata = self._md_api.get('api/files', payload)
+                metadata = self.md_api.get('api/files', payload)
             self._check_response_length(metadata)
             if metadata:
                 input_files[product] = self._storage_api.download_product(metadata[0],
@@ -97,7 +97,7 @@ class ProcessCloudnet(ProcessBase):
 
     def process_level2(self, uuid: Uuid, product: str) -> Tuple[Uuid, str]:
         payload = self._get_payload(product='categorize')
-        metadata = self._md_api.get('api/files', payload)
+        metadata = self.md_api.get('api/files', payload)
         self._check_response_length(metadata)
         if metadata:
             categorize_file = self._storage_api.download_product(metadata[0], self.temp_dir.name)
@@ -112,7 +112,7 @@ class ProcessCloudnet(ProcessBase):
     def fetch_volatile_uuid(self, product: str) -> Union[str, None]:
         payload = self._get_payload(product=product)
         payload['showLegacy'] = True
-        metadata = self._md_api.get(f'api/files', payload)
+        metadata = self.md_api.get(f'api/files', payload)
         uuid = self._read_volatile_uuid(metadata)
         self._create_new_version = self._is_create_new_version(metadata)
         return uuid
@@ -124,21 +124,34 @@ class ProcessCloudnet(ProcessBase):
     def download_instrument(self,
                             instrument: str,
                             pattern: Optional[str] = None,
-                            largest_only: Optional[bool] = False) -> Tuple[Union[list, str], list]:
+                            largest_only: Optional[bool] = False,
+                            exclude: Optional[str] = None) -> Tuple[Union[list, str], list]:
         payload = self._get_payload(instrument=instrument, skip_created=True)
-        upload_metadata = self._md_api.get('upload-metadata', payload)
+        upload_metadata = self.md_api.get('upload-metadata', payload)
         if pattern is not None:
             upload_metadata = _screen_by_filename(upload_metadata, pattern)
+        if exclude is not None:
+            upload_metadata = _screen_by_filename_2(upload_metadata, exclude)
         arg = temp_file if largest_only else None
         self._check_raw_data_status(upload_metadata)
         return self._download_raw_files(upload_metadata, arg)
+
+    def download_uploaded(self,
+                          instrument: str,
+                          exclude: Optional[str]) -> Tuple[Union[list, str], list]:
+        payload = self._get_payload(instrument=instrument)
+        payload['status'] = 'uploaded'
+        upload_metadata = self.md_api.get('upload-metadata', payload)
+        if exclude is not None:
+            upload_metadata = _screen_by_filename_2(upload_metadata, exclude)
+        return self._download_raw_files(upload_metadata)
 
     def download_adjoining_daily_files(self, instrument: str) -> Tuple[list, list]:
         next_day = utils.get_date_from_past(-1, self.date_str)
         payload = self._get_payload(instrument=instrument, skip_created=True)
         payload['dateFrom'] = self.date_str
         payload['dateTo'] = next_day
-        upload_metadata = self._md_api.get('upload-metadata', payload)
+        upload_metadata = self.md_api.get('upload-metadata', payload)
         upload_metadata = _order_metadata(upload_metadata)
         if not upload_metadata:
             raise RawDataMissingError('No raw data')
@@ -162,10 +175,10 @@ class ProcessCloudnet(ProcessBase):
         return uuid_product
 
     def _detect_uploaded_instrument(self, instrument_type: str) -> str:
-        instrument_metadata = self._md_api.get('api/instruments')
+        instrument_metadata = self.md_api.get('api/instruments')
         possible_instruments = [x['id'] for x in instrument_metadata if x['type'] == instrument_type]
         payload = self._get_payload()
-        upload_metadata = self._md_api.get('upload-metadata', payload)
+        upload_metadata = self.md_api.get('upload-metadata', payload)
         uploaded_instruments = set([x['instrument']['id'] for x in upload_metadata])
         instrument = list(set(possible_instruments) & uploaded_instruments)
         if len(instrument) == 0:
@@ -188,6 +201,10 @@ def _get_valid_uuids(uuids: list, full_paths: list, valid_full_paths: list) -> l
 
 def _screen_by_filename(metadata: list, pattern: str) -> list:
     return [row for row in metadata if re.search(pattern.lower(), row['filename'].lower())]
+
+
+def _screen_by_filename_2(metadata: list, pattern: str) -> list:
+    return [row for row in metadata if not re.search(pattern.lower(), row['filename'].lower())]
 
 
 def _get_processing_dates(args):
