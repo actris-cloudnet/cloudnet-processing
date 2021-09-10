@@ -15,7 +15,8 @@ class TestMwr:
             'date': '2020-10-23',
             'uuid': None,
             'instrument': 'hatpro',
-            'model': None
+            'model': None,
+            'altitude': 10
         }
         yield
 
@@ -64,6 +65,9 @@ class TestMwr:
         assert nc.variables['time'].units == f'hours since {self.data["date"]} 00:00:00'
         assert nc.variables['time'].dtype == 'double'
         assert np.all(np.diff(time) >= 0)
+        assert nc.variables['altitude'][:] == 10
+        assert nc.variables['altitude'].units == 'm'
+        assert nc.variables['altitude'].long_name == 'Altitude of site'
         nc.close()
 
 
