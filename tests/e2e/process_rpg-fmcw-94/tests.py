@@ -15,16 +15,12 @@ class TestRPGFMCW94Processing:
 
     @pytest.fixture(autouse=True)
     def _fetch_params(self, params):
-        self.output = params['output']
         self.full_path = params['full_path']
 
     def test_that_does_not_call_pid_api(self):
         f = open(f'{SCRIPT_PATH}/pid.log')
         data = f.readlines()
         assert len(data) == 0
-
-    def test_that_reports_volatile_file_creation(self):
-        assert 'Created: Volatile file' in self.output
 
     def test_attributes(self):
         nc = netCDF4.Dataset(self.full_path)

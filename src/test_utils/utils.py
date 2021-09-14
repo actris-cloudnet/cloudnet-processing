@@ -1,5 +1,7 @@
+from tempfile import NamedTemporaryFile
 import atexit
 import os
+import re
 import io
 import sys
 import shutil
@@ -8,6 +10,10 @@ import time
 import socket
 import requests
 import requests_mock
+from data_processing.utils import get_product_types
+sys.path.append('scripts/')
+PROCESS_CLOUDNET = __import__("process-cloudnet")
+PROCESS_CLOUDNET_MODEL = __import__("process-model")
 
 
 def init_test_session():
@@ -96,3 +102,81 @@ def count_strings(data: list, string: str) -> int:
         if string in row:
             n += 1
     return n
+
+
+def register_storage_urls(temp_file: NamedTemporaryFile,
+                          source_data: list,
+                          site: str,
+                          date: str,
+                          identifier: str,
+                          is_volatile: bool,
+                          products=None):
+    def save_file(request):
+        with open(temp_file.name, mode='wb') as file:
+            file.write(request.body.read())
+        return True
+
+    session, adapter, mock_addr = init_test_session()
+    source_dir, end_point, is_level_2_product = _get_source_file_paths(identifier)
+    for uuid, filename in source_data:
+        prefix = '' if is_level_2_product else f'/{site}/{uuid}'
+        url = f'{mock_addr}{end_point}{prefix}/{filename}'
+        adapter.register_uri('GET', url, body=open(f'{source_dir}/{filename}', 'rb'))
+    bucket_suffix = '-volatile' if is_volatile is True else ''
+    date_stripped = date.replace('-', '')
+    if products is None:
+        products = (identifier,)
+    for product in products:
+        url = f'{mock_addr}cloudnet-product{bucket_suffix}/{date_stripped}_{site}_{product}.nc'
+        adapter.register_uri('PUT', url, additional_matcher=save_file, json={'size': 65,
+                                                                             'version': ''})
+    adapter.register_uri('PUT', re.compile(f'{mock_addr}cloudnet-img/(.*?)'))
+    return session
+
+
+def _get_source_file_paths(identifier: str) -> tuple:
+    is_level_2_product = identifier in get_product_types('2') or identifier == 'categorize'
+    if is_level_2_product is True:
+        source_dir = 'tests/data/products'
+        end_point = 'cloudnet-product'
+    else:
+        source_dir = f'tests/data/raw/{identifier}'
+        end_point = 'cloudnet-upload'
+    return source_dir, end_point, is_level_2_product
+
+
+def start_test_servers(instrument: str, script_path: str):
+    dir_name = 'tests/data/server/'
+    start_server(5000, f'{dir_name}metadata/process_{instrument}', f'{script_path}/md.log')
+    start_server(5001, f'{dir_name}pid', f'{script_path}/pid.log')
+
+
+def process(session,
+            main_args: list,
+            temp_file: NamedTemporaryFile,
+            script_path: str,
+            marker: str = None,
+            is_model_processing: bool = False):
+    if is_model_processing is True:
+        PROCESS_CLOUDNET_MODEL.main(main_args, storage_session=session)
+    else:
+        PROCESS_CLOUDNET.main(main_args, storage_session=session)
+    pytest_args = ['pytest', '-v', '-s', f'{script_path}/tests.py', '--full_path', temp_file.name,
+                   '--args', str(main_args)]
+    try:
+        if marker is not None:
+            pytest_args += ['-m', marker]
+        subprocess.check_call(pytest_args)
+    except subprocess.CalledProcessError:
+        raise
+
+
+def reset_log_file(script_path: str):
+    open(f'{script_path}/md.log', 'w').close()
+
+
+def parse_args(args: str) -> list:
+    chars_to_remove = ['\'', '"', '[', ']', '-d=', '-p=', '--date=', '--product=', ' ']
+    for c in chars_to_remove:
+        args = args.replace(c, '')
+    return args.split(',')
