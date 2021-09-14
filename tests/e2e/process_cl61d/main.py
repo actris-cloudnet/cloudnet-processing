@@ -7,20 +7,21 @@ from tempfile import NamedTemporaryFile
 SCRIPT_PATH = path.dirname(path.realpath(__file__))
 temp_file = NamedTemporaryFile()
 
-site = 'bucharest'
-date = '2020-10-22'
-instrument = 'rpg-fmcw-94'
+site = 'hyytiala'
+date = '2021-09-11'
+instrument = 'cl61d'
 source_data = [
-    ('1bd2bd3b-45ae-455e-ab2b-627d9fde3a53', '201022_070003_P06_ZEN.LV1'),
-    ('01425ad8-4acd-429b-b395-88723538e308', '201022_100001_P06_ZEN.LV1'),
-    ('d5859d33-c7b0-4f1b-bf40-66a236be76c6', '201023_160000_P06_ZEN.LV1')
+    ('5d5aae0d-4351-4d40-a359-5e7ff0560a56', 'HYYlive_20210911_182940.nc'),
+    ('14cf8fa5-7d0f-471a-b85d-6ed0ee0d8c6d', 'HYYlive_20210911_182740.nc'),
+    ('be23a333-1a65-4d7d-99df-5f4134fb616e', 'HYYlive_20210911_182640.nc'),
+    ('9c2a67e0-ecfb-4914-93bf-3b77ee95a06b', 'HYYlive_20210911_191440.nc')
 ]
 
 
 def main():
     utils.start_test_servers(instrument, SCRIPT_PATH)
     session = utils.register_storage_urls(temp_file, source_data, site, date, instrument, True)
-    main_args = [site, f'--date={date}', '-p=radar']
+    main_args = [site, f'-d={date}', '-p=lidar']
     utils.process(session, main_args, temp_file, SCRIPT_PATH)
 
 

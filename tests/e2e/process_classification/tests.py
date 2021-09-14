@@ -14,11 +14,7 @@ class TestClassificationProcessing:
 
     @pytest.fixture(autouse=True)
     def _fetch_params(self, params):
-        self.output = params['output']
         self.full_path = params['full_path']
-
-    def test_that_reports_volatile_file_creation(self):
-        assert 'Created: Volatile file' in self.output
 
     def test_that_has_correct_attributes(self):
         nc = netCDF4.Dataset(self.full_path)

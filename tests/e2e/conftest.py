@@ -1,6 +1,6 @@
 import pytest
 
-args = ['site', 'date', 'input', 'output', 'full_path']
+args = ['site', 'date', 'input', 'output', 'full_path', 'args']
 
 
 def pytest_addoption(parser):
