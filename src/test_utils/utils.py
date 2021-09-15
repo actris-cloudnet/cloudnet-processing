@@ -125,13 +125,19 @@ def register_storage_urls(temp_file: NamedTemporaryFile,
     bucket_suffix = '-volatile' if is_volatile is True else ''
     date_stripped = date.replace('-', '')
     if products is None:
-        products = (identifier,)
+        products = (_fix_identifier(identifier),)
     for product in products:
         url = f'{mock_addr}cloudnet-product{bucket_suffix}/{date_stripped}_{site}_{product}.nc'
         adapter.register_uri('PUT', url, additional_matcher=save_file, json={'size': 65,
                                                                              'version': ''})
     adapter.register_uri('PUT', re.compile(f'{mock_addr}cloudnet-img/(.*?)'))
     return session
+
+
+def _fix_identifier(identifier: str) -> str:
+    for n in range(10):
+        identifier = identifier.replace(f'_{n}', '')
+    return identifier
 
 
 def _get_source_file_paths(identifier: str) -> tuple:
