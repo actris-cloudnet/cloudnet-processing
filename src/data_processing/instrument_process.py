@@ -114,7 +114,8 @@ class ProcessLidar(ProcessInstrument):
 
     def _create_daily_file_name(self, model: str) -> str:
         dir_name = os.path.dirname(self._daily_file.name)
-        return f'{dir_name}/{self.base.date_str}_{self.base.site}_{model}_daily.nc'
+        date = self.base.date_str.replace('-', '')
+        return f'{dir_name}/{date}_{self.base.site}_{model}_daily.nc'
 
     def _call_ceilo2nc(self, instrument: str):
         site_meta = self._fetch_calibration_factor(instrument)
