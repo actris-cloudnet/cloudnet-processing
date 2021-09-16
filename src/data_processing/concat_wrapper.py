@@ -32,7 +32,10 @@ def concat_netcdf_files(files: list,
         return files
     valid_files = []
     for file in files:
-        nc = netCDF4.Dataset(file)
+        try:
+            nc = netCDF4.Dataset(file)
+        except OSError:
+            continue
         time = nc.variables['time']
         time_array = time[:]
         time_units = time.units
