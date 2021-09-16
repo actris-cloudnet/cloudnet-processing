@@ -6,7 +6,7 @@ import os
 import logging
 from tempfile import NamedTemporaryFile
 from data_processing import concat_wrapper, utils
-from data_processing.utils import RawDataMissingError
+from data_processing.utils import RawDataMissingError, SkipBlock
 from cloudnetpy.utils import is_timestamp
 
 
@@ -77,7 +77,7 @@ class ProcessLidar(ProcessInstrument):
 
     def process_halo_doppler_lidar(self):
         full_path, self.uuid.raw = self.base.download_instrument('halo-doppler-lidar',
-                                                                 pattern='.nc$',
+                                                                 include_pattern='.nc$',
                                                                  largest_only=True)
         self.uuid.product = self.base.fix_calibrated_daily_file(self.uuid, full_path,
                                                                 'halo-doppler-lidar')
@@ -87,14 +87,14 @@ class ProcessLidar(ProcessInstrument):
         self._daily_file.name = self._create_daily_file_name(model)
         try:
             if self.base.is_reprocess:
-                raise RawDataMissingError('Force creation of daily file and process..')
-            tmp_file, uuid = self.base.download_instrument(model, pattern='daily',
+                raise SkipBlock  # Move to next block and re-create daily file
+            tmp_file, uuid = self.base.download_instrument(model, include_pattern='daily',
                                                            largest_only=True)
-            full_paths, raw_uuids = self.base.download_uploaded(model, exclude='daily')
+            full_paths, raw_uuids = self.base.download_uploaded(model, exclude_pattern='daily')
             valid_full_paths = concat_wrapper.update_daily_file(full_paths, tmp_file)
             shutil.copy(tmp_file, self._daily_file.name)
-        except RawDataMissingError:
-            full_paths, raw_uuids = self.base.download_instrument(model, exclude='daily')
+        except (RawDataMissingError, SkipBlock):
+            full_paths, raw_uuids = self.base.download_instrument(model, exclude_pattern='daily')
             if full_paths:
                 logging.info(f'Creating daily file from {len(full_paths)} files')
             else:

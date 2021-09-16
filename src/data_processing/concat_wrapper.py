@@ -8,6 +8,7 @@ import logging
 
 
 def update_daily_file(new_files: list, daily_file: str) -> list:
+    """Appends new files to existing daily file."""
     if not new_files:
         return []
     valid_files = []
