@@ -115,7 +115,7 @@ class ProcessBase:
 
     def _check_raw_data_status(self, metadata: list) -> None:
         if not metadata:
-            raise RawDataMissingError('No raw data')
+            raise RawDataMissingError
         is_unprocessed_data = self._is_unprocessed_data(metadata)
         if not is_unprocessed_data and not self.is_reprocess:
             raise MiscError('Raw data already processed')

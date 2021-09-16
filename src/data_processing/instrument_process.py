@@ -104,13 +104,13 @@ class ProcessLidar(ProcessInstrument):
             if full_paths:
                 logging.info(f'Creating daily file from {len(full_paths)} files')
             else:
-                raise RawDataMissingError('Missing raw data')
+                raise RawDataMissingError
             valid_full_paths = concat_wrapper.concat_netcdf_files(full_paths,
                                                                   self.base.date_str,
                                                                   self._daily_file.name,
                                                                   concat_dimension='profile')
         if not valid_full_paths:
-            raise RawDataMissingError('Missing raw data')
+            raise RawDataMissingError
         self.base.md_api.upload_instrument_file(self._daily_file.name,
                                                 model,
                                                 self.base.date_str,

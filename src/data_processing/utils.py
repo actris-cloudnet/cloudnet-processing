@@ -287,7 +287,7 @@ class MiscError(Exception):
 
 class RawDataMissingError(Exception):
     """Internal exception class."""
-    def __init__(self, msg: str):
+    def __init__(self, msg: Optional[str] = 'Missing raw data'):
         self.message = msg
         super().__init__(self.message)
 

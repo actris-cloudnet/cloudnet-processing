@@ -157,7 +157,7 @@ class ProcessCloudnet(ProcessBase):
         upload_metadata = self.md_api.get('upload-metadata', payload)
         upload_metadata = _order_metadata(upload_metadata)
         if not upload_metadata:
-            raise RawDataMissingError('No raw data')
+            raise RawDataMissingError
         if not self._is_unprocessed_data(upload_metadata) and not self.is_reprocess:
             raise MiscError('Raw data already processed')
         return self._download_raw_files(upload_metadata)
@@ -185,7 +185,7 @@ class ProcessCloudnet(ProcessBase):
         uploaded_instruments = set([x['instrument']['id'] for x in upload_metadata])
         instrument = list(set(possible_instruments) & uploaded_instruments)
         if len(instrument) == 0:
-            raise RawDataMissingError('Missing raw data')
+            raise RawDataMissingError
         selected_instrument = instrument[0]
         if len(instrument) > 1:
             logging.warning(f'More than one type of {instrument_type} data, '
