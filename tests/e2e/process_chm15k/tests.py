@@ -11,7 +11,7 @@ class TestChm15kProcessing:
 
     product = 'lidar'
     instrument = 'chm15k'
-    n_img = len(utils.get_fields_for_plot(product)[0])
+    n_img = len(utils.get_fields_for_plot(product)[0]) - 1
 
     @pytest.fixture(autouse=True)
     def _fetch_params(self, params):

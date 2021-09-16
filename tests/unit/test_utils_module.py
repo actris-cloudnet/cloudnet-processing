@@ -56,7 +56,8 @@ def test_get_date_from_past(n, input_date, result):
 def test_get_plottable_variables_info():
     res = utils.get_plottable_variables_info('lidar')
     expected = {'lidar-beta': ['Attenuated backscatter coefficient', 0],
-                'lidar-beta_raw': ['Raw attenuated backscatter coefficient', 1]}
+                'lidar-beta_raw': ['Raw attenuated backscatter coefficient', 1],
+                'lidar-depolarisation': ['Lidar depolarisation', 2]}
     assert res == expected
 
 
