@@ -52,6 +52,9 @@ class ProcessRadar(ProcessInstrument):
 
 
 class ProcessLidar(ProcessInstrument):
+
+    file_id = 'clu-generated-daily'
+
     def process_chm15k(self):
         full_paths, raw_uuids = self.base.download_instrument('chm15k')
         valid_full_paths = concat_wrapper.concat_chm15k_files(full_paths,
@@ -88,13 +91,16 @@ class ProcessLidar(ProcessInstrument):
         try:
             if self.base.is_reprocess:
                 raise SkipBlock  # Move to next block and re-create daily file
-            tmp_file, uuid = self.base.download_instrument(model, include_pattern='daily',
+            tmp_file, uuid = self.base.download_instrument(model,
+                                                           include_pattern=self.file_id,
                                                            largest_only=True)
-            full_paths, raw_uuids = self.base.download_uploaded(model, exclude_pattern='daily')
+            full_paths, raw_uuids = self.base.download_uploaded(model,
+                                                                exclude_pattern=self.file_id)
             valid_full_paths = concat_wrapper.update_daily_file(full_paths, tmp_file)
             shutil.copy(tmp_file, self._daily_file.name)
         except (RawDataMissingError, SkipBlock):
-            full_paths, raw_uuids = self.base.download_instrument(model, exclude_pattern='daily')
+            full_paths, raw_uuids = self.base.download_instrument(model,
+                                                                  exclude_pattern=self.file_id)
             if full_paths:
                 logging.info(f'Creating daily file from {len(full_paths)} files')
             else:
@@ -115,7 +121,7 @@ class ProcessLidar(ProcessInstrument):
     def _create_daily_file_name(self, model: str) -> str:
         dir_name = os.path.dirname(self._daily_file.name)
         date = self.base.date_str.replace('-', '')
-        return f'{dir_name}/{date}_{self.base.site}_{model}_daily.nc'
+        return f'{dir_name}/{date}_{self.base.site}_{model}_{self.file_id}.nc'
 
     def _call_ceilo2nc(self, instrument: str):
         site_meta = self._fetch_calibration_factor(instrument)
