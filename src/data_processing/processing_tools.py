@@ -26,10 +26,6 @@ def clean_dir(dir_name: str) -> None:
         os.remove(filename)
 
 
-def _get_temp_dir(config: dict) -> str:
-    return config.get('TEMP_DIR', '/tmp')
-
-
 class ProcessBase:
     def __init__(self,
                  args,
@@ -37,13 +33,16 @@ class ProcessBase:
                  storage_session: Optional[requests.Session] = requests.Session(),
                  metadata_session: Optional[requests.Session] = requests.Session()):
         self.site_meta, self.site, self._site_type = _read_site_info(args)
+        self.config = config
         self.is_reprocess = getattr(args, 'reprocess', False)
         self.date_str = None
-        self.temp_dir = TemporaryDirectory(dir=_get_temp_dir(config))
         self.md_api = MetadataApi(config, metadata_session)
         self._storage_api = StorageApi(config, storage_session)
         self._pid_utils = PidUtils(config)
         self._create_new_version = False
+        self.temp_dir_target = utils.get_temp_dir(config)
+        self.temp_dir = TemporaryDirectory(dir=self.temp_dir_target)
+        self.temp_file = NamedTemporaryFile(dir=self.temp_dir_target)
 
     def print_info(self) -> None:
         logging.info(f'Created: '

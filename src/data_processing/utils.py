@@ -420,3 +420,7 @@ def _calc_quality(quality: Quality) -> float:
     n_tests = quality.n_metadata_tests + quality.n_data_tests
     n_failures = quality.n_metadata_test_failures + quality.n_data_test_failures
     return round(1 - (n_failures / n_tests), 2)
+
+
+def get_temp_dir(config: dict) -> str:
+    return config.get('TEMP_DIR', '/tmp')

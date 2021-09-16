@@ -47,11 +47,11 @@ class MetadataApi:
     def put_file(self,
                  end_point: str,
                  resource: str,
-                 filename: str,
+                 full_path: str,
                  auth: tuple) -> requests.Response:
         """PUT file to Cloudnet data portal."""
         url = os.path.join(self._url, end_point, resource)
-        res = requests.put(url, data=open(filename, 'rb'), auth=auth)
+        res = requests.put(url, data=open(full_path, 'rb'), auth=auth)
         res.raise_for_status()
         return res
 
@@ -66,14 +66,15 @@ class MetadataApi:
             self.put('visualizations', data['s3key'], payload)
 
     def upload_instrument_file(self,
-                               filename: str,
+                               full_path: str,
                                instrument: str,
                                date: str,
-                               site: str):
+                               site: str,
+                               filename: Optional[str] = None):
         auth = (site, 'letmein')
-        checksum = utils.md5sum(filename)
+        checksum = utils.md5sum(full_path)
         metadata = {
-            'filename': os.path.basename(filename),
+            'filename': filename or os.path.basename(full_path),
             'checksum': checksum,
             'instrument': instrument,
             'measurementDate': date
@@ -83,7 +84,7 @@ class MetadataApi:
         except requests.exceptions.HTTPError as err:
             logging.info(err)
             return
-        self.put_file('upload/data', checksum, filename, auth)
+        self.put_file('upload/data', checksum, full_path, auth)
 
     def find_volatile_regular_files_to_freeze(self) -> list:
         """Find volatile files released before certain time limit."""

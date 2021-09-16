@@ -15,7 +15,7 @@ class ProcessInstrument:
         self.base = process_cloudnet
         self.temp_file = temp_file
         self.uuid = uuid
-        self._daily_file = NamedTemporaryFile()
+        self._daily_file = NamedTemporaryFile(dir=self.base.temp_dir_target)
         self._kwargs = self._get_kwargs()
         self._args = self._get_args()
 
@@ -87,7 +87,6 @@ class ProcessLidar(ProcessInstrument):
 
     def process_cl61d(self):
         model = 'cl61d'
-        self._daily_file.name = self._create_daily_file_name(model)
         try:
             if self.base.is_reprocess:
                 raise SkipBlock  # Move to next block and re-create daily file
@@ -98,7 +97,9 @@ class ProcessLidar(ProcessInstrument):
                                                                 exclude_pattern=self.file_id)
             valid_full_paths = concat_wrapper.update_daily_file(full_paths, tmp_file)
             shutil.copy(tmp_file, self._daily_file.name)
+            msg = 'Raw data already processed'
         except (RawDataMissingError, SkipBlock):
+            msg = None
             full_paths, raw_uuids = self.base.download_instrument(model,
                                                                   exclude_pattern=self.file_id)
             if full_paths:
@@ -110,18 +111,18 @@ class ProcessLidar(ProcessInstrument):
                                                                   self._daily_file.name,
                                                                   concat_dimension='profile')
         if not valid_full_paths:
-            raise RawDataMissingError
+            raise RawDataMissingError(msg)
         self.base.md_api.upload_instrument_file(self._daily_file.name,
                                                 model,
                                                 self.base.date_str,
-                                                self.base.site)
+                                                self.base.site,
+                                                filename=self._create_daily_file_name(model))
         self._call_ceilo2nc(model)
         self.uuid.raw = _get_valid_uuids(raw_uuids, full_paths, valid_full_paths)
 
     def _create_daily_file_name(self, model: str) -> str:
-        dir_name = os.path.dirname(self._daily_file.name)
         date = self.base.date_str.replace('-', '')
-        return f'{dir_name}/{date}_{self.base.site}_{model}_{self.file_id}.nc'
+        return f'{date}_{self.base.site}_{model}_{self.file_id}.nc'
 
     def _call_ceilo2nc(self, instrument: str):
         site_meta = self._fetch_calibration_factor(instrument)

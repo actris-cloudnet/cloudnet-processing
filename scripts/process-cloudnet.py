@@ -5,7 +5,6 @@ import importlib
 import sys
 import re
 import warnings
-from tempfile import NamedTemporaryFile
 from typing import Tuple, Union, Optional
 import requests
 from cloudnetpy.categorize import generate_categorize
@@ -22,8 +21,6 @@ import logging
 
 warnings.simplefilter("ignore", UserWarning)
 warnings.simplefilter("ignore", RuntimeWarning)
-
-temp_file = NamedTemporaryFile()
 
 
 def main(args, storage_session=requests.session()):
@@ -50,8 +47,8 @@ def main(args, storage_session=requests.session()):
                     uuid, identifier = process.process_categorize(uuid)
                 else:
                     uuid, identifier = process.process_instrument(uuid, product)
-                process.add_pid(temp_file.name)
-                process.upload_product_and_images(temp_file.name, product, uuid, identifier)
+                process.add_pid(process.temp_file.name)
+                process.upload_product_and_images(process.temp_file.name, product, uuid, identifier)
                 process.print_info()
             except (RawDataMissingError, MiscError, NotImplementedError) as err:
                 logging.warning(err)
@@ -69,7 +66,7 @@ class ProcessCloudnet(ProcessBase):
             process_class = ProcessRadar
         else:
             process_class = ProcessMwr
-        process = process_class(self, temp_file, uuid)
+        process = process_class(self, self.temp_file, uuid)
         getattr(process, f'process_{instrument.replace("-", "_")}')()
         return process.uuid, instrument
 
@@ -92,7 +89,7 @@ class ProcessCloudnet(ProcessBase):
         missing = [product for product in l1_products if not input_files[product]]
         if missing:
             raise MiscError(f'Missing required input files: {", ".join(missing)}')
-        uuid.product = generate_categorize(input_files, temp_file.name, uuid=uuid.volatile)
+        uuid.product = generate_categorize(input_files, self.temp_file.name, uuid=uuid.volatile)
         return uuid, 'categorize'
 
     def process_level2(self, uuid: Uuid, product: str) -> Tuple[Uuid, str]:
@@ -105,7 +102,7 @@ class ProcessCloudnet(ProcessBase):
             raise MiscError(f'Missing input categorize file')
         module = importlib.import_module(f'cloudnetpy.products.{product}')
         fun = getattr(module, f'generate_{product}')
-        uuid.product = fun(categorize_file, temp_file.name, uuid=uuid.volatile)
+        uuid.product = fun(categorize_file, self.temp_file.name, uuid=uuid.volatile)
         identifier = utils.get_product_identifier(product)
         return uuid, identifier
 
@@ -134,7 +131,7 @@ class ProcessCloudnet(ProcessBase):
         if exclude_pattern is not None:
             upload_metadata = _exclude_records_with_pattern_in_filename(upload_metadata,
                                                                         exclude_pattern)
-        arg = temp_file if largest_only else None
+        arg = self.temp_file if largest_only else None
         self._check_raw_data_status(upload_metadata)
         return self._download_raw_files(upload_metadata, arg)
 

@@ -3,7 +3,6 @@
 import argparse
 import sys
 import warnings
-from tempfile import NamedTemporaryFile
 from typing import Union
 import requests
 import logging
@@ -18,8 +17,6 @@ from data_processing.processing_tools import Uuid, ProcessBase
 warnings.simplefilter("ignore", UserWarning)
 warnings.simplefilter("ignore", RuntimeWarning)
 
-temp_file = NamedTemporaryFile()
-
 
 def main(args, storage_session=requests.session()):
     args = _parse_args(args)
@@ -33,7 +30,7 @@ def main(args, storage_session=requests.session()):
         try:
             uuid.volatile = process.fetch_volatile_uuid(model, raw_uuid)
             uuid = process.process_model(uuid, model)
-            process.upload_product_and_images(temp_file.name, 'model', uuid, model)
+            process.upload_product_and_images(process.temp_file.name, 'model', uuid, model)
             process.print_info()
         except MiscError as err:
             logging.warning(err)
@@ -59,7 +56,7 @@ class ProcessModel(ProcessBase):
         payload = self._get_payload(model=model, skip_created=True)
         upload_metadata = self.md_api.get('upload-model-metadata', payload)
         self._check_raw_data_status(upload_metadata)
-        full_path, uuid.raw = self._download_raw_files(upload_metadata, temp_file)
+        full_path, uuid.raw = self._download_raw_files(upload_metadata, self.temp_file)
         data = {
             'site_name': self.site,
             'date': self.date_str,
