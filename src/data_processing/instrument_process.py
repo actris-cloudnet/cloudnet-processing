@@ -52,9 +52,7 @@ class ProcessRadar(ProcessInstrument):
 
 
 class ProcessLidar(ProcessInstrument):
-
     file_id = 'clu-generated-daily'
-
     def process_chm15k(self):
         full_paths, raw_uuids = self.base.download_instrument('chm15k')
         valid_full_paths = concat_wrapper.concat_chm15k_files(full_paths,
@@ -106,10 +104,12 @@ class ProcessLidar(ProcessInstrument):
                 logging.info(f'Creating daily file from {len(full_paths)} files')
             else:
                 raise RawDataMissingError
+            variables = ['x_pol', 'p_pol', 'beta_att', 'time']
             valid_full_paths = concat_wrapper.concat_netcdf_files(full_paths,
                                                                   self.base.date_str,
                                                                   self._daily_file.name,
-                                                                  concat_dimension='profile')
+                                                                  concat_dimension='profile',
+                                                                  variables=variables)
         if not valid_full_paths:
             raise RawDataMissingError(msg)
         self.base.md_api.upload_instrument_file(self._daily_file.name,

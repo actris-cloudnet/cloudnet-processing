@@ -21,8 +21,11 @@ def update_daily_file(new_files: list, daily_file: str) -> list:
     return valid_files
 
 
-def concat_netcdf_files(files: list, date: str, output_file: str,
-                        concat_dimension: Optional[str] = 'time') -> list:
+def concat_netcdf_files(files: list,
+                        date: str,
+                        output_file: str,
+                        concat_dimension: Optional[str] = 'time',
+                        variables: Optional[list] = None) -> list:
     """Concatenates several netcdf files into daily file."""
     if len(files) == 1:
         shutil.copy(files[0], output_file)
@@ -39,7 +42,10 @@ def concat_netcdf_files(files: list, date: str, output_file: str,
             if seconds2date(timestamp, epoch)[:3] == date.split('-'):
                 valid_files.append(file)
                 break
-    clib.concatenate_files(valid_files, output_file, concat_dimension=concat_dimension)
+    clib.concatenate_files(valid_files,
+                           output_file,
+                           concat_dimension=concat_dimension,
+                           variables=variables)
     return valid_files
 
 
