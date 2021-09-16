@@ -292,6 +292,13 @@ class RawDataMissingError(Exception):
         super().__init__(self.message)
 
 
+class SkipBlock(Exception):
+    """Internal exception class."""
+    def __init__(self, msg: Optional[str] = ''):
+        self.message = msg
+        super().__init__(self.message)
+
+
 def datetime_to_utc(date_time: str, time_zone_name: str) -> str:
     """Converts local datetime at some time zone to UTC."""
     time_zone = pytz.timezone(time_zone_name)

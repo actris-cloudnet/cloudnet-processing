@@ -123,27 +123,30 @@ class ProcessCloudnet(ProcessBase):
 
     def download_instrument(self,
                             instrument: str,
-                            pattern: Optional[str] = None,
+                            include_pattern: Optional[str] = None,
                             largest_only: Optional[bool] = False,
-                            exclude: Optional[str] = None) -> Tuple[Union[list, str], list]:
+                            exclude_pattern: Optional[str] = None) -> Tuple[Union[list, str], list]:
         payload = self._get_payload(instrument=instrument, skip_created=True)
         upload_metadata = self.md_api.get('upload-metadata', payload)
-        if pattern is not None:
-            upload_metadata = _screen_by_filename(upload_metadata, pattern)
-        if exclude is not None:
-            upload_metadata = _screen_by_filename_2(upload_metadata, exclude)
+        if include_pattern is not None:
+            upload_metadata = _include_records_with_pattern_in_filename(upload_metadata,
+                                                                        include_pattern)
+        if exclude_pattern is not None:
+            upload_metadata = _exclude_records_with_pattern_in_filename(upload_metadata,
+                                                                        exclude_pattern)
         arg = temp_file if largest_only else None
         self._check_raw_data_status(upload_metadata)
         return self._download_raw_files(upload_metadata, arg)
 
     def download_uploaded(self,
                           instrument: str,
-                          exclude: Optional[str]) -> Tuple[Union[list, str], list]:
+                          exclude_pattern: Optional[str]) -> Tuple[Union[list, str], list]:
         payload = self._get_payload(instrument=instrument)
         payload['status'] = 'uploaded'
         upload_metadata = self.md_api.get('upload-metadata', payload)
-        if exclude is not None:
-            upload_metadata = _screen_by_filename_2(upload_metadata, exclude)
+        if exclude_pattern is not None:
+            upload_metadata = _exclude_records_with_pattern_in_filename(upload_metadata,
+                                                                        exclude_pattern)
         return self._download_raw_files(upload_metadata)
 
     def download_adjoining_daily_files(self, instrument: str) -> Tuple[list, list]:
@@ -183,9 +186,11 @@ class ProcessCloudnet(ProcessBase):
         instrument = list(set(possible_instruments) & uploaded_instruments)
         if len(instrument) == 0:
             raise RawDataMissingError('Missing raw data')
+        selected_instrument = instrument[0]
         if len(instrument) > 1:
-            logging.warning(f'More than one type of {instrument_type} data, using {instrument[0]}')
-        return instrument[0]
+            logging.warning(f'More than one type of {instrument_type} data, '
+                            f'using {selected_instrument}')
+        return selected_instrument
 
 
 def _order_metadata(metadata: list) -> list:
@@ -199,11 +204,11 @@ def _get_valid_uuids(uuids: list, full_paths: list, valid_full_paths: list) -> l
     return [uuid for uuid, full_path in zip(uuids, full_paths) if full_path in valid_full_paths]
 
 
-def _screen_by_filename(metadata: list, pattern: str) -> list:
+def _include_records_with_pattern_in_filename(metadata: list, pattern: str) -> list:
     return [row for row in metadata if re.search(pattern.lower(), row['filename'].lower())]
 
 
-def _screen_by_filename_2(metadata: list, pattern: str) -> list:
+def _exclude_records_with_pattern_in_filename(metadata: list, pattern: str) -> list:
     return [row for row in metadata if not re.search(pattern.lower(), row['filename'].lower())]
 
 
