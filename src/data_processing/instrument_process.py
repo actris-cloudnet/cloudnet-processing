@@ -1,6 +1,7 @@
 from data_processing.processing_tools import Uuid
 from cloudnetpy.instruments import rpg2nc, mira2nc, basta2nc, ceilo2nc, hatpro2nc
 import gzip
+import glob
 import shutil
 import os
 import logging
@@ -44,11 +45,19 @@ class ProcessRadar(ProcessInstrument):
     def process_mira(self):
         full_paths, self.uuid.raw = self.base.download_instrument('mira')
         dir_name = _unzip_gz_files(full_paths)
+        self._fix_suffices(dir_name, '.mmclx')
         self.uuid.product = mira2nc(dir_name, *self._args, **self._kwargs)
 
     def process_basta(self):
         full_path, self.uuid.raw = self.base.download_instrument('basta', largest_only=True)
         self.uuid.product = basta2nc(full_path, *self._args, **self._kwargs)
+
+    @staticmethod
+    def _fix_suffices(dir_name: str, suffix: str) -> None:
+        """Fixes filenames that have incorrect suffix."""
+        for filename in glob.glob(f'{dir_name}/*'):
+            if not filename.lower().endswith(('.gz', suffix)):
+                os.rename(filename, filename + suffix)
 
 
 class ProcessLidar(ProcessInstrument):
