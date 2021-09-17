@@ -16,6 +16,7 @@ from data_processing.utils import MiscError, RawDataMissingError
 from data_processing import processing_tools
 from data_processing.processing_tools import Uuid, ProcessBase
 from data_processing.instrument_process import ProcessRadar, ProcessLidar, ProcessMwr
+from cloudnetpy.exceptions import InconsistentDataError
 import logging
 
 
@@ -52,6 +53,8 @@ def main(args, storage_session=requests.session()):
                 process.print_info()
             except (RawDataMissingError, MiscError, NotImplementedError) as err:
                 logging.warning(err)
+            except InconsistentDataError as err:
+                logging.error(err)
             except (HTTPError, ConnectionError, RuntimeError, ValueError) as err:
                 utils.send_slack_alert(err, 'data', args.site, date_str, product)
         processing_tools.clean_dir(process.temp_dir.name)
