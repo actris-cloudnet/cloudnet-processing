@@ -53,6 +53,7 @@ class ProcessRadar(ProcessInstrument):
 
 class ProcessLidar(ProcessInstrument):
     file_id = 'clu-generated-daily'
+
     def process_chm15k(self):
         full_paths, raw_uuids = self.base.download_instrument('chm15k')
         valid_full_paths = concat_wrapper.concat_chm15k_files(full_paths,
@@ -139,7 +140,8 @@ class ProcessMwr(ProcessInstrument):
         try:
             full_paths, raw_uuids = self.base.download_instrument('hatpro', '^(?!.*scan).*\.lwp$')
             self.uuid.product, valid_full_paths = hatpro2nc(self.base.temp_dir.name,
-                                                            *self._get_args())
+                                                            *self._args,
+                                                            **self._kwargs)
         except RawDataMissingError:
             pattern = '(ufs_l2a.nc$|clwvi.*.nc$|.lwp.*.nc$)'
             full_paths, raw_uuids = self.base.download_instrument('hatpro', pattern)
