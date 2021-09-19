@@ -366,7 +366,7 @@ def _parse_quality_result(quality_result: dict) -> list:
                 }
                 exceeding_key = 'exceedingValue'
                 if test_name == 'outOfBounds':
-                    min_value, max_value = [round(float(x), 2) for x in detected]
+                    min_value, max_value = [round(float(x), 4) for x in detected]
                     if min_value < limits[0]:
                         diagnostics[exceeding_key] = min_value
                     if max_value > limits[1]:
