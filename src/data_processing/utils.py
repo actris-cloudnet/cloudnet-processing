@@ -76,8 +76,9 @@ def get_product_types(level: Optional[str] = None) -> list:
 
 
 def get_calibration_factor(site: str, date: str, instrument: str) -> Union[float, None]:
-    config = read_main_conf()
-    url = f"{config['DATAPORTAL_URL']}api/calibration/"
+    data_portal_url = fetch_data_portal_url()
+    url = f"{data_portal_url}api/calibration/"
+    logging.info(url)
     payload = {
         'site': site,
         'date': date,
@@ -430,6 +431,13 @@ def get_cloudnet_sites() -> list:
 
 
 def get_from_data_portal_api(end_point: str):
-    config = read_main_conf()
-    url = f"{config['DATAPORTAL_URL']}{end_point}"
+    data_portal_url = fetch_data_portal_url()
+    url = f'{data_portal_url}{end_point}'
     return requests.get(url=url).json()
+
+
+def fetch_data_portal_url():
+    config = read_main_conf()
+    if 'test' in config['STORAGE_SERVICE_URL']:
+        return 'https://cloudnet.fmi.fi/'
+    return config['DATAPORTAL_URL']
