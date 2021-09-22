@@ -430,13 +430,13 @@ def get_cloudnet_sites() -> list:
     return sites
 
 
-def get_from_data_portal_api(end_point: str):
+def get_from_data_portal_api(end_point: str) -> list:
     data_portal_url = fetch_data_portal_url()
     url = f'{data_portal_url}{end_point}'
     return requests.get(url=url).json()
 
 
-def fetch_data_portal_url():
+def fetch_data_portal_url() -> str:
     config = read_main_conf()
     if 'test' in config['STORAGE_SERVICE_URL']:
         return 'https://cloudnet.fmi.fi/'
