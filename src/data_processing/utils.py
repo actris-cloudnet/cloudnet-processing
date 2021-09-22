@@ -55,8 +55,7 @@ def get_file_format(nc: netCDF4.Dataset):
 
 def read_site_info(site_name: str) -> dict:
     """Read site information from Cloudnet http API."""
-    url = f"https://cloudnet.fmi.fi/api/sites?developer"
-    sites = requests.get(url=url).json()
+    sites = get_from_data_portal_api('api/sites?developer')
     for site in sites:
         if site['id'] == site_name:
             site['id'] = site_name
@@ -66,8 +65,7 @@ def read_site_info(site_name: str) -> dict:
 
 def get_product_types(level: Optional[str] = None) -> list:
     """Return Cloudnet processing types."""
-    url = f"https://cloudnet.fmi.fi/api/products"
-    products = requests.get(url=url).json()
+    products = get_from_data_portal_api('api/products')
     l1b_types = [product['id'] for product in products if product['level'] == '1b']
     l2_types = [product['id'] for product in products if product['level'] == '2']
     if level == '1b':
@@ -78,7 +76,8 @@ def get_product_types(level: Optional[str] = None) -> list:
 
 
 def get_calibration_factor(site: str, date: str, instrument: str) -> Union[float, None]:
-    url = f"https://cloudnet.fmi.fi/api/calibration/"
+    config = read_main_conf()
+    url = f"{config['DATAPORTAL_URL']}api/calibration/"
     payload = {
         'site': site,
         'date': date,
@@ -91,8 +90,7 @@ def get_calibration_factor(site: str, date: str, instrument: str) -> Union[float
 
 
 def get_model_types() -> list:
-    url = f"https://cloudnet.fmi.fi/api/models"
-    models = requests.get(url=url).json()
+    models = get_from_data_portal_api('api/models')
     return [model['id'] for model in models]
 
 
@@ -269,8 +267,7 @@ def get_product_identifier(product: str) -> str:
 
 
 def get_level1b_type(instrument_id: str) -> str:
-    url = f"https://cloudnet.fmi.fi/api/instruments"
-    data = requests.get(url=url).json()
+    data = get_from_data_portal_api('api/instruments')
     return [instru['type'] for instru in data if instrument_id == instru['id']][0]
 
 
@@ -424,3 +421,15 @@ def _calc_quality(quality: Quality) -> float:
 
 def get_temp_dir(config: dict) -> str:
     return config.get('TEMP_DIR', '/tmp')
+
+
+def get_cloudnet_sites() -> list:
+    sites = get_from_data_portal_api('api/sites')
+    sites = [site['id'] for site in sites if 'cloudnet' in site['type']]
+    return sites
+
+
+def get_from_data_portal_api(end_point: str):
+    config = read_main_conf()
+    url = f"{config['DATAPORTAL_URL']}{end_point}"
+    return requests.get(url=url).json()

@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
-import requests
 import subprocess
 from datetime import datetime, timedelta
+from data_processing import utils
 
-url = f"https://cloudnet.fmi.fi/api/sites"
-sites = requests.get(url=url).json()
-
-sites = [site['id'] for site in sites if 'cloudnet' in site['type']]
+sites = utils.get_cloudnet_sites()
 
 interpreter = 'python3'
 script = 'scripts/process-cloudnet.py'
