@@ -15,7 +15,7 @@ from data_processing import utils
 from data_processing.utils import MiscError, RawDataMissingError
 from data_processing import processing_tools
 from data_processing.processing_tools import Uuid, ProcessBase
-from data_processing.instrument_process import ProcessRadar, ProcessLidar, ProcessMwr
+from data_processing import instrument_process
 from cloudnetpy.exceptions import InconsistentDataError
 import logging
 
@@ -63,12 +63,7 @@ def main(args, storage_session=requests.session()):
 class ProcessCloudnet(ProcessBase):
     def process_instrument(self, uuid: Uuid, instrument_type: str):
         instrument = self._detect_uploaded_instrument(instrument_type)
-        if instrument_type == 'lidar':
-            process_class = ProcessLidar
-        elif instrument_type == 'radar':
-            process_class = ProcessRadar
-        else:
-            process_class = ProcessMwr
+        process_class = getattr(instrument_process, f'Process{instrument_type.capitalize()}')
         process = process_class(self, self.temp_file, uuid)
         getattr(process, f'process_{instrument.replace("-", "_")}')()
         return process.uuid, instrument
