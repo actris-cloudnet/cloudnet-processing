@@ -81,12 +81,15 @@ def test_get_product_bucket():
     assert utils.get_product_bucket(False) == 'cloudnet-product'
 
 
-def test_get_product_types():
-    l1_types = ['lidar', 'model', 'mwr', 'radar']
-    l2_types = ['classification', 'drizzle', 'iwc', 'lwc']
-    assert utils.get_product_types(level='1b') == l1_types
-    assert utils.get_product_types(level='2') == l2_types
-    assert utils.get_product_types() == l1_types + ['categorize'] + l2_types
+@pytest.mark.parametrize("level, expected", [
+    ("1b", ['lidar', 'model', 'mwr', 'radar']),
+    ("1c", ['categorize']),
+    ("2", ['classification', 'drizzle', 'iwc', 'lwc']),
+    (None, ['lidar', 'model', 'mwr', 'radar', 'categorize', 'classification', 'drizzle', 'iwc', 'lwc'])
+])
+def test_get_product_types(level, expected):
+    result = utils.get_product_types(level=level)
+    assert set(result) == set(expected)
 
 
 class TestHash:

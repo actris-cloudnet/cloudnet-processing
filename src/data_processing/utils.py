@@ -66,13 +66,9 @@ def read_site_info(site_name: str) -> dict:
 def get_product_types(level: Optional[str] = None) -> list:
     """Return Cloudnet processing types."""
     products = get_from_data_portal_api('api/products')
-    l1b_types = [product['id'] for product in products if product['level'] == '1b']
-    l2_types = [product['id'] for product in products if product['level'] == '2']
-    if level == '1b':
-        return l1b_types
-    if level == '2':
-        return l2_types
-    return l1b_types + ['categorize'] + l2_types
+    if level is not None:
+        return [product['id'] for product in products if product['level'] == level]
+    return [product['id'] for product in products]
 
 
 def get_calibration_factor(site: str, date: str, instrument: str) -> Union[float, None]:
