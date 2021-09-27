@@ -203,6 +203,8 @@ def get_fields_for_plot(cloudnet_file_type: str) -> Tuple[list, int]:
         fields = ['LWP']
     elif cloudnet_file_type == 'radar':
         fields = ['Ze', 'v', 'width', 'ldr']
+    elif cloudnet_file_type == 'disdrometer':
+        fields = ['rainfall_rate', 'n_particles']
     elif cloudnet_file_type == 'drizzle':
         fields = ['Do', 'mu', 'S', 'drizzle_N', 'drizzle_lwc', 'drizzle_lwf', 'v_drizzle', 'v_air']
         max_alt = 4
