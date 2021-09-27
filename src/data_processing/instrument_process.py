@@ -169,6 +169,12 @@ class ProcessDisdrometer(ProcessInstrument):
         full_path, self.uuid.raw = self.base.download_instrument('parsivel', largest_only=True)
         self.uuid.product = disdrometer2nc(full_path, *self._args, **self._kwargs)
 
+    def process_thies_lnm(self):
+        full_paths, self.uuid.raw = self.base.download_instrument('thies-lnm')
+        full_paths.sort()
+        utils.concatenate_text_files(full_paths, self._daily_file.name)
+        self.uuid.product = disdrometer2nc(self._daily_file.name, *self._args, **self._kwargs)
+
 
 def _get_valid_uuids(uuids: list, full_paths: list, valid_full_paths: list) -> list:
     return [uuid for uuid, full_path in zip(uuids, full_paths) if full_path in valid_full_paths]
