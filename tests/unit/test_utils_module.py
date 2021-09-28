@@ -82,10 +82,11 @@ def test_get_product_bucket():
 
 
 @pytest.mark.parametrize("level, expected", [
-    ("1b", ['lidar', 'model', 'mwr', 'radar']),
+    ("1b", ['lidar', 'model', 'mwr', 'radar', 'disdrometer']),
     ("1c", ['categorize']),
     ("2", ['classification', 'drizzle', 'iwc', 'lwc']),
-    (None, ['lidar', 'model', 'mwr', 'radar', 'categorize', 'classification', 'drizzle', 'iwc', 'lwc'])
+    (None, ['lidar', 'model', 'mwr', 'radar', 'disdrometer', 'categorize', 'classification',
+            'drizzle', 'iwc', 'lwc'])
 ])
 def test_get_product_types(level, expected):
     result = utils.get_product_types(level=level)

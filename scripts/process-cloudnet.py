@@ -70,6 +70,7 @@ class ProcessCloudnet(ProcessBase):
 
     def process_categorize(self, uuid: Uuid) -> Tuple[Uuid, str]:
         l1_products = utils.get_product_types(level='1b')
+        l1_products.remove('disdrometer')  # Not yet used
         input_files = {key: '' for key in l1_products}
         for product in l1_products:
             if product == 'model':
