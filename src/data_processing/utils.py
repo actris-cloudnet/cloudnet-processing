@@ -55,8 +55,7 @@ def get_file_format(nc: netCDF4.Dataset):
 
 def read_site_info(site_name: str) -> dict:
     """Read site information from Cloudnet http API."""
-    url = f"https://cloudnet.fmi.fi/api/sites?developer"
-    sites = requests.get(url=url).json()
+    sites = get_from_data_portal_api('api/sites', {'developer': True})
     for site in sites:
         if site['id'] == site_name:
             site['id'] = site_name
@@ -66,19 +65,16 @@ def read_site_info(site_name: str) -> dict:
 
 def get_product_types(level: Optional[str] = None) -> list:
     """Return Cloudnet processing types."""
-    url = f"https://cloudnet.fmi.fi/api/products"
-    products = requests.get(url=url).json()
-    l1b_types = [product['id'] for product in products if product['level'] == '1b']
-    l2_types = [product['id'] for product in products if product['level'] == '2']
-    if level == '1b':
-        return l1b_types
-    if level == '2':
-        return l2_types
-    return l1b_types + ['categorize'] + l2_types
+    products = get_from_data_portal_api('api/products')
+    if level is not None:
+        return [product['id'] for product in products if product['level'] == level]
+    return [product['id'] for product in products]
 
 
 def get_calibration_factor(site: str, date: str, instrument: str) -> Union[float, None]:
-    url = f"https://cloudnet.fmi.fi/api/calibration/"
+    data_portal_url = fetch_data_portal_url()
+    url = f"{data_portal_url}api/calibration/"
+    logging.info(url)
     payload = {
         'site': site,
         'date': date,
@@ -91,8 +87,7 @@ def get_calibration_factor(site: str, date: str, instrument: str) -> Union[float
 
 
 def get_model_types() -> list:
-    url = f"https://cloudnet.fmi.fi/api/models"
-    models = requests.get(url=url).json()
+    models = get_from_data_portal_api('api/models')
     return [model['id'] for model in models]
 
 
@@ -208,6 +203,8 @@ def get_fields_for_plot(cloudnet_file_type: str) -> Tuple[list, int]:
         fields = ['LWP']
     elif cloudnet_file_type == 'radar':
         fields = ['Ze', 'v', 'width', 'ldr']
+    elif cloudnet_file_type == 'disdrometer':
+        fields = ['rainfall_rate', 'n_particles']
     elif cloudnet_file_type == 'drizzle':
         fields = ['Do', 'mu', 'S', 'drizzle_N', 'drizzle_lwc', 'drizzle_lwf', 'v_drizzle', 'v_air']
         max_alt = 4
@@ -269,8 +266,7 @@ def get_product_identifier(product: str) -> str:
 
 
 def get_level1b_type(instrument_id: str) -> str:
-    url = f"https://cloudnet.fmi.fi/api/instruments"
-    data = requests.get(url=url).json()
+    data = get_from_data_portal_api('api/instruments')
     return [instru['type'] for instru in data if instrument_id == instru['id']][0]
 
 
@@ -424,3 +420,22 @@ def _calc_quality(quality: Quality) -> float:
 
 def get_temp_dir(config: dict) -> str:
     return config.get('TEMP_DIR', '/tmp')
+
+
+def get_cloudnet_sites() -> list:
+    sites = get_from_data_portal_api('api/sites')
+    sites = [site['id'] for site in sites if 'cloudnet' in site['type']]
+    return sites
+
+
+def get_from_data_portal_api(end_point: str, payload: Optional[dict] = None) -> list:
+    data_portal_url = fetch_data_portal_url()
+    url = f'{data_portal_url}{end_point}'
+    return requests.get(url=url, params=payload).json()
+
+
+def fetch_data_portal_url() -> str:
+    config = read_main_conf()
+    if 'test' in config['STORAGE_SERVICE_URL']:
+        return 'https://cloudnet.fmi.fi/'
+    return config['DATAPORTAL_URL']

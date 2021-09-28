@@ -39,7 +39,7 @@ class TestCategorizeProcessing:
     def test_that_calls_metadata_api(self):
         f = open(f'{SCRIPT_PATH}/md.log')
         data = f.readlines()
-        n_gets = len(utils.get_product_types(level='1b')) + 1
+        n_gets = len(utils.get_product_types(level='1b'))
         n_puts = 2
         assert len(data) == n_gets + self.n_img + n_puts
 
