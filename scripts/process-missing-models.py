@@ -5,7 +5,7 @@ from data_processing import utils
 
 MINIMUM_SIZE = 20200
 
-uploaded_metadata = utils.get_from_data_portal_api('upload-model-metadata/?status=uploaded')
+uploaded_metadata = utils.get_from_data_portal_api('upload-model-metadata', {'status': 'uploaded'})
 
 valid_metadata = [data for data in uploaded_metadata if int(data['size']) > MINIMUM_SIZE]
 all_sites = [row['site']['id'] for row in valid_metadata]

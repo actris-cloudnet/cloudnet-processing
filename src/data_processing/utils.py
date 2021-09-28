@@ -55,7 +55,7 @@ def get_file_format(nc: netCDF4.Dataset):
 
 def read_site_info(site_name: str) -> dict:
     """Read site information from Cloudnet http API."""
-    sites = get_from_data_portal_api('api/sites?developer')
+    sites = get_from_data_portal_api('api/sites', {'developer': True})
     for site in sites:
         if site['id'] == site_name:
             site['id'] = site_name
@@ -428,10 +428,10 @@ def get_cloudnet_sites() -> list:
     return sites
 
 
-def get_from_data_portal_api(end_point: str) -> list:
+def get_from_data_portal_api(end_point: str, payload: Optional[dict] = None) -> list:
     data_portal_url = fetch_data_portal_url()
     url = f'{data_portal_url}{end_point}'
-    return requests.get(url=url).json()
+    return requests.get(url=url, params=payload).json()
 
 
 def fetch_data_portal_url() -> str:
