@@ -1,5 +1,3 @@
-import random
-import string
 import base64
 import datetime
 import hashlib
@@ -220,6 +218,26 @@ def get_fields_for_plot(cloudnet_file_type: str) -> Tuple[list, int]:
     else:
         raise NotImplementedError
     return fields, max_alt
+
+
+def get_fields_for_l3_plot(product: str, model: str) -> list:
+    """Return list of variables and maximum altitude for Cloudnet quicklooks.
+
+    Args:
+        product (str): Name of product, e.g., 'iwc'.
+        model (str): Name of the model, e.g., 'ecmwf'.
+    Returns:
+        list: List of wanted variables
+    """
+    if product == 'l3-iwc':
+        fields = [f'{model}_iwc', f'iwc_{model}']
+    elif product == 'l3-lwc':
+        fields = [f'{model}_lwc', f'lwc_{model}']
+    elif product == 'l3-cf':
+        fields = [f'{model}_cf', f'cf_V_{model}']
+    else:
+        raise NotImplementedError
+    return fields
 
 
 def get_var_id(cloudnet_file_type: str, field: str) -> str:

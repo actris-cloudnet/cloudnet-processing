@@ -39,6 +39,8 @@ class TestCategorizeProcessing:
     def test_that_calls_metadata_api(self):
         f = open(f'{SCRIPT_PATH}/md.log')
         data = f.readlines()
+        data = [line for line in data if '/api/sites' not in line and '/api/products' not in line]  # ignore trash lines
+        print(data)
         n_gets = len(utils.get_product_types(level='1b'))
         n_puts = 2
         n_checks_for_updated_at = 1

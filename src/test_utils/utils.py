@@ -14,6 +14,7 @@ from data_processing.utils import get_product_types
 sys.path.append('scripts/')
 PROCESS_CLOUDNET = __import__("process-cloudnet")
 PROCESS_CLOUDNET_MODEL = __import__("process-model")
+PROCESS_CLOUDNET_MODEL_EVALUATION = __import__("process-model-evaluation")
 
 
 def init_test_session():
@@ -165,9 +166,11 @@ def process(session,
             temp_file: NamedTemporaryFile,
             script_path: str,
             marker: str = None,
-            is_model_processing: bool = False):
-    if is_model_processing is True:
+            processing_mode: str = ''):
+    if processing_mode is 'model':
         PROCESS_CLOUDNET_MODEL.main(main_args, storage_session=session)
+    elif processing_mode is 'model_evaluation':
+        PROCESS_CLOUDNET_MODEL_EVALUATION.main(main_args, storage_session=session)
     else:
         PROCESS_CLOUDNET.main(main_args, storage_session=session)
     pytest_args = ['pytest', '-v', '-s', f'{script_path}/tests.py', '--full_path', temp_file.name,

@@ -48,10 +48,15 @@ def main(args, storage_session=requests.session()):
                     uuid, identifier = process.process_level2(uuid, product)
                 elif product == 'categorize':
                     uuid, identifier = process.process_categorize(uuid)
-                else:
+                elif product in utils.get_product_types(level='1b'):
                     uuid, identifier = process.process_instrument(uuid, product)
+                else:
+                    logging.info(f'Skipping product {product}')
+                    continue
                 process.add_pid(process.temp_file.name)
-                process.upload_product_and_images(process.temp_file.name, product, uuid, identifier)
+                process.upload_product(process.temp_file.name, product, uuid, identifier)
+                process.upload_images(process.temp_file.name, product, uuid, identifier)
+                process.upload_quality_report(process.temp_file.name, uuid)
                 process.print_info()
             except (RawDataMissingError, MiscError, NotImplementedError) as err:
                 logging.warning(err)
@@ -59,7 +64,6 @@ def main(args, storage_session=requests.session()):
                 logging.error(err)
             except (HTTPError, ConnectionError, RuntimeError, ValueError) as err:
                 utils.send_slack_alert(err, 'data', args.site, date_str, product)
-            processing_tools.clean_dir(process.temp_dir.name)
 
 
 class ProcessCloudnet(ProcessBase):
