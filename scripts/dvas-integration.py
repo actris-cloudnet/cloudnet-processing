@@ -4,19 +4,38 @@ from data_processing import utils
 from datetime import datetime
 import re
 
+
 def create_title(file):
     return f"{file['product']['humanReadableName']} file from {file['site']['humanReadableName']} on {file['measurementDate']}"
 
+
+def parse_affiliation(site):
+    affiliation = ['CLOUDNET']
+    if 'arm' in site['type']:
+        affiliation.append('ARM')
+    if 'cloudnet' in site['type']:
+        affiliation.append('ACTRIS_NRT')
+    return affiliation
+
+
+def parse_instrument_type(product):
+    if product['id'] == 'model':
+        return ['UNKNOWN']
+    elif product['level'] == '1b':
+        return [product['id']]
+    else:
+        return ['radar', 'lidar', 'mwr']
+
 def main():
-    stable = utils.get_from_data_portal_api('api/files', dict(volatile=False, updatedAtFrom='2020-01-01'))
     variables = utils.get_from_data_portal_api('api/products/variables')
+    stable = utils.get_from_data_portal_api('api/files', dict(volatile=False, updatedAtFrom='2020-01-01'))
     file = stable[0]
     site = file['site']
     product = file['product']
     file_vars = list(filter(lambda var: var['id'] == product['id'], variables))
     var_ids = list(map(lambda var: re.sub(r'.*-', '', var['id']), file_vars[0]['variables']))
     print(var_ids)
-    pid = { 'id': file['pid'], 'type': 'N/A' } if file['pid'] else None
+    pid = { 'id': file['pid'].replace('https://hdl.handle.net/', ''), 'type': 'Handle' } if file['pid'] else { 'id': None, 'type': 'N/A' }
 
     actris_json = {
       'md_metadata': { # mandatory
@@ -104,11 +123,11 @@ def main():
         'product_type': 'model' if product['id'] == 'model' else 'observation', # mandatory ["model", "observation", "fundamental_parameter"]
         'matrix': 'cloud', # mandatory ["cloud", "gas", "particle", "met"]
         'sub_matrix': 'Unknown', # mandatory
-        'instrument_type': ['UNKNOWN' if ((product['level'] == '2') or (product['id'] == 'model')) else product['id']], # mandatory
-        'program_affiliation': ['ACTRIS'], # mandatory, fixed list ['ACTRIS', 'AMAP', 'AMAP_public','EUSAAR','EMEP','ACTRIS_preliminary','GAW-WDCA','GAW-WDCRG','NOAA-ESRL']
+        'instrument_type': parse_instrument_type(product), # mandatory
+        'program_affiliation': parse_affiliation(site), # mandatory, fixed list ['ACTRIS', 'AMAP', 'AMAP_public','EUSAAR','EMEP','ACTRIS_preliminary','GAW-WDCA','GAW-WDCRG','NOAA-ESRL']
         'legacy_data': file['legacy'], # mandatory
-        'data_level': product['level'], # mandatory, fixed list [0, 1, 2, 3]
-        'data_sublevel': None, # optional
+        'data_level': product['level'][0], # mandatory, fixed list [0, 1, 2, 3]
+        'data_sublevel': product['level'][1] or None, # optional
         'data_product': 'near-realtime-data' if file['quality'] == 'nrt' else 'quality assured data' # mandatory, need fixed list e.g. ['higher level data','quality assured data', 'near-realtime-data']
       },
       'dq_data_quality_information': { # optional
