@@ -30,7 +30,7 @@ class TestClassificationProcessing:
     def test_that_calls_metadata_api(self):
         f = open(f'{SCRIPT_PATH}/md.log')
         data = f.readlines()
-        n_gets = 2
+        n_gets = 3
         n_puts = 2
         assert len(data) == n_gets + n_puts + self.n_img
 
@@ -43,7 +43,7 @@ class TestClassificationProcessing:
                '&developer=True&product=categorize HTTP/1.1" 200 -' in data[1]
 
         # PUT file
-        assert '"PUT /files/20201022_bucharest_classification.nc HTTP/1.1" 201 -' in data[2]
+        assert '"PUT /files/20201022_bucharest_classification.nc HTTP/1.1" 201 -' in data[3]
 
         # PUT images
         img_put = '"PUT /visualizations/20201022_bucharest_classification-'
