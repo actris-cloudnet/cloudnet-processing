@@ -7,6 +7,8 @@ import re
 import warnings
 from typing import Tuple, Union, Optional
 import requests
+import logging
+import numpy as np
 from cloudnetpy.categorize import generate_categorize
 from cloudnetpy.utils import date_range
 from requests.exceptions import HTTPError
@@ -17,7 +19,6 @@ from data_processing import processing_tools
 from data_processing.processing_tools import Uuid, ProcessBase
 from data_processing import instrument_process
 from cloudnetpy.exceptions import InconsistentDataError, DisdrometerDataError
-import logging
 
 
 warnings.simplefilter("ignore", UserWarning)
@@ -71,8 +72,24 @@ class ProcessCloudnet(ProcessBase):
     def process_categorize(self, uuid: Uuid) -> Tuple[Uuid, str]:
         l1_products = utils.get_product_types(level='1b')
         l1_products.remove('disdrometer')  # Not yet used
-        input_files = {key: '' for key in l1_products}
-        for product in l1_products:
+        meta_records = self._get_level1b_metadata_for_categorize(l1_products)
+        missing = self._get_missing_level1b_products(meta_records, l1_products)
+        if missing:
+            raise MiscError(f'Missing required input files: {", ".join(missing)}')
+        else:
+            self._check_source_status('categorize', meta_records)
+            input_files = {key: '' for key in l1_products}
+            for product, metadata in meta_records.items():
+                input_files[product] = self._storage_api.download_product(metadata,
+                                                                          self.temp_dir.name)
+            if not input_files['mwr'] and 'rpg-fmcw-94' in input_files['radar']:
+                input_files['mwr'] = input_files['radar']
+        uuid.product = generate_categorize(input_files, self.temp_file.name, uuid=uuid.volatile)
+        return uuid, 'categorize'
+
+    def _get_level1b_metadata_for_categorize(self, source_products: list) -> dict:
+        meta_records = {}
+        for product in source_products:
             if product == 'model':
                 payload = self._get_payload()
                 metadata = self.md_api.get('api/model-files', payload)
@@ -81,15 +98,16 @@ class ProcessCloudnet(ProcessBase):
                 metadata = self.md_api.get('api/files', payload)
             self._check_response_length(metadata)
             if metadata:
-                input_files[product] = self._storage_api.download_product(metadata[0],
-                                                                          self.temp_dir.name)
-        if not input_files['mwr'] and 'rpg-fmcw-94' in input_files['radar']:
-            input_files['mwr'] = input_files['radar']
-        missing = [product for product in l1_products if not input_files[product]]
-        if missing:
-            raise MiscError(f'Missing required input files: {", ".join(missing)}')
-        uuid.product = generate_categorize(input_files, self.temp_file.name, uuid=uuid.volatile)
-        return uuid, 'categorize'
+                meta_records[product] = metadata[0]
+        return meta_records
+
+    @staticmethod
+    def _get_missing_level1b_products(meta_records: dict, required_products: list) -> list:
+        existing_products = list(meta_records.keys())
+        if 'mwr' not in meta_records and ('radar' in meta_records and 'rpg-fmcw' in
+                                          meta_records['radar']['filename']):
+            existing_products.append('mwr')
+        return [product for product in required_products if product not in existing_products]
 
     def process_level2(self, uuid: Uuid, product: str) -> Tuple[Uuid, str]:
         payload = self._get_payload(product='categorize')
@@ -97,13 +115,29 @@ class ProcessCloudnet(ProcessBase):
         self._check_response_length(metadata)
         if metadata:
             categorize_file = self._storage_api.download_product(metadata[0], self.temp_dir.name)
+            meta_record = {'categorize': metadata[0]}
         else:
             raise MiscError(f'Missing input categorize file')
+        self._check_source_status(product, meta_record)
         module = importlib.import_module(f'cloudnetpy.products.{product}')
         fun = getattr(module, f'generate_{product}')
         uuid.product = fun(categorize_file, self.temp_file.name, uuid=uuid.volatile)
         identifier = utils.get_product_identifier(product)
         return uuid, identifier
+
+    def _check_source_status(self, product: str, meta_records: dict) -> None:
+        product_timestamp = self._get_product_timestamp(product)
+        if product_timestamp is None:
+            return
+        source_timestamps = [meta['updatedAt'] for _, meta in meta_records.items()]
+        if np.all([timestamp < product_timestamp for timestamp in source_timestamps]):
+            raise MiscError('Source data already processed')
+
+    def _get_product_timestamp(self, product: str) -> str:
+        payload = self._get_payload(product=product)
+        product_metadata = self.md_api.get(f'api/files', payload)
+        if product_metadata and self.is_reprocess is False:
+            return product_metadata[0]['updatedAt']
 
     def fetch_volatile_uuid(self, product: str) -> Union[str, None]:
         payload = self._get_payload(product=product)
