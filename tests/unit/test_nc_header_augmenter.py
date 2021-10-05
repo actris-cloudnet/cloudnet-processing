@@ -63,7 +63,7 @@ class TestMwr:
         assert nc.variables['LWP'].units == 'g m-2'
         time = nc.variables['time'][:]
         assert nc.variables['time'].units == f'hours since {self.data["date"]} 00:00:00'
-        assert nc.variables['time'].dtype == 'double'
+        assert nc.variables['time'].dtype == 'float32'
         assert np.all(np.diff(time) >= 0)
         assert nc.variables['altitude'][:] == 10
         assert nc.variables['altitude'].units == 'm'
@@ -93,6 +93,7 @@ class TestModel:
         assert nc.day == '14'
         assert nc.title == 'Model file from Bucharest'
         assert nc.Conventions == 'CF-1.7'
+        assert nc.variables['time'].dtype == 'float32'
         nc.close()
 
     def test_bad_model_file(self, bad_gdas1_file):
