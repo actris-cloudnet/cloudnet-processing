@@ -141,7 +141,10 @@ def _fix_identifier(identifier: str) -> str:
 
 
 def _get_source_file_paths(identifier: str) -> tuple:
-    is_level_2_product = identifier in get_product_types('2') or identifier == 'categorize'
+    is_level_2_product = False
+    for product in get_product_types('2'):
+        if product in identifier or identifier == 'categorize':
+            is_level_2_product = True
     if is_level_2_product is True:
         source_dir = 'tests/data/products'
         end_point = 'cloudnet-product'
