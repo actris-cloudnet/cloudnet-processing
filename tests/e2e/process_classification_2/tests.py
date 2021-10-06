@@ -16,6 +16,12 @@ class TestClassificationProcessing:
     def _fetch_params(self, params):
         self.full_path = params['full_path']
 
+    @pytest.mark.first_run
+    def test_that_refuses_to_process_without_reprocess_flag(self):
+        with pytest.raises(OSError):
+            netCDF4.Dataset(self.full_path)
+
+    @pytest.mark.reprocess
     def test_that_has_correct_attributes(self):
         nc = netCDF4.Dataset(self.full_path)
         assert nc.year == '2020'
@@ -27,6 +33,7 @@ class TestClassificationProcessing:
         assert nc.source_file_uuids == 'd963776b33844dc7b979d4c31d84a86b'
         nc.close()
 
+    @pytest.mark.reprocess
     def test_that_calls_metadata_api(self):
         f = open(f'{SCRIPT_PATH}/md.log')
         data = f.readlines()
