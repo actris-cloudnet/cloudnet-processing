@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 import netCDF4
 
@@ -47,7 +48,7 @@ def model_file(tmpdir_factory):
     file_name = tmpdir_factory.mktemp("data").join("xkljslfksef")
     root_grp = netCDF4.Dataset(file_name, "w", format="NETCDF3_CLASSIC")
     root_grp.createDimension('time', 25)
-    time = root_grp.createVariable('time', 'f8', ('time',))
+    time = root_grp.createVariable('time', 'f4', ('time',))
     time.units = 'hours since 2020-10-14 00:00:00 +00:00'
     root_grp.title = 'ECMWF single-site output over Bucharest'
     root_grp.location = ''
@@ -62,7 +63,7 @@ def bad_gdas1_file(tmpdir_factory):
     file_name = tmpdir_factory.mktemp("data").join("xkljslfksef")
     root_grp = netCDF4.Dataset(file_name, "w", format="NETCDF3_CLASSIC")
     root_grp.createDimension('time', 1)
-    time = root_grp.createVariable('time', 'f8', ('time',))
+    time = root_grp.createVariable('time', 'f4', ('time',))
     time.units = 'hours since 2020-10-14 00:00:00 +00:00'
     root_grp.title = 'GDAS1 single-site output over Bucharest'
     root_grp.location = ''
@@ -77,10 +78,11 @@ def halo_file(tmpdir_factory):
     file_name = tmpdir_factory.mktemp("data").join("20201014_fajdlfksfdjl")
     root_grp = netCDF4.Dataset(file_name, "w", format="NETCDF3_CLASSIC")
     root_grp.createDimension('time', 10)
-    time = root_grp.createVariable('time', 'f8')
+    time = root_grp.createVariable('time', 'f8', ('time', ))
     time.units = 'hours since 2020-10-14 00:00:00 +00:00'
+    time[:] = np.linspace(0, 24, 10)
     root_grp.createDimension('range', 3)
-    range = root_grp.createVariable('range', 'f8', ('range',))
+    range = root_grp.createVariable('range', 'f4', ('range',))
     range[:] = [2, 4, 6]
     root_grp.createVariable('altitude', 'f8')[:] = 10
     root_grp.title = 'FMI HALO Doppler lidar'

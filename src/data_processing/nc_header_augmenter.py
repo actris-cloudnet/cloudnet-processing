@@ -28,10 +28,7 @@ def harmonize_nc_file(data: dict) -> str:
     temp_file = NamedTemporaryFile()
     nc_raw = netCDF4.Dataset(data['full_path'], 'r')
     nc = netCDF4.Dataset(temp_file.name, 'w', format='NETCDF4_CLASSIC')
-    if data['instrument'] == 'hatpro':
-        valid_ind = _get_valid_hatpro_timestamps(data, nc_raw)
-    else:
-        valid_ind = None
+    valid_ind = _get_valid_timestamps(data, nc_raw) if data['instrument'] is not None else None
     copy_file_contents(nc_raw, nc, valid_ind)
     uuid = data['uuid'] or get_uuid()
     nc.file_uuid = uuid
@@ -52,11 +49,11 @@ def harmonize_nc_file(data: dict) -> str:
         nc.year, nc.month, nc.day = data['date'].split('-')
         nc.renameVariable('range', 'height')
         nc.variables['height'][:] += nc.variables['altitude']
+    nc = _harmonize_units(nc)
     nc.history = _get_history(nc)
     nc.location = _get_location(nc, data)
     nc.title = _get_title(nc)
-    if file_type in ('model', 'lidar'):  # HATPRO files contain multiple problems
-        nc.Conventions = 'CF-1.7'
+    nc.Conventions = 'CF-1.7'
     nc.close()
     nc_raw.close()
     shutil.copy(temp_file.name, data['full_path'])
@@ -74,7 +71,10 @@ def copy_file_contents(source: netCDF4.Dataset,
             size = dimension.size
         target.createDimension(key, size)
     for var_name, variable in source.variables.items():
-        dtype = 'f' if var_name == 'time' else variable.dtype
+        if time_ind is not None and var_name == 'time' and 'int' in str(variable.dtype):  # time_ind condition makes sure we don't touch model files
+            dtype = 'f8'
+        else:
+            dtype = variable.dtype
         var_out = target.createVariable(var_name,
                                         dtype,
                                         variable.dimensions,
@@ -108,7 +108,7 @@ def _get_file_type(data: dict) -> str:
     return utils.get_level1b_type(data['instrument'])
 
 
-def _get_valid_hatpro_timestamps(data: dict, nc: netCDF4.Dataset) -> list:
+def _get_valid_timestamps(data: dict, nc: netCDF4.Dataset) -> list:
     time_stamps = nc.variables['time'][:]
     epoch = _get_epoch(nc.variables['time'].units)
     expected_date = data['date'].split('-')
@@ -215,3 +215,15 @@ def _get_epoch(units: str) -> tuple:
     if (1900 < year <= current_year) and (0 < month < 13) and (0 < day < 32):
         return tuple(date_components)
     return fallback
+
+
+def _harmonize_units(nc: netCDF4.Dataset) -> netCDF4.Dataset:
+    units = [
+        ('latitude', 'degrees_north'),
+        ('longitude', 'degrees_east')
+    ]
+    for key, value in units:
+        if key in nc.variables and hasattr(nc.variables[key], 'units'):
+            if nc.variables[key].units != value:
+                nc.variables[key].units = value
+    return nc
