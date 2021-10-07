@@ -75,10 +75,12 @@ def copy_file_contents(source: netCDF4.Dataset,
         target.createDimension(key, size)
     for var_name, variable in source.variables.items():
         dtype = 'f' if var_name == 'time' else variable.dtype
-        var_out = target.createVariable(var_name, dtype, variable.dimensions, zlib=True)
-        attr = {k: variable.getncattr(k) for k in variable.ncattrs()}
-        if '_FillValue' in attr:
-            del attr['_FillValue']
+        var_out = target.createVariable(var_name,
+                                        dtype,
+                                        variable.dimensions,
+                                        zlib=True,
+                                        fill_value=getattr(variable, '_FillValue', None))
+        attr = {k: variable.getncattr(k) for k in variable.ncattrs() if k != '_FillValue'}
         var_out.setncatts(attr)
         if 'time' in variable.dimensions and time_ind is not None:
             array = variable[time_ind]
