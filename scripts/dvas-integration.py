@@ -29,15 +29,25 @@ def parse_instrument_type(product):
 
 
 def main():
-    file1 = open('scripts/last-success', 'r')
-    lines = file1.readlines()
-    startdate = lines[0]
+    lastsuccesspath = 'scripts/last-success'
+    lastsuccessfile = open(lastsuccesspath, 'r')
+    lines = lastsuccessfile.readlines()
+    lastsuccessfile.close()
+
+    startdate = lines[0].strip()
     enddate = datetime.now().isoformat()
 
-    variables = utils.get_from_data_portal_api('api/products/variables')
-
     payload = dict(volatile=False, updatedAtFrom=startdate, updatedAtTo=enddate)
+    print(payload)
+
+    variables = utils.get_from_data_portal_api('api/products/variables')
+    if 'status' in variables and variables['status'] >= 300:
+        raise requests.HTTPError(variables['errors'][0])
     files = utils.get_from_data_portal_api('api/files', payload)
+    if 'status' in files and files['status'] >= 300:
+        raise requests.HTTPError(files['errors'][0])
+
+    print(f'About to upload {len(files)} files.')
 
     for file in files:
         site = file['site']
@@ -146,10 +156,11 @@ def main():
 
         headers = {'X-Authorization': f"Bearer {os.environ['DVAS_PORTAL_TOKEN']}"}
         res = requests.post(f"{os.environ['DVAS_PORTAL_URL']}/Metadata/add", json=actris_json, headers=headers)
-        print(res.json())
         res.raise_for_status()
 
-
+    filehandle = open(lastsuccesspath, 'w')
+    filehandle.write(enddate)
+    filehandle.close()
 
 
 if __name__ == "__main__":
