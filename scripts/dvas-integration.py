@@ -4,6 +4,7 @@ from data_processing import utils
 from datetime import datetime
 import re
 import requests
+import logging
 
 
 def create_title(file):
@@ -39,7 +40,7 @@ def main():
     products = ['classification', 'drizzle', 'iwc', 'lwc']
 
     payload = dict(updatedAtFrom=startdate, updatedAtTo=enddate, volatile=False, product=products)
-    print(payload)
+    logging.info(payload)
 
     variables = utils.get_from_data_portal_api('api/products/variables')
     if 'status' in variables and variables['status'] >= 300:
@@ -48,14 +49,18 @@ def main():
     if 'status' in files and files['status'] >= 300:
         raise requests.HTTPError(files['errors'][0])
 
-    print(f'About to upload {len(files)} metadata entries.')
+    logging.info(f'About to upload {len(files)} metadata entries.')
 
     for file in files:
         site = file['site']
         product = file['product']
+        site_dvas_id = site['dvasId']
         file_vars = list(filter(lambda var: var['id'] == product['id'], variables))
         var_ids = list(map(lambda var: re.sub(r'.*-', '', var['id']), file_vars[0]['variables']))
         pid = { 'id': file['pid'].replace('https://hdl.handle.net/', ''), 'type': 'Handle' } if file['pid'] else { 'id': None, 'type': 'N/A' }
+
+        if not site_dvas_id:  # Skip sites that are not in dvas db
+            continue
 
         actris_json = {
           'md_metadata': { # mandatory
@@ -105,7 +110,7 @@ def main():
             'language': 'en', # mandatory
             'topic_category': 'climatologyMeteorologyAtmosphere', # mandatory
             'description': 'time series of point measurements', # mandatory
-            'station_identifier': 'INO' # mandatory, fixed list will be provided
+            'station_identifier': site_dvas_id # mandatory, fixed list will be provided
           },
           'ex_geographic_bounding_box': { # mandatory
             'west_bound_longitude': site['longitude'], # mandatory
@@ -117,7 +122,7 @@ def main():
             'time_period_begin': file['measurementDate'], # mandatory
             'time_period_end': file['measurementDate'] # mandatory
           },
-          'ex_vertical_extent': { # optional
+          'ex_vertical_extent': { # optional, range of measurement, left out because we don't want to parse it
             'minimum_value': None, # optional
             'maximum_value': None, # optional
             'unit_of_measure': 'm above sea level' # optional
