@@ -36,8 +36,9 @@ def main():
 
     startdate = lines[0].strip()
     enddate = datetime.now().isoformat()
+    products = ['classification', 'drizzle', 'iwc', 'lwc']
 
-    payload = dict(volatile=False, updatedAtFrom=startdate, updatedAtTo=enddate)
+    payload = dict(updatedAtFrom=startdate, updatedAtTo=enddate, volatile=False, product=products)
     print(payload)
 
     variables = utils.get_from_data_portal_api('api/products/variables')
@@ -47,7 +48,7 @@ def main():
     if 'status' in files and files['status'] >= 300:
         raise requests.HTTPError(files['errors'][0])
 
-    print(f'About to upload {len(files)} files.')
+    print(f'About to upload {len(files)} metadata entries.')
 
     for file in files:
         site = file['site']
