@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import os
+from sys import argv
 from data_processing import utils
 from datetime import datetime
 import re
@@ -30,7 +31,10 @@ def parse_instrument_type(product):
 
 
 def main():
-    lastsuccesspath = 'scripts/last-success'
+    if not len(argv) > 1:
+        logging.error('Last success file not specified')
+        exit(1)
+    lastsuccesspath = argv[1]
     lastsuccessfile = open(lastsuccesspath, 'r')
     lines = lastsuccessfile.readlines()
     lastsuccessfile.close()
