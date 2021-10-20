@@ -166,7 +166,7 @@ def main():
 
         headers = {'X-Authorization': f"Bearer {os.environ['DVAS_PORTAL_TOKEN']}"}
         res = requests.post(f"{os.environ['DVAS_PORTAL_URL']}/Metadata/add", json=actris_json, headers=headers)
-        print(res.json())
+        print(file['filename'], res.text)
         res.raise_for_status()
 
     filehandle = open(lastsuccesspath, 'w')
