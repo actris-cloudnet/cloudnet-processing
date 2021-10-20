@@ -41,7 +41,7 @@ def main():
 
     startdate = lines[0].strip()
     enddate = datetime.now().isoformat()
-    products = ['classification', 'drizzle', 'iwc', 'lwc']
+    products = ['classification']
 
     payload = dict(updatedAtFrom=startdate, updatedAtTo=enddate, volatile=False, product=products)
     logging.info(payload)
@@ -132,7 +132,7 @@ def main():
             'unit_of_measure': 'm above sea level' # optional
           },
           'md_content_information': { # mandatory
-            'attribute_descriptions': list(map(lambda var: re.sub(r'[-_]/g', '.', var), var_ids)), # mandatory, list of parameters
+            'attribute_descriptions': list(map(lambda var: re.sub(r'[-_]', '.', var), var_ids)), # mandatory, list of parameters
             'content_type': 'physicalMeasurement' # mandatory, fixed list ['image','thematicClassification','physicalMeasurement']
           },
           'md_distribution_information': { # mandatory
@@ -166,6 +166,7 @@ def main():
 
         headers = {'X-Authorization': f"Bearer {os.environ['DVAS_PORTAL_TOKEN']}"}
         res = requests.post(f"{os.environ['DVAS_PORTAL_URL']}/Metadata/add", json=actris_json, headers=headers)
+        print(res.json())
         res.raise_for_status()
 
     filehandle = open(lastsuccesspath, 'w')
