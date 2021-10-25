@@ -41,7 +41,7 @@ def main():
 
     startdate = lines[0].strip()
     enddate = datetime.now().isoformat()
-    products = ['classification']
+    products = ['classification', 'lwc', 'iwc', 'drizzle']
 
     payload = dict(updatedAtFrom=startdate, updatedAtTo=enddate, volatile=False, product=products)
     logging.info(payload)
