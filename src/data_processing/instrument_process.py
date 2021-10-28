@@ -1,5 +1,5 @@
 from data_processing.processing_tools import Uuid
-from cloudnetpy.instruments import rpg2nc, mira2nc, basta2nc, ceilo2nc, hatpro2nc, disdrometer2nc
+from cloudnetpy.instruments import rpg2nc, mira2nc, basta2nc, ceilo2nc, hatpro2nc, disdrometer2nc, pollyxt2nc
 import gzip
 import glob
 import shutil
@@ -9,6 +9,7 @@ from tempfile import NamedTemporaryFile
 from data_processing import concat_wrapper, utils
 from data_processing.utils import RawDataMissingError, SkipBlock
 from cloudnetpy.utils import is_timestamp
+import numpy as np
 
 
 class ProcessInstrument:
@@ -76,14 +77,23 @@ class ProcessLidar(ProcessInstrument):
         shutil.move(full_path, self._daily_file.name)
         self._call_ceilo2nc('ct25k')
 
+    def process_pollyxt(self):
+        full_paths, self.uuid.raw = self.base.download_instrument('pollyxt')
+        self.uuid.product = pollyxt2nc(os.path.dirname(full_paths[0]),
+                                       self.temp_file.name,
+                                       site_meta=self.base.site_meta,
+                                       uuid=self.uuid.volatile,
+                                       date=self.base.date_str)
+
     def process_cl51(self):
         if self.base.site == 'norunda':
             full_paths, self.uuid.raw = self.base.download_adjoining_daily_files('cl51')
-            utils.concatenate_text_files(full_paths, self._daily_file.name)
-            _fix_cl51_timestamps(self._daily_file.name, 'Europe/Stockholm')
         else:
-            full_path, self.uuid.raw = self.base.download_instrument('cl51', largest_only=True)
-            shutil.move(full_path, self._daily_file.name)
+            full_paths, self.uuid.raw = self.base.download_instrument('cl51')
+        full_paths.sort()
+        utils.concatenate_text_files(full_paths, self._daily_file.name)
+        if self.base.site == 'norunda':
+            _fix_cl51_timestamps(self._daily_file.name, 'Europe/Stockholm')
         self._call_ceilo2nc('cl51')
 
     def process_halo_doppler_lidar(self):
