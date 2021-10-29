@@ -190,7 +190,10 @@ class ProcessCloudnet(ProcessBase):
             raise RawDataMissingError
         if not self._is_unprocessed_data(upload_metadata) and not self.is_reprocess:
             raise MiscError('Raw data already processed')
-        return self._download_raw_files(upload_metadata)
+        full_paths, uuids = self._download_raw_files(upload_metadata)
+        uuids_of_current_day = [meta['uuid'] for meta in upload_metadata
+                                if meta['measurementDate'] == self.date_str]
+        return full_paths, uuids_of_current_day
 
     def fix_calibrated_daily_file(self,
                                   uuid: Uuid,
