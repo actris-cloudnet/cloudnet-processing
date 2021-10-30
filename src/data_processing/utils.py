@@ -184,7 +184,7 @@ def get_fields_for_plot(cloudnet_file_type: str) -> Tuple[list, int]:
         (list) and maximum altitude (int).
 
     """
-    max_alt = 10
+    max_alt = 12
     if cloudnet_file_type == 'categorize':
         fields = ['Z', 'v', 'width', 'ldr', 'v_sigma', 'beta', 'lwp', 'Tw',
                   'radar_gas_atten', 'radar_liquid_atten']
