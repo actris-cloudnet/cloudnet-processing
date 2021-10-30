@@ -29,7 +29,7 @@ class TestMIRAProcessing:
         assert nc.day == '27'
         assert nc.title == f'{self.product.capitalize()} file from Jülich'
         assert nc.cloudnet_file_type == self.product
-        assert nc.Conventions == 'CF-1.7'
+        assert nc.Conventions == 'CF-1.8'
         assert nc.source == 'METEK MIRA-35'
         assert nc.references == 'https://doi.org/10.21105/joss.02123'
         assert hasattr(nc, 'pid') is False

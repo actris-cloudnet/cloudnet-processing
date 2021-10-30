@@ -173,6 +173,13 @@ def str2bool(s: str) -> Union[bool, str]:
     return False if s == 'False' else True if s == 'True' else s
 
 
+def get_plottable_variables_info(cloudnet_file_type: str) -> dict:
+    """Find variable IDs and corresponding human readable names."""
+    fields = get_fields_for_plot(cloudnet_file_type)[0]
+    return {get_var_id(cloudnet_file_type, field): [f"{ATTR[field].name}", i]
+            for i, field in enumerate(fields)}
+
+
 def get_fields_for_plot(cloudnet_file_type: str) -> Tuple[list, int]:
     """Return list of variables and maximum altitude for Cloudnet quicklooks.
 
@@ -211,13 +218,6 @@ def get_fields_for_plot(cloudnet_file_type: str) -> Tuple[list, int]:
     else:
         raise NotImplementedError
     return fields, max_alt
-
-
-def get_plottable_variables_info(cloudnet_file_type: str) -> dict:
-    """Find variable IDs and corresponding human readable names."""
-    fields = get_fields_for_plot(cloudnet_file_type)[0]
-    return {get_var_id(cloudnet_file_type, field): [f"{ATTR[field].name}", i]
-            for i, field in enumerate(fields)}
 
 
 def get_var_id(cloudnet_file_type: str, field: str) -> str:

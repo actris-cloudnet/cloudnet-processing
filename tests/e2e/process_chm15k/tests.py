@@ -11,7 +11,6 @@ class TestChm15kProcessing:
 
     product = 'lidar'
     instrument = 'chm15k'
-    n_img = len(utils.get_fields_for_plot(product)[0]) - 1
 
     @pytest.fixture(autouse=True)
     def _fetch_params(self, params):
@@ -42,9 +41,7 @@ class TestChm15kProcessing:
         assert nc.year == "2020"
         assert nc.month == "10"
         assert nc.day == "22"
-        assert nc.title == f'Ceilometer file from Bucharest'
         assert nc.cloudnet_file_type == self.product
-        assert nc.Conventions == 'CF-1.7'
         assert hasattr(nc, 'pid') is True
         nc.close()
 
@@ -61,9 +58,10 @@ class TestChm15kProcessing:
         data = f.readlines()
 
         n_raw_files = 3
+        n_img = 2
 
         n_gets = 4
-        n_puts = 2 + self.n_img
+        n_puts = n_img + 2
         n_posts = n_raw_files
 
         assert len(data) == n_gets + n_puts + n_posts
@@ -83,7 +81,7 @@ class TestChm15kProcessing:
 
         # PUT images
         img_put = '"PUT /visualizations/20201022_bucharest_chm15k-'
-        assert count_strings(data, img_put) == self.n_img
+        assert count_strings(data, img_put) == n_img
 
         # POST metadata
         file_put = '"POST /upload-metadata HTTP/1.1" 200 -'

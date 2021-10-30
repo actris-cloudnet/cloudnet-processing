@@ -1,6 +1,5 @@
 import datetime
 from pathlib import Path
-from collections import namedtuple
 import pytest
 import data_processing.utils as utils
 
@@ -57,7 +56,8 @@ def test_get_plottable_variables_info():
     res = utils.get_plottable_variables_info('lidar')
     expected = {'lidar-beta': ['Attenuated backscatter coefficient', 0],
                 'lidar-beta_raw': ['Raw attenuated backscatter coefficient', 1],
-                'lidar-depolarisation': ['Lidar depolarisation', 2]}
+                'lidar-depolarisation': ['Lidar depolarisation', 2],
+                'lidar-depolarisation_raw': ['Raw depolarisation', 3]}
     assert res == expected
 
 

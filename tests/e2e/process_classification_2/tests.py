@@ -29,7 +29,7 @@ class TestClassificationProcessing:
         assert nc.day == '22'
         assert nc.title == f'{self.product.capitalize()} file from Bucharest'
         assert nc.cloudnet_file_type == self.product
-        assert nc.Conventions == 'CF-1.7'
+        assert nc.Conventions == 'CF-1.8'
         assert nc.source_file_uuids == 'd963776b33844dc7b979d4c31d84a86b'
         nc.close()
 

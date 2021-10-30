@@ -24,7 +24,7 @@ class TestCategorizeProcessing:
         assert hasattr(nc, 'pid') is True
         assert nc.title == f'{self.product.capitalize()} file from Bucharest'
         assert nc.cloudnet_file_type == self.product
-        assert nc.Conventions == 'CF-1.7'
+        assert nc.Conventions == 'CF-1.8'
         for uuid in ('a50161be-6ecd-4ae6-ad0e-26bb739af752', '38a41d8f-f688-4196-8b88-2b401f433fed',
                      '0d4fbbd9-85c3-451c-989b-4f26e044c0ed'):
             assert uuid.replace('-', '') in nc.source_file_uuids
