@@ -306,6 +306,13 @@ def datetime_to_utc(date_time: str, time_zone_name: str) -> str:
     return dt
 
 
+def shift_datetime(date_time: str, offset: int) -> str:
+    """Shifts datetime N hours."""
+    dt = datetime.datetime.strptime(date_time, "%Y-%m-%d %H:%M:%S")
+    dt = dt + datetime.timedelta(hours=offset)
+    return dt.strftime("%Y-%m-%d %H:%M:%S")
+
+
 def get_helsinki_datetime() -> datetime.datetime:
     time_zone = pytz.timezone('Europe/Helsinki')
     dt = datetime.datetime.now()

@@ -9,7 +9,6 @@ from tempfile import NamedTemporaryFile
 from data_processing import concat_wrapper, utils
 from data_processing.utils import RawDataMissingError, SkipBlock
 from cloudnetpy.utils import is_timestamp
-import numpy as np
 
 
 class ProcessInstrument:
@@ -93,7 +92,9 @@ class ProcessLidar(ProcessInstrument):
         full_paths.sort()
         utils.concatenate_text_files(full_paths, self._daily_file.name)
         if self.base.site == 'norunda':
-            _fix_cl51_timestamps(self._daily_file.name, 'Europe/Stockholm')
+            logging.info('Shifting timestamps to UTC')
+            offset_in_hours = -1
+            _fix_cl51_timestamps(self._daily_file.name, offset_in_hours)
         self._call_ceilo2nc('cl51')
 
     def process_halo_doppler_lidar(self):
@@ -200,13 +201,13 @@ def _unzip_gz_files(full_paths: list) -> str:
     return os.path.dirname(full_paths[0])
 
 
-def _fix_cl51_timestamps(filename: str, time_zone: str) -> None:
+def _fix_cl51_timestamps(filename: str, hours: int) -> None:
     with open(filename, 'r') as file:
         lines = file.readlines()
     for ind, line in enumerate(lines):
         if is_timestamp(line):
             date_time = line.strip('-').strip('\n')
-            date_time_utc = utils.datetime_to_utc(date_time, time_zone)
+            date_time_utc = utils.shift_datetime(date_time, hours)
             lines[ind] = f'-{date_time_utc}\n'
     with open(filename, 'w') as file:
         file.writelines(lines)
