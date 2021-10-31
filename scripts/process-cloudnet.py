@@ -58,7 +58,7 @@ def main(args, storage_session=requests.session()):
                 logging.error(err)
             except (HTTPError, ConnectionError, RuntimeError, ValueError) as err:
                 utils.send_slack_alert(err, 'data', args.site, date_str, product)
-        processing_tools.clean_dir(process.temp_dir.name)
+            processing_tools.clean_dir(process.temp_dir.name)
 
 
 class ProcessCloudnet(ProcessBase):
