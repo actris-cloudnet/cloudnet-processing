@@ -221,6 +221,10 @@ class ProcessCloudnet(ProcessBase):
             raise RawDataMissingError
         selected_instrument = instrument[0]
         if len(instrument) > 1:
+            for instru in instrument:
+                if 'rpg-fmcw-94' in instru:
+                    selected_instrument = instru
+                    break
             logging.warning(f'More than one type of {instrument_type} data, '
                             f'using {selected_instrument}')
         return selected_instrument
