@@ -35,6 +35,7 @@ def main(args, storage_session=requests.session()):
         date_str = date.strftime("%Y-%m-%d")
         process.date_str = date_str
         for product in args.products:
+            processing_tools.clean_dir(process.temp_dir.name)
             if product not in utils.get_product_types():
                 raise ValueError('No such product')
             if product == 'model':
