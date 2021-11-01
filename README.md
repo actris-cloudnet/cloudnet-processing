@@ -21,7 +21,7 @@ The following scripts are provided:
 Create Cloudnet products.
 
 ```
-usage: process-cloudnet.py [-h] [-r] [-d YYYY-MM-DD] [--start YYYY-MM-DD]
+usage: process-cloudnet.py [-h] [-r] [--reprocess_volatile] [-d YYYY-MM-DD] [--start YYYY-MM-DD]
                            [--stop YYYY-MM-DD] [-p ...] SITE
 ```
 
@@ -37,6 +37,7 @@ Optional arguments:
 | :---  | :----------             | :---              | :---                                       |
 | `-h`  | `--help`         |                   | Show help and exit. |
 | `-r`  | `--reprocess`    | `False`           | See below. |
+|       | `--reprocess_volatile`  | `False`    | Reprocess volatile files only (and create new volatile file from unprocessed). |
 | `-d`  | `--date`         |                   | Single date to be processed. Alternatively `--start` and `--stop` can be defined.|
 |       | `--start`        | `current day - 7` | Starting date. |
 |       | `--stop`         | `current day - 1 `| Stopping date. |
@@ -103,8 +104,6 @@ Behavior:
 | `volatile`             | - |
 | `stable` (legacy)      | - |
 | `stable` (non-legacy)  | Add stable legacy file as oldest version. |
-
-
 
 
 ### `freeze.py`

@@ -35,6 +35,7 @@ class ProcessBase:
         self.site_meta, self.site, self._site_type = _read_site_info(args)
         self.config = config
         self.is_reprocess = getattr(args, 'reprocess', False)
+        self.is_reprocess_volatile = getattr(args, 'reprocess_volatile', False)
         self.date_str = None
         self.md_api = MetadataApi(config, metadata_session)
         self._storage_api = StorageApi(config, storage_session)
@@ -80,6 +81,8 @@ class ProcessBase:
 
     def _is_create_new_version(self, metadata) -> bool:
         if self._parse_volatile_value(metadata) is False:
+            if self.is_reprocess_volatile is True:
+                raise MiscError('Skip reprocessing of a stable file.')
             if self.is_reprocess is True:
                 return True
             else:
@@ -116,7 +119,7 @@ class ProcessBase:
         if not metadata:
             raise RawDataMissingError
         is_unprocessed_data = self._is_unprocessed_data(metadata)
-        if not is_unprocessed_data and not self.is_reprocess:
+        if not is_unprocessed_data and not (self.is_reprocess or self.is_reprocess_volatile):
             raise MiscError('Raw data already processed')
 
     @staticmethod

@@ -136,7 +136,7 @@ class ProcessCloudnet(ProcessBase):
     def _get_product_timestamp(self, product: str) -> str:
         payload = self._get_payload(product=product)
         product_metadata = self.md_api.get(f'api/files', payload)
-        if product_metadata and self.is_reprocess is False:
+        if product_metadata and self.is_reprocess is False and self.is_reprocess_volatile is False:
             return product_metadata[0]['updatedAt']
 
     def fetch_volatile_uuid(self, product: str) -> Union[str, None]:
@@ -188,7 +188,8 @@ class ProcessCloudnet(ProcessBase):
         upload_metadata = _order_metadata(upload_metadata)
         if not upload_metadata:
             raise RawDataMissingError
-        if not self._is_unprocessed_data(upload_metadata) and not self.is_reprocess:
+        if not self._is_unprocessed_data(upload_metadata) and not (self.is_reprocess
+                                                                   or self.is_reprocess_volatile):
             raise MiscError('Raw data already processed')
         full_paths, uuids = self._download_raw_files(upload_metadata)
         uuids_of_current_day = [meta['uuid'] for meta in upload_metadata
@@ -280,13 +281,17 @@ def _parse_args(args):
                         help='Single date to be processed.')
     parser.add_argument('-r', '--reprocess',
                         action='store_true',
-                        help='Process new version of the stable files and reprocess volatile '
-                             'files.',
+                        help='Process a) new version of the stable files, b) reprocess volatile '
+                             'files, c) create volatile file from unprocessed files.',
                         default=False)
     parser.add_argument('-p', '--products',
                         help='Products to be processed, e.g., radar,lidar,mwr,categorize,iwc',
                         type=lambda s: s.split(','),
                         default=utils.get_product_types())
+    parser.add_argument('--reprocess_volatile',
+                        action='store_true',
+                        help='Reprocess unprocessed and volatile files only.',
+                        default=False)
     return parser.parse_args(args)
 
 
