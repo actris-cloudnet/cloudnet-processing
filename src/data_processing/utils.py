@@ -1,3 +1,5 @@
+import random
+import string
 import base64
 import datetime
 import hashlib
@@ -446,3 +448,7 @@ def fetch_data_portal_url() -> str:
     if 'test' in config['STORAGE_SERVICE_URL']:
         return 'https://cloudnet.fmi.fi/'
     return config['DATAPORTAL_URL']
+
+
+def random_string(n: Optional[int] = 10) -> str:
+    return ''.join(random.choices(string.ascii_lowercase, k=n))

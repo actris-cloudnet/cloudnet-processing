@@ -1,11 +1,11 @@
-from data_processing.processing_tools import Uuid
-from cloudnetpy.instruments import rpg2nc, mira2nc, basta2nc, ceilo2nc, hatpro2nc, disdrometer2nc, pollyxt2nc
+import os
 import gzip
 import glob
 import shutil
-import os
 import logging
 from tempfile import NamedTemporaryFile
+from data_processing.processing_tools import Uuid
+from cloudnetpy.instruments import rpg2nc, mira2nc, basta2nc, ceilo2nc, hatpro2nc, disdrometer2nc, pollyxt2nc
 from data_processing import concat_wrapper, utils
 from data_processing.utils import RawDataMissingError, SkipBlock
 from cloudnetpy.utils import is_timestamp
@@ -16,7 +16,7 @@ class ProcessInstrument:
         self.base = process_cloudnet
         self.temp_file = temp_file
         self.uuid = uuid
-        self._daily_file = os.path.join(self.base.temp_dir_target, 'tmp_daily_file')
+        self._daily_file = os.path.join(self.base.temp_dir_target, utils.random_string())
         self._kwargs = self._get_kwargs()
         self._args = self._get_args()
 
