@@ -16,7 +16,6 @@ class ProcessInstrument:
         self.base = process_cloudnet
         self.temp_file = temp_file
         self.uuid = uuid
-        self._daily_file = os.path.join(self.base.temp_dir_target, utils.random_string())
         self._kwargs = self._get_kwargs()
         self._args = self._get_args()
 
@@ -67,13 +66,13 @@ class ProcessLidar(ProcessInstrument):
         full_paths, raw_uuids = self.base.download_instrument('chm15k')
         valid_full_paths = concat_wrapper.concat_chm15k_files(full_paths,
                                                               self.base.date_str,
-                                                              self._daily_file)
+                                                              self.base.daily_file.name)
         self.uuid.raw = _get_valid_uuids(raw_uuids, full_paths, valid_full_paths)
         self._call_ceilo2nc('chm15k')
 
     def process_ct25k(self):
         full_path, self.uuid.raw = self.base.download_instrument('ct25k', largest_only=True)
-        shutil.move(full_path, self._daily_file)
+        shutil.move(full_path, self.base.daily_file.name)
         self._call_ceilo2nc('ct25k')
 
     def process_pollyxt(self):
@@ -90,11 +89,11 @@ class ProcessLidar(ProcessInstrument):
         else:
             full_paths, self.uuid.raw = self.base.download_instrument('cl51')
         full_paths.sort()
-        utils.concatenate_text_files(full_paths, self._daily_file)
+        utils.concatenate_text_files(full_paths, self.base.daily_file.name)
         if self.base.site == 'norunda':
             logging.info('Shifting timestamps to UTC')
             offset_in_hours = -1
-            _fix_cl51_timestamps(self._daily_file, offset_in_hours)
+            _fix_cl51_timestamps(self.base.daily_file.name, offset_in_hours)
         self._call_ceilo2nc('cl51')
 
     def process_halo_doppler_lidar(self):
@@ -115,7 +114,7 @@ class ProcessLidar(ProcessInstrument):
             full_paths, raw_uuids = self.base.download_uploaded(model,
                                                                 exclude_pattern=self.file_id)
             valid_full_paths = concat_wrapper.update_daily_file(full_paths, tmp_file)
-            shutil.copy(tmp_file, self._daily_file)
+            shutil.copy(tmp_file, self.base.daily_file.name)
             msg = 'Raw data already processed'
         except (RawDataMissingError, SkipBlock):
             msg = None
@@ -128,12 +127,12 @@ class ProcessLidar(ProcessInstrument):
             variables = ['x_pol', 'p_pol', 'beta_att', 'time']
             valid_full_paths = concat_wrapper.concat_netcdf_files(full_paths,
                                                                   self.base.date_str,
-                                                                  self._daily_file,
+                                                                  self.base.daily_file.name,
                                                                   concat_dimension='profile',
                                                                   variables=variables)
         if not valid_full_paths:
             raise RawDataMissingError(msg)
-        self.base.md_api.upload_instrument_file(self._daily_file,
+        self.base.md_api.upload_instrument_file(self.base.daily_file.name,
                                                 model,
                                                 self.base.date_str,
                                                 self.base.site,
@@ -147,7 +146,7 @@ class ProcessLidar(ProcessInstrument):
 
     def _call_ceilo2nc(self, instrument: str):
         site_meta = self._fetch_calibration_factor(instrument)
-        self.uuid.product = ceilo2nc(self._daily_file,
+        self.uuid.product = ceilo2nc(self.base.daily_file.name,
                                      self.temp_file.name,
                                      site_meta=site_meta,
                                      uuid=self.uuid.volatile,
@@ -183,8 +182,8 @@ class ProcessDisdrometer(ProcessInstrument):
     def process_thies_lnm(self):
         full_paths, self.uuid.raw = self.base.download_instrument('thies-lnm')
         full_paths.sort()
-        utils.concatenate_text_files(full_paths, self._daily_file)
-        self.uuid.product = disdrometer2nc(self._daily_file, *self._args, **self._kwargs)
+        utils.concatenate_text_files(full_paths, self.base.daily_file.name)
+        self.uuid.product = disdrometer2nc(self.base.daily_file.name, *self._args, **self._kwargs)
 
 
 def _get_valid_uuids(uuids: list, full_paths: list, valid_full_paths: list) -> list:
