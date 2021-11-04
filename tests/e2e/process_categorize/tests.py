@@ -2,7 +2,7 @@ import pytest
 import netCDF4
 from os import path
 from data_processing import utils
-from test_utils.utils import count_strings
+from test_utils.utils import count_strings, read_log_file
 
 SCRIPT_PATH = path.dirname(path.realpath(__file__))
 
@@ -37,10 +37,7 @@ class TestCategorizeProcessing:
         assert 'POST /pid/ HTTP/1.1" 200 -' in data[0]
 
     def test_that_calls_metadata_api(self):
-        f = open(f'{SCRIPT_PATH}/md.log')
-        data = f.readlines()
-        data = [line for line in data if '/api/sites' not in line and '/api/products' not in line]  # ignore trash lines
-        print(data)
+        data = read_log_file(SCRIPT_PATH)
         n_gets = len(utils.get_product_types(level='1b'))
         n_puts = 2
         n_checks_for_updated_at = 1

@@ -1,7 +1,7 @@
 import netCDF4
 from os import path
 import pytest
-from test_utils.utils import parse_args, count_strings
+from test_utils.utils import parse_args, count_strings, read_log_file
 
 SCRIPT_PATH = path.dirname(path.realpath(__file__))
 
@@ -22,8 +22,7 @@ class Test:
         nc.close()
 
     def test_metadata_api_calls(self):
-        f = open(f'{SCRIPT_PATH}/md.log')
-        data = f.readlines()
+        data = read_log_file(SCRIPT_PATH)
 
         n_raw_files = 2
 

@@ -33,7 +33,6 @@ class Server(BaseHTTPRequestHandler):
         except FileNotFoundError:
             file = self.try_to_open_file(f'{root}{os.path.dirname(self.path)}/any')
         if not file:
-            print('tried', self.path, file=sys.stderr)
             self._set_headers(404)
             return
 

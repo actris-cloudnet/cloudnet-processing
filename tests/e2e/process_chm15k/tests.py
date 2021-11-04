@@ -1,7 +1,6 @@
 import netCDF4
 from os import path
-from data_processing import utils
-from test_utils.utils import count_strings
+from test_utils.utils import count_strings, read_log_file
 import pytest
 
 SCRIPT_PATH = path.dirname(path.realpath(__file__))
@@ -23,8 +22,7 @@ class TestChm15kProcessing:
 
     @pytest.mark.first_run
     def test_that_calls_metadata_api_only_once(self):
-        f = open(f'{SCRIPT_PATH}/md.log')
-        data = f.readlines()
+        data = read_log_file(SCRIPT_PATH)
         assert len(data) == 1
         assert '"GET /api/files?dateFrom=2020-10-22&dateTo=2020-10-22&site=bucharest&developer=True' \
                '&product=lidar&showLegacy=True HTTP/1.1" 200 -' in data[0]
@@ -54,13 +52,12 @@ class TestChm15kProcessing:
 
     @pytest.mark.reprocess
     def test_that_calls_metadata_api(self):
-        f = open(f'{SCRIPT_PATH}/md.log')
-        data = f.readlines()
+        data = read_log_file(SCRIPT_PATH)
 
         n_raw_files = 3
         n_img = 2
 
-        n_gets = 4
+        n_gets = 5
         n_puts = n_img + 2
         n_posts = n_raw_files
 
@@ -76,8 +73,11 @@ class TestChm15kProcessing:
         assert '"GET /upload-metadata?dateFrom=2020-10-22&dateTo=2020-10-22&site=bucharest' \
                '&developer=True&instrument=chm15k&status%5B%5D=uploaded&status%5B%5D=processed HTTP/1.1" 200 -' in data[3]
 
+        # GET calibration
+        assert '"GET /api/calibration?site=bucharest&date=2020-10-22&instrument=chm15k HTTP/1.1" 200 -' in data[4]
+
         # PUT file
-        assert '"PUT /files/20201022_bucharest_chm15k.nc HTTP/1.1"' in data[4]
+        assert '"PUT /files/20201022_bucharest_chm15k.nc HTTP/1.1"' in data[5]
 
         # PUT images
         img_put = '"PUT /visualizations/20201022_bucharest_chm15k-'

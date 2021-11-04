@@ -2,7 +2,7 @@ import netCDF4
 from os import path
 from data_processing import utils
 import pytest
-from test_utils.utils import count_strings
+from test_utils.utils import count_strings, read_log_file
 
 SCRIPT_PATH = path.dirname(path.realpath(__file__))
 
@@ -43,8 +43,7 @@ class TestMIRAProcessing:
         nc.close()
 
     def test_that_calls_metadata_api(self):
-        f = open(f'{SCRIPT_PATH}/md.log')
-        data = f.readlines()
+        data = read_log_file(SCRIPT_PATH)
         n_raw_files = 2
         n_gets = 4  # instrument checks (2) + product check (1) + mira raw (1)
         n_puts = 2 + self.n_img

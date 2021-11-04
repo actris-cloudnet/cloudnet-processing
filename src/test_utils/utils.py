@@ -192,3 +192,11 @@ def parse_args(args: str) -> list:
     for c in chars_to_remove:
         args = args.replace(c, '')
     return args.split(',')
+
+
+def read_log_file(script_path: str):
+    f = open(f'{script_path}/md.log')
+    data = f.readlines()
+    data = [line for line in data if '/api/sites' not in line and '/api/products' not in line]  # ignore trash lines
+    f.close()
+    return data
