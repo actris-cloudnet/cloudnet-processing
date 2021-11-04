@@ -9,6 +9,7 @@ from cloudnetpy.instruments import rpg2nc, mira2nc, basta2nc, ceilo2nc, hatpro2n
 from data_processing import concat_wrapper, utils
 from data_processing.utils import RawDataMissingError, SkipBlock
 from cloudnetpy.utils import is_timestamp
+import datetime
 
 
 class ProcessInstrument:
@@ -30,6 +31,13 @@ class ProcessInstrument:
         meta['calibration_factor'] = utils.get_calibration_factor(self.base.site,
                                                                   self.base.date_str,
                                                                   instrument)
+        return meta
+
+    def _fetch_range_corrected(self, site_meta_in: dict) -> dict:
+        meta = site_meta_in.copy()
+        date = utils.date_string_to_date(self.base.date_str)
+        if self.base.site == 'norunda' and date > datetime.date(2020, 9, 6):
+            meta['range_corrected'] = False
         return meta
 
 
@@ -146,6 +154,7 @@ class ProcessLidar(ProcessInstrument):
 
     def _call_ceilo2nc(self, instrument: str):
         site_meta = self._fetch_calibration_factor(instrument)
+        site_meta = self._fetch_range_corrected(site_meta)
         self.uuid.product = ceilo2nc(self.base.daily_file.name,
                                      self.temp_file.name,
                                      site_meta=site_meta,
