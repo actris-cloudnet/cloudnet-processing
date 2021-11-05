@@ -468,3 +468,7 @@ def fetch_data_portal_url() -> str:
 
 def random_string(n: Optional[int] = 10) -> str:
     return ''.join(random.choices(string.ascii_lowercase, k=n))
+
+
+def full_product_to_l3_product(full_product: str):
+    return full_product.split('-')[1]

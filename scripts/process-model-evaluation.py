@@ -2,6 +2,7 @@
 """Master script for Model evaluation processing."""
 import argparse
 import importlib
+import json
 import sys
 import re
 import warnings
@@ -23,12 +24,12 @@ warnings.simplefilter("ignore", UserWarning)
 warnings.simplefilter("ignore", RuntimeWarning)
 
 
-def main(args):
+def main(args, storage_session=requests.session()):
     args = _parse_args(args)
     utils.init_logger(args)
     config = utils.read_main_conf()
     start_date, stop_date = _get_processing_dates(args)
-    process = ProcessModelEvaluation(args, config)
+    process = ProcessModelEvaluation(args, config, storage_session=storage_session)
     for date in date_range(start_date, stop_date):
         date_str = date.strftime("%Y-%m-%d")
         process.date_str = date_str
@@ -37,6 +38,7 @@ def main(args):
                 raise ValueError('No such product')
             if product == 'model':
                 continue
+            processing_tools.clean_dir(process.temp_dir.name)
             logging.info(f'Processing {product} product, {args.site} {date_str}')
             uuid = Uuid()
             uuid.volatile = process.fetch_volatile_uuid(product)
@@ -47,7 +49,6 @@ def main(args):
                     process.upload_product(process.temp_file.name, product, uuid, model)
                     process.upload_images(process.temp_file.name, product, uuid, model)
                     process.print_info()
-            processing_tools.clean_dir(process.temp_dir.name)
 
 
 class ProcessModelEvaluation(ProcessBase):

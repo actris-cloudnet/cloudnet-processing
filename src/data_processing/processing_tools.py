@@ -105,21 +105,7 @@ class ProcessBase:
         if metadata:
             models_meta = {}
             models = [metadata[i]['model']['id'] for i in range(len(metadata))]
-            models_id_short = utils.parse_long_model_ids(models)
-            for m_id in models_id_short:
-                m_metas = [metadata for i in range(len(metadata)) if m_id in metadata[i]['model']['id']]
-                models_meta[m_id] = m_metas
-            return models_meta
-        else:
-            raise RuntimeError('No existing model files')
-
-    def _sort_model_meta2dict(self, metadata: list) -> dict:
-        """Sort models and cycles to same dict key. Removes Gdas"""
-        if metadata:
-            models_meta = {}
-            models = [metadata[i]['model']['id'] for i in range(len(metadata))]
-            models_id_short = utils.parse_long_model_ids(models)
-            for m_id in models_id_short:
+            for m_id in models:
                 m_metas = [metadata for i in range(len(metadata)) if m_id in metadata[i]['model']['id']]
                 models_meta[m_id] = m_metas
             return models_meta
