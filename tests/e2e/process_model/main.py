@@ -20,7 +20,7 @@ def main():
     utils.start_test_servers(instrument, SCRIPT_PATH)
     session = utils.register_storage_urls(temp_file, source_data, site, date, instrument, True,
                                           products=['ecmwf', 'gdas1'])
-    utils.process(session, [site], temp_file, SCRIPT_PATH, is_model_processing=True)
+    utils.process(session, [site], temp_file, SCRIPT_PATH, processing_mode='model')
 
 
 if __name__ == "__main__":

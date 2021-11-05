@@ -52,9 +52,10 @@ class TestModelProcessing:
         # PUT file
         assert '"PUT /files/20201022_bucharest_ecmwf.nc HTTP/1.1" 201 -' in data[3]
 
+        # POST metadata
+        assert '"POST /upload-metadata HTTP/1.1" 200 -' in data[4]
+
         # PUT images
         img_put = '"PUT /visualizations/20201022_bucharest_ecmwf-'
         assert count_strings(data, img_put) == n_img_puts
 
-        # POST metadata
-        assert '"POST /upload-metadata HTTP/1.1" 200 -' in data[-2]
