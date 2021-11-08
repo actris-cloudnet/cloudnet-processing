@@ -65,7 +65,7 @@ def read_site_info(site_name: str) -> dict:
 
 def get_product_types(level: Optional[str] = None) -> list:
     """Return Cloudnet processing types."""
-    products = get_from_data_portal_api('api/products')
+    products = get_from_data_portal_api('api/products', {'developer': True})
     if level is not None:
         return [product['id'] for product in products if product['level'] == level]
     return [product['id'] for product in products]
