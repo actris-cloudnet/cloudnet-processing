@@ -17,7 +17,7 @@ jobs:
         run: docker run --env-file test.env test pytest
 
       - name: Run e2e tests
-        run: docker run --env-file test.env test /bin/sh -c 'for f in tests/e2e/*/main.py; do $f || exit; done'
+        run: docker run --env-file e2e-test.env test /bin/sh -c 'for f in tests/e2e/*/main.py; do $f || exit; done'
 
       - name: Lint
         run: docker run --env-file test.env test pylint **/*.py --errors-only --ignored-modules=netCDF4

@@ -86,7 +86,7 @@ def test_get_product_bucket():
     ("1c", ['categorize']),
     ("2", ['classification', 'drizzle', 'iwc', 'lwc']),
     (None, ['lidar', 'model', 'mwr', 'radar', 'disdrometer', 'categorize', 'classification',
-            'drizzle', 'iwc', 'lwc'])
+            'drizzle', 'iwc', 'lwc', 'l3-cf', 'l3-iwc', 'l3-lwc'])
 ])
 def test_get_product_types(level, expected):
     result = utils.get_product_types(level=level)
