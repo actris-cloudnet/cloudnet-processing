@@ -70,7 +70,7 @@ class ProcessModelEvaluation(ProcessBase):
             input_model_files.append(m_file)
             #TODO: Raise error if no model meta, warning if only one meta missing
         uuid.product = product_resampling.process_L3_day_product(model, l3_product, input_model_files, l2_file,
-                                                                 self.temp_file.name, overwrite=True)
+                                                                 self.temp_file.name, uuid=uuid.volatile, overwrite=True)
         return uuid
 
     def fetch_volatile_uuid(self, product: str) -> Union[str, None]:
