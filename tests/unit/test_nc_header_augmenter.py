@@ -40,7 +40,7 @@ class TestMwr:
         assert nc.day == '23'
         assert nc.location == 'Bucharest'
         assert nc.title == 'Mwr file from Bucharest'
-        assert nc.Conventions == 'CF-1.7'
+        assert nc.Conventions == 'CF-1.8'
         nc.close()
 
     def test_user_supplied_uuid(self, mwr_file):
@@ -85,7 +85,7 @@ class TestMwr:
         self.data['date'] = '2021-10-07'
         nca.harmonize_nc_file(self.data)
         nc = netCDF4.Dataset(self.data['full_path'])
-        assert nc.Conventions == 'CF-1.7'
+        assert nc.Conventions == 'CF-1.8'
         assert nc.variables['LWP'].units == 'g m-2'
         time = nc.variables['time'][:]
         assert nc.variables['time'].units == f'hours since {self.data["date"]} 00:00:00'
@@ -117,7 +117,7 @@ class TestModel:
         assert nc.month == '10'
         assert nc.day == '14'
         assert nc.title == 'Model file from Bucharest'
-        assert nc.Conventions == 'CF-1.7'
+        assert nc.Conventions == 'CF-1.8'
         assert nc.variables['time'].dtype == 'float32'
         nc.close()
 
@@ -136,13 +136,13 @@ class TestModel:
         self.data['site'] = 'munich'
         nca.harmonize_nc_file(self.data)
         nc = netCDF4.Dataset(self.data['full_path'])
-        assert nc.Conventions == 'CF-1.7'
+        assert nc.Conventions == 'CF-1.8'
         time = nc.variables['time'][:]
         assert nc.variables['time'].units == f'hours since {self.data["date"]} 00:00:00 +00:00'
         assert nc.variables['time'].dtype == 'float32'
         assert np.all(np.diff(time) > 0)
-        assert nc.variables['latitude'].units == 'degrees_north'
-        assert nc.variables['longitude'].units == 'degrees_east'
+        assert nc.variables['latitude'].units == 'degree_north'
+        assert nc.variables['longitude'].units == 'degree_east'
         nc.close()
 
 
@@ -166,7 +166,7 @@ class TestHalo:
         assert nc.month == '10'
         assert nc.day == '14'
         assert nc.title == 'Lidar file from Hyytiälä'
-        assert nc.Conventions == 'CF-1.7'
+        assert nc.Conventions == 'CF-1.8'
         assert 'height' in nc.variables
         nc.close()
 

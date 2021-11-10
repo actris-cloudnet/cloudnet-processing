@@ -53,7 +53,7 @@ def harmonize_nc_file(data: dict) -> str:
     nc.history = _get_history(nc)
     nc.location = _get_location(nc, data)
     nc.title = _get_title(nc)
-    nc.Conventions = 'CF-1.7'
+    nc.Conventions = 'CF-1.8'
     nc.close()
     nc_raw.close()
     shutil.copy(temp_file.name, data['full_path'])
@@ -181,13 +181,13 @@ def _sort_time(nc: netCDF4.Dataset, key: str) -> netCDF4.Dataset:
 
 def _get_history(nc: netCDF4.Dataset) -> str:
     old_history = getattr(nc, 'history', '')
-    new_record = f"{get_time()} - File content harmonized by the CLU unit.\n"
+    new_record = f"{get_time()} +00:00 - Metadata harmonized by CLU.\n"
     return f"{new_record}{old_history}"
 
 
 def _get_title(nc: netCDF4.Dataset) -> str:
     file_type = nc.cloudnet_file_type.capitalize()
-    return f"{file_type} file from {nc.location.capitalize()}"
+    return f"{file_type} file from {nc.location}"
 
 
 def _get_location(nc: netCDF4.Dataset, data: dict) -> str:
@@ -219,8 +219,8 @@ def _get_epoch(units: str) -> tuple:
 
 def _harmonize_units(nc: netCDF4.Dataset) -> netCDF4.Dataset:
     units = [
-        ('latitude', 'degrees_north'),
-        ('longitude', 'degrees_east')
+        ('latitude', 'degree_north'),
+        ('longitude', 'degree_east')
     ]
     for key, value in units:
         if key in nc.variables and hasattr(nc.variables[key], 'units'):
