@@ -28,7 +28,7 @@ def main(args, storage_session=requests.session()):
     args = _parse_args(args)
     utils.init_logger(args)
     config = utils.read_main_conf()
-    start_date, stop_date = _get_processing_dates(args)
+    start_date, stop_date = utils.get_processing_dates(args)
     process = ProcessModelEvaluation(args, config, storage_session=storage_session)
     for date in date_range(start_date, stop_date):
         date_str = date.strftime("%Y-%m-%d")
@@ -73,19 +73,7 @@ class ProcessModelEvaluation(ProcessBase):
                                                                  self.temp_file.name, uuid=uuid.volatile, overwrite=True)
         return uuid
 
-    def fetch_volatile_uuid(self, product: str) -> Union[str, None]:
-        payload = self._get_payload(product=product)
-        payload['showLegacy'] = True
-        metadata = self.md_api.get(f'api/files', payload)
-        uuid = self._read_volatile_uuid(metadata)
-        self._create_new_version = self._is_create_new_version(metadata)
-        return uuid
-
-    def add_pid(self, full_path: str) -> None:
-        if self._create_new_version:
-            self._pid_utils.add_pid_to_file(full_path)
-
-    def fetch_model_params(self, model: Union[str, None] = 'ecmwf') -> dict:
+    def fetch_model_params(self, model: Optional[str] = 'ecmwf') -> dict:
         # POC: only EC
         payload = self._get_payload()
         if model:
@@ -97,44 +85,13 @@ class ProcessModelEvaluation(ProcessBase):
         return model_metas
 
     @staticmethod
-    def get_l2for_l3_product(product: str):
+    def get_l2for_l3_product(product: str) -> str:
         if product == 'cf':
             return 'categorize'
         if product == 'iwc':
             return 'iwc'
         if product == 'lwc':
             return 'lwc'
-
-
-def _order_metadata(metadata: list) -> list:
-    key = 'measurementDate'
-    if len(metadata) == 2 and metadata[0][key] > metadata[1][key]:
-        metadata.reverse()
-    return metadata
-
-
-def _get_valid_uuids(uuids: list, full_paths: list, valid_full_paths: list) -> list:
-    return [uuid for uuid, full_path in zip(uuids, full_paths) if full_path in valid_full_paths]
-
-
-def _include_records_with_pattern_in_filename(metadata: list, pattern: str) -> list:
-    return [row for row in metadata if re.search(pattern.lower(), row['filename'].lower())]
-
-
-def _exclude_records_with_pattern_in_filename(metadata: list, pattern: str) -> list:
-    return [row for row in metadata if not re.search(pattern.lower(), row['filename'].lower())]
-
-
-def _get_processing_dates(args):
-    if args.date is not None:
-        start_date = args.date
-        stop_date = utils.get_date_from_past(-1, start_date)
-    else:
-        start_date = args.start
-        stop_date = args.stop
-    start_date = utils.date_string_to_date(start_date)
-    stop_date = utils.date_string_to_date(stop_date)
-    return start_date, stop_date
 
 
 def _parse_args(args):

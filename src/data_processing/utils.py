@@ -11,6 +11,7 @@ import pytz
 import requests
 import logging
 import inspect
+import re
 from cloudnetpy.plotting.plot_meta import ATTRIBUTES as ATTR
 from cloudnetpy.utils import get_time
 from cloudnetpy.quality import Quality
@@ -472,3 +473,35 @@ def random_string(n: Optional[int] = 10) -> str:
 
 def full_product_to_l3_product(full_product: str):
     return full_product.split('-')[1]
+
+
+def order_metadata(metadata: list) -> list:
+    key = 'measurementDate'
+    if len(metadata) == 2 and metadata[0][key] > metadata[1][key]:
+        metadata.reverse()
+    return metadata
+
+
+def get_valid_uuids(uuids: list, full_paths: list, valid_full_paths: list) -> list:
+    return [uuid for uuid, full_path in zip(uuids, full_paths) if full_path in valid_full_paths]
+
+
+def include_records_with_pattern_in_filename(metadata: list, pattern: str) -> list:
+    return [row for row in metadata if re.search(pattern.lower(), row['filename'].lower())]
+
+
+def exclude_records_with_pattern_in_filename(metadata: list, pattern: str) -> list:
+    return [row for row in metadata if not re.search(pattern.lower(), row['filename'].lower())]
+
+
+def get_processing_dates(args):
+    if args.date is not None:
+        start_date = args.date
+        stop_date = get_date_from_past(-1, start_date)
+    else:
+        start_date = args.start
+        stop_date = args.stop
+    start_date = date_string_to_date(start_date)
+    stop_date = date_string_to_date(stop_date)
+    return start_date, stop_date
+

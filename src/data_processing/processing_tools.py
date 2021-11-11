@@ -46,6 +46,14 @@ class ProcessBase:
         self.temp_file = NamedTemporaryFile(dir=self._temp_dir_root)
         self.daily_file = NamedTemporaryFile(dir=self._temp_dir_root)
 
+    def fetch_volatile_uuid(self, product: str) -> Union[str, None]:
+        payload = self._get_payload(product=product)
+        payload['showLegacy'] = True
+        metadata = self.md_api.get(f'api/files', payload)
+        uuid = self._read_volatile_uuid(metadata)
+        self._create_new_version = self._is_create_new_version(metadata)
+        return uuid
+
     def print_info(self) -> None:
         logging.info(f'Created: '
                      f'{"New version" if self._create_new_version is True else "Volatile file"}')
