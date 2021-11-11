@@ -7,6 +7,7 @@ import re
 import requests
 import logging
 
+logging.basicConfig(level=logging.INFO)
 
 def create_title(file):
     return f"{file['product']['humanReadableName']} file from {file['site']['humanReadableName']} on {file['measurementDate']}"
@@ -31,9 +32,6 @@ def parse_instrument_type(product):
 
 
 def main():
-    if not len(argv) > 1:
-        logging.error('Last success file not specified')
-        exit(1)
     lastsuccesspath = argv[1]
     lastsuccessfile = open(lastsuccesspath, 'r')
     lines = lastsuccessfile.readlines()
@@ -43,7 +41,7 @@ def main():
     enddate = datetime.now().isoformat()
     products = ['classification', 'lwc', 'iwc', 'drizzle']
 
-    payload = dict(updatedAtFrom=startdate, updatedAtTo=enddate, volatile=False, product=products)
+    payload = dict(updatedAtFrom=startdate, updatedAtTo=enddate, volatile=False, product=products, showLegacy=True)
     logging.info(payload)
 
     variables = utils.get_from_data_portal_api('api/products/variables')
@@ -166,7 +164,7 @@ def main():
 
         headers = {'X-Authorization': f"Bearer {os.environ['DVAS_PORTAL_TOKEN']}"}
         res = requests.post(f"{os.environ['DVAS_PORTAL_URL']}/Metadata/add", json=actris_json, headers=headers)
-        print(file['filename'], res.text)
+        logging.info(f'{file["filename"]} {res.text}')
         res.raise_for_status()
 
     filehandle = open(lastsuccesspath, 'w')
@@ -175,4 +173,10 @@ def main():
 
 
 if __name__ == "__main__":
+    if not len(argv) > 1:
+        logging.error('Last success file not specified')
+        exit(1)
+    if 'DVAS_PORTAL_URL' not in os.environ or 'DVAS_PORTAL_TOKEN' not in os.environ:
+        logging.error('DVAS_PORTAL_URL and DVAS_PORTAL_TOKEN must be specified as environment variables.')
+        exit(1)
     main()
