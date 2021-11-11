@@ -116,7 +116,7 @@ class TestModel:
         assert nc.year == '2020'
         assert nc.month == '10'
         assert nc.day == '14'
-        assert nc.title == 'Model file from Bucharest'
+        assert nc.title == 'ECMWF single-site output over Bucharest'
         assert nc.Conventions == 'CF-1.8'
         assert nc.variables['time'].dtype == 'float32'
         nc.close()

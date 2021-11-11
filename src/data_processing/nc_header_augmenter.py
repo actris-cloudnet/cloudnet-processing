@@ -52,7 +52,8 @@ def harmonize_nc_file(data: dict) -> str:
     nc = _harmonize_units(nc)
     nc.history = _get_history(nc)
     nc.location = _get_location(nc, data)
-    nc.title = _get_title(nc)
+    if file_type != 'model':
+        nc.title = _get_title(nc)
     nc.Conventions = 'CF-1.8'
     nc.close()
     nc_raw.close()
@@ -181,7 +182,7 @@ def _sort_time(nc: netCDF4.Dataset, key: str) -> netCDF4.Dataset:
 
 def _get_history(nc: netCDF4.Dataset) -> str:
     old_history = getattr(nc, 'history', '')
-    new_record = f"{get_time()} +00:00 - Metadata harmonized by CLU.\n"
+    new_record = f"{get_time()} - Metadata harmonized by CLU using data-processing Python package.\n"
     return f"{new_record}{old_history}"
 
 

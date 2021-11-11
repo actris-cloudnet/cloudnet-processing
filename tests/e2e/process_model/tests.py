@@ -22,7 +22,7 @@ class TestModelProcessing:
         assert nc.month == '10'
         assert nc.day == '22'
         assert hasattr(nc, 'pid') is False
-        assert nc.title == f'{self.product.capitalize()} file from Bucharest'
+        assert nc.title == 'ECMWF single-site output over Bucharest'
         assert nc.cloudnet_file_type == self.product
         assert 'netcdf4' in nc.file_format.lower()
         nc.close()
