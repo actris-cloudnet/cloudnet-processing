@@ -45,10 +45,13 @@ def main(args, storage_session=requests.session()):
             models_metadata = process.fetch_model_params()
             for model, m_meta in models_metadata.items():
                 if product in utils.get_product_types(level='3'):
-                    uuid = process.process_level3_day(uuid, product, model, m_meta)
-                    process.upload_product(process.temp_file.name, product, uuid, model)
-                    process.upload_images(process.temp_file.name, product, uuid, model)
-                    process.print_info()
+                    try:
+                        uuid = process.process_level3_day(uuid, product, model, m_meta)
+                        process.upload_product(process.temp_file.name, product, uuid, model)
+                        process.upload_images(process.temp_file.name, product, uuid, model)
+                        process.print_info()
+                    except (RawDataMissingError, MiscError, NotImplementedError) as err:
+                        logging.warning(err)
 
 
 class ProcessModelEvaluation(ProcessBase):
@@ -61,6 +64,11 @@ class ProcessModelEvaluation(ProcessBase):
         payload = self._get_payload(product=l2_product)
         metadata = self.md_api.get('api/files', payload)
         self._check_response_length(metadata)
+        metadict = {
+            l2_product: metadata[0],
+            'model': model_meta[0][0]
+        }
+        self._check_source_status(full_product, metadict)
         if metadata:
             l2_file = self._storage_api.download_product(metadata[0], self.temp_dir.name)
         else:

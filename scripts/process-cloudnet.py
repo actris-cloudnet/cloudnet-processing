@@ -130,20 +130,6 @@ class ProcessCloudnet(ProcessBase):
         identifier = utils.get_product_identifier(product)
         return uuid, identifier
 
-    def _check_source_status(self, product: str, meta_records: dict) -> None:
-        product_timestamp = self._get_product_timestamp(product)
-        if product_timestamp is None:
-            return
-        source_timestamps = [meta['updatedAt'] for _, meta in meta_records.items()]
-        if np.all([timestamp < product_timestamp for timestamp in source_timestamps]):
-            raise MiscError('Source data already processed')
-
-    def _get_product_timestamp(self, product: str) -> str:
-        payload = self._get_payload(product=product)
-        product_metadata = self.md_api.get(f'api/files', payload)
-        if product_metadata and self.is_reprocess is False and self.is_reprocess_volatile is False:
-            return product_metadata[0]['updatedAt']
-
     def add_pid(self, full_path: str) -> None:
         if self._create_new_version:
             self._pid_utils.add_pid_to_file(full_path)

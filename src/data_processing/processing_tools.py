@@ -3,6 +3,7 @@ import glob
 import shutil
 import logging
 import requests
+import numpy as np
 from typing import Union, Tuple, Optional
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 from data_processing import utils
@@ -203,6 +204,20 @@ class ProcessBase:
     def _check_response_length(metadata: list) -> None:
         if len(metadata) > 1:
             logging.warning('API responded with several files')
+
+    def _check_source_status(self, product: str, meta_records: dict) -> None:
+        product_timestamp = self._get_product_timestamp(product)
+        if product_timestamp is None:
+            return
+        source_timestamps = [meta['updatedAt'] for _, meta in meta_records.items()]
+        if np.all([timestamp < product_timestamp for timestamp in source_timestamps]):
+            raise MiscError('Source data already processed')
+
+    def _get_product_timestamp(self, product: str) -> str:
+        payload = self._get_payload(product=product)
+        product_metadata = self.md_api.get(f'api/files', payload)
+        if product_metadata and self.is_reprocess is False and self.is_reprocess_volatile is False:
+            return product_metadata[0]['updatedAt']
 
 
 def _read_site_info(args) -> tuple:
