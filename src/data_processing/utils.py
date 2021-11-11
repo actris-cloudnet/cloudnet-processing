@@ -75,7 +75,6 @@ def get_product_types(level: Optional[str] = None) -> list:
 def get_calibration_factor(site: str, date: str, instrument: str) -> Union[float, None]:
     data_portal_url = fetch_data_portal_url()
     url = f"{data_portal_url}api/calibration"
-    logging.info(url)
     payload = {
         'site': site,
         'date': date,
