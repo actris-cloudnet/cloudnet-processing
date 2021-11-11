@@ -14,6 +14,7 @@ from data_processing.utils import get_product_types
 sys.path.append('scripts/')
 PROCESS_CLOUDNET = __import__("process-cloudnet")
 PROCESS_CLOUDNET_MODEL = __import__("process-model")
+PROCESS_CLOUDNET_MODEL_EVALUATION = __import__("process-model-evaluation")
 
 
 def init_test_session():
@@ -143,7 +144,7 @@ def _fix_identifier(identifier: str) -> str:
 def _get_source_file_paths(identifier: str) -> tuple:
     is_level_2_product = False
     for product in get_product_types('2'):
-        if product in identifier or identifier == 'categorize':
+        if product in identifier or identifier in ['categorize', 'model_evaluation']:
             is_level_2_product = True
     if is_level_2_product is True:
         source_dir = 'tests/data/products'
@@ -165,9 +166,11 @@ def process(session,
             temp_file: NamedTemporaryFile,
             script_path: str,
             marker: str = None,
-            is_model_processing: bool = False):
-    if is_model_processing is True:
+            processing_mode: str = ''):
+    if processing_mode is 'model':
         PROCESS_CLOUDNET_MODEL.main(main_args, storage_session=session)
+    elif processing_mode is 'model_evaluation':
+        PROCESS_CLOUDNET_MODEL_EVALUATION.main(main_args, storage_session=session)
     else:
         PROCESS_CLOUDNET.main(main_args, storage_session=session)
     pytest_args = ['pytest', '-v', '-s', f'{script_path}/tests.py', '--full_path', temp_file.name,
@@ -189,3 +192,11 @@ def parse_args(args: str) -> list:
     for c in chars_to_remove:
         args = args.replace(c, '')
     return args.split(',')
+
+
+def read_log_file(script_path: str):
+    f = open(f'{script_path}/md.log')
+    data = f.readlines()
+    data = [line for line in data if '/api/sites' not in line and '/api/products' not in line]  # ignore trash lines
+    f.close()
+    return data

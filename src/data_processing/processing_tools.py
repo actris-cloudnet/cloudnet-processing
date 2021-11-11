@@ -3,6 +3,7 @@ import glob
 import shutil
 import logging
 import requests
+import numpy as np
 from typing import Union, Tuple, Optional
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 from data_processing import utils
@@ -46,32 +47,60 @@ class ProcessBase:
         self.temp_file = NamedTemporaryFile(dir=self._temp_dir_root)
         self.daily_file = NamedTemporaryFile(dir=self._temp_dir_root)
 
+    def fetch_volatile_uuid(self, product: str) -> Union[str, None]:
+        payload = self._get_payload(product=product)
+        payload['showLegacy'] = True
+        metadata = self.md_api.get(f'api/files', payload)
+        uuid = self._read_volatile_uuid(metadata)
+        self._create_new_version = self._is_create_new_version(metadata)
+        return uuid
+
     def print_info(self) -> None:
         logging.info(f'Created: '
                      f'{"New version" if self._create_new_version is True else "Volatile file"}')
 
-    def upload_product_and_images(self,
-                                  full_path: str,
-                                  product: str,
-                                  uuid: Uuid,
-                                  model_or_product_id: str) -> None:
-        s3key = self._get_product_key(model_or_product_id)
-        file_info = self._storage_api.upload_product(full_path, s3key)
-        if 'hidden' not in self._site_type:
-            img_metadata = self._storage_api.create_and_upload_images(full_path, s3key,
-                                                                      uuid.product, product)
+    def upload_product(self,
+                       full_path: str,
+                       product: str,
+                       uuid: Uuid,
+                       model_or_instrument_id: str = None) -> None:
+        if product in utils.get_product_types(level='3'):
+            s3key = self._get_l3_product_key(product, model_or_instrument_id)
         else:
-            img_metadata = []
+            s3key = self._get_product_key(model_or_instrument_id)
+        file_info = self._storage_api.upload_product(full_path, s3key)
         payload = utils.create_product_put_payload(full_path, file_info, site=self.site)
         if product == 'model':
             del payload['cloudnetpyVersion']
-            payload['model'] = model_or_product_id
+            payload['model'] = model_or_instrument_id
+        payload['product'] = product  # L3 files use different products in NC vars
         self.md_api.put('files', s3key, payload)
-        self.md_api.put_images(img_metadata, uuid.product)
         if product in utils.get_product_types(level='1b'):
             self.update_statuses(uuid.raw)
+
+    def upload_images(self,
+                      full_path: str,
+                      product: str,
+                      uuid: Uuid,
+                      model_or_instrument_id: str = None) -> None:
+        if product in utils.get_product_types(level='3'):
+            s3key = self._get_l3_product_key(product, model_or_instrument_id)
+        else:
+            s3key = self._get_product_key(model_or_instrument_id)
+        img_metadata = []
+        if 'hidden' not in self._site_type:
+            img_metadata = self._storage_api.create_and_upload_images(full_path,
+                                                                      s3key,
+                                                                      uuid.product,
+                                                                      product,
+                                                                      model=model_or_instrument_id)
+        self.md_api.put_images(img_metadata, uuid.product)
+
+    def upload_quality_report(self,
+                              full_path: str,
+                              uuid: Uuid) -> None:
         quality_report = utils.create_quality_report(full_path)
-        self.md_api.put('quality', payload['uuid'], quality_report)
+        self.md_api.put('quality', uuid.product, quality_report)
 
     def _read_volatile_uuid(self, metadata: list) -> Union[str, None]:
         if self._parse_volatile_value(metadata) is True:
@@ -79,6 +108,18 @@ class ProcessBase:
             assert isinstance(uuid, str) and len(uuid) > 0
             return uuid
         return None
+
+    def _sort_model_meta2dict(self, metadata: list) -> dict:
+        """Sort models and cycles to same dict key. Removes Gdas"""
+        if metadata:
+            models_meta = {}
+            models = [metadata[i]['model']['id'] for i in range(len(metadata))]
+            for m_id in models:
+                m_metas = [metadata for i in range(len(metadata)) if m_id in metadata[i]['model']['id']]
+                models_meta[m_id] = m_metas
+            return models_meta
+        else:
+            raise RuntimeError('No existing model files')
 
     def _is_create_new_version(self, metadata) -> bool:
         if self._parse_volatile_value(metadata) is False:
@@ -156,10 +197,27 @@ class ProcessBase:
     def _get_product_key(self, identifier: str) -> str:
         return f"{self.date_str.replace('-', '')}_{self.site}_{identifier}.nc"
 
+    def _get_l3_product_key(self, product: str, model: str) -> str:
+        return f"{self.date_str.replace('-', '')}_{self.site}_{product}_downsampled_{model}.nc"
+
     @staticmethod
     def _check_response_length(metadata: list) -> None:
         if len(metadata) > 1:
             logging.warning('API responded with several files')
+
+    def _check_source_status(self, product: str, meta_records: dict) -> None:
+        product_timestamp = self._get_product_timestamp(product)
+        if product_timestamp is None:
+            return
+        source_timestamps = [meta['updatedAt'] for _, meta in meta_records.items()]
+        if np.all([timestamp < product_timestamp for timestamp in source_timestamps]):
+            raise MiscError('Source data already processed')
+
+    def _get_product_timestamp(self, product: str) -> str:
+        payload = self._get_payload(product=product)
+        product_metadata = self.md_api.get(f'api/files', payload)
+        if product_metadata and self.is_reprocess is False and self.is_reprocess_volatile is False:
+            return product_metadata[0]['updatedAt']
 
 
 def _read_site_info(args) -> tuple:

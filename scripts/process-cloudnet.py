@@ -29,7 +29,7 @@ def main(args, storage_session=requests.session()):
     args = _parse_args(args)
     utils.init_logger(args)
     config = utils.read_main_conf()
-    start_date, stop_date = _get_processing_dates(args)
+    start_date, stop_date = utils.get_processing_dates(args)
     process = ProcessCloudnet(args, config, storage_session=storage_session)
     for date in date_range(start_date, stop_date):
         date_str = date.strftime("%Y-%m-%d")
@@ -48,10 +48,15 @@ def main(args, storage_session=requests.session()):
                     uuid, identifier = process.process_level2(uuid, product)
                 elif product == 'categorize':
                     uuid, identifier = process.process_categorize(uuid)
-                else:
+                elif product in utils.get_product_types(level='1b'):
                     uuid, identifier = process.process_instrument(uuid, product)
+                else:
+                    logging.info(f'Skipping product {product}')
+                    continue
                 process.add_pid(process.temp_file.name)
-                process.upload_product_and_images(process.temp_file.name, product, uuid, identifier)
+                process.upload_product(process.temp_file.name, product, uuid, identifier)
+                process.upload_images(process.temp_file.name, product, uuid, identifier)
+                process.upload_quality_report(process.temp_file.name, uuid)
                 process.print_info()
             except (RawDataMissingError, MiscError, NotImplementedError) as err:
                 logging.warning(err)
@@ -59,7 +64,6 @@ def main(args, storage_session=requests.session()):
                 logging.error(err)
             except (HTTPError, ConnectionError, RuntimeError, ValueError) as err:
                 utils.send_slack_alert(err, 'data', args.site, date_str, product)
-            processing_tools.clean_dir(process.temp_dir.name)
 
 
 class ProcessCloudnet(ProcessBase):
@@ -126,28 +130,6 @@ class ProcessCloudnet(ProcessBase):
         identifier = utils.get_product_identifier(product)
         return uuid, identifier
 
-    def _check_source_status(self, product: str, meta_records: dict) -> None:
-        product_timestamp = self._get_product_timestamp(product)
-        if product_timestamp is None:
-            return
-        source_timestamps = [meta['updatedAt'] for _, meta in meta_records.items()]
-        if np.all([timestamp < product_timestamp for timestamp in source_timestamps]):
-            raise MiscError('Source data already processed')
-
-    def _get_product_timestamp(self, product: str) -> str:
-        payload = self._get_payload(product=product)
-        product_metadata = self.md_api.get(f'api/files', payload)
-        if product_metadata and self.is_reprocess is False and self.is_reprocess_volatile is False:
-            return product_metadata[0]['updatedAt']
-
-    def fetch_volatile_uuid(self, product: str) -> Union[str, None]:
-        payload = self._get_payload(product=product)
-        payload['showLegacy'] = True
-        metadata = self.md_api.get(f'api/files', payload)
-        uuid = self._read_volatile_uuid(metadata)
-        self._create_new_version = self._is_create_new_version(metadata)
-        return uuid
-
     def add_pid(self, full_path: str) -> None:
         if self._create_new_version:
             self._pid_utils.add_pid_to_file(full_path)
@@ -160,11 +142,11 @@ class ProcessCloudnet(ProcessBase):
         payload = self._get_payload(instrument=instrument, skip_created=True)
         upload_metadata = self.md_api.get('upload-metadata', payload)
         if include_pattern is not None:
-            upload_metadata = _include_records_with_pattern_in_filename(upload_metadata,
-                                                                        include_pattern)
+            upload_metadata = utils.include_records_with_pattern_in_filename(upload_metadata,
+                                                                             include_pattern)
         if exclude_pattern is not None:
-            upload_metadata = _exclude_records_with_pattern_in_filename(upload_metadata,
-                                                                        exclude_pattern)
+            upload_metadata = utils.exclude_records_with_pattern_in_filename(upload_metadata,
+                                                                             exclude_pattern)
         arg = self.temp_file if largest_only else None
         self._check_raw_data_status(upload_metadata)
         return self._download_raw_files(upload_metadata, arg)
@@ -176,8 +158,8 @@ class ProcessCloudnet(ProcessBase):
         payload['status'] = 'uploaded'
         upload_metadata = self.md_api.get('upload-metadata', payload)
         if exclude_pattern is not None:
-            upload_metadata = _exclude_records_with_pattern_in_filename(upload_metadata,
-                                                                        exclude_pattern)
+            upload_metadata = utils.exclude_records_with_pattern_in_filename(upload_metadata,
+                                                                             exclude_pattern)
         return self._download_raw_files(upload_metadata)
 
     def download_adjoining_daily_files(self, instrument: str) -> Tuple[list, list]:
@@ -186,7 +168,7 @@ class ProcessCloudnet(ProcessBase):
         payload['dateFrom'] = self.date_str
         payload['dateTo'] = next_day
         upload_metadata = self.md_api.get('upload-metadata', payload)
-        upload_metadata = _order_metadata(upload_metadata)
+        upload_metadata = utils.order_metadata(upload_metadata)
         if not upload_metadata:
             raise RawDataMissingError
         if not self._is_unprocessed_data(upload_metadata) and not (self.is_reprocess
@@ -231,37 +213,6 @@ class ProcessCloudnet(ProcessBase):
             logging.warning(f'More than one type of {instrument_type} data, '
                             f'using {selected_instrument}')
         return selected_instrument
-
-
-def _order_metadata(metadata: list) -> list:
-    key = 'measurementDate'
-    if len(metadata) == 2 and metadata[0][key] > metadata[1][key]:
-        metadata.reverse()
-    return metadata
-
-
-def _get_valid_uuids(uuids: list, full_paths: list, valid_full_paths: list) -> list:
-    return [uuid for uuid, full_path in zip(uuids, full_paths) if full_path in valid_full_paths]
-
-
-def _include_records_with_pattern_in_filename(metadata: list, pattern: str) -> list:
-    return [row for row in metadata if re.search(pattern.lower(), row['filename'].lower())]
-
-
-def _exclude_records_with_pattern_in_filename(metadata: list, pattern: str) -> list:
-    return [row for row in metadata if not re.search(pattern.lower(), row['filename'].lower())]
-
-
-def _get_processing_dates(args):
-    if args.date is not None:
-        start_date = args.date
-        stop_date = utils.get_date_from_past(-1, start_date)
-    else:
-        start_date = args.start
-        stop_date = args.stop
-    start_date = utils.date_string_to_date(start_date)
-    stop_date = utils.date_string_to_date(stop_date)
-    return start_date, stop_date
 
 
 def _parse_args(args):

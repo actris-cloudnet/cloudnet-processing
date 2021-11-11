@@ -1,7 +1,7 @@
 import netCDF4
 from os import path
 import pytest
-from test_utils.utils import parse_args, count_strings
+from test_utils.utils import parse_args, count_strings, read_log_file
 
 SCRIPT_PATH = path.dirname(path.realpath(__file__))
 
@@ -22,8 +22,7 @@ class Test:
         nc.close()
 
     def test_metadata_api_calls(self):
-        f = open(f'{SCRIPT_PATH}/md.log')
-        data = f.readlines()
+        data = read_log_file(SCRIPT_PATH)
 
         n_raw_files = 2
 
@@ -47,11 +46,11 @@ class Test:
         assert f'POST /upload/metadata' in data[5]
         assert f'PUT /upload/data' in data[6]
 
-        # PUT product file
-        assert f'PUT /files/{self.date_short}_{self.site}_{self.instrument}.nc' in data[7]
+        # GET calibration
+        assert "GET /api/calibration" in data[7]
 
-        # PUT image
-        assert f'PUT /visualizations/{self.date_short}_{self.site}_{self.instrument}-' in data[8]
+        # PUT product file
+        assert f'PUT /files/{self.date_short}_{self.site}_{self.instrument}.nc' in data[8]
 
         # Update status of raw files
         file_put = '"POST /upload-metadata HTTP/1.1" 200 -'

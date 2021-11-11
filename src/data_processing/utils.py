@@ -1,5 +1,3 @@
-import random
-import string
 import base64
 import datetime
 import hashlib
@@ -13,6 +11,7 @@ import pytz
 import requests
 import logging
 import inspect
+import re
 from cloudnetpy.plotting.plot_meta import ATTRIBUTES as ATTR
 from cloudnetpy.utils import get_time
 from cloudnetpy.quality import Quality
@@ -67,7 +66,7 @@ def read_site_info(site_name: str) -> dict:
 
 def get_product_types(level: Optional[str] = None) -> list:
     """Return Cloudnet processing types."""
-    products = get_from_data_portal_api('api/products')
+    products = get_from_data_portal_api('api/products', {'developer': True})
     if level is not None:
         return [product['id'] for product in products if product['level'] == level]
     return [product['id'] for product in products]
@@ -75,17 +74,17 @@ def get_product_types(level: Optional[str] = None) -> list:
 
 def get_calibration_factor(site: str, date: str, instrument: str) -> Union[float, None]:
     data_portal_url = fetch_data_portal_url()
-    url = f"{data_portal_url}api/calibration/"
+    url = f"{data_portal_url}api/calibration"
     logging.info(url)
     payload = {
         'site': site,
         'date': date,
         'instrument': instrument
     }
-    res = requests.get(url, payload).json()
-    if isinstance(res, dict):
+    res = requests.get(url, payload)
+    if not res.ok:
         return None
-    return res[0].get('calibrationFactor', None)
+    return res.json()[0].get('calibrationFactor', None)
 
 
 def get_model_types() -> list:
@@ -220,6 +219,26 @@ def get_fields_for_plot(cloudnet_file_type: str) -> Tuple[list, int]:
     else:
         raise NotImplementedError
     return fields, max_alt
+
+
+def get_fields_for_l3_plot(product: str, model: str) -> list:
+    """Return list of variables and maximum altitude for Cloudnet quicklooks.
+
+    Args:
+        product (str): Name of product, e.g., 'iwc'.
+        model (str): Name of the model, e.g., 'ecmwf'.
+    Returns:
+        list: List of wanted variables
+    """
+    if product == 'l3-iwc':
+        fields = [f'{model}_iwc', f'iwc_{model}']
+    elif product == 'l3-lwc':
+        fields = [f'{model}_lwc', f'lwc_{model}']
+    elif product == 'l3-cf':
+        fields = [f'{model}_cf', f'cf_V_{model}']
+    else:
+        raise NotImplementedError
+    return fields
 
 
 def get_var_id(cloudnet_file_type: str, field: str) -> str:
@@ -445,10 +464,44 @@ def get_from_data_portal_api(end_point: str, payload: Optional[dict] = None) -> 
 
 def fetch_data_portal_url() -> str:
     config = read_main_conf()
-    if 'test' in config['STORAGE_SERVICE_URL']:
-        return 'https://cloudnet.fmi.fi/'
     return config['DATAPORTAL_URL']
 
 
 def random_string(n: Optional[int] = 10) -> str:
     return ''.join(random.choices(string.ascii_lowercase, k=n))
+
+
+def full_product_to_l3_product(full_product: str):
+    return full_product.split('-')[1]
+
+
+def order_metadata(metadata: list) -> list:
+    key = 'measurementDate'
+    if len(metadata) == 2 and metadata[0][key] > metadata[1][key]:
+        metadata.reverse()
+    return metadata
+
+
+def get_valid_uuids(uuids: list, full_paths: list, valid_full_paths: list) -> list:
+    return [uuid for uuid, full_path in zip(uuids, full_paths) if full_path in valid_full_paths]
+
+
+def include_records_with_pattern_in_filename(metadata: list, pattern: str) -> list:
+    return [row for row in metadata if re.search(pattern.lower(), row['filename'].lower())]
+
+
+def exclude_records_with_pattern_in_filename(metadata: list, pattern: str) -> list:
+    return [row for row in metadata if not re.search(pattern.lower(), row['filename'].lower())]
+
+
+def get_processing_dates(args):
+    if args.date is not None:
+        start_date = args.date
+        stop_date = get_date_from_past(-1, start_date)
+    else:
+        start_date = args.start
+        stop_date = args.stop
+    start_date = date_string_to_date(start_date)
+    stop_date = date_string_to_date(stop_date)
+    return start_date, stop_date
+
