@@ -119,7 +119,7 @@ class ProcessBase:
                 models_meta[m_id] = m_metas
             return models_meta
         else:
-            raise RuntimeError('No existing model files')
+            raise MiscError('No existing model files')
 
     def _is_create_new_version(self, metadata) -> bool:
         if self._parse_volatile_value(metadata) is False:

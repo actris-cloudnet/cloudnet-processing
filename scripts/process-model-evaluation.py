@@ -42,7 +42,11 @@ def main(args, storage_session=requests.session()):
             logging.info(f'Processing {product} product, {args.site} {date_str}')
             uuid = Uuid()
             uuid.volatile = process.fetch_volatile_uuid(product)
-            models_metadata = process.fetch_model_params()
+            try:
+                models_metadata = process.fetch_model_params()
+            except MiscError as err:
+                logging.warning(err)
+                continue
             for model, m_meta in models_metadata.items():
                 if product in utils.get_product_types(level='3'):
                     try:
