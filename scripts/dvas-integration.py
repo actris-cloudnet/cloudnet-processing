@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 import os
 from sys import argv
+from urllib.error import HTTPError
+
 from data_processing import utils
 from datetime import datetime
 import re
 import requests
 import logging
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def create_title(file):
     return f"{file['product']['humanReadableName']} file from {file['site']['humanReadableName']} on {file['measurementDate']}"
@@ -42,7 +44,7 @@ def main():
     products = ['classification', 'lwc', 'iwc', 'drizzle']
 
     payload = dict(updatedAtFrom=startdate, updatedAtTo=enddate, volatile=False, product=products, showLegacy=True)
-    logging.info(payload)
+    logging.info(f'GET {payload}')
 
     variables = utils.get_from_data_portal_api('api/products/variables')
     if 'status' in variables and variables['status'] >= 300:
@@ -67,7 +69,7 @@ def main():
         if not site_dvas_id:  # Skip sites that are not in dvas db
             continue
 
-        logging.info(f'{file["filename"]}')
+        logging.info(f'POST {file["filename"]}')
 
         actris_json = {
           'md_metadata': { # mandatory
@@ -168,7 +170,9 @@ def main():
         }
 
         res = s.post(f"{os.environ['DVAS_PORTAL_URL']}/Metadata/add", json=actris_json)
-        res.raise_for_status()
+        if not res.ok:
+            logging.error(f'{res.status_code} {res.text}')
+            exit(2)
 
     filehandle = open(lastsuccesspath, 'w')
     filehandle.write(enddate)
