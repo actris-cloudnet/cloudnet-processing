@@ -140,7 +140,7 @@ $ docker run --env-file test.env test pytest
 
 Run end-to-end tests:
 ```
-$ docker run --env-file test.env test /bin/sh -c 'for f in tests/e2e/*/main.py; do $f; done'
+$ docker run --env-file e2e-test.env test /bin/sh -c 'for f in tests/e2e/*/main.py; do $f; done'
 ```
 
 ### Licence
