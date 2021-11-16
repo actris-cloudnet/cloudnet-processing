@@ -53,6 +53,9 @@ def main():
 
     logging.info(f'About to upload {len(files)} metadata entries.')
 
+    s = requests.Session()
+    s.headers.update({'X-Authorization': f"Bearer {os.environ['DVAS_PORTAL_TOKEN']}"})
+
     for file in files:
         site = file['site']
         product = file['product']
@@ -63,6 +66,8 @@ def main():
 
         if not site_dvas_id:  # Skip sites that are not in dvas db
             continue
+
+        logging.info(f'{file["filename"]}')
 
         actris_json = {
           'md_metadata': { # mandatory
@@ -162,9 +167,7 @@ def main():
           },
         }
 
-        headers = {'X-Authorization': f"Bearer {os.environ['DVAS_PORTAL_TOKEN']}"}
-        res = requests.post(f"{os.environ['DVAS_PORTAL_URL']}/Metadata/add", json=actris_json, headers=headers)
-        logging.info(f'{file["filename"]} {res.text}')
+        res = s.post(f"{os.environ['DVAS_PORTAL_URL']}/Metadata/add", json=actris_json)
         res.raise_for_status()
 
     filehandle = open(lastsuccesspath, 'w')
