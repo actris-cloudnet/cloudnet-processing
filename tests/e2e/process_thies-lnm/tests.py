@@ -18,7 +18,6 @@ class TestProcessing:
         assert self.nc.year == "2021"
         assert self.nc.month == "09"
         assert self.nc.day == "15"
-        assert self.nc.title == f'Disdrometer file from Lindenberg'
         assert self.nc.cloudnet_file_type == 'disdrometer'
         assert self.nc.Conventions == 'CF-1.8'
         assert hasattr(self.nc, 'pid') is False

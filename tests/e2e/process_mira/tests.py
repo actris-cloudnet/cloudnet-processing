@@ -11,7 +11,7 @@ class TestMIRAProcessing:
 
     product = 'radar'
     instrument = 'mira'
-    n_img = len(utils.get_fields_for_plot(product)[0])
+    n_img = 4
 
     @pytest.fixture(autouse=True)
     def _fetch_params(self, params):
@@ -27,7 +27,6 @@ class TestMIRAProcessing:
         assert nc.year == '2021'
         assert nc.month == '01'
         assert nc.day == '27'
-        assert nc.title == f'{self.product.capitalize()} file from Jülich'
         assert nc.cloudnet_file_type == self.product
         assert nc.Conventions == 'CF-1.8'
         assert nc.source == 'METEK MIRA-35'

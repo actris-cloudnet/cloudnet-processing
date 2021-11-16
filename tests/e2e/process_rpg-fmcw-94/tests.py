@@ -11,7 +11,6 @@ class TestRPGFMCW94Processing:
 
     product = 'radar'
     instrument = 'rpg-fmcw-94'
-    n_img = len(utils.get_fields_for_plot(product)[0])
 
     @pytest.fixture(autouse=True)
     def _fetch_params(self, params):
@@ -27,7 +26,6 @@ class TestRPGFMCW94Processing:
         assert nc.year == '2020'
         assert nc.month == '10'
         assert nc.day == '22'
-        assert nc.title == f'{self.product.capitalize()} file from Bucharest'
         assert nc.cloudnet_file_type == self.product
         assert nc.Conventions == 'CF-1.8'
         assert hasattr(nc, 'pid') is False
@@ -37,7 +35,8 @@ class TestRPGFMCW94Processing:
         data = read_log_file(SCRIPT_PATH)
         n_raw_files = 2
         n_gets = 4  # product check (1) + instrument checks (2)  + rpg-fmcw-94 raw (1)
-        n_puts = 2 + self.n_img
+        n_img = 4
+        n_puts = 2 + n_img
         n_posts = n_raw_files
 
         assert len(data) == n_gets + n_puts + n_posts
@@ -55,7 +54,7 @@ class TestRPGFMCW94Processing:
 
         # PUT images
         img_put = '"PUT /visualizations/20201022_bucharest_rpg-fmcw-94-'
-        assert count_strings(data, img_put) == self.n_img
+        assert count_strings(data, img_put) == n_img
 
         # POST metadata
         file_post = '"POST /upload-metadata HTTP/1.1" 200 -'

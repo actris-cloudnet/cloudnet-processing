@@ -6,9 +6,9 @@ from test_utils.utils import count_strings, read_log_file
 SCRIPT_PATH = path.dirname(path.realpath(__file__))
 
 
-class TestClassificationProcessing:
+class TestModelEvaluationProcessing:
 
-    n_img = 2
+    n_img = 0
 
     @pytest.fixture(autouse=True)
     def _fetch_params(self, params):
