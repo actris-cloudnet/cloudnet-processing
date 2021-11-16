@@ -209,7 +209,7 @@ def get_fields_for_plot(cloudnet_file_type: str) -> Tuple[list, int]:
     elif cloudnet_file_type == 'mwr':
         fields = ['LWP']
     elif cloudnet_file_type == 'radar':
-        fields = ['Ze', 'v', 'width', 'ldr']
+        fields = ['Zh', 'v', 'width', 'ldr', 'sldr']
     elif cloudnet_file_type == 'disdrometer':
         fields = ['rainfall_rate', 'n_particles']
     elif cloudnet_file_type == 'drizzle':
