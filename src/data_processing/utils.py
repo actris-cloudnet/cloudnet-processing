@@ -1,20 +1,23 @@
+"""Helper functions."""
 import base64
 import datetime
 import hashlib
+import inspect
+import logging
 import os
-import sys
+import random
+import re
 import shutil
+import string
+import sys
 from typing import Tuple, Optional
 from typing import Union
 import netCDF4
 import pytz
 import requests
-import logging
-import inspect
-import re
 from cloudnetpy.plotting.plot_meta import ATTRIBUTES as ATTR
-from cloudnetpy.utils import get_time
 from cloudnetpy.quality import Quality
+from cloudnetpy.utils import get_time
 
 
 def create_product_put_payload(full_path: str,
@@ -22,9 +25,8 @@ def create_product_put_payload(full_path: str,
                                product: Optional[str] = None,
                                site: Optional[str] = None,
                                date_str: Optional[str] = None) -> dict:
-
+    """Creates put payload for data portal."""
     nc = netCDF4.Dataset(full_path, 'r')
-
     payload = {
         'product': product or nc.cloudnet_file_type,
         'site': site or nc.location.lower(),
@@ -46,6 +48,7 @@ def create_product_put_payload(full_path: str,
 
 
 def get_file_format(nc: netCDF4.Dataset):
+    """Returns netCDF file format."""
     file_format = nc.file_format.lower()
     if 'netcdf4' in file_format:
         return 'HDF5 (NetCDF4)'
@@ -55,7 +58,7 @@ def get_file_format(nc: netCDF4.Dataset):
 
 
 def read_site_info(site_name: str) -> dict:
-    """Read site information from Cloudnet http API."""
+    """Reads site information from Cloudnet http API."""
     sites = get_from_data_portal_api('api/sites', {'developer': True})
     for site in sites:
         if site['id'] == site_name:
@@ -65,7 +68,7 @@ def read_site_info(site_name: str) -> dict:
 
 
 def get_product_types(level: Optional[str] = None) -> list:
-    """Return Cloudnet processing types."""
+    """Returns Cloudnet processing types."""
     products = get_from_data_portal_api('api/products', {'developer': True})
     if level is not None:
         return [product['id'] for product in products if product['level'] == level]
@@ -73,6 +76,7 @@ def get_product_types(level: Optional[str] = None) -> list:
 
 
 def get_calibration_factor(site: str, date: str, instrument: str) -> Union[float, None]:
+    """Gets calibration factor."""
     data_portal_url = fetch_data_portal_url()
     url = f"{data_portal_url}api/calibration"
     payload = {
@@ -87,6 +91,7 @@ def get_calibration_factor(site: str, date: str, instrument: str) -> Union[float
 
 
 def get_model_types() -> list:
+    """Returns list of model types."""
     models = get_from_data_portal_api('api/models')
     return [model['id'] for model in models]
 
@@ -119,6 +124,7 @@ def send_slack_alert(error_msg,
                      date: Optional[str] = None,
                      product: Optional[str] = None,
                      critical: Optional[bool] = False) -> None:
+    """Sends notification to slack."""
     config = read_main_conf()
     if critical is True:
         logging.critical(error_msg)
@@ -165,11 +171,12 @@ def send_slack_alert(error_msg,
 
 
 def read_main_conf() -> dict:
-    """Read config from env vars."""
+    """Reads config from env vars."""
     return dict(os.environ)
 
 
 def str2bool(s: str) -> Union[bool, str]:
+    """Converts string to bool."""
     return False if s == 'False' else True if s == 'True' else s
 
 
@@ -266,6 +273,7 @@ def _calc_hash_sum(filename, method, is_base64: Optional[bool] = False) -> str:
 
 
 def get_product_bucket(volatile: Optional[bool] = False) -> str:
+    """Retrurns correct s3 bucket."""
     return 'cloudnet-product-volatile' if volatile else 'cloudnet-product'
 
 
@@ -278,6 +286,7 @@ def is_volatile_file(filename: str) -> bool:
 
 
 def get_product_identifier(product: str) -> str:
+    """Returns product identifier."""
     if product == 'iwc':
         return 'iwc-Z-T-method'
     if product == 'lwc':
@@ -285,13 +294,15 @@ def get_product_identifier(product: str) -> str:
     return product
 
 
+def get_model_identifier(filename: str) -> str:
+    """Returns model identifier."""
+    return filename.split('_')[-1][:-3]
+
+
 def get_level1b_type(instrument_id: str) -> str:
+    """Returns level 1b types."""
     data = get_from_data_portal_api('api/instruments')
     return [instru['type'] for instru in data if instrument_id == instru['id']][0]
-
-
-def get_model_identifier(filename: str) -> str:
-    return filename.split('_')[-1][:-3]
 
 
 class MiscError(Exception):
@@ -334,6 +345,7 @@ def shift_datetime(date_time: str, offset: int) -> str:
 
 
 def get_helsinki_datetime() -> datetime.datetime:
+    """Returns Helsinki datetime in UTC."""
     time_zone = pytz.timezone('Europe/Helsinki')
     dt = datetime.datetime.now()
     return dt.astimezone(time_zone)
@@ -348,6 +360,7 @@ def concatenate_text_files(filenames: list, output_filename: str) -> None:
 
 
 def init_logger(args: Optional = None) -> None:
+    """Initializes logger."""
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
@@ -357,7 +370,6 @@ def init_logger(args: Optional = None) -> None:
     stderr_handler.setFormatter(formatter)
     logger.addHandler(output_file_handler)
     logger.addHandler(stderr_handler)
-
     script_name = inspect.stack()[2][1]
     msg = f'Starting {script_name}'
     msg += f' with args {vars(args)}' if args is not None else ''
@@ -365,6 +377,7 @@ def init_logger(args: Optional = None) -> None:
 
 
 def create_quality_report(filename: str) -> dict:
+    """Creates quality report for data portal."""
     quality = Quality(filename)
     meta_res = quality.check_metadata()
     data_res = quality.check_data()
@@ -428,13 +441,13 @@ def _format_test_name(test_name: str) -> str:
 def _get_test_description(test_name: str) -> str:
     if test_name == 'outOfBounds':
         return 'Find data values that are unexpectedly large or small.'
-    elif test_name == 'invalidGlobalAttributeValues':
+    if test_name == 'invalidGlobalAttributeValues':
         return 'Find attribute values that are unexpectedly large or small.'
-    elif test_name == 'invalidUnits':
+    if test_name == 'invalidUnits':
         return 'Find unexpected variable units.'
-    elif test_name == 'missingVariables':
+    if test_name == 'missingVariables':
         return 'Find variables that should be included.'
-    elif test_name == 'missingGlobalAttributes':
+    if test_name == 'missingGlobalAttributes':
         return 'Find global attributes that should be included.'
     return ''
 
@@ -446,35 +459,42 @@ def _calc_quality(quality: Quality) -> float:
 
 
 def get_temp_dir(config: dict) -> str:
+    """Returns temporary directory path."""
     return config.get('TEMP_DIR', '/tmp')
 
 
 def get_cloudnet_sites() -> list:
+    """Returns cloudnet site identifiers."""
     sites = get_from_data_portal_api('api/sites')
     sites = [site['id'] for site in sites if 'cloudnet' in site['type']]
     return sites
 
 
 def get_from_data_portal_api(end_point: str, payload: Optional[dict] = None) -> list:
+    """Reads from data portal API."""
     data_portal_url = fetch_data_portal_url()
     url = f'{data_portal_url}{end_point}'
     return requests.get(url=url, params=payload).json()
 
 
 def fetch_data_portal_url() -> str:
+    """Returns data portal url."""
     config = read_main_conf()
     return config['DATAPORTAL_URL']
 
 
 def random_string(n: Optional[int] = 10) -> str:
+    """Creates random string."""
     return ''.join(random.choices(string.ascii_lowercase, k=n))
 
 
 def full_product_to_l3_product(full_product: str):
+    """Returns l3 product name."""
     return full_product.split('-')[1]
 
 
 def order_metadata(metadata: list) -> list:
+    """Orders 2-element metadata according to measurementDate."""
     key = 'measurementDate'
     if len(metadata) == 2 and metadata[0][key] > metadata[1][key]:
         metadata.reverse()
@@ -482,18 +502,22 @@ def order_metadata(metadata: list) -> list:
 
 
 def get_valid_uuids(uuids: list, full_paths: list, valid_full_paths: list) -> list:
+    """Returns valid uuids."""
     return [uuid for uuid, full_path in zip(uuids, full_paths) if full_path in valid_full_paths]
 
 
 def include_records_with_pattern_in_filename(metadata: list, pattern: str) -> list:
+    """Includes only records with certain pattern."""
     return [row for row in metadata if re.search(pattern.lower(), row['filename'].lower())]
 
 
 def exclude_records_with_pattern_in_filename(metadata: list, pattern: str) -> list:
+    """Excludes records with certain pattern."""
     return [row for row in metadata if not re.search(pattern.lower(), row['filename'].lower())]
 
 
 def get_processing_dates(args):
+    """Returns processing dates."""
     if args.date is not None:
         start_date = args.date
         stop_date = get_date_from_past(-1, start_date)
@@ -503,4 +527,3 @@ def get_processing_dates(args):
     start_date = date_string_to_date(start_date)
     stop_date = date_string_to_date(stop_date)
     return start_date, stop_date
-

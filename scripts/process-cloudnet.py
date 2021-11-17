@@ -3,12 +3,10 @@
 import argparse
 import importlib
 import sys
-import re
 import warnings
 from typing import Tuple, Union, Optional
 import requests
 import logging
-import numpy as np
 from cloudnetpy.categorize import generate_categorize
 from cloudnetpy.utils import date_range
 from requests.exceptions import HTTPError
