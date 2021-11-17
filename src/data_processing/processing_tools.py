@@ -109,6 +109,13 @@ class ProcessBase:
             return uuid
         return None
 
+    def _read_stable_uuid(self, metadata: list) -> Union[str, None]:
+        if self._parse_volatile_value(metadata) is False:
+            uuid = metadata[0]['uuid']
+            assert isinstance(uuid, str) and len(uuid) > 0
+            return uuid
+        return None
+
     def _sort_model_meta2dict(self, metadata: list) -> dict:
         """Sort models and cycles to same dict key. Removes Gdas"""
         if metadata:

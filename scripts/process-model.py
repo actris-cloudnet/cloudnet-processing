@@ -28,7 +28,7 @@ def main(args, storage_session=requests.session()):
         logging.info(f'{args.site}, {date_str}, {model}')
         uuid = Uuid()
         try:
-            uuid.volatile = process.fetch_volatile_uuid(model, raw_uuid)
+            uuid.volatile = process.fetch_volatile_model_uuid(model, raw_uuid)
             uuid = process.process_model(uuid, model)
             process.upload_product(process.temp_file.name, 'model', uuid, model)
             process.upload_images(process.temp_file.name, 'model', uuid, model)
@@ -70,12 +70,22 @@ class ProcessModel(ProcessBase):
         uuid.product = nc_header_augmenter.harmonize_nc_file(data)
         return uuid
 
-    def fetch_volatile_uuid(self, model: str, raw_uuid: str) -> Union[str, None]:
+    def fetch_volatile_model_uuid(self, model: str, raw_uuid: str) -> Union[str, None]:
         payload = self._get_payload(model=model)
         metadata = self.md_api.get(f'api/model-files', payload)
         try:
-            uuid = self._read_volatile_uuid(metadata)
-            self._create_new_version = self._is_create_new_version(metadata)
+            uuid = self._read_stable_uuid(metadata)
+            if uuid is not None:
+                # We have new submission but stable file -> replace with volatile file
+                logging.warning('Stable model file found. Changing to volatile and reprocess.')
+                payload = {
+                    'volatile': True,
+                    'uuid': uuid
+                }
+                self.md_api.post('files', payload)
+            else:
+                uuid = self._read_volatile_uuid(metadata)
+                self._create_new_version = self._is_create_new_version(metadata)
         except MiscError as err:
             self.update_statuses([raw_uuid], status='invalid')
             msg = f'{err.message}: Setting status of {metadata[0]["filename"]} to "invalid"'
