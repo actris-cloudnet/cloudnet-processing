@@ -4,8 +4,6 @@ from typing import Optional, Tuple
 from tempfile import NamedTemporaryFile
 import requests
 import logging
-from cloudnetpy.plotting import generate_figure, generate_legacy_figure
-from model_evaluation.plotting.plotting import generate_L3_day_plots
 from data_processing import utils
 
 
@@ -53,51 +51,12 @@ class StorageApi:
         res = self.session.delete(url, auth=self._auth)
         return res
 
-    def create_and_upload_images(self,
-                                 nc_file_full_path: str,
-                                 product_key: str,
-                                 uuid: str,
-                                 product: str,
-                                 model: Optional[str] = None,
-                                 legacy: Optional[bool] = False) -> list:
-        """Create and upload images."""
-        temp_file = NamedTemporaryFile(suffix='.png')
-        try:
-            if product in utils.get_product_types(level='3'):
-                fields = utils.get_fields_for_l3_plot(product, model)
-            else:
-                fields, max_alt = utils.get_fields_for_plot(product)
-        except NotImplementedError:
-            logging.warning(f'Plotting for {product} not implemented')
-            return []
-        visualizations = []
-        for field in fields:
-            try:
-                if legacy:
-                    generate_legacy_figure(nc_file_full_path, product, field,
-                                           image_name=temp_file.name, max_y=max_alt, dpi=120)
-                if product in utils.get_product_types(level='3'):
-                    l3_product = utils.full_product_to_l3_product(product)
-                    generate_L3_day_plots(nc_file_full_path, l3_product, model, [field],
-                                          image_name=temp_file.name,
-                                          fig_type='single',
-                                          title=False)
-                else:
-                    generate_figure(nc_file_full_path, [field], show=False,
-                                    image_name=temp_file.name, max_y=max_alt, sub_title=False,
-                                    title=False, dpi=120)
-            except (IndexError, ValueError, TypeError) as err:
-                logging.warning(err)
-                continue
-            s3key = product_key.replace('.nc', f"-{uuid[:8]}-{field}.png")
-            url = path.join(self._url, 'cloudnet-img', s3key)
-            headers = self._get_headers(temp_file.name)
-            self._put(url, temp_file.name, headers=headers)
-            visualizations.append({
-                's3key': s3key,
-                'variable_id': utils.get_var_id(product, field),
-            })
-        return visualizations
+    def upload_image(self,
+                     full_path: str,
+                     s3key: str) -> None:
+        url = path.join(self._url, 'cloudnet-img', s3key)
+        headers = self._get_headers(full_path)
+        self._put(url, full_path, headers=headers)
 
     def _put(self, url: str, full_path: str, headers: Optional[dict] = None) -> requests.Response:
         res = self.session.put(url, data=open(full_path, 'rb'), auth=self._auth, headers=headers)

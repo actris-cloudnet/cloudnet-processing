@@ -11,6 +11,7 @@ from data_processing.utils import MiscError, RawDataMissingError
 from data_processing.metadata_api import MetadataApi
 from data_processing.storage_api import StorageApi
 from data_processing.pid_utils import PidUtils
+from cloudnetpy.plotting import generate_figure, generate_legacy_figure
 
 
 class Uuid:
@@ -78,23 +79,44 @@ class ProcessBase:
         if product in utils.get_product_types(level='1b'):
             self.update_statuses(uuid.raw)
 
-    def upload_images(self,
-                      full_path: str,
-                      product: str,
-                      uuid: Uuid,
-                      model_or_instrument_id: str = None) -> None:
-        if product in utils.get_product_types(level='3'):
-            s3key = self._get_l3_product_key(product, model_or_instrument_id)
-        else:
-            s3key = self._get_product_key(model_or_instrument_id)
-        img_metadata = []
-        if 'hidden' not in self._site_type:
-            img_metadata = self._storage_api.create_and_upload_images(full_path,
-                                                                      s3key,
-                                                                      uuid.product,
-                                                                      product,
-                                                                      model=model_or_instrument_id)
-        self.md_api.put_images(img_metadata, uuid.product)
+    def create_and_upload_images(self,
+                                 nc_file_full_path: str,
+                                 product: str,
+                                 uuid: Uuid,
+                                 model_or_instrument_id: str = None) -> None:
+        if 'hidden' in self._site_type:
+            logging.info('Skipping plotting for hidden site')
+            return
+        temp_file = NamedTemporaryFile(suffix='.png')
+        visualizations = []
+        try:
+            product_s3key = self._get_product_key(model_or_instrument_id)
+            fields, max_alt = utils.get_fields_for_plot(product)
+        except NotImplementedError:
+            logging.warning(f'Plotting for {product} not implemented')
+            return
+        for field in fields:
+            try:
+                generate_figure(nc_file_full_path, [field], show=False,
+                                image_name=temp_file.name, max_y=max_alt, sub_title=False,
+                                title=False, dpi=120)
+            except (IndexError, ValueError, TypeError) as err:
+                logging.warning(err)
+                continue
+
+            visualizations.append(self._upload_img(temp_file.name, product_s3key,
+                                                   uuid.product, product, field))
+        self.md_api.put_images(visualizations, uuid.product)
+
+    def _upload_img(self, img_path: str, product_s3key: str,
+                    product_uuid: str, product: str, field: str) -> dict:
+        img_s3key = product_s3key.replace('.nc', f"-{product_uuid[:8]}-{field}.png")
+        self._storage_api.upload_image(full_path=img_path,
+                                       s3key=img_s3key)
+        return {
+            's3key': img_s3key,
+            'variable_id': utils.get_var_id(product, field),
+        }
 
     def upload_quality_report(self,
                               full_path: str,

@@ -8,7 +8,7 @@ SCRIPT_PATH = path.dirname(path.realpath(__file__))
 
 class TestModelEvaluationProcessing:
 
-    n_img = 0
+    n_img = 4
 
     @pytest.fixture(autouse=True)
     def _fetch_params(self, params):
@@ -52,5 +52,5 @@ class TestModelEvaluationProcessing:
         assert 'PUT /files/20201022_bucharest_l3-cf_downsampled_ecmwf.nc' in data[4]
 
         # PUT images
-        img_put = '"PUT /visualizations/20201022_bucharest_l3-cf_downsampled_ecmwf-'
+        img_put = '"PUT /visualizations/20201022_bucharest_l3-cf_downsampled'
         assert count_strings(data, img_put) == self.n_img

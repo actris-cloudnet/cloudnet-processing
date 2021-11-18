@@ -69,8 +69,13 @@ def main():
 
             pid_utils.add_pid_to_file(temp_file.name)
             upload_info = storage_api.upload_product(temp_file.name, s3key)
-            img_metadata = storage_api.create_and_upload_images(temp_file.name, s3key, uuid,
-                                                                info['product'], legacy=True)
+
+            print('IMAGE GENERATION CODE NEEDS TO BE UPDATED, NOT CREATING VISUALIZATIONS')
+            """ IMAGE GENERATION CODE HAS CHANGED, THIS NO LONGER WORKS
+            img_metadata = storage_api.upload_image(temp_file.name, s3key, uuid,
+                                                    info['product'], legacy=True)
+            md_api.put_images(img_metadata, uuid)
+            """
             payload = utils.create_product_put_payload(temp_file.name,
                                                        upload_info,
                                                        product=info['product'],
@@ -78,7 +83,6 @@ def main():
                                                        site=site)
             payload['legacy'] = True
             md_api.put('files', s3key, payload)
-            md_api.put_images(img_metadata, uuid)
             temp_file.close()
 
 

@@ -32,11 +32,14 @@ def main():
 
             if len(vis_meta) != len(fields_to_plot):
                 full_path = storage_api.download_product(row, temp_dir.name)
-                img_metadata = storage_api.create_and_upload_images(full_path,
-                                                                    row['filename'],
-                                                                    product_uuid,
-                                                                    row['product']['id'])
+                print('IMAGE GENERATION CODE NEEDS TO BE UPDATED, NOT DOING ANYTHING')
+                """ IMAGE GENERATION CODE HAS CHANGED, THIS NO LOGNER WORKS
+                img_metadata = storage_api.upload_image(full_path,
+                                                        row['filename'],
+                                                        product_uuid,
+                                                        row['product']['id'])
                 md_api.put_images(img_metadata, product_uuid)
+                """
 
 
 if __name__ == "__main__":

@@ -6,6 +6,8 @@ import json
 import sys
 import re
 import warnings
+import logging
+from tempfile import NamedTemporaryFile
 from typing import Tuple, Union, Optional
 import requests
 from model_evaluation.products import product_resampling
@@ -17,7 +19,7 @@ from data_processing.utils import MiscError, RawDataMissingError
 from data_processing import processing_tools
 from data_processing.processing_tools import Uuid, ProcessBase
 from cloudnetpy.exceptions import InconsistentDataError
-import logging
+from model_evaluation.plotting.plotting import generate_L3_day_plots
 
 
 warnings.simplefilter("ignore", UserWarning)
@@ -52,7 +54,7 @@ def main(args, storage_session=requests.session()):
                     try:
                         uuid = process.process_level3_day(uuid, product, model, m_meta)
                         process.upload_product(process.temp_file.name, product, uuid, model)
-                        process.upload_images(process.temp_file.name, product, uuid, model)
+                        process.create_and_upload_images(process.temp_file.name, product, uuid, model)
                         process.print_info()
                     except (RawDataMissingError, MiscError, NotImplementedError) as err:
                         logging.warning(err)
@@ -95,6 +97,42 @@ class ProcessModelEvaluation(ProcessBase):
         metadata = self.md_api.get(f'api/model-files', payload)
         model_metas = self._sort_model_meta2dict(metadata)
         return model_metas
+
+    def create_and_upload_images(self,
+                                 nc_file_full_path: str,
+                                 product: str,
+                                 uuid: Uuid,
+                                 model_or_instrument_id: str = None) -> None:
+
+        if 'hidden' in self._site_type:
+            logging.info('Skipping plotting for hidden site')
+            return
+        temp_file = NamedTemporaryFile(suffix='.png')
+        visualizations = []
+        product_s3key = self._get_l3_product_key(product, model_or_instrument_id)
+        fields = utils.get_fields_for_l3_plot(product, model_or_instrument_id)
+        l3_product = utils.full_product_to_l3_product(product)
+
+        # Statistic plot
+        generate_L3_day_plots(nc_file_full_path, l3_product, model_or_instrument_id, var_list=fields,
+                              image_name=temp_file.name,
+                              fig_type='statistic', stats=['area'], title=False)
+        visualizations.append(self._upload_img(temp_file.name, product_s3key,
+                                               uuid.product, product, 'area'))
+        # Statistic error plot
+        generate_L3_day_plots(nc_file_full_path, l3_product, model_or_instrument_id, var_list=fields,
+                              image_name=temp_file.name,
+                              fig_type='statistic', stats=['error'], title=False)
+        visualizations.append(self._upload_img(temp_file.name, product_s3key,
+                                               uuid.product, product, 'error'))
+        # Single plots
+        for field in fields:
+            generate_L3_day_plots(nc_file_full_path, l3_product, model_or_instrument_id, var_list=[field],
+                                  image_name=temp_file.name,
+                                  fig_type='single', title=False)
+            visualizations.append(self._upload_img(temp_file.name, product_s3key,
+                                                   uuid.product, product, field))
+        self.md_api.put_images(visualizations, uuid.product)
 
     @staticmethod
     def get_l2for_l3_product(product: str) -> str:
