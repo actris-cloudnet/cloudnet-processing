@@ -69,14 +69,14 @@ class ProcessModelEvaluation(ProcessBase):
         input_model_files = []
         payload = self._get_payload(product=l2_product)
         metadata = self.md_api.get('api/files', payload)
-        self._check_response_length(metadata)
-        metadict = {
-            l2_product: metadata[0],
-            'model': model_meta[0][0]
-        }
-        self._check_source_status(full_product, metadict)
         if metadata:
             l2_file = self._storage_api.download_product(metadata[0], self.temp_dir.name)
+            self._check_response_length(metadata)
+            metadict = {
+                l2_product: metadata[0],
+                'model': model_meta[0][0]
+            }
+            self._check_source_status(full_product, metadict)
         else:
             raise MiscError(f'Missing input level 2 file')
         for m_meta in model_meta:
