@@ -177,21 +177,6 @@ class ProcessCloudnet(ProcessBase):
                                 if meta['measurementDate'] == self.date_str]
         return full_paths, uuids_of_current_day
 
-    def fix_calibrated_daily_file(self,
-                                  uuid: Uuid,
-                                  full_path: str,
-                                  instrument: str) -> str:
-        data = {
-            'site_name': self.site,
-            'date': self.date_str,
-            'uuid': uuid.volatile,
-            'full_path': full_path,
-            'instrument': instrument,
-            'altitude': self.site_meta['altitude']
-            }
-        uuid_product = nc_header_augmenter.harmonize_nc_file(data)
-        return uuid_product
-
     def _detect_uploaded_instrument(self, instrument_type: str) -> str:
         instrument_metadata = self.md_api.get('api/instruments')
         possible_instruments = [x['id'] for x in instrument_metadata if x['type'] == instrument_type]

@@ -9,6 +9,7 @@ from cloudnetpy.instruments import rpg2nc, mira2nc, basta2nc, ceilo2nc, hatpro2n
 from data_processing import concat_wrapper, utils
 from data_processing.utils import RawDataMissingError, SkipBlock
 from cloudnetpy.utils import is_timestamp
+from data_processing import nc_header_augmenter
 import datetime
 
 
@@ -104,13 +105,6 @@ class ProcessLidar(ProcessInstrument):
             _fix_cl51_timestamps(self.base.daily_file.name, offset_in_hours)
         self._call_ceilo2nc('cl51')
 
-    def process_halo_doppler_lidar(self):
-        full_path, self.uuid.raw = self.base.download_instrument('halo-doppler-lidar',
-                                                                 include_pattern='.nc$',
-                                                                 largest_only=True)
-        self.uuid.product = self.base.fix_calibrated_daily_file(self.uuid, full_path,
-                                                                'halo-doppler-lidar')
-
     def process_cl61d(self):
         model = 'cl61d'
         try:
@@ -176,9 +170,14 @@ class ProcessMwr(ProcessInstrument):
             valid_full_paths = concat_wrapper.concat_netcdf_files(full_paths,
                                                                   self.base.date_str,
                                                                   self.temp_file.name)
-            self.uuid.product = self.base.fix_calibrated_daily_file(self.uuid,
-                                                                    self.temp_file.name,
-                                                                    'hatpro')
+            data = {
+                'site_name': self.base.site,
+                'date': self.base.date_str,
+                'site_meta': self.base.site_meta,
+                'full_path': self.temp_file.name,
+                'uuid': self.uuid.volatile
+            }
+            self.uuid.product = nc_header_augmenter.harmonize_hatpro_file(data)
         self.uuid.raw = _get_valid_uuids(raw_uuids, full_paths, valid_full_paths)
 
 

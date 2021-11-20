@@ -67,7 +67,7 @@ class ProcessModel(ProcessBase):
             'model': model,
             'instrument': None
             }
-        uuid.product = nc_header_augmenter.harmonize_nc_file(data)
+        uuid.product = nc_header_augmenter.harmonize_model_file(data)
         return uuid
 
     def fetch_volatile_model_uuid(self, model: str, raw_uuid: str) -> Union[str, None]:

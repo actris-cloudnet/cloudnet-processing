@@ -1,200 +1,247 @@
 import shutil
-from typing import Optional
 from tempfile import NamedTemporaryFile
-import cloudnetpy.utils
-import netCDF4
 import datetime
+import netCDF4
+import cloudnetpy.utils
+from cloudnetpy import output
 from cloudnetpy.utils import get_uuid, get_time, seconds2date
+from cloudnetpy.metadata import COMMON_ATTRIBUTES
+from cloudnetpy.instruments import instruments
 from data_processing import utils
 from data_processing.utils import MiscError
 
 
+
 def fix_legacy_file(legacy_file_full_path: str, target_full_path: str) -> str:
     """Fix legacy netCDF file."""
-    uuid = get_uuid()
     nc_legacy = netCDF4.Dataset(legacy_file_full_path, 'r')
-    nc_new = netCDF4.Dataset(target_full_path, 'w', format='NETCDF4_CLASSIC')
-    copy_file_contents(nc_legacy, nc_new)
-    history = _get_history(nc_legacy)
-    nc_new.file_uuid = uuid
-    nc_new.history = history
-    nc_legacy.close()
-    nc_new.close()
+    nc = netCDF4.Dataset(target_full_path, 'w', format='NETCDF4_CLASSIC')
+    legacy = LegacyNc(nc_legacy, nc, {})
+    legacy.copy_file_contents()
+    uuid = legacy.add_uuid()
+    legacy.add_history()
+    legacy.close()
     return uuid
 
 
-def harmonize_nc_file(data: dict) -> str:
-    """Compresses and harmonizes metadata of a "calibrated" Cloudnet netCDF file."""
+def harmonize_model_file(data: dict) -> str:
+    """Harmonizes model netCDF file."""
     temp_file = NamedTemporaryFile()
     nc_raw = netCDF4.Dataset(data['full_path'], 'r')
     nc = netCDF4.Dataset(temp_file.name, 'w', format='NETCDF4_CLASSIC')
-    valid_ind = _get_valid_timestamps(data, nc_raw) if data['instrument'] is not None else None
-    copy_file_contents(nc_raw, nc, valid_ind)
-    uuid = data['uuid'] or get_uuid()
-    nc.file_uuid = uuid
-    file_type = _get_file_type(data)
-    nc.cloudnet_file_type = file_type
-    if file_type == 'model':
-        try:
-            _check_time_dimension(nc_raw, data)
-        except ValueError:
-            nc.close()
-            nc_raw.close()
-            raise MiscError('Incomplete model file.')
-        nc.year, nc.month, nc.day = _get_model_date(nc)
-    if data['instrument'] == 'hatpro':
-        nc.year, nc.month, nc.day = data['date'].split('-')
-        nc = _harmonize_hatpro_file(nc, data)
-    if data['instrument'] == 'halo-doppler-lidar':
-        nc.year, nc.month, nc.day = data['date'].split('-')
-        nc.renameVariable('range', 'height')
-        nc.variables['height'][:] += nc.variables['altitude']
-    nc = _harmonize_units(nc)
-    nc.history = _get_history(nc)
-    nc.location = _get_location(nc, data)
-    if file_type != 'model':
-        nc.title = _get_title(nc)
-    nc.Conventions = 'CF-1.8'
-    nc.close()
-    nc_raw.close()
+    model = ModelNc(nc_raw, nc, data)
+    model.copy_file_contents()
+    uuid = model.add_uuid()
+    model.add_global_attributes()
+    try:
+        model.check_time_dimension()
+    except ValueError:
+        model.nc.close()
+        model.nc_raw.close()
+        raise MiscError('Incomplete model file.')
+    model.add_date()
+    model.add_history()
+    model.close()
     shutil.copy(temp_file.name, data['full_path'])
     return uuid
 
 
-def copy_file_contents(source: netCDF4.Dataset,
-                       target: netCDF4.Dataset,
-                       time_ind: Optional[list] = None) -> None:
-    """Copies netCDF contents. Optionally uses only certain time indices."""
-    for key, dimension in source.dimensions.items():
-        if key == 'time' and time_ind is not None:
-            size = len(time_ind)
-        else:
-            size = dimension.size
-        target.createDimension(key, size)
-    for var_name, variable in source.variables.items():
-        if time_ind is not None and var_name == 'time' and 'int' in str(variable.dtype):  # time_ind condition makes sure we don't touch model files
-            dtype = 'f8'
-        else:
+def harmonize_hatpro_file(data: dict) -> str:
+    """Harmonizes calibrated hatpro netCDF file."""
+    temp_file = NamedTemporaryFile()
+    nc_raw = netCDF4.Dataset(data['full_path'], 'r')
+    nc = netCDF4.Dataset(temp_file.name, 'w', format='NETCDF4_CLASSIC')
+    hatpro = HatproNc(nc_raw, nc, data)
+    hatpro.copy_file()
+    hatpro.add_lwp()
+    hatpro.sort_time()
+    hatpro.convert_time()
+    hatpro.check_time_reference()
+    hatpro.add_geolocation()
+    hatpro.clean_global_attributes()
+    uuid = hatpro.add_uuid()
+    hatpro.add_date()
+    hatpro.add_global_attributes()
+    hatpro.add_history()
+    hatpro.close()
+    shutil.copy(temp_file.name, data['full_path'])
+    return uuid
+
+
+class Level1Nc:
+    def __init__(self, nc_raw: netCDF4.Dataset, nc: netCDF4.Dataset, data: dict):
+        self.nc_raw = nc_raw
+        self.nc = nc
+        self.data = data
+
+    def add_uuid(self) -> str:
+        uuid = self.data['uuid'] or get_uuid()
+        self.nc.file_uuid = uuid
+        return uuid
+
+    def add_history(self):
+        old_history = getattr(self.nc_raw, 'history', '')
+        history = f"{get_time()} - Metadata harmonized by CLU using data-processing Python package."
+        if len(old_history) > 0:
+            history = f"{history}\n{old_history}"
+        self.nc.history = history
+
+    def close(self):
+        self.nc.close()
+        self.nc_raw.close()
+
+    def copy_file_contents(self):
+        for key, dimension in self.nc_raw.dimensions.items():
+            self.nc.createDimension(key, dimension.size)
+        for name, variable in self.nc_raw.variables.items():
             dtype = variable.dtype
-        var_out = target.createVariable(var_name,
-                                        dtype,
-                                        variable.dimensions,
-                                        zlib=True,
-                                        fill_value=getattr(variable, '_FillValue', None))
-        attr = {k: variable.getncattr(k) for k in variable.ncattrs() if k != '_FillValue'}
-        var_out.setncatts(attr)
-        if 'time' in variable.dimensions and time_ind is not None:
-            array = variable[time_ind]
-        else:
-            array = variable[:]
-        var_out[:] = array
-    for attr_name in source.ncattrs():
-        setattr(target, attr_name, source.getncattr(attr_name))
+            var_out = self.nc.createVariable(name,
+                                             dtype,
+                                             variable.dimensions,
+                                             zlib=True,
+                                             fill_value=getattr(variable, '_FillValue', None))
+            self._copy_variable_attributes(variable, var_out)
+            var_out[:] = variable[:]
+        self._copy_global_attributes()
 
 
-def _check_time_dimension(nc: netCDF4.Dataset, data: dict) -> None:
-    n_steps = len(nc.dimensions['time'])
-    n_steps_expected = 25
-    n_steps_expected_gdas1 = 9
-    if data['model'] == 'gdas1' and n_steps == n_steps_expected_gdas1:
-        return
-    if data['model'] != 'gdas1' and n_steps == n_steps_expected:
-        return
-    raise ValueError
+    @staticmethod
+    def _copy_variable_attributes(source, target):
+        attr = {k: source.getncattr(k) for k in source.ncattrs() if k != '_FillValue'}
+        target.setncatts(attr)
+
+    def _copy_global_attributes(self):
+        for name in self.nc_raw.ncattrs():
+            setattr(self.nc, name, self.nc_raw.getncattr(name))
 
 
-def _get_file_type(data: dict) -> str:
-    if data['instrument'] is None:
-        return 'model'
-    return utils.get_level1b_type(data['instrument'])
+class LegacyNc(Level1Nc):
+    pass
 
 
-def _get_valid_timestamps(data: dict, nc: netCDF4.Dataset) -> list:
-    time_stamps = nc.variables['time'][:]
-    epoch = _get_epoch(nc.variables['time'].units)
-    expected_date = data['date'].split('-')
-    valid_ind = []
-    for ind, t in enumerate(time_stamps):
-        if (0 < t < 24 and epoch == expected_date) or (seconds2date(t, epoch)[:3] == expected_date):
-            valid_ind.append(ind)
-    if not valid_ind:
-        raise RuntimeError('All HATPRO dates differ from expected.')
-    return valid_ind
+class ModelNc(Level1Nc):
 
+    def check_time_dimension(self):
+        n_steps = len(self.nc.dimensions['time'])
+        n_steps_expected = 25
+        n_steps_expected_gdas1 = 9
+        if self.data['model'] == 'gdas1' and n_steps == n_steps_expected_gdas1:
+            return
+        if self.data['model'] != 'gdas1' and n_steps == n_steps_expected:
+            return
+        raise ValueError
 
-def _get_model_date(nc: netCDF4.Dataset) -> list:
-    date_string = nc.variables['time'].units
-    the_date = date_string.split()[2]
-    return the_date.split('-')
+    def add_date(self):
+        date_string = self.nc.variables['time'].units
+        date = date_string.split()[2]
+        self.nc.year, self.nc.month, self.nc.day = date.split('-')
 
+    def add_global_attributes(self):
+        self.nc.cloudnet_file_type = 'model'
+        self.nc.Conventions = 'CF-1.8'
 
-def _harmonize_hatpro_file(nc: netCDF4.Dataset, data: dict) -> netCDF4.Dataset:
-    valid_name = 'LWP'
-    valid_unit = 'g m-2'
-    for invalid_name in ('LWP_data', 'clwvi', 'atmosphere_liquid_water_content'):
-        if invalid_name in nc.variables:
-            nc.renameVariable(invalid_name, valid_name)
-    assert valid_name in nc.variables
-    if 'kg' in nc.variables[valid_name].units:
-        nc.variables[valid_name][:] *= 1000
-    nc.variables[valid_name].units = valid_unit
-    nc = _sort_time(nc, valid_name)
-    nc = _convert_hatpro_time(nc, data)
-    _check_time_reference(nc)
-    nc = _add_altitude(nc, data)
-    return nc
+class HatproNc(Level1Nc):
 
+    bad_lwp_keys = ('LWP', 'LWP_data', 'clwvi', 'atmosphere_liquid_water_content')
 
-def _add_altitude(nc: netCDF4.Dataset, data: dict) -> netCDF4.Dataset:
-    key = 'altitude'
-    alt = nc.createVariable(key, 'i4') if key not in nc.variables else nc.variables[key]
-    alt[:] = data[key]
-    alt.units = 'm'
-    alt.long_name = 'Altitude of site'
-    return nc
+    def copy_file(self):
+        valid_ind = self._get_valid_timestamps()
+        possible_keys = ('lwp', 'time') + self.bad_lwp_keys
+        self._copy_file_contents(valid_ind, possible_keys)
 
+    def add_lwp(self):
+        key = 'lwp'
+        for invalid_name in self.bad_lwp_keys:
+            if invalid_name in self.nc.variables:
+                self.nc.renameVariable(invalid_name, key)
+        assert key in self.nc.variables
+        lwp = self.nc.variables[key]
+        if 'kg' in lwp.units:
+            lwp[:] *= 1000
+        lwp.units = COMMON_ATTRIBUTES[key].units
+        lwp.long_name = COMMON_ATTRIBUTES[key].long_name
 
-def _convert_hatpro_time(nc: netCDF4.Dataset, data: dict):
-    key = 'time'
-    time = nc.variables[key]
-    if max(time[:]) > 24:
-        fraction_hour = cloudnetpy.utils.seconds2hours(time[:])
-        nc.variables[key][:] = fraction_hour
-    nc.variables[key].long_name = 'Time UTC'
-    nc.variables[key].units = f'hours since {data["date"]} 00:00:00'
-    return nc
+    def sort_time(self):
+        time = self.nc.variables['time'][:]
+        array = self.nc.variables['lwp'][:]
+        ind = time.argsort()
+        self.nc.variables['time'][:] = time[ind]
+        self.nc.variables['lwp'][:] = array[ind]
 
+    def convert_time(self):
+        time = self.nc.variables['time']
+        if max(time[:]) > 24:
+            fraction_hour = cloudnetpy.utils.seconds2hours(time[:])
+            time[:] = fraction_hour
+        time.long_name = 'Time UTC'
+        time.units = f'hours since {self.data["date"]} 00:00:00'
+        if hasattr(time, 'comment'):
+            delattr(time, 'comment')
+        time.standard_name = 'time'
+        time.axis = 'T'
+        time.calendar = 'standard'
 
-def _check_time_reference(nc: netCDF4.Dataset):
-    key = 'time_reference'
-    if key in nc.variables:
-        assert nc.variables[key][:] == 1  # 1 = UTC. This check is for Palaiseau HATPRO files.
+    def check_time_reference(self):
+        key = 'time_reference'
+        if key in self.nc_raw.variables:
+            assert self.nc_raw.variables[key][:] == 1  # 1 = UTC
 
+    def add_geolocation(self):
+        for key in ('altitude', 'latitude', 'longitude'):
+            var = self.nc.createVariable(key, 'f4')
+            var[:] = self.data['site_meta'][key]
+            var.units = COMMON_ATTRIBUTES[key].units
+            var.long_name = COMMON_ATTRIBUTES[key].long_name
+            var.standard_name = COMMON_ATTRIBUTES[key].standard_name
 
-def _sort_time(nc: netCDF4.Dataset, key: str) -> netCDF4.Dataset:
-    time = nc.variables['time'][:]
-    array = nc.variables[key][:]
-    ind = time.argsort()
-    nc.variables['time'][:] = time[ind]
-    nc.variables[key][:] = array[ind]
-    return nc
+    def clean_global_attributes(self):
+        for attr in self.nc.ncattrs():
+            delattr(self.nc, attr)
 
+    def add_date(self):
+        self.nc.year, self.nc.month, self.nc.day = self.data['date'].split('-')
 
-def _get_history(nc: netCDF4.Dataset) -> str:
-    old_history = getattr(nc, 'history', '')
-    new_record = f"{get_time()} - Metadata harmonized by CLU using data-processing Python package.\n"
-    return f"{new_record}{old_history}"
+    def add_global_attributes(self):
+        instrument = instruments.HATPRO
+        location = utils.read_site_info(self.data['site_name'])['name']
+        self.nc.Conventions = 'CF-1.8'
+        self.nc.cloudnet_file_type = 'mwr'
+        self.nc.source = output.get_l1b_source(instrument)
+        self.nc.location = location
+        self.nc.title = output.get_l1b_title(instrument, location)
+        self.nc.references = output.get_references()
 
+    def _get_valid_timestamps(self) -> list:
+        time_stamps = self.nc_raw.variables['time'][:]
+        epoch = _get_epoch(self.nc_raw.variables['time'].units)
+        expected_date = self.data['date'].split('-')
+        valid_ind = []
+        for ind, t in enumerate(time_stamps):
+            if (0 < t < 24 and epoch == expected_date) or (seconds2date(t, epoch)[:3] == expected_date):
+                valid_ind.append(ind)
+        if not valid_ind:
+            raise RuntimeError('All HATPRO dates differ from expected.')
+        return valid_ind
 
-def _get_title(nc: netCDF4.Dataset) -> str:
-    file_type = nc.cloudnet_file_type.capitalize()
-    return f"{file_type} file from {nc.location}"
-
-
-def _get_location(nc: netCDF4.Dataset, data: dict) -> str:
-    if hasattr(nc, 'location') and len(nc.location) > 0:
-        return nc.location
-    return data['site_name'].capitalize()
+    def _copy_file_contents(self, time_ind: list, keys: tuple):
+        for key, dimension in self.nc_raw.dimensions.items():
+            size = len(time_ind) if key == 'time' else dimension.size
+            self.nc.createDimension(key, size)
+        for name, variable in self.nc_raw.variables.items():
+            if name not in keys:
+                continue
+            if name == 'time' and 'int' in str(variable.dtype):
+                dtype = 'f8'
+            else:
+                dtype = variable.dtype
+            var_out = self.nc.createVariable(name,
+                                             dtype,
+                                             variable.dimensions,
+                                             zlib=True,
+                                             fill_value=getattr(variable, '_FillValue', None))
+            self._copy_variable_attributes(variable, var_out)
+            var_out[:] = variable[time_ind] if 'time' in variable.dimensions else variable[:]
+        self._copy_global_attributes()
 
 
 def _get_epoch(units: str) -> tuple:
@@ -216,15 +263,3 @@ def _get_epoch(units: str) -> tuple:
     if (1900 < year <= current_year) and (0 < month < 13) and (0 < day < 32):
         return tuple(date_components)
     return fallback
-
-
-def _harmonize_units(nc: netCDF4.Dataset) -> netCDF4.Dataset:
-    units = [
-        ('latitude', 'degree_north'),
-        ('longitude', 'degree_east')
-    ]
-    for key, value in units:
-        if key in nc.variables and hasattr(nc.variables[key], 'units'):
-            if nc.variables[key].units != value:
-                nc.variables[key].units = value
-    return nc
