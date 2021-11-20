@@ -210,17 +210,17 @@ def get_fields_for_plot(cloudnet_file_type: str) -> Tuple[list, int]:
         fields = ['lwc', 'lwc_error', 'lwc_retrieval_status']
         max_alt = 6
     elif cloudnet_file_type == 'model':
-        fields = ['cloud_fraction', 'uwind', 'vwind', 'temperature', 'q', 'pressure']
+        fields = ['cloud_fraction', 'uwind', 'vwind', 'temperature']
     elif cloudnet_file_type == 'lidar':
         fields = ['beta', 'beta_raw', 'depolarisation', 'depolarisation_raw']
     elif cloudnet_file_type == 'mwr':
-        fields = ['LWP']
+        fields = ['lwp']
     elif cloudnet_file_type == 'radar':
         fields = ['Zh', 'v', 'width', 'ldr', 'sldr']
     elif cloudnet_file_type == 'disdrometer':
         fields = ['rainfall_rate', 'n_particles']
     elif cloudnet_file_type == 'drizzle':
-        fields = ['Do', 'mu', 'S', 'drizzle_N', 'drizzle_lwc', 'drizzle_lwf', 'v_drizzle', 'v_air']
+        fields = ['Do', 'drizzle_N']
         max_alt = 4
     else:
         raise NotImplementedError
