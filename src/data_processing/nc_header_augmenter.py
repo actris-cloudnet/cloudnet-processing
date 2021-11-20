@@ -174,7 +174,7 @@ class HatproNc(Level1Nc):
             fraction_hour = cloudnetpy.utils.seconds2hours(time[:])
             time[:] = fraction_hour
         time.long_name = 'Time UTC'
-        time.units = f'hours since {self.data["date"]} 00:00:00'
+        time.units = f'hours since {self.data["date"]} 00:00:00 +00:00'
         if hasattr(time, 'comment'):
             delattr(time, 'comment')
         time.standard_name = 'time'
