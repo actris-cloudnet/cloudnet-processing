@@ -1,4 +1,5 @@
 import shutil
+from typing import Optional
 from tempfile import NamedTemporaryFile
 import datetime
 import netCDF4
@@ -64,7 +65,14 @@ def harmonize_hatpro_file(data: dict) -> str:
     hatpro.add_global_attributes()
     hatpro.add_history()
     hatpro.close()
-    shutil.copy(temp_file.name, data['full_path'])
+    # Need this to convert double time to float:
+    temp_file_new = NamedTemporaryFile()
+    source = netCDF4.Dataset(temp_file.name, 'r')
+    target = netCDF4.Dataset(temp_file_new.name, 'w', format='NETCDF4_CLASSIC')
+    hatpro = HatproNc(source, target, data)
+    hatpro.copy_file(all=True)
+    hatpro.close()
+    shutil.copy(temp_file_new.name, data['full_path'])
     return uuid
 
 
@@ -144,9 +152,12 @@ class HatproNc(Level1Nc):
 
     bad_lwp_keys = ('LWP', 'LWP_data', 'clwvi', 'atmosphere_liquid_water_content')
 
-    def copy_file(self):
+    def copy_file(self, all: Optional[bool] = False):
         valid_ind = self._get_valid_timestamps()
-        possible_keys = ('lwp', 'time') + self.bad_lwp_keys
+        if all is True:
+            possible_keys = None
+        else:
+            possible_keys = ('lwp', 'time') + self.bad_lwp_keys
         self._copy_file_contents(valid_ind, possible_keys)
 
     def add_lwp(self):
@@ -223,15 +234,17 @@ class HatproNc(Level1Nc):
             raise RuntimeError('All HATPRO dates differ from expected.')
         return valid_ind
 
-    def _copy_file_contents(self, time_ind: list, keys: tuple):
+    def _copy_file_contents(self, time_ind: list, keys: Optional[tuple] = None):
         for key, dimension in self.nc_raw.dimensions.items():
             size = len(time_ind) if key == 'time' else dimension.size
             self.nc.createDimension(key, size)
         for name, variable in self.nc_raw.variables.items():
-            if name not in keys:
+            if keys is not None and name not in keys:
                 continue
             if name == 'time' and 'int' in str(variable.dtype):
                 dtype = 'f8'
+            elif name == 'time' and str(variable.dtype) == 'float64':
+                dtype = 'f4'
             else:
                 dtype = variable.dtype
             var_out = self.nc.createVariable(name,
