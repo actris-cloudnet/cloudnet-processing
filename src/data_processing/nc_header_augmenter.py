@@ -2,6 +2,7 @@ import shutil
 from typing import Optional
 from tempfile import NamedTemporaryFile
 import datetime
+import numpy as np
 import netCDF4
 import cloudnetpy.utils
 from cloudnetpy import output
@@ -10,7 +11,6 @@ from cloudnetpy.metadata import COMMON_ATTRIBUTES
 from cloudnetpy.instruments import instruments
 from data_processing import utils
 from data_processing.utils import MiscError
-
 
 
 def fix_legacy_file(legacy_file_full_path: str, target_full_path: str) -> str:
@@ -65,6 +65,7 @@ def harmonize_hatpro_file(data: dict) -> str:
     hatpro.add_global_attributes()
     hatpro.add_history()
     hatpro.close()
+    shutil.copy(temp_file.name, data['full_path'])
     # Need this to convert double time to float:
     temp_file_new = NamedTemporaryFile()
     source = netCDF4.Dataset(temp_file.name, 'r')
@@ -112,7 +113,6 @@ class Level1Nc:
             var_out[:] = variable[:]
         self._copy_global_attributes()
 
-
     @staticmethod
     def _copy_variable_attributes(source, target):
         attr = {k: source.getncattr(k) for k in source.ncattrs() if k != '_FillValue'}
@@ -148,6 +148,7 @@ class ModelNc(Level1Nc):
         self.nc.cloudnet_file_type = 'model'
         self.nc.Conventions = 'CF-1.8'
 
+
 class HatproNc(Level1Nc):
 
     bad_lwp_keys = ('LWP', 'LWP_data', 'clwvi', 'atmosphere_liquid_water_content')
@@ -171,6 +172,9 @@ class HatproNc(Level1Nc):
             lwp[:] *= 1000
         lwp.units = COMMON_ATTRIBUTES[key].units
         lwp.long_name = COMMON_ATTRIBUTES[key].long_name
+        if hasattr(lwp, 'comment'):
+            delattr(lwp, 'comment')
+        lwp.standard_name = 'atmosphere_cloud_liquid_water_content'
 
     def sort_time(self):
         time = self.nc.variables['time'][:]
@@ -186,8 +190,9 @@ class HatproNc(Level1Nc):
             time[:] = fraction_hour
         time.long_name = 'Time UTC'
         time.units = f'hours since {self.data["date"]} 00:00:00 +00:00'
-        if hasattr(time, 'comment'):
-            delattr(time, 'comment')
+        for key in ('comment', 'bounds'):
+            if hasattr(time, key):
+                delattr(time, key)
         time.standard_name = 'time'
         time.axis = 'T'
         time.calendar = 'standard'
@@ -232,19 +237,16 @@ class HatproNc(Level1Nc):
                 valid_ind.append(ind)
         if not valid_ind:
             raise RuntimeError('All HATPRO dates differ from expected.')
-        return valid_ind
+        _, ind = np.unique(time_stamps[valid_ind], return_index=True)
+        return list(np.array(valid_ind)[ind])
 
     def _copy_file_contents(self, time_ind: list, keys: Optional[tuple] = None):
-        for key, dimension in self.nc_raw.dimensions.items():
-            size = len(time_ind) if key == 'time' else dimension.size
-            self.nc.createDimension(key, size)
+        self.nc.createDimension('time', len(time_ind))
         for name, variable in self.nc_raw.variables.items():
             if keys is not None and name not in keys:
                 continue
             if name == 'time' and 'int' in str(variable.dtype):
                 dtype = 'f8'
-            elif name == 'time' and str(variable.dtype) == 'float64':
-                dtype = 'f4'
             else:
                 dtype = variable.dtype
             var_out = self.nc.createVariable(name,
