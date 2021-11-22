@@ -210,7 +210,7 @@ def get_fields_for_plot(cloudnet_file_type: str) -> Tuple[list, int]:
         fields = ['lwc', 'lwc_error', 'lwc_retrieval_status']
         max_alt = 6
     elif cloudnet_file_type == 'model':
-        fields = ['cloud_fraction', 'uwind', 'vwind', 'temperature']
+        fields = ['cloud_fraction', 'uwind', 'vwind', 'temperature', 'q', 'pressure']
     elif cloudnet_file_type == 'lidar':
         fields = ['beta', 'beta_raw', 'depolarisation', 'depolarisation_raw']
     elif cloudnet_file_type == 'mwr':
