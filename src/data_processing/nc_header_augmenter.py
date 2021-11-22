@@ -18,7 +18,7 @@ def fix_legacy_file(legacy_file_full_path: str, target_full_path: str) -> str:
     """Fix legacy netCDF file."""
     nc_legacy = netCDF4.Dataset(legacy_file_full_path, 'r')
     nc = netCDF4.Dataset(target_full_path, 'w', format='NETCDF4_CLASSIC')
-    legacy = LegacyNc(nc_legacy, nc, {})
+    legacy = Level1Nc(nc_legacy, nc, {})
     legacy.copy_file_contents()
     uuid = legacy.add_uuid()
     legacy.add_history()
@@ -33,6 +33,7 @@ def harmonize_model_file(data: dict) -> str:
     nc = netCDF4.Dataset(temp_file.name, 'w', format='NETCDF4_CLASSIC')
     model = ModelNc(nc_raw, nc, data)
     model.copy_file_contents()
+    model.harmonize_units()
     uuid = model.add_uuid()
     model.add_global_attributes()
     try:
@@ -106,6 +107,14 @@ class Level1Nc:
             var_out[:] = variable[:]
         self._copy_global_attributes()
 
+    def harmonize_units(self):
+        keys = ('latitude', 'longitude', 'altitude')
+        for key in keys:
+            if key in self.nc.variables and hasattr(self.nc.variables[key], 'units'):
+                value = COMMON_ATTRIBUTES[key].units
+                if self.nc.variables[key].units != value:
+                    self.nc.variables[key].units = value
+
     @staticmethod
     def _copy_variable_attributes(source, target):
         attr = {k: source.getncattr(k) for k in source.ncattrs() if k != '_FillValue'}
@@ -114,10 +123,6 @@ class Level1Nc:
     def _copy_global_attributes(self):
         for name in self.nc_raw.ncattrs():
             setattr(self.nc, name, self.nc_raw.getncattr(name))
-
-
-class LegacyNc(Level1Nc):
-    pass
 
 
 class ModelNc(Level1Nc):
