@@ -128,20 +128,16 @@ usage: map-variable-names.py
 ```
 
 ### Tests
-First, build the docker container:
-```
-$ docker build -t test .
-```
-
 Run unit tests:
 ```
-$ docker run --env-file test.env test pytest
+$ docker run -v $PWD/tests:/app/tests -v $PWD/src:/app/src --env-file test.env test pytest
 ```
 
 Run end-to-end tests:
 ```
-$ docker run --env-file e2e-test.env test /bin/sh -c 'for f in tests/e2e/*/main.py; do $f; done'
+$ docker run -v $PWD/tests:/app/tests -v $PWD/src:/app/src --env-file e2e-test.env test /bin/sh -c 'for f in tests/e2e/*/main.py; do $f; done'
 ```
+
 
 ### Licence
 MIT
