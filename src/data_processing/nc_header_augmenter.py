@@ -9,6 +9,7 @@ from cloudnetpy import output
 from cloudnetpy.utils import get_uuid, get_time, seconds2date
 from cloudnetpy.metadata import COMMON_ATTRIBUTES
 from cloudnetpy.instruments import instruments
+from cloudnetpy.exceptions import ValidTimeStampError
 from data_processing import utils
 from data_processing.utils import MiscError
 
@@ -66,14 +67,6 @@ def harmonize_hatpro_file(data: dict) -> str:
     hatpro.add_history()
     hatpro.close()
     shutil.copy(temp_file.name, data['full_path'])
-    # Need this to convert double time to float:
-    temp_file_new = NamedTemporaryFile()
-    source = netCDF4.Dataset(temp_file.name, 'r')
-    target = netCDF4.Dataset(temp_file_new.name, 'w', format='NETCDF4_CLASSIC')
-    hatpro = HatproNc(source, target, data)
-    hatpro.copy_file(all=True)
-    hatpro.close()
-    shutil.copy(temp_file_new.name, data['full_path'])
     return uuid
 
 
@@ -174,7 +167,7 @@ class HatproNc(Level1Nc):
         lwp.long_name = COMMON_ATTRIBUTES[key].long_name
         if hasattr(lwp, 'comment'):
             delattr(lwp, 'comment')
-        lwp.standard_name = 'atmosphere_cloud_liquid_water_content'
+        lwp.standard_name = COMMON_ATTRIBUTES[key].standard_name
 
     def sort_time(self):
         time = self.nc.variables['time'][:]
@@ -236,7 +229,7 @@ class HatproNc(Level1Nc):
             if (0 < t < 24 and epoch == expected_date) or (seconds2date(t, epoch)[:3] == expected_date):
                 valid_ind.append(ind)
         if not valid_ind:
-            raise RuntimeError('All HATPRO dates differ from expected.')
+            raise ValidTimeStampError
         _, ind = np.unique(time_stamps[valid_ind], return_index=True)
         return list(np.array(valid_ind)[ind])
 
