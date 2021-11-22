@@ -36,12 +36,7 @@ def harmonize_model_file(data: dict) -> str:
     model.harmonize_units()
     uuid = model.add_uuid()
     model.add_global_attributes()
-    try:
-        model.check_time_dimension()
-    except ValueError:
-        model.nc.close()
-        model.nc_raw.close()
-        raise MiscError('Incomplete model file.')
+    model.check_time_dimension()
     model.add_date()
     model.add_history()
     model.close()
@@ -135,7 +130,8 @@ class ModelNc(Level1Nc):
             return
         if self.data['model'] != 'gdas1' and n_steps == n_steps_expected:
             return
-        raise ValueError
+        self.close()
+        raise MiscError('Incomplete model file.')
 
     def add_date(self):
         date_string = self.nc.variables['time'].units
@@ -198,7 +194,9 @@ class HatproNc(Level1Nc):
     def check_time_reference(self):
         key = 'time_reference'
         if key in self.nc_raw.variables:
-            assert self.nc_raw.variables[key][:] == 1  # 1 = UTC
+            if self.nc_raw.variables[key][:] != 1:  # not UTC
+                self.close()
+                raise ValueError
 
     def add_geolocation(self):
         for key in ('altitude', 'latitude', 'longitude'):
@@ -234,6 +232,7 @@ class HatproNc(Level1Nc):
             if (0 < t < 24 and epoch == expected_date) or (seconds2date(t, epoch)[:3] == expected_date):
                 valid_ind.append(ind)
         if not valid_ind:
+            self.close()
             raise ValidTimeStampError
         _, ind = np.unique(time_stamps[valid_ind], return_index=True)
         return list(np.array(valid_ind)[ind])
