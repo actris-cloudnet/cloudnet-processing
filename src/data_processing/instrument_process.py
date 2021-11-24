@@ -99,7 +99,8 @@ class ProcessLidar(ProcessInstrument):
             full_paths, self.uuid.raw = self.base.download_instrument('cl51')
         full_paths.sort()
         utils.concatenate_text_files(full_paths, self.base.daily_file.name)
-        if self.base.site == 'norunda':
+        date = utils.date_string_to_date(self.base.date_str)
+        if self.base.site == 'norunda' and date < datetime.date(2021, 10, 18):
             logging.info('Shifting timestamps to UTC')
             offset_in_hours = -1
             _fix_cl51_timestamps(self.base.daily_file.name, offset_in_hours)
