@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """A script for assigning PIDs for data files."""
+import sys
 import os
 import requests
 import glob
 import logging
+import argparse
 from tempfile import TemporaryDirectory
 from data_processing.utils import read_main_conf
 from data_processing import metadata_api
@@ -13,15 +15,14 @@ from data_processing import utils
 from requests.exceptions import HTTPError
 
 
-def main(storage_session=requests.session()):
-    utils.init_logger()
+def main(args, storage_session=requests.session()):
+    args = _parse_args(args)
+    utils.init_logger(args)
     config = read_main_conf()
     pid_utils = PidUtils(config)
     md_api = metadata_api.MetadataApi(config, requests.session())
     storage_api = StorageApi(config, storage_session)
-    regular_files = md_api.find_volatile_regular_files_to_freeze()
-    model_files = md_api.find_volatile_model_files_to_freeze()
-    metadata = regular_files + model_files
+    metadata = md_api.find_files_to_freeze(args)
     logging.info(f'Found {len(metadata)} files to freeze.')
     temp_dir = TemporaryDirectory()
     for row in metadata:
@@ -52,5 +53,34 @@ def main(storage_session=requests.session()):
             os.remove(filename)
 
 
+def _parse_args(args):
+    parser = argparse.ArgumentParser(description='Freeze Cloudnet files')
+    parser.add_argument('site', help='Site Name', type=str, default=None)
+    parser.add_argument('-f', '--force',
+                        type=bool,
+                        help='Override freeze after days configuration option.\
+                        Use in conjunction with --start, --stop, or --date',
+                        default=False)
+    parser.add_argument('--start',
+                        type=str,
+                        metavar='YYYY-MM-DD',
+                        help='Starting date. Freeze all dates by default.',
+                        default=None)
+    parser.add_argument('--stop',
+                        type=str,
+                        metavar='YYYY-MM-DD',
+                        help='Stopping date. Freeze all dates by default.',
+                        default=None)
+    parser.add_argument('-d', '--date',
+                        type=str,
+                        metavar='YYYY-MM-DD',
+                        help='Single date to be freezed. Freeze all dates by default.')
+    parser.add_argument('-p', '--products',
+                        help='Products to be freezed, e.g., radar,lidar,mwr,categorize,iwc',
+                        type=lambda s: s.split(','),
+                        default=utils.get_product_types())
+    return parser.parse_args(args)
+
+
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])

@@ -1,4 +1,5 @@
 """Metadata API for Cloudnet files."""
+from argparse import Namespace
 from datetime import timedelta, datetime
 from typing import Union, Optional
 import logging
@@ -86,25 +87,45 @@ class MetadataApi:
             return
         self.put_file('upload/data', checksum, full_path, auth)
 
-    def find_volatile_regular_files_to_freeze(self) -> list:
+    def find_files_to_freeze(self, args: Namespace) -> list:
         """Find volatile files released before certain time limit."""
-        updated_before = self._get_freeze_limit('FREEZE_AFTER_DAYS')
-        payload = self._get_freeze_payload(updated_before)
-        return self.get('api/files', payload)
+        freeze_model_files = not args.products or 'model' in args.products
+        products = None
+        if args.products:
+            products = filter(lambda prod: prod != 'model', args.products)
+        common_payload = {
+            'site': args.site,
+            'dateFrom': args.start,
+            'dateTo': args.stop,
+            'date': args.date
+        }
 
-    def find_volatile_model_files_to_freeze(self) -> list:
-        """Find volatile model files released before certain time limit."""
-        updated_before = self._get_freeze_limit('FREEZE_MODEL_AFTER_DAYS')
-        payload = self._get_freeze_payload(updated_before)
-        payload['allModels'] = True
-        return self.get('api/model-files', payload)
+        # Regular files
+        files_payload = {
+            **common_payload,
+            **{'product': products},
+            **self._get_freeze_payload('FREEZE_AFTER_DAYS', args)
+        }
+        regular_files = self.get('api/files', files_payload)
 
-    def _get_freeze_limit(self, key: str) -> datetime:
+        # Model files
+        model_files = []
+        if freeze_model_files:
+            models_payload = {
+                **common_payload,
+                **{'allModels': True},
+                **self._get_freeze_payload('FREEZE_MODEL_AFTER_DAYS', args)
+            }
+            model_files = self.get('api/model-files', models_payload)
+
+        return regular_files + model_files
+
+    def _get_freeze_payload(self, key: str, args: Namespace) -> dict:
         freeze_after_days = int(self.config[key])
-        return utils.get_helsinki_datetime() - timedelta(days=freeze_after_days)
-
-    @staticmethod
-    def _get_freeze_payload(updated_before: datetime) -> dict:
+        updated_before = (utils.get_helsinki_datetime() - timedelta(days=freeze_after_days)).isoformat()
+        if args.force:
+            logging.warning(f'Overriding {key} -config option. Also recently changed files may be freezed.')
+            updated_before = None
         return {
             'volatile': True,
             'releasedBefore': updated_before

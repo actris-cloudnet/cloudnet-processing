@@ -96,8 +96,10 @@ def get_model_types() -> list:
     return [model['id'] for model in models]
 
 
-def date_string_to_date(date_string: str) -> datetime.date:
+def date_string_to_date(date_string: Union[str, None]) -> Union[datetime.date, None]:
     """Convert YYYY-MM-DD to Python date."""
+    if date_string is None:
+        return None
     date = [int(x) for x in date_string.split('-')]
     return datetime.date(*date)
 
