@@ -21,7 +21,7 @@ def fix_legacy_file(legacy_file_full_path: str, target_full_path: str) -> str:
     legacy = Level1Nc(nc_legacy, nc, {})
     legacy.copy_file_contents()
     uuid = legacy.add_uuid()
-    legacy.add_history()
+    legacy.add_history('')
     legacy.close()
     return uuid
 
@@ -38,7 +38,7 @@ def harmonize_model_file(data: dict) -> str:
     model.add_global_attributes()
     model.check_time_dimension()
     model.add_date()
-    model.add_history()
+    model.add_history('model')
     model.close()
     shutil.copy(temp_file.name, data['full_path'])
     return uuid
@@ -60,7 +60,7 @@ def harmonize_hatpro_file(data: dict) -> str:
     uuid = hatpro.add_uuid()
     hatpro.add_date()
     hatpro.add_global_attributes()
-    hatpro.add_history()
+    hatpro.add_history('mwr')
     hatpro.close()
     shutil.copy(temp_file.name, data['full_path'])
     return uuid
@@ -77,9 +77,9 @@ class Level1Nc:
         self.nc.file_uuid = uuid
         return uuid
 
-    def add_history(self):
+    def add_history(self, product: str):
         old_history = getattr(self.nc_raw, 'history', '')
-        history = f"{get_time()} - Metadata harmonized by CLU using data-processing Python package."
+        history = f"{get_time()} - {product} metadata harmonized by CLU using data-processing Python package"
         if len(old_history) > 0:
             history = f"{history}\n{old_history}"
         self.nc.history = history
