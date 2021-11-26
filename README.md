@@ -128,6 +128,12 @@ usage: map-variable-names.py
 ```
 
 ### Tests
+
+First, build the docker container:
+```
+$ docker build -t test .
+```
+
 Run unit tests:
 ```
 $ docker run -v $PWD/tests:/app/tests -v $PWD/src:/app/src --env-file test.env test pytest
