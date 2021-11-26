@@ -136,12 +136,12 @@ $ docker build -t test .
 
 Run unit tests:
 ```
-$ docker run -v $PWD/tests:/app/tests -v $PWD/src:/app/src --env-file test.env test pytest
+$ docker run -tv $PWD/tests:/app/tests -v $PWD/src:/app/src --env-file test.env test pytest
 ```
 
 Run end-to-end tests:
 ```
-$ docker run -v $PWD/tests:/app/tests -v $PWD/src:/app/src --env-file e2e-test.env test /bin/sh -c 'for f in tests/e2e/*/main.py; do $f; done'
+$ docker run -tv $PWD/tests:/app/tests -v $PWD/src:/app/src --env-file e2e-test.env test /bin/sh -c 'for f in tests/e2e/*/main.py; do $f; done'
 ```
 
 
