@@ -55,9 +55,9 @@ def main(args, storage_session=requests.session()):
 
 def _parse_args(args):
     parser = argparse.ArgumentParser(description='Freeze Cloudnet files')
-    parser.add_argument('site', help='Site Name', type=str, default=None)
+    parser.add_argument('site', help='Site Name', type=str, default=None, nargs='?')
     parser.add_argument('-f', '--force',
-                        type=bool,
+                        action='store_true',
                         help='Override freeze after days configuration option.\
                         Use in conjunction with --start, --stop, or --date',
                         default=False)
@@ -76,9 +76,10 @@ def _parse_args(args):
                         metavar='YYYY-MM-DD',
                         help='Single date to be freezed. Freeze all dates by default.')
     parser.add_argument('-p', '--products',
-                        help='Products to be freezed, e.g., radar,lidar,mwr,categorize,iwc',
+                        help='Products to be freezed, e.g., radar,lidar,mwr,categorize,iwc \
+                              By default freezes all products, including L3 products.',
                         type=lambda s: s.split(','),
-                        default=utils.get_product_types())
+                        default=None)
     return parser.parse_args(args)
 
 

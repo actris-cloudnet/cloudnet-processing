@@ -36,7 +36,7 @@ def main():
     utils.start_server(5001, 'tests/data/server/pid', f'{SCRIPT_PATH}/pid.log')
     register_storage_urls()
 
-    freeze.main(storage_session=session)
+    freeze.main([], storage_session=session)
 
     try:
         subprocess.check_call(['pytest', '-v', f'{SCRIPT_PATH}/tests.py',
