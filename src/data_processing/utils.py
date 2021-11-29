@@ -16,7 +16,7 @@ import netCDF4
 import pytz
 import requests
 from cloudnetpy.plotting.plot_meta import ATTRIBUTES as ATTR
-from cloudnetpy.quality import Quality
+from cloudnetpy_qc import Quality
 from cloudnetpy.utils import get_time
 
 

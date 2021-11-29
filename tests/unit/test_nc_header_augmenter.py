@@ -9,7 +9,7 @@ import numpy as np
 from tempfile import NamedTemporaryFile
 from cloudnetpy.exceptions import ValidTimeStampError
 from cloudnetpy.metadata import COMMON_ATTRIBUTES
-from cloudnetpy.quality import Quality
+from cloudnetpy_qc import Quality
 
 
 TEST_FILE_PATH = Path(__file__).parent.absolute()
