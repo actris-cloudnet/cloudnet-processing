@@ -22,7 +22,6 @@ class TestCategorizeProcessing:
         assert nc.month == '10'
         assert nc.day == '22'
         assert hasattr(nc, 'pid') is True
-        assert nc.title == f'{self.product.capitalize()} file from Bucharest'
         assert nc.cloudnet_file_type == self.product
         assert nc.Conventions == 'CF-1.8'
         for uuid in ('2d485fa6d3af40ca9c93612a0abf0430', '38a41d8f-f688-4196-8b88-2b401f433fed',
