@@ -167,9 +167,9 @@ def process(session,
             script_path: str,
             marker: str = None,
             processing_mode: str = ''):
-    if processing_mode is 'model':
+    if processing_mode == 'model':
         PROCESS_CLOUDNET_MODEL.main(main_args, storage_session=session)
-    elif processing_mode is 'model_evaluation':
+    elif processing_mode == 'model_evaluation':
         PROCESS_CLOUDNET_MODEL_EVALUATION.main(main_args, storage_session=session)
     else:
         PROCESS_CLOUDNET.main(main_args, storage_session=session)
