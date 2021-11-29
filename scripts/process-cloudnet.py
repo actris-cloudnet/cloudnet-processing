@@ -10,7 +10,6 @@ import logging
 from cloudnetpy.categorize import generate_categorize
 from cloudnetpy.utils import date_range
 from requests.exceptions import HTTPError
-from data_processing import nc_header_augmenter
 from data_processing import utils
 from data_processing.utils import MiscError, RawDataMissingError
 from data_processing import processing_tools
