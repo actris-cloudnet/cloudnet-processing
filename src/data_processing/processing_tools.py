@@ -97,11 +97,10 @@ class ProcessBase:
             return
         for field in fields:
             try:
-                generate_figure(nc_file_full_path, [field], show=False,
-                                image_name=temp_file.name, max_y=max_alt, sub_title=False,
-                                title=False, dpi=120)
-            except (IndexError, ValueError, TypeError) as err:
-                logging.warning(err)
+                generate_figure(nc_file_full_path, [field], show=False, image_name=temp_file.name, max_y=max_alt,
+                                sub_title=False, title=False, dpi=120)
+            except (IndexError, ValueError, TypeError):
+                logging.warning(f'Skipping {field}')
                 continue
 
             visualizations.append(self._upload_img(temp_file.name, product_s3key, uuid, product, field))
