@@ -52,7 +52,7 @@ def main(args, storage_session=requests.session()):
                     continue
                 process.add_pid(process.temp_file.name)
                 process.upload_product(process.temp_file.name, product, uuid, identifier)
-                process.create_and_upload_images(process.temp_file.name, product, uuid, identifier)
+                process.create_and_upload_images(process.temp_file.name, product, uuid.product, identifier)
                 process.upload_quality_report(process.temp_file.name, uuid)
                 process.print_info()
             except (RawDataMissingError, MiscError, NotImplementedError) as err:

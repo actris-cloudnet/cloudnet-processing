@@ -131,3 +131,19 @@ class MetadataApi:
             'releasedBefore': updated_before
         }
 
+    def find_files_for_plotting(self, args: Namespace) -> list:
+        products = None
+        if args.products:
+            products = filter(lambda prod: prod != 'model', args.products)
+        common_payload = {
+            'site': args.site,
+            'dateFrom': args.start,
+            'dateTo': args.stop,
+            'date': args.date
+        }
+        files_payload = {
+            **common_payload,
+            **{'product': products},
+        }
+        files = self.get('api/files', files_payload)
+        return files

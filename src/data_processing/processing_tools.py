@@ -82,7 +82,7 @@ class ProcessBase:
     def create_and_upload_images(self,
                                  nc_file_full_path: str,
                                  product: str,
-                                 uuid: Uuid,
+                                 uuid: str,
                                  model_or_instrument_id: str = None) -> None:
         if 'hidden' in self._site_type:
             logging.info('Skipping plotting for hidden site')
@@ -104,9 +104,8 @@ class ProcessBase:
                 logging.warning(err)
                 continue
 
-            visualizations.append(self._upload_img(temp_file.name, product_s3key,
-                                                   uuid.product, product, field))
-        self.md_api.put_images(visualizations, uuid.product)
+            visualizations.append(self._upload_img(temp_file.name, product_s3key, uuid, product, field))
+        self.md_api.put_images(visualizations, uuid)
 
     def _upload_img(self, img_path: str, product_s3key: str,
                     product_uuid: str, product: str, field: str) -> dict:
@@ -138,7 +137,8 @@ class ProcessBase:
             return uuid
         return None
 
-    def _sort_model_meta2dict(self, metadata: list) -> dict:
+    @staticmethod
+    def _sort_model_meta2dict(metadata: list) -> dict:
         """Sort models and cycles to same dict key. Removes Gdas"""
         if metadata:
             models_meta = {}
