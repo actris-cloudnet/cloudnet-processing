@@ -14,6 +14,8 @@ from data_processing.pid_utils import PidUtils
 from data_processing import utils
 from data_processing.nc_header_augmenter import fix_legacy_file
 from data_processing.utils import MiscError
+from cloudnetpy.plotting import generate_legacy_figure
+import logging
 
 
 def main():
@@ -48,6 +50,7 @@ def main():
                 continue
 
             try:
+                product = legacy_file.get_product_type()
                 info = {
                     'date_str': legacy_file.get_date_str(),
                     'product': legacy_file.get_product_type(),
@@ -61,21 +64,31 @@ def main():
             finally:
                 legacy_file.close()
 
+            # FIX FILE
             s3key = _get_s3key(info)
             print(s3key)
-
             temp_file = NamedTemporaryFile()
             uuid = fix_legacy_file(file, temp_file.name)
-
             pid_utils.add_pid_to_file(temp_file.name)
             upload_info = storage_api.upload_product(temp_file.name, s3key)
 
-            print('IMAGE GENERATION CODE NEEDS TO BE UPDATED, NOT CREATING VISUALIZATIONS')
-            """ IMAGE GENERATION CODE HAS CHANGED, THIS NO LONGER WORKS
-            img_metadata = storage_api.upload_image(temp_file.name, s3key, uuid,
-                                                    info['product'], legacy=True)
-            md_api.put_images(img_metadata, uuid)
-            """
+            # IMAGES
+            temp_img_file = NamedTemporaryFile(suffix='.png')
+            visualizations = []
+            fields, max_alt = utils.get_fields_for_plot(product)
+            for field in fields:
+                try:
+                    generate_legacy_figure(temp_file.name, product, field, image_name=temp_img_file.name,
+                                           max_y=max_alt, dpi=120)
+                except (IndexError, ValueError, TypeError) as err:
+                    logging.warning(err)
+                    continue
+
+                img_s3key = s3key.replace('.nc', f"-{uuid[:8]}-{field}.png")
+                storage_api.upload_image(full_path=temp_img_file.name, s3key=img_s3key)
+                img_meta = {'s3key': img_s3key, 'variable_id': utils.get_var_id(product, field)}
+                visualizations.append(img_meta)
+
             payload = utils.create_product_put_payload(temp_file.name,
                                                        upload_info,
                                                        product=info['product'],
@@ -83,7 +96,9 @@ def main():
                                                        site=site)
             payload['legacy'] = True
             md_api.put('files', s3key, payload)
+            md_api.put_images(visualizations, uuid)
             temp_file.close()
+            temp_img_file.close()
 
 
 class LegacyFile:
@@ -156,7 +171,7 @@ if __name__ == "__main__":
     parser.add_argument('path',
                         nargs='+',
                         help='Path to the specific site directory containing legacy products '
-                             'in the subdirectories, e.g., /ibrix/arch/dmz/cloudnet/data/arm-sgp')
+                             'in the subdirectories, e.g., /temp/data/davos')
     parser.add_argument('--year',
                         '-y',
                         type=int,

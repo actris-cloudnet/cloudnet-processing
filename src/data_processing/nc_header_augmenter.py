@@ -18,7 +18,7 @@ def fix_legacy_file(legacy_file_full_path: str, target_full_path: str) -> str:
     """Fix legacy netCDF file."""
     nc_legacy = netCDF4.Dataset(legacy_file_full_path, 'r')
     nc = netCDF4.Dataset(target_full_path, 'w', format='NETCDF4_CLASSIC')
-    legacy = Level1Nc(nc_legacy, nc, {})
+    legacy = Level1Nc(nc_legacy, nc, {'uuid': None})
     legacy.copy_file_contents()
     uuid = legacy.add_uuid()
     legacy.add_history('')
