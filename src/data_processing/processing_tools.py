@@ -118,9 +118,9 @@ class ProcessBase:
 
     def upload_quality_report(self,
                               full_path: str,
-                              uuid: Uuid) -> None:
+                              uuid: str) -> None:
         quality_report = utils.create_quality_report(full_path)
-        self.md_api.put('quality', uuid.product, quality_report)
+        self.md_api.put('quality', uuid, quality_report)
 
     def _read_volatile_uuid(self, metadata: list) -> Union[str, None]:
         if self._parse_volatile_value(metadata) is True:
