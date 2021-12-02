@@ -98,6 +98,30 @@ Optional arguments:
 | `-p`  | `--products`     | all except `model` and `L3`  | Plotted products, e.g, `radar,lidar,categorize,classification`. |
 
 
+### `create-qc-reports.py`
+Create quality control reports only.
+
+```
+usage: create-qc-reports.py [-h] [-d YYYY-MM-DD] [--start YYYY-MM-DD] [--stop YYYY-MM-DD] [-p ...] SITE
+```
+
+Positional arguments:
+
+| Name   | Description | 
+| :---   | :---        |
+| `site` |  Site name.|
+
+Optional arguments:
+
+| Short | Long             | Default           | Description                                | 
+| :---  | :----------      | :---              | :---                                       |
+| `-h`  | `--help`         |                   | Show help and exit. |
+| `-d`  | `--date`         |                   | Single date to be analysed. Alternatively `--start` and `--stop` can be defined.|
+|       | `--start`        | all               | Starting date. |
+|       | `--stop`         | all               | Stopping date. |
+| `-p`  | `--products`     | all except `model` and `L3`  | Analysed products, e.g, `radar,lidar,categorize,classification`. |
+
+
 ### `put-legacy-files.py`
 
 Upload Matlab processed legacy products (`categorize`, and level 2 products) to data portal.
