@@ -11,6 +11,7 @@ from data_processing.utils import read_main_conf
 from data_processing import metadata_api
 from data_processing.storage_api import StorageApi
 from data_processing import utils
+from data_processing.processing_tools import ProcessBase
 from requests.exceptions import HTTPError
 
 
@@ -23,19 +24,16 @@ def main(args, storage_session=requests.session()):
     metadata = md_api.find_files_for_plotting(args)
     temp_dir_root = utils.get_temp_dir(config)
     temp_dir = TemporaryDirectory(dir=temp_dir_root)
+    qc = ProcessBase(args, config)
     for row in metadata:
-        date_str = row['measurementDate']
-        product = row['product']['id']
-        site = row['site']['id']
-        logging.info(f'Plotting images for: {site} - {date_str} - {product}')
+        logging.info(f'Creating QC report: {row["site"]["id"]} - {row["measurementDate"]} - {row["product"]["id"]}')
         try:
             full_path = storage_api.download_product(row, temp_dir.name)
         except HTTPError as err:
             logging.error(err)
             continue
         try:
-            # Do the qc
-            pass
+            qc.upload_quality_report(full_path, row['uuid'])
         except OSError as err:
             logging.error(err)
         for filename in glob.glob(f'{temp_dir.name}/*'):
