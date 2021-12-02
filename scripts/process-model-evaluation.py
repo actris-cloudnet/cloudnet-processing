@@ -1,24 +1,19 @@
 #!/usr/bin/env python3
 """Master script for Model evaluation processing."""
 import argparse
-import importlib
-import json
 import sys
-import re
 import warnings
 import logging
 from tempfile import NamedTemporaryFile
-from typing import Tuple, Union, Optional
+from typing import Optional
 import requests
 from model_evaluation.products import product_resampling
 from cloudnetpy.utils import date_range
 from requests.exceptions import HTTPError
-from data_processing import nc_header_augmenter
 from data_processing import utils
 from data_processing.utils import MiscError, RawDataMissingError
 from data_processing import processing_tools
 from data_processing.processing_tools import Uuid, ProcessBase
-from cloudnetpy.exceptions import InconsistentDataError
 from model_evaluation.plotting.plotting import generate_L3_day_plots
 
 

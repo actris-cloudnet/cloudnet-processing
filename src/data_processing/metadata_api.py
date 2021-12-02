@@ -1,6 +1,6 @@
 """Metadata API for Cloudnet files."""
 from argparse import Namespace
-from datetime import timedelta, datetime
+from datetime import timedelta
 from typing import Union, Optional
 import logging
 import os
