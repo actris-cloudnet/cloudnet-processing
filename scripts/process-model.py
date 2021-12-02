@@ -31,7 +31,7 @@ def main(args, storage_session=requests.session()):
             uuid.volatile = process.fetch_volatile_model_uuid(model, raw_uuid)
             uuid = process.process_model(uuid, model)
             process.upload_product(process.temp_file.name, 'model', uuid, model)
-            process.create_and_upload_images(process.temp_file.name, 'model', uuid, model)
+            process.create_and_upload_images(process.temp_file.name, 'model', uuid.product, model)
             process.upload_quality_report(process.temp_file.name, uuid)
             process.print_info()
         except MiscError as err:

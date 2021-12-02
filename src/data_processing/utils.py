@@ -145,6 +145,8 @@ def send_slack_alert(error_msg,
         label = ':desktop_computer: Data processing'
     elif error_source == 'wrapper':
         label = ':fire: Main wrapper'
+    elif error_source == 'img':
+        label = ':frame_with_picture: Image creation'
     else:
         raise ValueError('Unknown error source')
 

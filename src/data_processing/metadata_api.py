@@ -90,15 +90,8 @@ class MetadataApi:
     def find_files_to_freeze(self, args: Namespace) -> list:
         """Find volatile files released before certain time limit."""
         freeze_model_files = not args.products or 'model' in args.products
-        products = None
-        if args.products:
-            products = filter(lambda prod: prod != 'model', args.products)
-        common_payload = {
-            'site': args.site,
-            'dateFrom': args.start,
-            'dateTo': args.stop,
-            'date': args.date
-        }
+        products = _get_regular_products(args)
+        common_payload = _get_common_payload(args)
 
         # Regular files
         files_payload = {
@@ -131,3 +124,26 @@ class MetadataApi:
             'releasedBefore': updated_before
         }
 
+    def find_files_for_plotting(self, args: Namespace) -> list:
+        common_payload = _get_common_payload(args)
+        products = _get_regular_products(args)
+        files_payload = {
+            **common_payload,
+            **{'product': products},
+        }
+        files = self.get('api/files', files_payload)
+        return files
+
+
+def _get_common_payload(args: Namespace) -> dict:
+    return {
+        'site': args.site,
+        'dateFrom': args.start,
+        'dateTo': args.stop,
+        'date': args.date
+    }
+
+
+def _get_regular_products(args: Namespace) -> list:
+    if args.products:
+        return [prod for prod in args.products if prod != 'model']
