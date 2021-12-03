@@ -137,7 +137,7 @@ class MetadataApi:
 
 def _get_common_payload(args: Namespace) -> dict:
     return {
-        'site': args.site,
+        'site': args.sites,
         'dateFrom': args.start,
         'dateTo': args.stop,
         'date': args.date

@@ -1,0 +1,58 @@
+#!/usr/bin/env python3
+"""A wrapper script for calling data processing functions."""
+import sys
+import warnings
+import argparse
+
+from data_processing import utils, freeze
+
+
+warnings.simplefilter("ignore", UserWarning)
+warnings.simplefilter("ignore", RuntimeWarning)
+
+modules = {
+    'freeze': freeze,
+}
+
+def main(args):
+    args = _parse_args(args)
+    cmd = args.cmd
+    print('Hello', cmd)
+    modules[cmd].main(args)
+
+
+
+
+
+def _parse_args(args):
+    parser = argparse.ArgumentParser(description='Cloudnet processing main wrapper.',
+                                     epilog='Enjoy the program! :)')
+    parser.add_argument('-s', '--sites',
+                        help='Sites to process data from, e.g. hyytiala,limassol.',
+                        type=lambda s: s.split(','),
+                        default=None)
+    parser.add_argument('--start',
+                        type=str,
+                        metavar='YYYY-MM-DD',
+                        help='Starting date. Default is current day - 5 (included).',
+                        default=utils.get_date_from_past(5))
+    parser.add_argument('--stop',
+                        type=str,
+                        metavar='YYYY-MM-DD',
+                        help='Stopping date. Default is current day + 1 (excluded).',
+                        default=utils.get_date_from_past(-1))
+    parser.add_argument('-d', '--date',
+                        type=str,
+                        metavar='YYYY-MM-DD',
+                        help='Single date to be processed.')
+    parser.add_argument('-p', '--products',
+                        help='Products to be processed, e.g., radar,lidar,mwr,categorize,iwc',
+                        type=lambda s: s.split(','),
+                        default=utils.get_product_types())
+    subparsers = parser.add_subparsers(title='Command', help='Command to execute.', required=True, dest='cmd')
+    for module in modules.values():
+        subparsers = module.add_arguments(subparsers)
+    return parser.parse_args(args)
+
+if __name__ == "__main__":
+    main(sys.argv[1:])

@@ -5,7 +5,6 @@ import os
 import requests
 import glob
 import logging
-import argparse
 from tempfile import TemporaryDirectory
 from data_processing.utils import read_main_conf
 from data_processing import metadata_api
@@ -16,7 +15,6 @@ from requests.exceptions import HTTPError
 
 
 def main(args, storage_session=requests.session()):
-    args = _parse_args(args)
     utils.init_logger(args)
     config = read_main_conf()
     pid_utils = PidUtils(config)
@@ -53,34 +51,14 @@ def main(args, storage_session=requests.session()):
             os.remove(filename)
 
 
-def _parse_args(args):
-    parser = argparse.ArgumentParser(description='Freeze Cloudnet files')
-    parser.add_argument('site', help='Site Name', type=str, default=None, nargs='?')
-    parser.add_argument('-f', '--force',
-                        action='store_true',
-                        help='Override freeze after days configuration option.\
-                        Use in conjunction with --start, --stop, or --date',
-                        default=False)
-    parser.add_argument('--start',
-                        type=str,
-                        metavar='YYYY-MM-DD',
-                        help='Starting date. Freeze all dates by default.',
-                        default=None)
-    parser.add_argument('--stop',
-                        type=str,
-                        metavar='YYYY-MM-DD',
-                        help='Stopping date. Freeze all dates by default.',
-                        default=None)
-    parser.add_argument('-d', '--date',
-                        type=str,
-                        metavar='YYYY-MM-DD',
-                        help='Single date to be freezed. Freeze all dates by default.')
-    parser.add_argument('-p', '--products',
-                        help='Products to be freezed, e.g., radar,lidar,mwr,categorize,iwc \
-                              By default freezes all products, including L3 products.',
-                        type=lambda s: s.split(','),
-                        default=None)
-    return parser.parse_args(args)
+def add_arguments(subparser):
+    freeze_parser = subparser.add_parser('freeze', help='Freeze files.')
+    freeze_parser.add_argument('-f', '--force',
+                               action='store_true',
+                               help='Ignore freeze after days configuration option. \
+                               Allows freezing recently changed files.',
+                               default=False)
+    return subparser
 
 
 if __name__ == "__main__":
