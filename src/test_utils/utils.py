@@ -1,3 +1,4 @@
+import json
 from tempfile import NamedTemporaryFile
 import atexit
 import os
@@ -12,9 +13,9 @@ import requests
 import requests_mock
 from data_processing.utils import get_product_types
 sys.path.append('scripts/')
-PROCESS_CLOUDNET = __import__("process-cloudnet")
-PROCESS_CLOUDNET_MODEL = __import__("process-model")
-PROCESS_CLOUDNET_MODEL_EVALUATION = __import__("process-model-evaluation")
+cloudnet = __import__('cloudnet')
+
+from data_processing.subcmds import process_cloudnet, process_model, process_model_evaluation
 
 
 def init_test_session():
@@ -167,14 +168,15 @@ def process(session,
             script_path: str,
             marker: str = None,
             processing_mode: str = ''):
+    main_args = cloudnet._parse_args(main_args)
     if processing_mode == 'model':
-        PROCESS_CLOUDNET_MODEL.main(main_args, storage_session=session)
+        process_model.main(main_args, storage_session=session)
     elif processing_mode == 'model_evaluation':
-        PROCESS_CLOUDNET_MODEL_EVALUATION.main(main_args, storage_session=session)
+        process_model_evaluation.main(main_args, storage_session=session)
     else:
-        PROCESS_CLOUDNET.main(main_args, storage_session=session)
+        process_cloudnet.main(main_args, storage_session=session)
     pytest_args = ['pytest', '-v', '-s', f'{script_path}/tests.py', '--full_path', temp_file.name,
-                   '--args', str(main_args)]
+                   '--args', json.dumps(vars(main_args))]
     try:
         if marker is not None:
             pytest_args += ['-m', marker]
@@ -187,11 +189,9 @@ def reset_log_file(script_path: str):
     open(f'{script_path}/md.log', 'w').close()
 
 
-def parse_args(args: str) -> list:
-    chars_to_remove = ['\'', '"', '[', ']', '-d=', '-p=', '--date=', '--product=', ' ']
-    for c in chars_to_remove:
-        args = args.replace(c, '')
-    return args.split(',')
+def parse_args(args: str) -> tuple:
+    args = json.loads(args)
+    return args['sites'][0], args['date'], args['products'][0]
 
 
 def read_log_file(script_path: str):

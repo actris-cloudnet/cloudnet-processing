@@ -16,8 +16,6 @@ from requests.exceptions import HTTPError
 
 
 def main(args, storage_session=requests.session()):
-    args = _parse_args(args)
-    utils.init_logger(args)
     config = read_main_conf()
     md_api = metadata_api.MetadataApi(config, requests.session())
     storage_api = StorageApi(config, storage_session)
@@ -40,30 +38,6 @@ def main(args, storage_session=requests.session()):
             os.remove(filename)
 
 
-def _parse_args(args):
-    parser = argparse.ArgumentParser(description='Create QC reports')
-    parser.add_argument('site', help='Site Name', type=str, default=None, nargs='?')
-    parser.add_argument('--start',
-                        type=str,
-                        metavar='YYYY-MM-DD',
-                        help='Starting date. Plot all dates by default.',
-                        default=None)
-    parser.add_argument('--stop',
-                        type=str,
-                        metavar='YYYY-MM-DD',
-                        help='Stopping date. Plot all dates by default.',
-                        default=None)
-    parser.add_argument('-d', '--date',
-                        type=str,
-                        metavar='YYYY-MM-DD',
-                        help='Single date to be plotted.')
-    parser.add_argument('-p', '--products',
-                        help='Products to be analyzed, e.g., radar,lidar,mwr,categorize,iwc \
-                              By default analyzes all products.',
-                        type=lambda s: s.split(','),
-                        default=None)
-    return parser.parse_args(args)
-
-
-if __name__ == "__main__":
-    main(sys.argv[1:])
+def add_arguments(subparser):
+    subparser.add_parser('qc', help='Create Quality Control reports.')
+    return subparser

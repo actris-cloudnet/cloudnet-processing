@@ -15,7 +15,6 @@ from requests.exceptions import HTTPError
 
 
 def main(args, storage_session=requests.session()):
-    utils.init_logger(args)
     config = read_main_conf()
     pid_utils = PidUtils(config)
     md_api = metadata_api.MetadataApi(config, requests.session())
@@ -59,7 +58,3 @@ def add_arguments(subparser):
                                Allows freezing recently changed files.',
                                default=False)
     return subparser
-
-
-if __name__ == "__main__":
-    main(sys.argv[1:])

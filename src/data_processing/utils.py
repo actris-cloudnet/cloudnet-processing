@@ -374,7 +374,7 @@ def init_logger(args: Optional = None) -> None:
     stderr_handler.setFormatter(formatter)
     logger.addHandler(output_file_handler)
     logger.addHandler(stderr_handler)
-    script_name = inspect.stack()[2][1]
+    script_name = args.cmd
     msg = f'Starting {script_name}'
     msg += f' with args {vars(args)}' if args is not None else ''
     logging.info(msg)

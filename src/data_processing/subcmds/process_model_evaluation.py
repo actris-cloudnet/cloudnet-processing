@@ -22,39 +22,39 @@ warnings.simplefilter("ignore", RuntimeWarning)
 
 
 def main(args, storage_session=requests.session()):
-    args = _parse_args(args)
-    utils.init_logger(args)
     config = utils.read_main_conf()
     start_date, stop_date = utils.get_processing_dates(args)
-    process = ProcessModelEvaluation(args, config, storage_session=storage_session)
-    for date in date_range(start_date, stop_date):
-        date_str = date.strftime("%Y-%m-%d")
-        process.date_str = date_str
-        for product in args.products:
-            if product not in utils.get_product_types('3'):
-                raise ValueError('No such product')
-            if product == 'model':
-                continue
-            processing_tools.clean_dir(process.temp_dir.name)
-            logging.info(f'Processing {product} product, {args.site} {date_str}')
-            uuid = Uuid()
-            uuid.volatile = process.fetch_volatile_uuid(product)
-            try:
-                models_metadata = process.fetch_model_params()
-            except MiscError as err:
-                logging.warning(err)
-                continue
-            for model, m_meta in models_metadata.items():
-                if product in utils.get_product_types(level='3'):
-                    try:
-                        uuid = process.process_level3_day(uuid, product, model, m_meta)
-                        process.upload_product(process.temp_file.name, product, uuid, model)
-                        process.create_and_upload_images(process.temp_file.name, product, uuid, model)
-                        process.print_info()
-                    except (RawDataMissingError, MiscError, NotImplementedError) as err:
-                        logging.warning(err)
-                    except (HTTPError, ConnectionError, RuntimeError, ValueError) as err:
-                        utils.send_slack_alert(err, 'data', args.site, date_str, product)
+    for site in args.sites:
+        args.site = site
+        process = ProcessModelEvaluation(args, config, storage_session=storage_session)
+        for date in date_range(start_date, stop_date):
+            date_str = date.strftime("%Y-%m-%d")
+            process.date_str = date_str
+            for product in args.products:
+                if product not in utils.get_product_types('3'):
+                    raise ValueError('No such product')
+                if product == 'model':
+                    continue
+                processing_tools.clean_dir(process.temp_dir.name)
+                logging.info(f'Processing {product} product, {args.site} {date_str}')
+                uuid = Uuid()
+                uuid.volatile = process.fetch_volatile_uuid(product)
+                try:
+                    models_metadata = process.fetch_model_params()
+                except MiscError as err:
+                    logging.warning(err)
+                    continue
+                for model, m_meta in models_metadata.items():
+                    if product in utils.get_product_types(level='3'):
+                        try:
+                            uuid = process.process_level3_day(uuid, product, model, m_meta)
+                            process.upload_product(process.temp_file.name, product, uuid, model)
+                            process.create_and_upload_images(process.temp_file.name, product, uuid, model)
+                            process.print_info()
+                        except (RawDataMissingError, MiscError, NotImplementedError) as err:
+                            logging.warning(err)
+                        except (HTTPError, ConnectionError, RuntimeError, ValueError) as err:
+                            utils.send_slack_alert(err, 'data', args.site, date_str, product)
 
 
 class ProcessModelEvaluation(ProcessBase):
@@ -141,33 +141,14 @@ class ProcessModelEvaluation(ProcessBase):
             return 'lwc'
 
 
-def _parse_args(args):
-    parser = argparse.ArgumentParser(description='Process Cloudnet Level 3 data, model evaluation.')
-    parser = processing_tools.add_default_arguments(parser)
-    parser.add_argument('--start',
-                        type=str,
-                        metavar='YYYY-MM-DD',
-                        help='Starting date. Default is current day - 5 (included).',
-                        default=utils.get_date_from_past(5))
-    parser.add_argument('--stop',
-                        type=str,
-                        metavar='YYYY-MM-DD',
-                        help='Stopping date. Default is current day + 1 (excluded).',
-                        default=utils.get_date_from_past(-1))
-    parser.add_argument('-d', '--date',
-                        type=str,
-                        metavar='YYYY-MM-DD',
-                        help='Single date to be processed.')
+def add_arguments(subparser):
+    parser = subparser.add_parser('me', help='Process Cloudnet model evaluation data')
     parser.add_argument('-r', '--reprocess',
                         action='store_true',
                         help='Process new version of the stable files and reprocess volatile '
                              'files.',
                         default=False)
-    parser.add_argument('-p', '--products',
-                        help='Products to be processed, e.g., cf, iwc, lwc',
-                        type=lambda s: s.split(','),
-                        default=utils.get_product_types('3'))
-    return parser.parse_args(args)
+    return subparser
 
 
 if __name__ == "__main__":

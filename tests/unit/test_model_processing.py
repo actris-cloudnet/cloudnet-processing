@@ -7,17 +7,18 @@ import requests_mock
 import importlib
 import pytest
 from data_processing.utils import MiscError
+from data_processing.subcmds import process_model
+
 sys.path.append('scripts/')
-process_model = importlib.import_module('process-model')
+cloudnet = __import__('cloudnet')
 
 adapter = requests_mock.Adapter()
 session = requests.Session()
 session.mount('http://', adapter)
 mock_addr = 'http://test/'
 
-args = namedtuple('args', 'site reprocess')
+args = cloudnet._parse_args(['model'])  # Initialize default arguments
 args.site = 'bucharest'
-args.reprocess = False
 
 config = {
     'DATAPORTAL_URL': mock_addr,

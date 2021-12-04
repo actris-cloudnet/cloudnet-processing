@@ -13,14 +13,15 @@ sites = list(set(all_sites))
 
 interpreter = 'python3'
 wrapper = 'scripts/wrapper.py'
-script = 'scripts/process-model.py'
-script_freeze = 'scripts/freeze.py'
+script = 'scripts/cloudnet'
+subcommand = 'model'
+subcommand_freeze = 'freeze'
 
 if not sites:
     logging.info('No unprocessed model data')
 else:
 
     for site in sites:
-        subprocess.check_call([interpreter, wrapper, interpreter, script, site])
+        subprocess.check_call([interpreter, wrapper, interpreter, script, subcommand, '-s', site])
 
-    subprocess.check_call([interpreter, wrapper, interpreter, script_freeze])
+    subprocess.check_call([interpreter, wrapper, interpreter, script, subcommand_freeze])

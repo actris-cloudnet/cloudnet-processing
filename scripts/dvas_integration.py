@@ -178,6 +178,10 @@ def main():
     filehandle.write(enddate)
     filehandle.close()
 
+def add_arguments(subparser):
+    subparser.add_parser('dvas-upload', help='Upload Cloudnet data to DVAS data portal')
+    return subparser
+
 
 if __name__ == "__main__":
     if not len(argv) > 1:

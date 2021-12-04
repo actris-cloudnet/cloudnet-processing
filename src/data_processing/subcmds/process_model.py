@@ -19,25 +19,25 @@ warnings.simplefilter("ignore", RuntimeWarning)
 
 
 def main(args, storage_session=requests.session()):
-    args = _parse_args(args)
-    utils.init_logger(args)
     config = utils.read_main_conf()
-    process = ProcessModel(args, config, storage_session=storage_session)
-    for date_str, model, raw_uuid in process.get_models_to_process(args):
-        process.date_str = date_str
-        logging.info(f'{args.site}, {date_str}, {model}')
-        uuid = Uuid()
-        try:
-            uuid.volatile = process.fetch_volatile_model_uuid(model, raw_uuid)
-            uuid = process.process_model(uuid, model)
-            process.upload_product(process.temp_file.name, 'model', uuid, model)
-            process.create_and_upload_images(process.temp_file.name, 'model', uuid.product, model)
-            process.upload_quality_report(process.temp_file.name, uuid.product)
-            process.print_info()
-        except MiscError as err:
-            logging.warning(err)
-        except (HTTPError, ConnectionError, RuntimeError) as err:
-            utils.send_slack_alert(err, 'model', args.site, date_str, model)
+    for site in args.sites:
+        args.site = site
+        process = ProcessModel(args, config, storage_session=storage_session)
+        for date_str, model, raw_uuid in process.get_models_to_process(args):
+            process.date_str = date_str
+            logging.info(f'{args.site}, {date_str}, {model}')
+            uuid = Uuid()
+            try:
+                uuid.volatile = process.fetch_volatile_model_uuid(model, raw_uuid)
+                uuid = process.process_model(uuid, model)
+                process.upload_product(process.temp_file.name, 'model', uuid, model)
+                process.create_and_upload_images(process.temp_file.name, 'model', uuid.product, model)
+                process.upload_quality_report(process.temp_file.name, uuid.product)
+                process.print_info()
+            except MiscError as err:
+                logging.warning(err)
+            except (HTTPError, ConnectionError, RuntimeError) as err:
+                utils.send_slack_alert(err, 'model', args.site, date_str, model)
 
 
 class ProcessModel(ProcessBase):
@@ -93,14 +93,9 @@ class ProcessModel(ProcessBase):
         return uuid
 
 
-def _parse_args(args):
-    parser = argparse.ArgumentParser(description='Process Cloudnet model data.')
-    parser = processing_tools.add_default_arguments(parser)
-    parser.add_argument('--start',
-                        type=str,
-                        metavar='YYYY-MM-DD',
-                        help='Starting date.')
-    return parser.parse_args(args)
+def add_arguments(subparser):
+    subparser.add_parser('model', help='Process Cloudnet model data.')
+    return subparser
 
 
 if __name__ == "__main__":

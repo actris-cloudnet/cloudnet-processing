@@ -9,9 +9,10 @@ active_campaign_sites = ['mindelo']
 sites += active_campaign_sites
 
 wrapper = 'scripts/wrapper.py'
-script = 'scripts/process-cloudnet.py'
+script = 'scripts/cloudnet'
+subcommand = 'process'
 products = 'radar,lidar,mwr'
 interpreter = 'python3'
 
 for site in sites:
-    subprocess.check_call([interpreter, wrapper, interpreter, script, site, '--p', products])
+    subprocess.check_call([interpreter, wrapper, interpreter, script, subcommand, '-s', site, '--p', products])

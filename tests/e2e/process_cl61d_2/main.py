@@ -22,11 +22,9 @@ source_data = [
 def main():
     utils.start_test_servers(identifier, SCRIPT_PATH)
     session = utils.register_storage_urls(temp_file, source_data, site, date, identifier, True)
-    main_args = [site, f'-d={date}', '-p=lidar']
+    main_args = [f'-s={site}', f'-d={date}', '-p=lidar', 'process']
     utils.process(session, main_args, temp_file, SCRIPT_PATH)
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description=f'Cloudnet {identifier} processing e2e test.')
-    ARGS = parser.parse_args()
     main()

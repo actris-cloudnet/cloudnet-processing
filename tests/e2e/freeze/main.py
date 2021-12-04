@@ -5,7 +5,8 @@ from tempfile import NamedTemporaryFile
 import subprocess
 import test_utils.utils as utils
 sys.path.append('scripts/')
-freeze = __import__("freeze")
+cloudnet = __import__('cloudnet')
+from data_processing.subcmds import freeze
 
 SCRIPT_PATH = os.path.dirname(os.path.realpath(__file__))
 
@@ -36,7 +37,8 @@ def main():
     utils.start_server(5001, 'tests/data/server/pid', f'{SCRIPT_PATH}/pid.log')
     register_storage_urls()
 
-    freeze.main([], storage_session=session)
+    args = cloudnet._parse_args(['freeze'])
+    freeze.main(args, storage_session=session)
 
     try:
         subprocess.check_call(['pytest', '-v', f'{SCRIPT_PATH}/tests.py',
