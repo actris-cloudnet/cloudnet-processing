@@ -12,6 +12,7 @@ from data_processing.subcmds import freeze, process_cloudnet, process_model, pro
 warnings.simplefilter("ignore", UserWarning)
 warnings.simplefilter("ignore", RuntimeWarning)
 
+"""All modules MUST have an add_arguments function which adds the subcommand to the subparser."""
 modules = {
     'freeze': freeze,
     'process': process_cloudnet,

@@ -3,46 +3,59 @@
 
 Various scripts used in Cloudnet data transfer and processing.
 
-### Installation
+## Installation
 The data processing tools are distributed as a docker container as a part of the Cloudnet development toolkit.
 Refer to [README of the dev-toolkit repository](https://github.com/actris-cloudnet/dev-toolkit/) on how to set up the CLU development environment.
 
-### Scripts
+## Scripts
 Once the CLU development environment is running, scripts can be run inside the data-processing container with
 the `./run` wrapper.
 The scripts are located in `scripts/` folder and should be run from the root: 
 ```
-$ ./run scripts/<script_name.py> arg1 --arg2=foo ...
+$ ./run scripts/<script_name.py> --arg1=foo --arg2=bar ...
 ```
 The following scripts are provided:
 
 
-### `process-cloudnet.py`
-Create Cloudnet products.
+### `cloudnet.py`
+The main wrapper for running all of the processing steps.
 
 ```
-usage: process-cloudnet.py [-h] [-r] [--reprocess_volatile] [-d YYYY-MM-DD] [--start YYYY-MM-DD]
-                           [--stop YYYY-MM-DD] [-p ...] SITE
+usage: cloudnet.py [-h] [-d YYYY-MM-DD] [--start YYYY-MM-DD]
+                           [--stop YYYY-MM-DD] [-p ...] [-s ...] COMMAND
 ```
 
 Positional arguments:
 
 | Name   | Description | 
 | :---   | :---        |
-| `site` |  Site name.|
+| `command` |  Command to execute. Must be one of `freeze`, `process`, `model`, `me`, `plot`, or `qc`. Commands are detailed [here](#commands).|
 
-Optional arguments:
+General arguments. These arguments are available for all commands. The arguments must be issued before the command argument.
 
 | Short | Long             | Default           | Description                                | 
 | :---  | :----------             | :---              | :---                                       |
 | `-h`  | `--help`         |                   | Show help and exit. |
+| `-d`  | `--date`         |                   | Single date to be processed. Alternatively `--start` and `--stop` can be defined.|
+|       | `--start`        | `current day - 5` | Starting date. |
+|       | `--stop`         | `current day `| Stopping date. |
+| `-p`  | `--products`     | all except `L3`   | Processed products, e.g, `radar,lidar,categorize,classification`. |
+| `-s`  | `--sites`        | all Cloudnet sites   | Sites to process data from, e.g, `hyytiala,limassol`. |
+
+
+### Commands
+
+
+### `process`
+
+The `process` command processes standard cloudnet products, such as `radar`, `lidar`, `categorize`, and `classification` products.
+
+In addition to the general arguments, it accepts the following special arguments.
+
+| Short | Long             | Default           | Description                                | 
+| :---  | :----------             | :---              | :---                                       |
 | `-r`  | `--reprocess`    | `False`           | See below. |
 |       | `--reprocess_volatile`  | `False`    | Reprocess volatile files only (and create new volatile file from unprocessed). |
-| `-d`  | `--date`         |                   | Single date to be processed. Alternatively `--start` and `--stop` can be defined.|
-|       | `--start`        | `current day - 7` | Starting date. |
-|       | `--stop`         | `current day - 1 `| Stopping date. |
-| `-p`  | `--products`     | all except `L3`   | Processed products, e.g, `radar,lidar,categorize,classification`. |
-
 Behavior of the `--reprocess` flag:
 
 | Existing file | `--reprocess` | Action          |
@@ -54,73 +67,59 @@ Behavior of the `--reprocess` flag:
 | `stable` (legacy or not)      | `False`       | - |
 | `stable`      | `True`        | Create new stable file version.|
 
-### `process-model.py`
+### `model`
 Create Cloudnet model products.
 
-```
-usage: process-model.py [-h] SITE
-```
+This command takes no additional arguments
 
-Positional arguments:
+### `me`
+Create Cloudnet level 3 model evaluation products (experimental).
 
-| Name   | Description | 
-| :---   | :---        |
-| `site` |  Site name.|
+Additional arguments:
 
-Optional arguments:
-
-| Short | Long             | Default           | Description                                | 
+| Short | Long             | Default           | Description                                |
 | :---  | :----------             | :---              | :---                                       |
-| `-h`  | `--help`         |                   | Show help and exit. |
+| `-r`  | `--reprocess`    | `False`           | Process new version of the stable files and reprocess volatile files. |
+
+### `plot`
+Don't process anything, only plot images for products.
+
+This command takes no additional arguments
 
 
-### `create-images.py`
-Create images only.
-
-```
-usage: create-images.py [-h] [-d YYYY-MM-DD] [--start YYYY-MM-DD] [--stop YYYY-MM-DD] [-p ...] SITE
-```
-
-Positional arguments:
-
-| Name   | Description | 
-| :---   | :---        |
-| `site` |  Site name.|
-
-Optional arguments:
-
-| Short | Long             | Default           | Description                                | 
-| :---  | :----------      | :---              | :---                                       |
-| `-h`  | `--help`         |                   | Show help and exit. |
-| `-d`  | `--date`         |                   | Single date to be plotted. Alternatively `--start` and `--stop` can be defined.|
-|       | `--start`        | all               | Starting date. |
-|       | `--stop`         | all               | Stopping date. |
-| `-p`  | `--products`     | all except `model` and `L3`  | Plotted products, e.g, `radar,lidar,categorize,classification`. |
+### `qc`
+Don't process anything, only create quality control reports for products.
 
 
-### `create-qc-reports.py`
-Create quality control reports only.
+This command takes no additional arguments
 
-```
-usage: create-qc-reports.py [-h] [-d YYYY-MM-DD] [--start YYYY-MM-DD] [--stop YYYY-MM-DD] [-p ...] SITE
-```
+### `freeze`
+Freeze selected files by adding a PID to the files and setting their state to `stable`, preventing further changes to the data.
 
-Positional arguments:
+Additional arguments:
 
-| Name   | Description | 
-| :---   | :---        |
-| `site` |  Site name.|
+| Short | Long             | Default     | Description                                | 
+| :---  | :---             | :---        | :---                                       |
+| `-f`  | `--force`         | False             | Ignore environment variables `FREEZE_AFTER_DAYS` and `FREEZE_MODEL_AFTER_DAYS`. Allows freezing recently changed files.                      |
 
-Optional arguments:
 
-| Short | Long             | Default           | Description                                | 
-| :---  | :----------      | :---              | :---                                       |
-| `-h`  | `--help`         |                   | Show help and exit. |
-| `-d`  | `--date`         |                   | Single date to be analysed. Alternatively `--start` and `--stop` can be defined.|
-|       | `--start`        | all               | Starting date. |
-|       | `--stop`         | all               | Stopping date. |
-| `-p`  | `--products`     | all except `model` and `L3`  | Analysed products, e.g, `radar,lidar,categorize,classification`. |
+### Examples
 
+Process classification product for the Bucharest site for the date 2021-12-07:
+
+    scripts/cloudnet.py -s bucharest -d 2021-12-07 -p classification process
+
+Freeze all files whose measurement date is 2021-01-01 or later:
+
+    scripts/cloudnet.py --start 2021-01-01 freeze
+
+Reprocess all level 2 files between 2021-01-01 and 2021-01-31:
+
+    scripts/cloudnet.py --start 2021-01-01 --stop 2021-01-31 -p classification,drizzle,iwc,lwc process -r
+
+## Other scripts
+
+Code that is not involved in the cloudnet data processing chain can be found in other scripts under the `scripts` directory.
 
 ### `put-legacy-files.py`
 
@@ -152,19 +151,6 @@ Behavior:
 | `stable` (legacy)      | - |
 | `stable` (non-legacy)  | Add stable legacy file as oldest version. |
 
-
-### `freeze.py`
-Freeze selected files.
-
-```
-usage: freeze.py [-h]
-```
-
-Optional arguments:
-
-| Short | Long             | Default     | Description                                | 
-| :---  | :---             | :---        | :---                                       |
-| `-h`  | `--help`         |             | Show help and exit.                        |
 
 
 ### `map-variable-names.py`

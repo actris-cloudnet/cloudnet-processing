@@ -52,5 +52,5 @@ class Img(ProcessBase):
 
 
 def add_arguments(subparser):
-    subparser.add_parser('plot', help='Plot cloudnet images.')
+    subparser.add_parser('plot', help='Plot Cloudnet images.')
     return subparser

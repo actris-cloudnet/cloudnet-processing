@@ -142,7 +142,7 @@ class ProcessModelEvaluation(ProcessBase):
 
 
 def add_arguments(subparser):
-    parser = subparser.add_parser('me', help='Process Cloudnet model evaluation data')
+    parser = subparser.add_parser('me', help='Process Cloudnet model evaluation (Level 3) data.')
     parser.add_argument('-r', '--reprocess',
                         action='store_true',
                         help='Process new version of the stable files and reprocess volatile '
