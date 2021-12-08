@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 import subprocess
+from sys import argv
 from datetime import datetime, timedelta
 from data_processing import utils
 
-sites = utils.get_cloudnet_sites()
+default_sites = utils.get_cloudnet_sites()
+additional_sites = argv[1:]
+sites = default_sites + additional_sites
 
 interpreter = 'python3'
 script = 'scripts/cloudnet.py'

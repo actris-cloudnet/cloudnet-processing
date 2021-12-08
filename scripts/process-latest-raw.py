@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 import subprocess
+from sys import argv
 from data_processing import utils
 
-sites = utils.get_cloudnet_sites()
-
-active_campaign_sites = ['mindelo']
-
-sites += active_campaign_sites
+default_sites = utils.get_cloudnet_sites()
+additional_sites = argv[1:]
+sites = default_sites + additional_sites
 
 wrapper = 'scripts/wrapper.py'
 script = 'scripts/cloudnet.py'
