@@ -23,7 +23,7 @@ def main(args, storage_session=requests.session()):
     for site in args.sites:
         args.site = site
         process = ProcessModel(args, config, storage_session=storage_session)
-        for date_str, model, raw_uuid in process.get_models_to_process(args):
+        for date_str, model, raw_uuid in process.get_models_to_process():
             process.date_str = date_str
             logging.info(f'{args.site}, {date_str}, {model}')
             uuid = Uuid()
@@ -42,14 +42,12 @@ def main(args, storage_session=requests.session()):
 
 class ProcessModel(ProcessBase):
 
-    def get_models_to_process(self, args) -> list:
+    def get_models_to_process(self) -> list:
         minimum_size = 20200
         payload = {
             'site': self.site,
             'status': 'uploaded'
         }
-        if hasattr(args, 'start'):
-            payload['dateFrom'] = args.start
         metadata = self.md_api.get('upload-model-metadata', payload)
         return [(row['measurementDate'], row['model']['id'], row['uuid']) for row in metadata
                 if int(row['size']) > minimum_size]
@@ -96,7 +94,3 @@ class ProcessModel(ProcessBase):
 def add_arguments(subparser):
     subparser.add_parser('model', help='Process Cloudnet model data.')
     return subparser
-
-
-if __name__ == "__main__":
-    main(sys.argv[1:])

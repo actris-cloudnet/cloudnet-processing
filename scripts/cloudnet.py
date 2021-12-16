@@ -33,7 +33,8 @@ def main(args):
 def _parse_args(args):
     parser = argparse.ArgumentParser(description='Cloudnet processing main wrapper.',
                                      epilog='Enjoy the program! :)')
-    subparsers = parser.add_subparsers(title='Command', help='Command to execute.', required=True, dest='cmd')
+    subparsers = parser.add_subparsers(title='Command', help='Command to execute.', required=True,
+                                       dest='cmd')
     for module in modules.values():
         subparsers = module.add_arguments(subparsers)
     group = parser.add_argument_group(title='General options')

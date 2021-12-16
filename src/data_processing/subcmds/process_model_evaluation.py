@@ -149,7 +149,3 @@ def add_arguments(subparser):
                              'files.',
                         default=False)
     return subparser
-
-
-if __name__ == "__main__":
-    main(sys.argv[1:])
