@@ -187,9 +187,17 @@ class ProcessCloudnet(ProcessBase):
             raise RawDataMissingError
         selected_instrument = instrument[0]
         if len(instrument) > 1:
+            # First choose the preferred instrument
             preferred = ('rpg-fmcw-94', 'chm15k')
             for instru in instrument:
                 if instru in preferred:
+                    selected_instrument = instru
+                    break
+            # If something already processed we must use it
+            payload = self._get_payload(product=instrument_type)
+            product_metadata = self.md_api.get('api/files', payload)
+            for instru in instrument:
+                if product_metadata and instru in product_metadata[0]['filename']:
                     selected_instrument = instru
                     break
             logging.warning(f'More than one type of {instrument_type} data, '
