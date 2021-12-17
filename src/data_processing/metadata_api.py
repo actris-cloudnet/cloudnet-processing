@@ -127,11 +127,18 @@ class MetadataApi:
     def find_files_for_plotting(self, args: Namespace) -> list:
         common_payload = _get_common_payload(args)
         products = _get_regular_products(args)
-        files_payload = {
-            **common_payload,
-            **{'product': products},
-        }
-        files = self.get('api/files', files_payload)
+        files = []
+        if len(products) > 0:
+            files_payload = {
+                **common_payload,
+                **{'product': products},
+            }
+            files += self.get('api/files', files_payload)
+        if 'model' in args.products:
+            model_files_payload = {
+                **common_payload,
+            }
+            files += self.get('api/model-files', model_files_payload)
         return files
 
 
