@@ -15,6 +15,14 @@ from requests.exceptions import HTTPError
 
 
 def main(args, storage_session=requests.session()):
+
+    if set(args.sites) == set(utils.get_cloudnet_sites()):
+        args.sites = None
+
+    if args.start == utils.get_date_from_past(5) and args.stop == utils.get_date_from_past(-1):
+        args.start = None
+        args.stop = None
+
     config = read_main_conf()
     pid_utils = PidUtils(config)
     md_api = metadata_api.MetadataApi(config, requests.session())
