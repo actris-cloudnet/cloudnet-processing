@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 """A script for creating Cloudnet quality control (QC) reports."""
-import sys
 import os
 import requests
 import glob
 import logging
-import argparse
 from tempfile import TemporaryDirectory
 from data_processing.utils import read_main_conf
 from data_processing import metadata_api
@@ -19,6 +17,7 @@ def main(args, storage_session=requests.session()):
     config = read_main_conf()
     md_api = metadata_api.MetadataApi(config, requests.session())
     storage_api = StorageApi(config, storage_session)
+    args.site = args.sites[0]
     metadata = md_api.find_files_for_plotting(args)
     temp_dir_root = utils.get_temp_dir(config)
     temp_dir = TemporaryDirectory(dir=temp_dir_root)

@@ -136,12 +136,15 @@ class MetadataApi:
 
 
 def _get_common_payload(args: Namespace) -> dict:
-    return {
-        'site': args.sites,
-        'dateFrom': args.start,
-        'dateTo': args.stop,
-        'date': args.date
-    }
+    if args.date is not None:
+        payload = {'date': args.date}
+    else:
+        payload = {
+            'dateFrom': args.start,
+            'dateTo': args.stop
+        }
+    payload['site'] = args.sites
+    return payload
 
 
 def _get_regular_products(args: Namespace) -> list:
