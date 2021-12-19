@@ -48,6 +48,10 @@ class ProcessBase:
         self.temp_file = NamedTemporaryFile(dir=self._temp_dir_root)
         self.daily_file = NamedTemporaryFile(dir=self._temp_dir_root)
 
+    def init_temp_files(self):
+        self.temp_file = NamedTemporaryFile(dir=self._temp_dir_root)
+        self.daily_file = NamedTemporaryFile(dir=self._temp_dir_root)
+
     def fetch_volatile_uuid(self, product: str) -> Union[str, None]:
         payload = self._get_payload(product=product)
         payload['showLegacy'] = True
