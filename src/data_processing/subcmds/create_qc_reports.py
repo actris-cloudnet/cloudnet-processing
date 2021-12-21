@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """A script for creating Cloudnet quality control (QC) reports."""
 import os
-import requests
 import glob
 import logging
 from tempfile import TemporaryDirectory
-from data_processing.utils import read_main_conf
-from data_processing import metadata_api
-from data_processing.storage_api import StorageApi
-from data_processing import utils
-from data_processing.processing_tools import ProcessBase
+import requests
 from requests.exceptions import HTTPError
+from data_processing import utils
+from data_processing import metadata_api
+from data_processing.utils import read_main_conf
+from data_processing.storage_api import StorageApi
+from data_processing.processing_tools import ProcessBase
 
 
 def main(args, storage_session=requests.session()):

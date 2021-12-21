@@ -1,22 +1,19 @@
 #!/usr/bin/env python3
 """Master script for CloudnetPy processing."""
-import argparse
 import importlib
-import sys
+import logging
 import warnings
 from typing import Tuple, Union, Optional
 import requests
-import logging
 from cloudnetpy.categorize import generate_categorize
-from cloudnetpy.utils import date_range
-from requests.exceptions import HTTPError
-from data_processing import utils
-from data_processing.utils import MiscError, RawDataMissingError
-from data_processing import processing_tools
-from data_processing.processing_tools import Uuid, ProcessBase
-from data_processing import instrument_process
 from cloudnetpy.exceptions import InconsistentDataError, DisdrometerDataError, ValidTimeStampError
-
+from cloudnetpy.utils import date_range
+from data_processing import instrument_process
+from data_processing import processing_tools
+from data_processing import utils
+from data_processing.processing_tools import Uuid, ProcessBase
+from data_processing.utils import MiscError, RawDataMissingError
+from requests.exceptions import HTTPError
 
 warnings.simplefilter("ignore", UserWarning)
 warnings.simplefilter("ignore", RuntimeWarning)
@@ -79,14 +76,12 @@ class ProcessCloudnet(ProcessBase):
         missing = self._get_missing_level1b_products(meta_records, l1_products)
         if missing:
             raise MiscError(f'Missing required input files: {", ".join(missing)}')
-        else:
-            self._check_source_status('categorize', meta_records)
-            input_files = {key: '' for key in l1_products}
-            for product, metadata in meta_records.items():
-                input_files[product] = self._storage_api.download_product(metadata,
-                                                                          self.temp_dir.name)
-            if not input_files['mwr'] and 'rpg-fmcw-94' in input_files['radar']:
-                input_files['mwr'] = input_files['radar']
+        self._check_source_status('categorize', meta_records)
+        input_files = {key: '' for key in l1_products}
+        for product, metadata in meta_records.items():
+            input_files[product] = self._storage_api.download_product(metadata, self.temp_dir.name)
+        if not input_files['mwr'] and 'rpg-fmcw-94' in input_files['radar']:
+            input_files['mwr'] = input_files['radar']
         uuid.product = generate_categorize(input_files, self.temp_file.name, uuid=uuid.volatile)
         return uuid, 'categorize'
 
@@ -120,7 +115,7 @@ class ProcessCloudnet(ProcessBase):
             categorize_file = self._storage_api.download_product(metadata[0], self.temp_dir.name)
             meta_record = {'categorize': metadata[0]}
         else:
-            raise MiscError(f'Missing input categorize file')
+            raise MiscError('Missing input categorize file')
         self._check_source_status(product, meta_record)
         module = importlib.import_module(f'cloudnetpy.products.{product}')
         fun = getattr(module, f'generate_{product}')
@@ -172,18 +167,18 @@ class ProcessCloudnet(ProcessBase):
         if not self._is_unprocessed_data(upload_metadata) and not (self.is_reprocess
                                                                    or self.is_reprocess_volatile):
             raise MiscError('Raw data already processed')
-        full_paths, uuids = self._download_raw_files(upload_metadata)
+        full_paths, _ = self._download_raw_files(upload_metadata)
         uuids_of_current_day = [meta['uuid'] for meta in upload_metadata
                                 if meta['measurementDate'] == self.date_str]
         return full_paths, uuids_of_current_day
 
     def _detect_uploaded_instrument(self, instrument_type: str) -> str:
         instrument_metadata = self.md_api.get('api/instruments')
-        possible_instruments = [x['id'] for x in instrument_metadata if x['type'] == instrument_type]
+        possible_instruments = {x['id'] for x in instrument_metadata if x['type'] == instrument_type}
         payload = self._get_payload()
         upload_metadata = self.md_api.get('upload-metadata', payload)
-        uploaded_instruments = set([x['instrument']['id'] for x in upload_metadata])
-        instrument = list(set(possible_instruments) & uploaded_instruments)
+        uploaded_instruments = {x['instrument']['id'] for x in upload_metadata}
+        instrument = list(possible_instruments & uploaded_instruments)
         if len(instrument) == 0:
             raise RawDataMissingError
         selected_instrument = instrument[0]

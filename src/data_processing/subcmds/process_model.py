@@ -1,18 +1,14 @@
 #!/usr/bin/env python3
 """Master script for Cloudnet model processing."""
-import argparse
-import sys
+import logging
 import warnings
 from typing import Union
 import requests
-import logging
-from requests.exceptions import HTTPError
 from data_processing import nc_header_augmenter
 from data_processing import utils
-from data_processing.utils import MiscError
-from data_processing import processing_tools
 from data_processing.processing_tools import Uuid, ProcessBase
-
+from data_processing.utils import MiscError
+from requests.exceptions import HTTPError
 
 warnings.simplefilter("ignore", UserWarning)
 warnings.simplefilter("ignore", RuntimeWarning)
@@ -70,7 +66,7 @@ class ProcessModel(ProcessBase):
 
     def fetch_volatile_model_uuid(self, model: str, raw_uuid: str) -> Union[str, None]:
         payload = self._get_payload(model=model)
-        metadata = self.md_api.get(f'api/model-files', payload)
+        metadata = self.md_api.get('api/model-files', payload)
         try:
             uuid = self._read_stable_uuid(metadata)
             if uuid is not None:
@@ -87,7 +83,7 @@ class ProcessModel(ProcessBase):
         except MiscError as err:
             self.update_statuses([raw_uuid], status='invalid')
             msg = f'{err.message}: Setting status of {metadata[0]["filename"]} to "invalid"'
-            raise MiscError(msg)
+            raise MiscError(msg) from None
         return uuid
 
 

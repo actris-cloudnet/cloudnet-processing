@@ -1,21 +1,18 @@
 #!/usr/bin/env python3
 """Master script for Model evaluation processing."""
-import argparse
-import sys
-import warnings
 import logging
+import warnings
 from tempfile import NamedTemporaryFile
 from typing import Optional
 import requests
-from model_evaluation.products import product_resampling
 from cloudnetpy.utils import date_range
-from requests.exceptions import HTTPError
-from data_processing import utils
-from data_processing.utils import MiscError, RawDataMissingError
 from data_processing import processing_tools
+from data_processing import utils
 from data_processing.processing_tools import Uuid, ProcessBase
+from data_processing.utils import MiscError, RawDataMissingError
 from model_evaluation.plotting.plotting import generate_L3_day_plots
-
+from model_evaluation.products import product_resampling
+from requests.exceptions import HTTPError
 
 warnings.simplefilter("ignore", UserWarning)
 warnings.simplefilter("ignore", RuntimeWarning)
@@ -75,7 +72,7 @@ class ProcessModelEvaluation(ProcessBase):
             }
             self._check_source_status(full_product, metadict)
         else:
-            raise MiscError(f'Missing input level 2 file')
+            raise MiscError('Missing input level 2 file')
         for m_meta in model_meta:
             m_file = self._storage_api.download_product(m_meta[0], self.temp_dir.name)
             input_model_files.append(m_file)
@@ -91,7 +88,7 @@ class ProcessModelEvaluation(ProcessBase):
             payload = self._get_payload(model=model)
         else:
             payload['allModels'] = True
-        metadata = self.md_api.get(f'api/model-files', payload)
+        metadata = self.md_api.get('api/model-files', payload)
         model_metas = self._sort_model_meta2dict(metadata)
         return model_metas
 

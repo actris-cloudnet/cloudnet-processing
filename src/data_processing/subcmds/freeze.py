@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
 """A script for assigning PIDs for data files."""
-import sys
-import os
-import requests
 import glob
 import logging
+import os
 from tempfile import TemporaryDirectory
-from data_processing.utils import read_main_conf
+import requests
 from data_processing import metadata_api
+from data_processing import utils
 from data_processing.pid_utils import PidUtils
 from data_processing.storage_api import StorageApi
-from data_processing import utils
+from data_processing.utils import read_main_conf
 from requests.exceptions import HTTPError
 
 
