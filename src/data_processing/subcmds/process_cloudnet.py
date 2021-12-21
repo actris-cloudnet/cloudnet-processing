@@ -7,6 +7,7 @@ from typing import Tuple, Union, Optional
 import requests
 from cloudnetpy.categorize import generate_categorize
 from cloudnetpy.exceptions import InconsistentDataError, DisdrometerDataError, ValidTimeStampError
+from cloudnetpy.exceptions import ModelDataError
 from cloudnetpy.utils import date_range
 from data_processing import instrument_process
 from data_processing import processing_tools
@@ -82,7 +83,18 @@ class ProcessCloudnet(ProcessBase):
             input_files[product] = self._storage_api.download_product(metadata, self.temp_dir.name)
         if not input_files['mwr'] and 'rpg-fmcw-94' in input_files['radar']:
             input_files['mwr'] = input_files['radar']
-        uuid.product = generate_categorize(input_files, self.temp_file.name, uuid=uuid.volatile)
+        try:
+            uuid.product = generate_categorize(input_files, self.temp_file.name, uuid=uuid.volatile)
+        except ModelDataError:
+            payload = self._get_payload(model='gdas1')
+            metadata = self.md_api.get('api/model-files', payload)
+            if len(metadata) == 1:
+                input_files['model'] = self._storage_api.download_product(metadata[0],
+                                                                          self.temp_dir.name)
+                uuid.product = generate_categorize(input_files, self.temp_file.name,
+                                                   uuid=uuid.volatile)
+            else:
+                raise MiscError('Bad ecmwf model data and no gdas1')
         return uuid, 'categorize'
 
     def _get_level1b_metadata_for_categorize(self, source_products: list) -> dict:
