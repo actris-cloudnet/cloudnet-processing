@@ -101,23 +101,31 @@ class ProcessBase:
             return
         for field in fields:
             try:
-                generate_figure(nc_file_full_path, [field], show=False, image_name=temp_file.name, max_y=max_alt,
-                                sub_title=False, title=False, dpi=120)
+                dimensions = generate_figure(nc_file_full_path, [field], show=False, image_name=temp_file.name, max_y=max_alt,
+                                             sub_title=False, title=False, dpi=120)
             except (IndexError, ValueError, TypeError):
                 logging.warning(f'Skipping {field}')
                 continue
 
-            visualizations.append(self._upload_img(temp_file.name, product_s3key, uuid, product, field))
+            visualizations.append(self._upload_img(temp_file.name, product_s3key, uuid, product, field, dimensions))
         self.md_api.put_images(visualizations, uuid)
 
     def _upload_img(self, img_path: str, product_s3key: str,
-                    product_uuid: str, product: str, field: str) -> dict:
+                    product_uuid: str, product: str, field: str, dimensions) -> dict:
         img_s3key = product_s3key.replace('.nc', f"-{product_uuid[:8]}-{field}.png")
         self._storage_api.upload_image(full_path=img_path,
                                        s3key=img_s3key)
         return {
             's3key': img_s3key,
             'variable_id': utils.get_var_id(product, field),
+            'dimensions': {
+                'width': dimensions.width,
+                'height': dimensions.height,
+                'marginTop': dimensions.margin_top,
+                'marginLeft': dimensions.margin_left,
+                'marginBottom': dimensions.margin_bottom,
+                'marginRight': dimensions.margin_right,
+            },
         }
 
     def upload_quality_report(self,

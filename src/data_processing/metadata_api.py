@@ -62,7 +62,8 @@ class MetadataApi:
         for data in img_metadata:
             payload = {
                 'sourceFileId': product_uuid,
-                'variableId': data['variable_id']
+                'variableId': data['variable_id'],
+                'dimensions': data['dimensions']
             }
             self.put('visualizations', data['s3key'], payload)
 
