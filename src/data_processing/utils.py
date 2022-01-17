@@ -2,7 +2,6 @@
 import base64
 import datetime
 import hashlib
-import inspect
 import logging
 import os
 import random
@@ -16,6 +15,7 @@ import netCDF4
 import pytz
 import requests
 from cloudnetpy.plotting.plot_meta import ATTRIBUTES as ATTR
+from cloudnetpy.plotting.plotting import Dimensions
 from cloudnetpy_qc import Quality
 from cloudnetpy.utils import get_time
 
@@ -531,3 +531,15 @@ def get_processing_dates(args):
     start_date = date_string_to_date(start_date)
     stop_date = date_string_to_date(stop_date)
     return start_date, stop_date
+
+
+def dimensions2dict(dimensions: Dimensions) -> dict:
+    """Converts dimensions object to dictionary."""
+    return {
+        'width': dimensions.width,
+        'height': dimensions.height,
+        'marginTop': dimensions.margin_top,
+        'marginLeft': dimensions.margin_left,
+        'marginBottom': dimensions.margin_bottom,
+        'marginRight': dimensions.margin_right
+    }

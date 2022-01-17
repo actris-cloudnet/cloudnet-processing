@@ -118,14 +118,7 @@ class ProcessBase:
         return {
             's3key': img_s3key,
             'variable_id': utils.get_var_id(product, field),
-            'dimensions': {
-                'width': dimensions.width,
-                'height': dimensions.height,
-                'marginTop': dimensions.margin_top,
-                'marginLeft': dimensions.margin_left,
-                'marginBottom': dimensions.margin_bottom,
-                'marginRight': dimensions.margin_right,
-            } if dimensions is not None else None,
+            'dimensions': utils.dimensions2dict(dimensions) if dimensions is not None else None,
         }
 
     def upload_quality_report(self,

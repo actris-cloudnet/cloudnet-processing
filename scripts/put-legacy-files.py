@@ -78,7 +78,8 @@ def main():
             fields, max_alt = utils.get_fields_for_plot(product)
             for field in fields:
                 try:
-                    dimensions = generate_legacy_figure(temp_file.name, product, field, image_name=temp_img_file.name,
+                    dimensions = generate_legacy_figure(temp_file.name, product, field,
+                                                        image_name=temp_img_file.name,
                                                         max_y=max_alt, dpi=120)
                 except (IndexError, ValueError, TypeError) as err:
                     logging.warning(err)
@@ -86,7 +87,8 @@ def main():
 
                 img_s3key = s3key.replace('.nc', f"-{uuid[:8]}-{field}.png")
                 storage_api.upload_image(full_path=temp_img_file.name, s3key=img_s3key)
-                img_meta = {'s3key': img_s3key, 'variable_id': utils.get_var_id(product, field), 'dimensions': dimensions}
+                img_meta = {'s3key': img_s3key, 'variable_id': utils.get_var_id(product, field),
+                            'dimensions': utils.dimensions2dict(dimensions)}
                 visualizations.append(img_meta)
 
             payload = utils.create_product_put_payload(temp_file.name,
