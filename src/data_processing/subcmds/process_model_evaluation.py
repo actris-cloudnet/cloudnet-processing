@@ -112,20 +112,20 @@ class ProcessModelEvaluation(ProcessBase):
                               image_name=temp_file.name,
                               fig_type='statistic', stats=['area'], title=False)
         visualizations.append(self._upload_img(temp_file.name, product_s3key,
-                                               uuid.product, product, 'area'))
+                                               uuid.product, product, 'area', None))
         # Statistic error plot
         generate_L3_day_plots(nc_file_full_path, l3_product, model_or_instrument_id, var_list=fields,
                               image_name=temp_file.name,
                               fig_type='statistic', stats=['error'], title=False)
         visualizations.append(self._upload_img(temp_file.name, product_s3key,
-                                               uuid.product, product, 'error'))
+                                               uuid.product, product, 'error', None))
         # Single plots
         for field in fields:
             generate_L3_day_plots(nc_file_full_path, l3_product, model_or_instrument_id, var_list=[field],
                                   image_name=temp_file.name,
                                   fig_type='single', title=False)
             visualizations.append(self._upload_img(temp_file.name, product_s3key,
-                                                   uuid.product, product, field))
+                                                   uuid.product, product, field, None))
         self.md_api.put_images(visualizations, uuid.product)
 
     @staticmethod
