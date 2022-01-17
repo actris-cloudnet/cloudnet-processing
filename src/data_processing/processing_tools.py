@@ -125,7 +125,7 @@ class ProcessBase:
                 'marginLeft': dimensions.margin_left,
                 'marginBottom': dimensions.margin_bottom,
                 'marginRight': dimensions.margin_right,
-            },
+            } if dimensions is not None else None,
         }
 
     def upload_quality_report(self,
