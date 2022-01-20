@@ -32,18 +32,17 @@ def main(args, storage_session=requests.session()):
         except HTTPError as err:
             utils.send_slack_alert(err, 'img', site, img.date_str, product)
             continue
-        identifier = _get_identifier(row['downloadUrl'])
         try:
-            img.create_and_upload_images(full_path, product, row['uuid'], identifier)
+            identifier = row['downloadUrl'].split('_')[-1][:-3]
+            img.create_and_upload_images(full_path,
+                                         product,
+                                         row['uuid'],
+                                         identifier,
+                                         legacy=row.get('legacy', False))
         except OSError as err:
             utils.send_slack_alert(err, 'img', site, img.date_str, product)
         for filename in glob.glob(f'{temp_dir.name}/*'):
             os.remove(filename)
-
-
-def _get_identifier(filename: str) -> str:
-    identifier = filename.split('_')[-1][:-3]
-    return identifier
 
 
 class Img(ProcessBase):
