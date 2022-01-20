@@ -38,7 +38,7 @@ class StorageApi:
     def download_product(self, metadata: dict, dir_name: str) -> str:
         """Download a product."""
         filename = metadata['filename']
-        s3key = f'legacy/{filename}' if metadata['legacy'] is True else filename
+        s3key = f'legacy/{filename}' if metadata.get('legacy', False) is True else filename
         bucket = utils.get_product_bucket(metadata['volatile'])
         url = path.join(self._url, bucket, s3key)
         full_path = path.join(dir_name, filename)
