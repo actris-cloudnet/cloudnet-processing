@@ -87,34 +87,42 @@ class ProcessBase:
                                  nc_file_full_path: str,
                                  product: str,
                                  uuid: str,
-                                 model_or_instrument_id: str = None) -> None:
+                                 model_or_instrument_id: str = None,
+                                 legacy: bool = False) -> None:
         if 'hidden' in self._site_type:
             logging.info('Skipping plotting for hidden site')
             return
         temp_file = NamedTemporaryFile(suffix='.png')
         visualizations = []
+        product_s3key = self._get_product_key(model_or_instrument_id)
+        product_s3key = f'legacy/{product_s3key}' if legacy is True else product_s3key
         try:
-            product_s3key = self._get_product_key(model_or_instrument_id)
             fields, max_alt = utils.get_fields_for_plot(product)
         except NotImplementedError:
             logging.warning(f'Plotting for {product} not implemented')
             return
         for field in fields:
             try:
-                dimensions = generate_figure(nc_file_full_path, [field], show=False, image_name=temp_file.name, max_y=max_alt,
+                dimensions = generate_figure(nc_file_full_path, [field], show=False,
+                                             image_name=temp_file.name, max_y=max_alt,
                                              sub_title=False, title=False, dpi=120)
-            except (IndexError, ValueError, TypeError):
+            except (IndexError, ValueError, TypeError) as err:
                 logging.warning(f'Skipping {field}')
                 continue
 
-            visualizations.append(self._upload_img(temp_file.name, product_s3key, uuid, product, field, dimensions))
+            visualizations.append(self._upload_img(temp_file.name, product_s3key, uuid, product,
+                                                   field, dimensions))
         self.md_api.put_images(visualizations, uuid)
 
-    def _upload_img(self, img_path: str, product_s3key: str,
-                    product_uuid: str, product: str, field: str, dimensions) -> dict:
+    def _upload_img(self,
+                    img_path: str,
+                    product_s3key: str,
+                    product_uuid: str,
+                    product: str,
+                    field: str,
+                    dimensions) -> dict:
         img_s3key = product_s3key.replace('.nc', f"-{product_uuid[:8]}-{field}.png")
-        self._storage_api.upload_image(full_path=img_path,
-                                       s3key=img_s3key)
+        self._storage_api.upload_image(full_path=img_path, s3key=img_s3key)
         return {
             's3key': img_s3key,
             'variable_id': utils.get_var_id(product, field),

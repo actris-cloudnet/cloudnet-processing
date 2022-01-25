@@ -131,6 +131,7 @@ class MetadataApi:
         files = []
         if len(products) > 0:
             files_payload = {
+                'showLegacy': True,
                 **common_payload,
                 **{'product': products},
             }
