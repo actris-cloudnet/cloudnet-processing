@@ -6,6 +6,7 @@ import logging
 from tempfile import NamedTemporaryFile
 from data_processing.processing_tools import Uuid
 from cloudnetpy.instruments import rpg2nc, mira2nc, basta2nc, ceilo2nc, hatpro2nc, disdrometer2nc, pollyxt2nc
+from cloudnetpy.instruments import radiometrics2nc
 from data_processing import concat_wrapper, utils
 from data_processing.utils import RawDataMissingError, SkipBlock
 from cloudnetpy.utils import is_timestamp
@@ -180,6 +181,10 @@ class ProcessMwr(ProcessInstrument):
             }
             self.uuid.product = nc_header_augmenter.harmonize_hatpro_file(data)
         self.uuid.raw = _get_valid_uuids(raw_uuids, full_paths, valid_full_paths)
+
+    def process_radiometrics(self):
+        full_path, self.uuid.raw = self.base.download_instrument('radiometrics', largest_only=True)
+        self.uuid.product = radiometrics2nc(full_path, *self._args, **self._kwargs)
 
 
 class ProcessDisdrometer(ProcessInstrument):
