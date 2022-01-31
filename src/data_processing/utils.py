@@ -387,6 +387,7 @@ def create_quality_report(filename: str) -> dict:
     data_res = quality.check_data()
     quality.close()
     return {
+        'checkedAt': datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
         'overallScore': _calc_quality(quality),
         'metadata': _parse_quality_result(meta_res),
         'data': _parse_quality_result(data_res)}
