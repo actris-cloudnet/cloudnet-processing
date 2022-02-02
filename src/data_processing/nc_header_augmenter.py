@@ -1,7 +1,8 @@
 import shutil
-from typing import Optional
+from typing import Optional, Union
 from tempfile import NamedTemporaryFile
 import datetime
+import logging
 import numpy as np
 import netCDF4
 import cloudnetpy.utils
@@ -33,9 +34,9 @@ def harmonize_model_file(data: dict) -> str:
     nc = netCDF4.Dataset(temp_file.name, 'w', format='NETCDF4_CLASSIC')
     model = ModelNc(nc_raw, nc, data)
     model.copy_file_contents()
-    model.harmonize_units()
+    model.harmonize_attribute('units', ('latitude', 'longitude', 'altitude'))
     uuid = model.add_uuid()
-    model.add_global_attributes()
+    model.add_global_model_attributes()
     model.check_time_dimension()
     model.add_date()
     model.add_history('model')
@@ -59,25 +60,55 @@ def harmonize_hatpro_file(data: dict) -> str:
     hatpro.clean_global_attributes()
     uuid = hatpro.add_uuid()
     hatpro.add_date()
-    hatpro.add_global_attributes()
+    hatpro.add_global_attributes('mwr', instruments.HATPRO)
     hatpro.add_history('mwr')
     hatpro.close()
     shutil.copy(temp_file.name, data['full_path'])
     return uuid
 
 
+def harmonize_halo_file(data: dict) -> str:
+    """Harmonizes calibrated halo doppler lidar netCDF file."""
+    temp_file = NamedTemporaryFile()
+    nc_raw = netCDF4.Dataset(data['full_path'], 'r')
+    nc = netCDF4.Dataset(temp_file.name, 'w', format='NETCDF4_CLASSIC')
+    halo = HaloNc(nc_raw, nc, data)
+    valid_ind = halo.get_valid_time_indices()
+    halo.copy_file(valid_ind)
+    halo.clean_global_attributes()
+    halo.add_geolocation()
+    halo.add_date()
+    halo.add_global_attributes('lidar', instruments.HALO)
+    uuid = halo.add_uuid()
+    halo.add_zenith_angle()
+    halo.add_range()
+    halo.add_wavelength()
+    halo.clean_variable_attributes()
+    halo.fix_time_units()
+    halo.harmonize_attribute('units')
+    halo.harmonize_attribute('long_name')
+    halo.harmonize_attribute('standard_name')
+    halo.add_history('lidar')
+    halo.close()
+    shutil.copy(temp_file.name, data['full_path'])
+    return uuid
+
+
 class Level1Nc:
+
     def __init__(self, nc_raw: netCDF4.Dataset, nc: netCDF4.Dataset, data: dict):
         self.nc_raw = nc_raw
         self.nc = nc
         self.data = data
 
     def add_uuid(self) -> str:
+        """Adds UUID."""
         uuid = self.data['uuid'] or get_uuid()
         self.nc.file_uuid = uuid
         return uuid
 
     def add_history(self, product: str):
+        """Adds history attribute."""
         old_history = getattr(self.nc_raw, 'history', '')
         history = f"{get_time()} - {product} metadata harmonized by CLU using data-processing Python package"
         if len(old_history) > 0:
@@ -85,30 +116,98 @@ class Level1Nc:
         self.nc.history = history
 
     def close(self):
+        """Closes open files."""
         self.nc.close()
         self.nc_raw.close()
 
-    def copy_file_contents(self):
+    def copy_file_contents(self, keys: Optional[tuple] = None, time_ind: Optional[list] = None):
+        """Copies all variables and global attributes from one file to another. Optionally copies only
+        certain keys and uses only certain time indices.
+        """
         for key, dimension in self.nc_raw.dimensions.items():
-            self.nc.createDimension(key, dimension.size)
-        for name, variable in self.nc_raw.variables.items():
-            dtype = variable.dtype
-            var_out = self.nc.createVariable(name,
-                                             dtype,
-                                             variable.dimensions,
-                                             zlib=True,
-                                             fill_value=getattr(variable, '_FillValue', None))
-            self._copy_variable_attributes(variable, var_out)
-            var_out[:] = variable[:]
+            if key == 'time' and time_ind is not None:
+                self.nc.createDimension(key, len(time_ind))
+            else:
+                self.nc.createDimension(key, dimension.size)
+        keys = keys if keys is not None else self.nc_raw.variables.keys()
+        for key in keys:
+            self.copy_variable(key, time_ind)
         self._copy_global_attributes()
 
-    def harmonize_units(self):
-        keys = ('latitude', 'longitude', 'altitude')
+    def copy_variable(self, key: str, time_ind: Optional[list] = None):
+        """Copies one variable from source file to target. Optionally uses certain time indices only."""
+        if key not in self.nc_raw.variables.keys():
+            logging.warning(f'Key {key} not found from the source file.')
+            return
+        variable = self.nc_raw.variables[key]
+        dtype = variable.dtype
+        var_out = self.nc.createVariable(key,
+                                         dtype,
+                                         variable.dimensions,
+                                         zlib=True,
+                                         fill_value=getattr(variable, '_FillValue', None))
+        self._copy_variable_attributes(variable, var_out)
+        var_out[:] = self._screen_data(variable, time_ind)
+
+    @staticmethod
+    def _screen_data(variable: netCDF4.Variable, time_ind: Optional[list] = None) -> np.ndarray:
+        if time_ind is None or variable.ndim == 0:
+            return variable[:]
+        if variable.dimensions[0] == 'time':
+            if variable.ndim == 1:
+                return variable[time_ind]
+            if variable.ndim == 2:
+                return variable[time_ind, :]
+        return variable[:]
+
+    def add_geolocation(self):
+        """Adds standard geolocation information."""
+        for key in ('altitude', 'latitude', 'longitude'):
+            if key not in self.nc.variables.keys():
+                var = self.nc.createVariable(key, 'f4')
+            else:
+                var = self.nc.variables[key]
+            var[:] = self.data['site_meta'][key]
+            var.units = COMMON_ATTRIBUTES[key].units
+            var.long_name = COMMON_ATTRIBUTES[key].long_name
+            var.standard_name = COMMON_ATTRIBUTES[key].standard_name
+
+    def add_date(self):
+        """Adds date attributes."""
+        self.nc.year, self.nc.month, self.nc.day = self.data['date'].split('-')
+
+    def harmonize_attribute(self, attribute: str, keys: Optional[tuple] = None):
+        """Harmonizes variable attributes."""
+        keys = keys if keys is not None else self.nc.variables.keys()
         for key in keys:
-            if key in self.nc.variables and hasattr(self.nc.variables[key], 'units'):
-                value = COMMON_ATTRIBUTES[key].units
-                if self.nc.variables[key].units != value:
-                    self.nc.variables[key].units = value
+            value = getattr(COMMON_ATTRIBUTES.get(key), attribute, None)
+            if value is not None and key in self.nc.variables:
+                setattr(self.nc.variables[key], attribute, value)
+            else:
+                logging.debug(f'Can"t find {attribute} for {key}')
+
+    def clean_variable_attributes(self):
+        """Removes obsolete variable attributes."""
+        accepted = ('_FillValue', 'units')
+        for key, item in self.nc.variables.items():
+            for attr in item.ncattrs():
+                if attr not in accepted:
+                    delattr(item, attr)
+
+    def clean_global_attributes(self):
+        """Removes all global attributes."""
+        for attr in self.nc.ncattrs():
+            delattr(self.nc, attr)
+
+    def add_global_attributes(self, cloudnet_file_type: str, instrument: instruments.Instrument):
+        """Adds standard global attributes."""
+        location = utils.read_site_info(self.data['site_name'])['name']
+        self.nc.Conventions = 'CF-1.8'
+        self.nc.cloudnet_file_type = cloudnet_file_type
+        self.nc.source = output.get_l1b_source(instrument)
+        self.nc.location = location
+        self.nc.title = output.get_l1b_title(instrument, location)
+        self.nc.references = output.get_references()
 
     @staticmethod
     def _copy_variable_attributes(source, target):
@@ -118,6 +217,9 @@ class Level1Nc:
     def _copy_global_attributes(self):
         for name in self.nc_raw.ncattrs():
             setattr(self.nc, name, self.nc_raw.getncattr(name))
+
+    def _get_time_units(self) -> str:
+        return f'hours since {self.data["date"]} 00:00:00 +00:00'
 
 
 class ModelNc(Level1Nc):
@@ -138,9 +240,47 @@ class ModelNc(Level1Nc):
         date = date_string.split()[2]
         self.nc.year, self.nc.month, self.nc.day = date.split('-')
 
-    def add_global_attributes(self):
+    def add_global_model_attributes(self):
         self.nc.cloudnet_file_type = 'model'
         self.nc.Conventions = 'CF-1.8'
+
+
+class HaloNc(Level1Nc):
+
+    def copy_file(self, valid_ind: list):
+        keys = ('beta', 'beta_raw', 'time', 'wavelength', 'elevation', 'range')
+        self.copy_file_contents(keys, valid_ind)
+
+    def add_zenith_angle(self):
+        self.nc.renameVariable('elevation', 'zenith_angle')
+        self.nc.variables['zenith_angle'][:] = 90 - self.nc.variables['zenith_angle'][:]
+
+    def add_range(self):
+        """Converts halo 'range', which is actually height, to true range (towards LOS)."""
+        self.nc.renameVariable('range', 'height')
+        self.copy_variable('range')
+        zenith_angle = self.nc.variables['zenith_angle'][:]
+        self.nc.variables['range'][:] /= np.cos(np.radians(zenith_angle))
+
+    def add_wavelength(self):
+        self.nc.variables['wavelength'][:] *= 1e6
+
+    def fix_time_units(self):
+        self.nc.variables['time'].units = self._get_time_units()
+
+    def get_valid_time_indices(self) -> list:
+        time_stamps = self.nc_raw.variables['time'][:]
+        valid_ind = []
+        valid_timestamps = []
+        for ind, t in enumerate(time_stamps):
+            if 0 < t < 24 and t not in valid_timestamps:
+                valid_ind.append(ind)
+                valid_timestamps.append(t)
+        if not valid_ind:
+            self.close()
+            raise ValidTimeStampError
+        valid_ind = np.where(np.diff(valid_timestamps) > 0)[0]
+        return valid_ind
 
 
 class HatproNc(Level1Nc):
@@ -153,7 +293,7 @@ class HatproNc(Level1Nc):
             possible_keys = None
         else:
             possible_keys = ('lwp', 'time') + self.bad_lwp_keys
-        self._copy_file_contents(valid_ind, possible_keys)
+        self._copy_hatpro_file_contents(valid_ind, possible_keys)
 
     def add_lwp(self):
         key = 'lwp'
@@ -183,7 +323,7 @@ class HatproNc(Level1Nc):
             fraction_hour = cloudnetpy.utils.seconds2hours(time[:])
             time[:] = fraction_hour
         time.long_name = 'Time UTC'
-        time.units = f'hours since {self.data["date"]} 00:00:00 +00:00'
+        time.units = self._get_time_units()
         for key in ('comment', 'bounds'):
             if hasattr(time, key):
                 delattr(time, key)
@@ -197,31 +337,6 @@ class HatproNc(Level1Nc):
             if self.nc_raw.variables[key][:] != 1:  # not UTC
                 self.close()
                 raise ValueError
-
-    def add_geolocation(self):
-        for key in ('altitude', 'latitude', 'longitude'):
-            var = self.nc.createVariable(key, 'f4')
-            var[:] = self.data['site_meta'][key]
-            var.units = COMMON_ATTRIBUTES[key].units
-            var.long_name = COMMON_ATTRIBUTES[key].long_name
-            var.standard_name = COMMON_ATTRIBUTES[key].standard_name
-
-    def clean_global_attributes(self):
-        for attr in self.nc.ncattrs():
-            delattr(self.nc, attr)
-
-    def add_date(self):
-        self.nc.year, self.nc.month, self.nc.day = self.data['date'].split('-')
-
-    def add_global_attributes(self):
-        instrument = instruments.HATPRO
-        location = utils.read_site_info(self.data['site_name'])['name']
-        self.nc.Conventions = 'CF-1.8'
-        self.nc.cloudnet_file_type = 'mwr'
-        self.nc.source = output.get_l1b_source(instrument)
-        self.nc.location = location
-        self.nc.title = output.get_l1b_title(instrument, location)
-        self.nc.references = output.get_references()
 
     def _get_valid_timestamps(self) -> list:
         time_stamps = self.nc_raw.variables['time'][:]
@@ -237,7 +352,7 @@ class HatproNc(Level1Nc):
         _, ind = np.unique(time_stamps[valid_ind], return_index=True)
         return list(np.array(valid_ind)[ind])
 
-    def _copy_file_contents(self, time_ind: list, keys: Optional[tuple] = None):
+    def _copy_hatpro_file_contents(self, time_ind: list, keys: Optional[tuple] = None):
         self.nc.createDimension('time', len(time_ind))
         for name, variable in self.nc_raw.variables.items():
             if keys is not None and name not in keys:
