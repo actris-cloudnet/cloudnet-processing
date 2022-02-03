@@ -73,12 +73,18 @@ class ProcessLidar(ProcessInstrument):
     file_id = 'clu-generated-daily'
 
     def process_chm15k(self):
-        full_paths, raw_uuids = self.base.download_instrument('chm15k')
+        self._process_chm_lidar('chm15k')
+
+    def process_chm15x(self):
+        self._process_chm_lidar('chm15x')
+
+    def _process_chm_lidar(self, model: str):
+        full_paths, raw_uuids = self.base.download_instrument(model)
         valid_full_paths = concat_wrapper.concat_chm15k_files(full_paths,
                                                               self.base.date_str,
                                                               self.base.daily_file.name)
         self.uuid.raw = _get_valid_uuids(raw_uuids, full_paths, valid_full_paths)
-        self._call_ceilo2nc('chm15k')
+        self._call_ceilo2nc(model)
 
     def process_ct25k(self):
         full_path, self.uuid.raw = self.base.download_instrument('ct25k', largest_only=True)
