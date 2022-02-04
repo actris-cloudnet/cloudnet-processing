@@ -42,6 +42,15 @@ class ProcessInstrument:
             meta['range_corrected'] = False
         return meta
 
+    def _get_payload_for_nc_file_augmenter(self, full_path: str) -> dict:
+        return {
+            'site_name': self.base.site,
+            'date': self.base.date_str,
+            'site_meta': self.base.site_meta,
+            'full_path': full_path,
+            'uuid': self.uuid.volatile
+        }
+
 
 class ProcessRadar(ProcessInstrument):
     def process_rpg_fmcw_94(self):
@@ -90,6 +99,11 @@ class ProcessLidar(ProcessInstrument):
         full_path, self.uuid.raw = self.base.download_instrument('ct25k', largest_only=True)
         shutil.move(full_path, self.base.daily_file.name)
         self._call_ceilo2nc('ct25k')
+
+    def process_halo_doppler_lidar(self):
+        full_path, self.uuid.raw = self.base.download_instrument('halo-doppler-lidar', largest_only=True)
+        data = self._get_payload_for_nc_file_augmenter(full_path)
+        self.uuid.product = nc_header_augmenter.harmonize_halo_file(data)
 
     def process_pollyxt(self):
         full_paths, self.uuid.raw = self.base.download_instrument('pollyxt')
@@ -178,13 +192,7 @@ class ProcessMwr(ProcessInstrument):
             valid_full_paths = concat_wrapper.concat_netcdf_files(full_paths,
                                                                   self.base.date_str,
                                                                   self.temp_file.name)
-            data = {
-                'site_name': self.base.site,
-                'date': self.base.date_str,
-                'site_meta': self.base.site_meta,
-                'full_path': self.temp_file.name,
-                'uuid': self.uuid.volatile
-            }
+            data = self._get_payload_for_nc_file_augmenter(self.temp_file.name)
             self.uuid.product = nc_header_augmenter.harmonize_hatpro_file(data)
         self.uuid.raw = _get_valid_uuids(raw_uuids, full_paths, valid_full_paths)
 
