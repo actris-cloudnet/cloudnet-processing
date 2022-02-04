@@ -42,6 +42,7 @@ class TestMwr:
         assert nc.title == 'HATPRO microwave radiometer from Bucharest'
         assert nc.Conventions == 'CF-1.8'
         nc.close()
+        run_quality_tests(self.data['full_path'])
 
     def test_user_supplied_uuid(self, mwr_file):
         uuid_volatile = 'abc'
@@ -79,6 +80,7 @@ class TestMwr:
             for attr in ('long_name', 'units'):
                 assert getattr(nc.variables[key],  attr) == getattr(COMMON_ATTRIBUTES[key], attr)
         nc.close()
+        run_quality_tests(self.data['full_path'])
 
     def test_palaiseau_mwr(self):
         test_file = f'{TEST_FILE_PATH}/../data/raw/hatpro/palaiseau_hatpro.nc'
@@ -95,6 +97,43 @@ class TestMwr:
         assert nc.variables['time'].dtype == 'double'
         assert np.all(np.diff(time) > 0)
         nc.close()
+        run_quality_tests(self.data['full_path'])
+
+
+@pytest.mark.parametrize('filename, site', [
+    ('220201_ufs_l2a.nc', 'schneefernerhaus'),
+    ('sups_nya_mwr00_l2_clwvi_v00_20220201000035.nc', 'ny-alesund'),
+    ('sups_joy_mwr00_l2_clwvi_p00_20220201000000.nc', 'juelich'),
+    ('hatpro_0a_Lz1Lb87Imwrad-LWP_v01_20220201_000240.nc', 'palaiseau')
+])
+def test_production_mwr_files(filename, site):
+    test_file = f'{TEST_FILE_PATH}/../data/raw/hatpro/{filename}'
+    temp_file = NamedTemporaryFile()
+    shutil.copy(test_file, temp_file.name)
+    data = {
+        'site_name': site,
+        'date': '2022-02-01',
+        'uuid': None,
+        'site_meta': {'altitude': 10, 'latitude': 25, 'longitude': 52.5},
+        'full_path': temp_file.name
+    }
+    nca.harmonize_hatpro_file(data)
+    run_quality_tests(data['full_path'])
+
+
+def test_halo_fix():
+    test_file = f'{TEST_FILE_PATH}/../data/raw/halo/halo-raw.nc'
+    temp_file = NamedTemporaryFile()
+    shutil.copy(test_file, temp_file.name)
+    data = {
+        'site_name': 'hyytiala',
+        'date': '2020-01-07',
+        'uuid': None,
+        'site_meta': {'altitude': 10, 'latitude': 25, 'longitude': 52.5},
+        'full_path': temp_file.name
+    }
+    nca.harmonize_halo_file(data)
+    run_quality_tests(data['full_path'])
 
 
 class TestModel:
@@ -130,7 +169,7 @@ class TestModel:
         with pytest.raises(MiscError):
             nca.harmonize_model_file(self.data)
 
-    def test_munich_ecmwf(self):
+    def test_punta_arenas_ecmwf(self):
         test_file = f'{TEST_FILE_PATH}/../data/raw/model/20211120_punta-arenas_ecmwf.nc'
         temp_file = NamedTemporaryFile()
         shutil.copy(test_file, temp_file.name)
@@ -145,11 +184,17 @@ class TestModel:
         assert nc.variables['time'].dtype == 'float32'
         assert np.all(np.diff(time) > 0)
         nc.close()
-        quality = Quality(self.data['full_path'])
-        res_data = quality.check_data()
-        res_metadata = quality.check_metadata()
-        assert quality.n_metadata_test_failures == 0, res_metadata
-        assert quality.n_data_test_failures == 0, res_data
+        run_quality_tests(self.data['full_path'])
+
+    def test_bucharest_ecmwf(self):
+        test_file = f'{TEST_FILE_PATH}/../data/raw/model/20220118_bucharest_ecmwf.nc'
+        temp_file = NamedTemporaryFile()
+        shutil.copy(test_file, temp_file.name)
+        self.data['full_path'] = temp_file.name
+        self.data['date'] = '2022-01-18'
+        self.data['site'] = 'bucharest'
+        nca.harmonize_model_file(self.data)
+        run_quality_tests(self.data['full_path'])
 
 
 @pytest.mark.parametrize('arg, expected', [
@@ -160,3 +205,11 @@ class TestModel:
 ])
 def test_get_epoch(arg, expected):
     assert nca._get_epoch(arg) == expected
+
+
+def run_quality_tests(filename: str):
+    quality = Quality(filename)
+    res_data = quality.check_data()
+    res_metadata = quality.check_metadata()
+    assert quality.n_metadata_test_failures == 0, res_metadata
+    assert quality.n_data_test_failures == 0, res_data
