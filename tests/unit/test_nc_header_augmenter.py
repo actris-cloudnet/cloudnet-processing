@@ -134,6 +134,10 @@ def test_halo_fix():
     }
     nca.harmonize_halo_file(data)
     run_quality_tests(data['full_path'])
+    nc = netCDF4.Dataset(data['full_path'])
+    wavelength = nc.variables['wavelength'][:]
+    assert 1490 < wavelength < 1560  # It should be 1550, but it is incorrectly 1.5e-6 um in the daily file.
+    nc.close()
 
 
 class TestModel:
