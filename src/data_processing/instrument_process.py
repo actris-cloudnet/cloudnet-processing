@@ -93,6 +93,7 @@ class ProcessLidar(ProcessInstrument):
                                                               self.base.date_str,
                                                               self.base.daily_file.name)
         self.uuid.raw = _get_valid_uuids(raw_uuids, full_paths, valid_full_paths)
+        utils.check_chm_version(self.base.daily_file.name, model)
         self._call_ceilo2nc(model)
 
     def process_ct25k(self):

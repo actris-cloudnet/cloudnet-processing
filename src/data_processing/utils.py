@@ -544,3 +544,11 @@ def dimensions2dict(dimensions: Dimensions) -> dict:
         'marginBottom': dimensions.margin_bottom,
         'marginRight': dimensions.margin_right
     }
+
+
+def check_chm_version(filename: str, expected_version: str):
+    nc = netCDF4.Dataset(filename)
+    source = getattr(nc, 'source', '')[:3].lower()
+    nc.close()
+    if (expected_version == 'chm15x' and source != 'chx') or (expected_version == 'chm15k' and source != 'chm'):
+        logging.warning(f'Data submitted with incorrect instrument id')
