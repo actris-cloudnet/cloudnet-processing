@@ -198,8 +198,12 @@ class ProcessMwr(ProcessInstrument):
         self.uuid.raw = _get_valid_uuids(raw_uuids, full_paths, valid_full_paths)
 
     def process_radiometrics(self):
-        full_path, self.uuid.raw = self.base.download_instrument('radiometrics', largest_only=True)
-        self.uuid.product = radiometrics2nc(full_path, *self._args, **self._kwargs)
+        full_paths, self.uuid.raw = self.base.download_instrument('radiometrics')
+        full_paths.sort()
+        for full_path in full_paths[1:]:
+            utils.remove_header_lines(full_path, 1)
+        utils.concatenate_text_files(full_paths, self.base.daily_file.name)
+        self.uuid.product = radiometrics2nc(self.base.daily_file.name, *self._args, **self._kwargs)
 
 
 class ProcessDisdrometer(ProcessInstrument):
