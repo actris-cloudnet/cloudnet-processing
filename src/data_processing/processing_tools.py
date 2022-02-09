@@ -134,7 +134,7 @@ class ProcessBase:
                               uuid: str) -> None:
         quality_report = utils.create_quality_report(full_path)
         if quality_report['overallScore'] == 1:
-            logging.info('Passed')
+            logging.info('QC passed')
         else:
             logging.info('Some QC tests failed')
         self.md_api.put('quality', uuid, quality_report)
