@@ -265,7 +265,7 @@ class HaloNc(Level1Nc):
         """Converts halo 'range', which is actually height, to true range (towards LOS)."""
         self.nc.renameVariable('range', 'height')
         self.copy_variable('range')
-        zenith_angle = self.nc.variables['zenith_angle'][:]
+        zenith_angle = np.median(self.nc.variables['zenith_angle'][:])
         self.nc.variables['range'][:] /= np.cos(np.radians(zenith_angle))
 
     def add_wavelength(self):
