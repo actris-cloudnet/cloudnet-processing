@@ -68,6 +68,7 @@ class ProcessCloudnet(ProcessBase):
         process_class = getattr(instrument_process, f'Process{instrument_type.capitalize()}')
         process = process_class(self, self.temp_file, uuid)
         getattr(process, f'process_{instrument.replace("-", "_")}')()
+        instrument = 'halo-doppler-lidar' if instrument == 'halo-doppler-lidar-calibrated' else instrument
         return process.uuid, instrument
 
     def process_categorize(self, uuid: Uuid) -> Tuple[Uuid, str]:
