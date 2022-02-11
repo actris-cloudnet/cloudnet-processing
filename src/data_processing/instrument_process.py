@@ -3,6 +3,7 @@ import gzip
 import glob
 import shutil
 import logging
+from typing import Optional
 from tempfile import NamedTemporaryFile
 from data_processing.processing_tools import Uuid
 from cloudnetpy.instruments import rpg2nc, mira2nc, basta2nc, ceilo2nc, hatpro2nc, disdrometer2nc, pollyxt2nc
@@ -101,8 +102,15 @@ class ProcessLidar(ProcessInstrument):
         shutil.move(full_path, self.base.daily_file.name)
         self._call_ceilo2nc('ct25k')
 
+    def process_halo_doppler_lidar_calibrated(self):
+        self._process_halo_lidar('-calibrated')
+
     def process_halo_doppler_lidar(self):
-        full_path, self.uuid.raw = self.base.download_instrument('halo-doppler-lidar', largest_only=True)
+        """This can be removed at some point."""
+        self._process_halo_lidar()
+
+    def _process_halo_lidar(self, suffix: Optional[str] = ''):
+        full_path, self.uuid.raw = self.base.download_instrument(f'halo-doppler-lidar{suffix}', largest_only=True)
         data = self._get_payload_for_nc_file_augmenter(full_path)
         self.uuid.product = nc_header_augmenter.harmonize_halo_file(data)
 
