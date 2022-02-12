@@ -121,8 +121,12 @@ def test_production_mwr_files(filename, site):
     run_quality_tests(data['full_path'])
 
 
-def test_halo_fix():
-    test_file = f'{TEST_FILE_PATH}/../data/raw/halo/halo-raw.nc'
+@pytest.mark.parametrize('filename', [
+    'halo-raw.nc',
+    'halo-bad-times.nc',
+])
+def test_halo_fix(filename):
+    test_file = f'{TEST_FILE_PATH}/../data/raw/halo/{filename}'
     temp_file = NamedTemporaryFile()
     shutil.copy(test_file, temp_file.name)
     data = {

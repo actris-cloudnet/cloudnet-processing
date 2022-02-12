@@ -280,15 +280,14 @@ class HaloNc(Level1Nc):
         """Finds valid time indices."""
         time_stamps = self.nc_raw.variables['time'][:]
         valid_ind = []
-        valid_timestamps = []
         for ind, t in enumerate(time_stamps):
-            if 0 < t < 24 and t not in valid_timestamps:
+            if 0 < t < 24:
+                if len(valid_ind) > 1 and t <= time_stamps[valid_ind[-1]]:
+                    continue
                 valid_ind.append(ind)
-                valid_timestamps.append(t)
         if not valid_ind:
             self.close()
             raise ValidTimeStampError
-        valid_ind = np.where(np.diff(valid_timestamps) > 0)[0]
         return valid_ind
 
 
