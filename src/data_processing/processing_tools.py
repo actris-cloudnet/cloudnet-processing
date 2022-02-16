@@ -32,13 +32,13 @@ class ProcessBase:
     def __init__(self,
                  args,
                  config: dict,
-                 storage_session: Optional[requests.Session] = requests.Session(),
-                 metadata_session: Optional[requests.Session] = requests.Session()):
+                 storage_session: requests.Session = requests.Session(),
+                 metadata_session: requests.Session = requests.Session()):
         self.site_meta, self.site, self._site_type = _read_site_info(args)
         self.config = config
         self.is_reprocess = getattr(args, 'reprocess', False)
         self.is_reprocess_volatile = getattr(args, 'reprocess_volatile', False)
-        self.date_str = None
+        self.date_str: Optional[str] = None
         self.md_api = MetadataApi(config, metadata_session)
         self._storage_api = StorageApi(config, storage_session)
         self._pid_utils = PidUtils(config)
@@ -68,7 +68,7 @@ class ProcessBase:
                        full_path: str,
                        product: str,
                        uuid: Uuid,
-                       model_or_instrument_id: str = None) -> None:
+                       model_or_instrument_id: str) -> None:
         if product in utils.get_product_types(level='3'):
             s3key = self._get_l3_product_key(product, model_or_instrument_id)
         else:
@@ -87,7 +87,7 @@ class ProcessBase:
                                  nc_file_full_path: str,
                                  product: str,
                                  uuid: str,
-                                 model_or_instrument_id: str = None,
+                                 model_or_instrument_id: str,
                                  legacy: bool = False) -> None:
         if 'hidden' in self._site_type:
             logging.info('Skipping plotting for hidden site')
@@ -190,7 +190,7 @@ class ProcessBase:
 
     def _download_raw_files(self,
                             upload_metadata: list,
-                            temp_file: Optional[NamedTemporaryFile] = None) -> Tuple[Union[list, str], list]:
+                            temp_file = None) -> Tuple[Union[list, str], list]:
         if temp_file is not None:
             if len(upload_metadata) > 1:
                 logging.warning('Several daily raw files')
@@ -217,7 +217,7 @@ class ProcessBase:
                      instrument: Optional[str] = None,
                      product: Optional[str] = None,
                      model: Optional[str] = None,
-                     skip_created: Optional[bool] = False) -> dict:
+                     skip_created: bool = False) -> dict:
         payload = {
             'dateFrom': self.date_str,
             'dateTo': self.date_str,
@@ -234,20 +234,22 @@ class ProcessBase:
             payload['status[]'] = ['uploaded', 'processed']
         return payload
 
-    def update_statuses(self, uuids: list, status: Optional[str] = 'processed') -> None:
+    def update_statuses(self, uuids: list, status: str = 'processed') -> None:
         for uuid in uuids:
             payload = {'uuid': uuid, 'status': status}
             self.md_api.post('upload-metadata', payload)
 
     def _get_product_key(self, identifier: str) -> str:
+        assert isinstance(self.date_str, str)
         return f"{self.date_str.replace('-', '')}_{self.site}_{identifier}.nc"
 
     def _get_l3_product_key(self, product: str, model: str) -> str:
+        assert isinstance(self.date_str, str)
         return f"{self.date_str.replace('-', '')}_{self.site}_{product}_downsampled_{model}.nc"
 
     @staticmethod
-    def _check_response_length(metadata: list) -> None:
-        if len(metadata) > 1:
+    def _check_response_length(metadata) -> None:
+        if isinstance(metadata, list) and len(metadata) > 1:
             logging.warning('API responded with several files')
 
     def _check_source_status(self, product: str, meta_records: dict) -> None:
@@ -258,11 +260,12 @@ class ProcessBase:
         if np.all([timestamp < product_timestamp for timestamp in source_timestamps]):
             raise MiscError('Source data already processed')
 
-    def _get_product_timestamp(self, product: str) -> str:
+    def _get_product_timestamp(self, product: str) -> Union[str, None]:
         payload = self._get_payload(product=product)
         product_metadata = self.md_api.get(f'api/files', payload)
         if product_metadata and self.is_reprocess is False and self.is_reprocess_volatile is False:
             return product_metadata[0]['updatedAt']
+        return None
 
 
 def _read_site_info(args) -> tuple:

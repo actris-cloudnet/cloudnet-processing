@@ -16,6 +16,5 @@ products = 'categorize,classification,iwc,lwc,drizzle'
 
 for site in sites:
     date = datetime.now() - timedelta(3)
-    date = datetime.strftime(date, '%Y-%m-%d')
     subprocess.check_call([interpreter, wrapper, interpreter, script, '-s', site, '--p', products,
-                           '--start', date, subcommand])
+                           '--start', date.strftime('%Y-%m-%d'), subcommand])

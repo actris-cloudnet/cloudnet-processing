@@ -18,7 +18,7 @@ class MetadataApi:
 
     def get(self,
             end_point: str,
-            payload: Optional[dict] = None) -> Union[list, dict]:
+            payload: Optional[dict] = None):
         """Get Cloudnet metadata."""
         url = os.path.join(self._url, end_point)
         res = self.session.get(url, params=payload)
@@ -116,10 +116,11 @@ class MetadataApi:
 
     def _get_freeze_payload(self, key: str, args: Namespace) -> dict:
         freeze_after_days = int(self.config[key])
-        updated_before = (utils.get_helsinki_datetime() - timedelta(days=freeze_after_days)).isoformat()
         if args.force:
             logging.warning(f'Overriding {key} -config option. Also recently changed files may be freezed.')
             updated_before = None
+        else:
+            updated_before = (utils.get_helsinki_datetime() - timedelta(days=freeze_after_days)).isoformat()
         return {
             'volatile': True,
             'releasedBefore': updated_before
@@ -129,11 +130,11 @@ class MetadataApi:
         common_payload = _get_common_payload(args)
         products = _get_regular_products(args)
         files = []
-        if len(products) > 0:
+        if products is not None and len(products) > 0:
             files_payload = {
                 'showLegacy': True,
                 **common_payload,
-                **{'product': products},
+                'product': products,
             }
             files += self.get('api/files', files_payload)
         if 'model' in args.products:
@@ -156,6 +157,7 @@ def _get_common_payload(args: Namespace) -> dict:
     return payload
 
 
-def _get_regular_products(args: Namespace) -> list:
+def _get_regular_products(args: Namespace) -> Union[list, None]:
     if args.products:
         return [prod for prod in args.products if prod != 'model']
+    return None

@@ -24,7 +24,7 @@ def update_daily_file(new_files: list, daily_file: str) -> list:
 def concat_netcdf_files(files: list,
                         date: str,
                         output_file: str,
-                        concat_dimension: Optional[str] = 'time',
+                        concat_dimension: str = 'time',
                         variables: Optional[list] = None) -> list:
     """Concatenates several netcdf files into daily file."""
     if len(files) == 1:
@@ -76,9 +76,9 @@ def concat_chm15k_files(files: list, date: str, output_file: str) -> list:
     return valid_files
 
 
-def _remove_files_with_wrong_date(files: list, date: str) -> list:
+def _remove_files_with_wrong_date(files: list, date_str: str) -> list:
     """Remove files that contain wrong date."""
-    date = date.split('-')
+    date = date_str.split('-')
     date_as_ints = [int(x) for x in date]
     valid_files = []
     for file in files:

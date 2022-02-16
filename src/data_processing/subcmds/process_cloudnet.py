@@ -3,7 +3,7 @@
 import importlib
 import logging
 import warnings
-from typing import Tuple, Union, Optional
+from typing import Tuple, Union, Optional, List
 import requests
 from cloudnetpy.categorize import generate_categorize
 from cloudnetpy.exceptions import InconsistentDataError, DisdrometerDataError, ValidTimeStampError
@@ -143,7 +143,7 @@ class ProcessCloudnet(ProcessBase):
     def download_instrument(self,
                             instrument: str,
                             include_pattern: Optional[str] = None,
-                            largest_only: Optional[bool] = False,
+                            largest_only: bool = False,
                             exclude_pattern: Optional[str] = None) -> Tuple[Union[list, str], list]:
         payload = self._get_payload(instrument=instrument, skip_created=True)
         upload_metadata = self.md_api.get('upload-metadata', payload)
@@ -168,7 +168,7 @@ class ProcessCloudnet(ProcessBase):
                                                                              exclude_pattern)
         return self._download_raw_files(upload_metadata)
 
-    def download_adjoining_daily_files(self, instrument: str) -> Tuple[list, list]:
+    def download_adjoining_daily_files(self, instrument: str) -> Tuple[Union[List, str], List]:
         next_day = utils.get_date_from_past(-1, self.date_str)
         payload = self._get_payload(instrument=instrument, skip_created=True)
         payload['dateFrom'] = self.date_str

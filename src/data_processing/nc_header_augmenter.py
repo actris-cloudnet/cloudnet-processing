@@ -1,5 +1,5 @@
 import shutil
-from typing import Optional
+from typing import Optional, List
 from tempfile import NamedTemporaryFile
 import datetime
 import logging
@@ -279,7 +279,7 @@ class HaloNc(Level1Nc):
     def get_valid_time_indices(self) -> list:
         """Finds valid time indices."""
         time_stamps = self.nc_raw.variables['time'][:]
-        valid_ind = []
+        valid_ind: List[int] = []
         for ind, t in enumerate(time_stamps):
             if 0 < t < 24:
                 if len(valid_ind) > 1 and t <= time_stamps[valid_ind[-1]]:
@@ -295,7 +295,7 @@ class HatproNc(Level1Nc):
 
     bad_lwp_keys = ('LWP', 'LWP_data', 'clwvi', 'atmosphere_liquid_water_content')
 
-    def copy_file(self, all: Optional[bool] = False):
+    def copy_file(self, all: bool = False):
         """Copies essential fields only."""
         valid_ind = self._get_valid_timestamps()
         if all is True:

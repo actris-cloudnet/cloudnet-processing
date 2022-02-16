@@ -9,7 +9,7 @@ import re
 import shutil
 import string
 import sys
-from typing import Tuple, Optional
+from typing import Tuple, Optional, List, Dict
 from typing import Union
 import netCDF4
 import pytz
@@ -65,6 +65,7 @@ def read_site_info(site_name: str) -> dict:
             site['id'] = site_name
             site['name'] = site.pop('humanReadableName')
             return site
+    raise ValueError(f'Invalid site name: {site_name}')
 
 
 def get_product_types(level: Optional[str] = None) -> list:
@@ -96,10 +97,8 @@ def get_model_types() -> list:
     return [model['id'] for model in models]
 
 
-def date_string_to_date(date_string: Union[str, None]) -> Union[datetime.date, None]:
+def date_string_to_date(date_string: str) -> datetime.date:
     """Convert YYYY-MM-DD to Python date."""
-    if date_string is None:
-        return None
     date = [int(x) for x in date_string.split('-')]
     return datetime.date(*date)
 
@@ -125,7 +124,7 @@ def send_slack_alert(error_msg,
                      site: Optional[str] = None,
                      date: Optional[str] = None,
                      product: Optional[str] = None,
-                     critical: Optional[bool] = False) -> None:
+                     critical: bool = False) -> None:
     """Sends notification to slack."""
     config = read_main_conf()
     if critical is True:
@@ -261,12 +260,12 @@ def sha256sum(filename: str) -> str:
     return _calc_hash_sum(filename, 'sha256')
 
 
-def md5sum(filename: str, is_base64: Optional[bool] = False) -> str:
+def md5sum(filename: str, is_base64: bool = False) -> str:
     """Calculates hash of file using md5."""
     return _calc_hash_sum(filename, 'md5', is_base64)
 
 
-def _calc_hash_sum(filename, method, is_base64: Optional[bool] = False) -> str:
+def _calc_hash_sum(filename, method, is_base64: bool = False) -> str:
     hash_sum = getattr(hashlib, method)()
     with open(filename, "rb") as f:
         for byte_block in iter(lambda: f.read(4096), b""):
@@ -276,7 +275,7 @@ def _calc_hash_sum(filename, method, is_base64: Optional[bool] = False) -> str:
     return hash_sum.hexdigest()
 
 
-def get_product_bucket(volatile: Optional[bool] = False) -> str:
+def get_product_bucket(volatile: bool = False) -> str:
     """Retrurns correct s3 bucket."""
     return 'cloudnet-product-volatile' if volatile else 'cloudnet-product'
 
@@ -318,14 +317,14 @@ class MiscError(Exception):
 
 class RawDataMissingError(Exception):
     """Internal exception class."""
-    def __init__(self, msg: Optional[str] = 'Missing raw data'):
+    def __init__(self, msg: str = 'Missing raw data'):
         self.message = msg
         super().__init__(self.message)
 
 
 class SkipBlock(Exception):
     """Internal exception class."""
-    def __init__(self, msg: Optional[str] = ''):
+    def __init__(self, msg: str = ''):
         self.message = msg
         super().__init__(self.message)
 
@@ -337,8 +336,7 @@ def datetime_to_utc(date_time: str, time_zone_name: str) -> str:
     dt = datetime.datetime.strptime(date_time, "%Y-%m-%d %H:%M:%S")
     dt = time_zone.localize(dt)
     dt = dt.astimezone(utc_timezone)
-    dt = dt.strftime("%Y-%m-%d %H:%M:%S")
-    return dt
+    return dt.strftime("%Y-%m-%d %H:%M:%S")
 
 
 def shift_datetime(date_time: str, offset: int) -> str:
@@ -372,7 +370,7 @@ def remove_header_lines(filename: str, n_lines: int):
         file.writelines(lines[n_lines:])
 
 
-def init_logger(args: Optional = None) -> None:
+def init_logger(args) -> None:
     """Initializes logger."""
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
@@ -497,7 +495,7 @@ def fetch_data_portal_url() -> str:
     return config['DATAPORTAL_URL']
 
 
-def random_string(n: Optional[int] = 10) -> str:
+def random_string(n: int = 10) -> str:
     """Creates random string."""
     return ''.join(random.choices(string.ascii_lowercase, k=n))
 

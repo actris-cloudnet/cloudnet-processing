@@ -4,7 +4,6 @@ import glob
 import shutil
 import logging
 from typing import Optional
-from tempfile import NamedTemporaryFile
 from data_processing.processing_tools import Uuid
 from cloudnetpy.instruments import rpg2nc, mira2nc, basta2nc, ceilo2nc, hatpro2nc, disdrometer2nc, pollyxt2nc
 from cloudnetpy.instruments import radiometrics2nc
@@ -16,7 +15,7 @@ import datetime
 
 
 class ProcessInstrument:
-    def __init__(self, process_cloudnet, temp_file: NamedTemporaryFile, uuid: Uuid):
+    def __init__(self, process_cloudnet, temp_file, uuid: Uuid):
         self.base = process_cloudnet
         self.temp_file = temp_file
         self.uuid = uuid
@@ -109,7 +108,7 @@ class ProcessLidar(ProcessInstrument):
         """This can be removed at some point."""
         self._process_halo_lidar()
 
-    def _process_halo_lidar(self, suffix: Optional[str] = ''):
+    def _process_halo_lidar(self, suffix: str = ''):
         full_path, self.uuid.raw = self.base.download_instrument(f'halo-doppler-lidar{suffix}', largest_only=True)
         data = self._get_payload_for_nc_file_augmenter(full_path)
         self.uuid.product = nc_header_augmenter.harmonize_halo_file(data)

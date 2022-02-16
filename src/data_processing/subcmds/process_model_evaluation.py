@@ -46,7 +46,7 @@ def main(args, storage_session=requests.session()):
                         try:
                             uuid = process.process_level3_day(uuid, product, model, m_meta)
                             process.upload_product(process.temp_file.name, product, uuid, model)
-                            process.create_and_upload_images(process.temp_file.name, product, uuid, model)
+                            process.create_and_upload_images(process.temp_file.name, product, uuid.product, model)
                             process.print_info()
                         except (RawDataMissingError, MiscError, NotImplementedError) as err:
                             logging.warning(err)
@@ -81,7 +81,7 @@ class ProcessModelEvaluation(ProcessBase):
                                                                  self.temp_file.name, uuid=uuid.volatile, overwrite=True)
         return uuid
 
-    def fetch_model_params(self, model: Optional[str] = 'ecmwf') -> dict:
+    def fetch_model_params(self, model: str = 'ecmwf') -> dict:
         # POC: only EC
         payload = self._get_payload()
         if model:
@@ -95,8 +95,9 @@ class ProcessModelEvaluation(ProcessBase):
     def create_and_upload_images(self,
                                  nc_file_full_path: str,
                                  product: str,
-                                 uuid: Uuid,
-                                 model_or_instrument_id: str = None) -> None:
+                                 uuid: str,
+                                 model_or_instrument_id: str,
+                                 legacy: bool = False) -> None:
 
         if 'hidden' in self._site_type:
             logging.info('Skipping plotting for hidden site')
@@ -109,24 +110,18 @@ class ProcessModelEvaluation(ProcessBase):
 
         # Statistic plot
         generate_L3_day_plots(nc_file_full_path, l3_product, model_or_instrument_id, var_list=fields,
-                              image_name=temp_file.name,
-                              fig_type='statistic', stats=['area'], title=False)
-        visualizations.append(self._upload_img(temp_file.name, product_s3key,
-                                               uuid.product, product, 'area', None))
+                              image_name=temp_file.name, fig_type='statistic', stats=['area'], title=False)
+        visualizations.append(self._upload_img(temp_file.name, product_s3key, uuid, product, 'area', None))
         # Statistic error plot
         generate_L3_day_plots(nc_file_full_path, l3_product, model_or_instrument_id, var_list=fields,
-                              image_name=temp_file.name,
-                              fig_type='statistic', stats=['error'], title=False)
-        visualizations.append(self._upload_img(temp_file.name, product_s3key,
-                                               uuid.product, product, 'error', None))
+                              image_name=temp_file.name, fig_type='statistic', stats=['error'], title=False)
+        visualizations.append(self._upload_img(temp_file.name, product_s3key, uuid, product, 'error', None))
         # Single plots
         for field in fields:
             generate_L3_day_plots(nc_file_full_path, l3_product, model_or_instrument_id, var_list=[field],
-                                  image_name=temp_file.name,
-                                  fig_type='single', title=False)
-            visualizations.append(self._upload_img(temp_file.name, product_s3key,
-                                                   uuid.product, product, field, None))
-        self.md_api.put_images(visualizations, uuid.product)
+                                  image_name=temp_file.name, fig_type='single', title=False)
+            visualizations.append(self._upload_img(temp_file.name, product_s3key, uuid, product, field, None))
+        self.md_api.put_images(visualizations, uuid)
 
     @staticmethod
     def get_l2for_l3_product(product: str) -> str:
@@ -136,6 +131,7 @@ class ProcessModelEvaluation(ProcessBase):
             return 'iwc'
         if product == 'lwc':
             return 'lwc'
+        raise ValueError(f'Invalid product {product}')
 
 
 def add_arguments(subparser):

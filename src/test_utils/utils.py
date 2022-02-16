@@ -106,7 +106,7 @@ def count_strings(data: list, string: str) -> int:
     return n
 
 
-def register_storage_urls(temp_file: NamedTemporaryFile,
+def register_storage_urls(temp_file,
                           source_data: list,
                           site: str,
                           date: str,
@@ -164,7 +164,7 @@ def start_test_servers(instrument: str, script_path: str):
 
 def process(session,
             main_args: list,
-            temp_file: NamedTemporaryFile,
+            temp_file,
             script_path: str,
             marker: str = None,
             processing_mode: str = ''):
@@ -189,7 +189,7 @@ def reset_log_file(script_path: str):
     open(f'{script_path}/md.log', 'w').close()
 
 
-def parse_args(args: str) -> tuple:
+def parse_args(args) -> tuple:
     args = json.loads(args)
     return args['sites'][0], args['date'], args['products'][0]
 
