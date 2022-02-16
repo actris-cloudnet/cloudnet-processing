@@ -3,7 +3,9 @@
 import glob
 import logging
 import os
+import sys
 from tempfile import TemporaryDirectory
+from uuid import UUID
 import requests
 from data_processing import metadata_api
 from data_processing import utils
@@ -29,6 +31,7 @@ def main(args, storage_session=requests.session()):
     metadata = md_api.find_files_to_freeze(args)
     logging.info(f'Found {len(metadata)} files to freeze.')
     temp_dir = TemporaryDirectory()
+    error = False
     for row in metadata:
         try:
             full_path = storage_api.download_product(row, temp_dir.name)
@@ -39,7 +42,11 @@ def main(args, storage_session=requests.session()):
         s3key = row['filename']
         try:
             uuid, pid = pid_utils.add_pid_to_file(full_path)
-            logging.info(f'{uuid} => {pid}')
+            if UUID(uuid) != UUID(row['uuid']):
+                logging.error(f"File {s3key} UUID mismatch (DB: {row['uuid']}, File: {uuid})")
+                error = True
+                continue
+            logging.info(f'Mapping UUID "{uuid}" to PID "{pid}"...')
             response_data = storage_api.upload_product(full_path, s3key)
             payload = {
                 'uuid': uuid,
@@ -55,6 +62,8 @@ def main(args, storage_session=requests.session()):
                                    row['product']['id'])
         for filename in glob.glob(f'{temp_dir.name}/*'):
             os.remove(filename)
+    if error is True:
+        sys.exit(1)
 
 
 def add_arguments(subparser):
