@@ -81,6 +81,7 @@ def harmonize_halo_file(data: dict) -> str:
     halo.add_global_attributes('lidar', instruments.HALO)
     uuid = halo.add_uuid()
     halo.add_zenith_angle()
+    halo.check_zenith_angle()
     halo.add_range()
     halo.add_wavelength()
     halo.clean_variable_attributes()
@@ -260,6 +261,13 @@ class HaloNc(Level1Nc):
         """Converts elevation to zenith angle."""
         self.nc.renameVariable('elevation', 'zenith_angle')
         self.nc.variables['zenith_angle'][:] = 90 - self.nc.variables['zenith_angle'][:]
+
+    def check_zenith_angle(self):
+        """Checks zenith angle value."""
+        threshold = 15
+        if (zenith_angle := self.nc.variables['zenith_angle'][:]) > threshold:
+            self.close()
+            raise ValueError(f'Invalid zenith angle {zenith_angle}')
 
     def add_range(self):
         """Converts halo 'range', which is actually height, to true range (towards LOS)."""
