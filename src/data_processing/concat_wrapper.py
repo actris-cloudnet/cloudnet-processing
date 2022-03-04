@@ -70,9 +70,9 @@ def concat_chm15k_files(files: list, date: str, output_file: str) -> list:
     valid_files = _remove_files_with_wrong_date(files, date)
     if len(valid_files) == 0:
         raise ValueError
-    variables = ['time', 'beta_raw', 'stddev', 'nn1', 'nn2', 'nn3']
+    variables = ['time', 'beta_raw', 'stddev', 'nn1', 'nn2', 'nn3', 'beta_att']
     clib.concatenate_files(valid_files, output_file, variables=variables,
-                           new_attributes={'Conventions': 'CF-1.7'})
+                           new_attributes={'Conventions': 'CF-1.8'})
     return valid_files
 
 
