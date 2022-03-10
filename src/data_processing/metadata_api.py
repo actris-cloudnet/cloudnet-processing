@@ -126,13 +126,13 @@ class MetadataApi:
             'releasedBefore': updated_before
         }
 
-    def find_files_for_plotting(self, args: Namespace) -> list:
+    def find_product_metadata(self, args: Namespace, legacy_files: bool = True) -> list:
         common_payload = _get_common_payload(args)
         products = _get_regular_products(args)
         files = []
         if products is not None and len(products) > 0:
             files_payload = {
-                'showLegacy': True,
+                'showLegacy': legacy_files,
                 **common_payload,
                 'product': products,
             }
