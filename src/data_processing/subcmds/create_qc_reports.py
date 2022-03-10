@@ -18,7 +18,7 @@ def main(args, storage_session=requests.session()):
     md_api = metadata_api.MetadataApi(config, requests.session())
     storage_api = StorageApi(config, storage_session)
     args.site = args.sites[0]
-    metadata = md_api.find_files_for_plotting(args)
+    metadata = md_api.find_product_metadata(args, legacy_files=False)
     temp_dir_root = utils.get_temp_dir(config)
     temp_dir = TemporaryDirectory(dir=temp_dir_root)
     qc = ProcessBase(args, config)

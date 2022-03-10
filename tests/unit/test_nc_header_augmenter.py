@@ -33,7 +33,7 @@ class TestMwr:
         uuid = nca.harmonize_hatpro_file(self.data)
         nc = netCDF4.Dataset(mwr_file)
         assert len(nc.variables['time'][:]) == 5
-        assert len(uuid) == 32
+        assert len(uuid) == 36
         assert nc.file_uuid == uuid
         assert nc.year == '2020'
         assert nc.month == '10'
@@ -161,7 +161,7 @@ class TestModel:
         self.data['full_path'] = model_file
         uuid = nca.harmonize_model_file(self.data)
         nc = netCDF4.Dataset(model_file)
-        assert len(uuid) == 32
+        assert len(uuid) == 36
         assert nc.file_uuid == uuid
         assert nc.year == '2020'
         assert nc.month == '10'
