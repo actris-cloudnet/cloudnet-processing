@@ -23,6 +23,8 @@ def main(args, storage_session=requests.session()):
     img = Img(args, config)
     for row in metadata:
         assert img.site == args.site == row['site']['id']
+        if args.missing and img.exist(row):
+            continue
         img.date_str = row['measurementDate']
         product = row['product']['id']
         logging.info(f'Plotting images for: {img.site} - {img.date_str} - {product}')
@@ -45,9 +47,19 @@ def main(args, storage_session=requests.session()):
 
 
 class Img(ProcessBase):
-    pass
+
+    def exist(self, row: dict) -> bool:
+        n_images = len(self.md_api.get(f'api/visualizations/{row["uuid"]}', {})['visualizations'])
+        n_images_max = len(utils.get_fields_for_plot(row['product']['id'])[0])
+        if n_images > n_images_max:
+            logging.warning(f'Too many images: https://cloudnet.fmi.fi/file/{row["uuid"]}')
+        return False if n_images == 0 else True
 
 
 def add_arguments(subparser):
-    subparser.add_parser('plot', help='Plot Cloudnet images.')
+    parser = subparser.add_parser('plot', help='Plot Cloudnet images.')
+    parser.add_argument('-m', '--missing',
+                        action='store_true',
+                        help='Plot missing images only.',
+                        default=False)
     return subparser
