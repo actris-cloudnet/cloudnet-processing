@@ -1,12 +1,8 @@
 import sys
 import re
 import json
-from collections import namedtuple
 import requests
 import requests_mock
-import importlib
-import pytest
-from data_processing.utils import MiscError
 from data_processing.subcmds import process_model
 
 sys.path.append('scripts/')
@@ -17,8 +13,7 @@ session = requests.Session()
 session.mount('http://', adapter)
 mock_addr = 'http://test/'
 
-args = cloudnet._parse_args(['model'])  # Initialize default arguments
-args.site = 'bucharest'
+args = cloudnet._parse_args([f'-s=bucharest', 'model'])  # Initialize default arguments
 
 config = {
     'DATAPORTAL_URL': mock_addr,
