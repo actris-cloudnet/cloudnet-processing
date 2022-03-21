@@ -17,20 +17,19 @@ def main(args, storage_session=requests.session()):
     config = read_main_conf()
     md_api = metadata_api.MetadataApi(config, requests.session())
     storage_api = StorageApi(config, storage_session)
-    args.site = args.sites[0]
     metadata = md_api.find_product_metadata(args)
     temp_dir_root = utils.get_temp_dir(config)
     temp_dir = TemporaryDirectory(dir=temp_dir_root)
     img = Img(args, config)
     for row in metadata:
+        assert img.site == args.site == row['site']['id']
         img.date_str = row['measurementDate']
         product = row['product']['id']
-        site = row['site']['id']
-        logging.info(f'Plotting images for: {site} - {img.date_str} - {product}')
+        logging.info(f'Plotting images for: {img.site} - {img.date_str} - {product}')
         try:
             full_path = storage_api.download_product(row, temp_dir.name)
         except HTTPError as err:
-            utils.send_slack_alert(err, 'img', site, img.date_str, product)
+            utils.send_slack_alert(err, 'img', img.site, img.date_str, product)
             continue
         try:
             identifier = row['downloadUrl'].split('_')[-1][:-3]
@@ -40,7 +39,7 @@ def main(args, storage_session=requests.session()):
                                          identifier,
                                          legacy=row.get('legacy', False))
         except OSError as err:
-            utils.send_slack_alert(err, 'img', site, img.date_str, product)
+            utils.send_slack_alert(err, 'img', img.site, img.date_str, product)
         for filename in glob.glob(f'{temp_dir.name}/*'):
             os.remove(filename)
 

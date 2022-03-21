@@ -17,8 +17,8 @@ from requests.exceptions import HTTPError
 
 def main(args, storage_session=requests.session()):
 
-    if set(args.sites) == set(utils.get_cloudnet_sites()):
-        args.sites = None
+    if args.site == '*':
+        args.site = None
 
     if args.start == utils.get_date_from_past(5) and args.stop == utils.get_date_from_past(-1):
         args.start = None

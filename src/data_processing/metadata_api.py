@@ -153,7 +153,7 @@ def _get_common_payload(args: Namespace) -> dict:
             'dateFrom': args.start,
             'dateTo': args.stop
         }
-    payload['site'] = args.sites
+    payload['site'] = args.site
     return payload
 
 
