@@ -38,10 +38,10 @@ def _parse_args(args):
     for module in modules.values():
         subparsers = module.add_arguments(subparsers)
     group = parser.add_argument_group(title='General options')
-    group.add_argument('-s', '--sites',
-                       help='Sites to process data from, e.g. hyytiala,limassol. Default is all Cloudnet sites.',
-                       type=lambda s: s.split(','),
-                       default=utils.get_cloudnet_sites())
+    group.add_argument('-s', '--site',
+                       required=True,
+                       help='Site to process data from, e.g. hyytiala',
+                       type=str)
     group.add_argument('-p', '--products',
                        help='Products to be processed, e.g., radar,lidar,mwr,categorize,iwc.\
                         Default is all regular products.',
