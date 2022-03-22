@@ -76,6 +76,12 @@ def get_product_types(level: Optional[str] = None) -> list:
     return [product['id'] for product in products]
 
 
+def get_product_types_excluding_level3() -> list:
+    """Returns Cloudnet processing types (other than level 3)."""
+    products = get_from_data_portal_api('api/products')
+    return [product['id'] for product in products if product['level'] != '3']
+
+
 def get_calibration_factor(site: str, date: str, instrument: str) -> Union[float, None]:
     """Gets calibration factor."""
     data_portal_url = fetch_data_portal_url()
@@ -226,7 +232,7 @@ def get_fields_for_plot(cloudnet_file_type: str) -> Tuple[list, int]:
         fields = ['Do', 'drizzle_N']
         max_alt = 4
     else:
-        raise NotImplementedError
+        raise NotImplementedError(cloudnet_file_type)
     return fields, max_alt
 
 

@@ -8,6 +8,8 @@ script = 'scripts/cloudnet.py'
 subcommand = 'plot'
 
 sites = utils.get_all_but_hidden_sites()
+products = utils.get_product_types_excluding_level3()
+products = ','.join([str(product) for product in products])
 
 for site in sites:
     subprocess.check_call([interpreter,
@@ -15,6 +17,7 @@ for site in sites:
                            interpreter,
                            script,
                            '-s', site,
+                           '-p', products,
                            '--start', '2000-01-01',
                            subcommand,
                            '-m'])
