@@ -21,10 +21,23 @@ def main(args, storage_session=requests.session()):
     temp_dir_root = utils.get_temp_dir(config)
     temp_dir = TemporaryDirectory(dir=temp_dir_root)
     img = Img(args, config)
+
+    if args.missing:
+        logging.info('Finding files without images..')
+        payload = {
+            'site': img.site,
+            'showLegacy': True,
+        }
+        img_metadata = img.md_api.get(f'api/visualizations/', payload=payload)
+        source_file_uuids = [x['sourceFileId'] for x in img_metadata]
+        metadata = [row for row in metadata if row['uuid'] not in source_file_uuids]
+        if metadata:
+            logging.info(f'Plotting images for {len(metadata)} files..')
+        else:
+            logging.info('Images exist for all products')
+
     for row in metadata:
         assert img.site == args.site == row['site']['id']
-        if args.missing and img.exist(row):
-            continue
         img.date_str = row['measurementDate']
         product = row['product']['id']
         logging.info(f'Plotting images for: {img.site} - {img.date_str} - {product}')
@@ -47,13 +60,7 @@ def main(args, storage_session=requests.session()):
 
 
 class Img(ProcessBase):
-
-    def exist(self, row: dict) -> bool:
-        n_images = len(self.md_api.get(f'api/visualizations/{row["uuid"]}', {})['visualizations'])
-        n_images_max = len(utils.get_fields_for_plot(row['product']['id'])[0])
-        if n_images > n_images_max:
-            logging.warning(f'Too many images: https://cloudnet.fmi.fi/file/{row["uuid"]}')
-        return n_images > 0
+    pass
 
 
 def add_arguments(subparser):

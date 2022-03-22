@@ -8,8 +8,8 @@ script = 'scripts/cloudnet.py'
 subcommand = 'plot'
 
 sites = utils.get_all_but_hidden_sites()
-products = utils.get_product_types_excluding_level3()
-products = ','.join([str(product) for product in products])
+products_list = utils.get_product_types_excluding_level3()
+products = ','.join([str(product) for product in products_list])
 
 for site in sites:
     subprocess.check_call([interpreter,
