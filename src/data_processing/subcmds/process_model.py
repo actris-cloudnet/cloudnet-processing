@@ -16,24 +16,22 @@ warnings.simplefilter("ignore", RuntimeWarning)
 
 def main(args, storage_session=requests.session()):
     config = utils.read_main_conf()
-    for site in args.sites:
-        args.site = site
-        process = ProcessModel(args, config, storage_session=storage_session)
-        for date_str, model, raw_uuid in process.get_models_to_process():
-            process.date_str = date_str
-            logging.info(f'{args.site}, {date_str}, {model}')
-            uuid = Uuid()
-            try:
-                uuid.volatile = process.fetch_volatile_model_uuid(model, raw_uuid)
-                uuid = process.process_model(uuid, model)
-                process.upload_product(process.temp_file.name, 'model', uuid, model)
-                process.create_and_upload_images(process.temp_file.name, 'model', uuid.product, model)
-                process.upload_quality_report(process.temp_file.name, uuid.product)
-                process.print_info()
-            except MiscError as err:
-                logging.warning(err)
-            except (HTTPError, ConnectionError, RuntimeError) as err:
-                utils.send_slack_alert(err, 'model', args.site, date_str, model)
+    process = ProcessModel(args, config, storage_session=storage_session)
+    for date_str, model, raw_uuid in process.get_models_to_process():
+        process.date_str = date_str
+        logging.info(f'{args.site}, {date_str}, {model}')
+        uuid = Uuid()
+        try:
+            uuid.volatile = process.fetch_volatile_model_uuid(model, raw_uuid)
+            uuid = process.process_model(uuid, model)
+            process.upload_product(process.temp_file.name, 'model', uuid, model)
+            process.create_and_upload_images(process.temp_file.name, 'model', uuid.product, model)
+            process.upload_quality_report(process.temp_file.name, uuid.product)
+            process.print_info()
+        except MiscError as err:
+            logging.warning(err)
+        except (HTTPError, ConnectionError, RuntimeError) as err:
+            utils.send_slack_alert(err, 'model', args.site, date_str, model)
 
 
 class ProcessModel(ProcessBase):

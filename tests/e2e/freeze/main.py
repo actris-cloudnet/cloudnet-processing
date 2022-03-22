@@ -37,7 +37,7 @@ def main():
     utils.start_server(5001, 'tests/data/server/pid', f'{SCRIPT_PATH}/pid.log')
     register_storage_urls()
 
-    args = cloudnet._parse_args(['freeze'])
+    args = cloudnet._parse_args(['-s=all', 'freeze'])
     freeze.main(args, storage_session=session)
 
     try:

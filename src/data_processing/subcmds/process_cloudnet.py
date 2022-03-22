@@ -23,43 +23,41 @@ warnings.simplefilter("ignore", RuntimeWarning)
 def main(args, storage_session=requests.session()):
     config = utils.read_main_conf()
     start_date, stop_date = utils.get_processing_dates(args)
-    for site in args.sites:
-        args.site = site
-        process = ProcessCloudnet(args, config, storage_session=storage_session)
-        for date in date_range(start_date, stop_date):
-            date_str = date.strftime("%Y-%m-%d")
-            process.date_str = date_str
-            for product in args.products:
-                processing_tools.clean_dir(process.temp_dir.name)
-                process.init_temp_files()
-                if product not in utils.get_product_types():
-                    raise ValueError('No such product')
-                if product == 'model':
+    process = ProcessCloudnet(args, config, storage_session=storage_session)
+    for date in date_range(start_date, stop_date):
+        date_str = date.strftime("%Y-%m-%d")
+        process.date_str = date_str
+        for product in args.products:
+            processing_tools.clean_dir(process.temp_dir.name)
+            process.init_temp_files()
+            if product not in utils.get_product_types():
+                raise ValueError('No such product')
+            if product == 'model':
+                continue
+            logging.info(f'Processing {product} product, {args.site} {date_str}')
+            uuid = Uuid()
+            try:
+                uuid.volatile = process.fetch_volatile_uuid(product)
+                if product in utils.get_product_types(level='2'):
+                    uuid, identifier = process.process_level2(uuid, product)
+                elif product == 'categorize':
+                    uuid, identifier = process.process_categorize(uuid)
+                elif product in utils.get_product_types(level='1b'):
+                    uuid, identifier = process.process_instrument(uuid, product)
+                else:
+                    logging.info(f'Skipping product {product}')
                     continue
-                logging.info(f'Processing {product} product, {args.site} {date_str}')
-                uuid = Uuid()
-                try:
-                    uuid.volatile = process.fetch_volatile_uuid(product)
-                    if product in utils.get_product_types(level='2'):
-                        uuid, identifier = process.process_level2(uuid, product)
-                    elif product == 'categorize':
-                        uuid, identifier = process.process_categorize(uuid)
-                    elif product in utils.get_product_types(level='1b'):
-                        uuid, identifier = process.process_instrument(uuid, product)
-                    else:
-                        logging.info(f'Skipping product {product}')
-                        continue
-                    process.add_pid(process.temp_file.name)
-                    process.upload_product(process.temp_file.name, product, uuid, identifier)
-                    process.create_and_upload_images(process.temp_file.name, product, uuid.product, identifier)
-                    process.upload_quality_report(process.temp_file.name, uuid.product)
-                    process.print_info()
-                except (RawDataMissingError, MiscError, NotImplementedError) as err:
-                    logging.warning(err)
-                except (InconsistentDataError, DisdrometerDataError, ValidTimeStampError) as err:
-                    logging.error(err)
-                except (HTTPError, ConnectionError, RuntimeError, ValueError) as err:
-                    utils.send_slack_alert(err, 'data', args.site, date_str, product)
+                process.add_pid(process.temp_file.name)
+                process.upload_product(process.temp_file.name, product, uuid, identifier)
+                process.create_and_upload_images(process.temp_file.name, product, uuid.product, identifier)
+                process.upload_quality_report(process.temp_file.name, uuid.product)
+                process.print_info()
+            except (RawDataMissingError, MiscError, NotImplementedError) as err:
+                logging.warning(err)
+            except (InconsistentDataError, DisdrometerDataError, ValidTimeStampError) as err:
+                logging.error(err)
+            except (HTTPError, ConnectionError, RuntimeError, ValueError) as err:
+                utils.send_slack_alert(err, 'data', args.site, date_str, product)
 
 
 class ProcessCloudnet(ProcessBase):

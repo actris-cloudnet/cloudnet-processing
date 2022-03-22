@@ -12,35 +12,36 @@ Once the CLU development environment is running, scripts can be run inside the d
 the `./run` wrapper.
 The scripts are located in `scripts/` folder and should be run from the root: 
 ```
-$ ./run scripts/<script_name.py> --arg1=foo --arg2=bar ...
+$ ./run scripts/<script_name.py> --arg1 foo --arg2 bar ...
 ```
 The following scripts are provided:
 
 
 ### `cloudnet.py`
-The main wrapper for running all of the processing steps.
+The main wrapper for running all the processing steps.
 
 ```
-usage: cloudnet.py [-h] [-d YYYY-MM-DD] [--start YYYY-MM-DD]
-                           [--stop YYYY-MM-DD] [-p ...] [-s ...] COMMAND
+usage: cloudnet.py [-h] -s SITE [-d YYYY-MM-DD] [--start YYYY-MM-DD]
+                           [--stop YYYY-MM-DD] [-p ...] COMMAND ...
 ```
 
 Positional arguments:
 
-| Name   | Description | 
-| :---   | :---        |
-| `command` |  Command to execute. Must be one of `freeze`, `process`, `model`, `me`, `plot`, or `qc`. Commands are detailed [here](#commands).|
+| Name      | Description                                                                                                                      | 
+|:----------|:---------------------------------------------------------------------------------------------------------------------------------|
+| `command` | Command to execute. Must be one of `freeze`, `process`, `model`, `me`, `plot`, or `qc`. Commands are detailed [here](#commands). |
 
 General arguments. These arguments are available for all commands. The arguments must be issued before the command argument.
 
-| Short | Long             | Default           | Description                                | 
-| :---  | :----------             | :---              | :---                                       |
-| `-h`  | `--help`         |                   | Show help and exit. |
-| `-d`  | `--date`         |                   | Single date to be processed. Alternatively `--start` and `--stop` can be defined.|
-|       | `--start`        | `current day - 5` | Starting date. |
-|       | `--stop`         | `current day `| Stopping date. |
-| `-p`  | `--products`     | all except `L3`   | Processed products, e.g, `radar,lidar,categorize,classification`. |
-| `-s`  | `--sites`        | all Cloudnet sites   | Sites to process data from, e.g, `hyytiala,limassol`. |
+| Short | Long         | Default           | Description                                                                        | 
+|:------|:-------------|:------------------|:-----------------------------------------------------------------------------------|
+| `-h`  | `--help`     |                   | Show help and exit.                                                                |
+| `-s`  | `--site`     |                   | Site to process data from, e.g, `hyytiala`. Required.                              |
+| `-d`  | `--date`     |                   | Single date to be processed. Alternatively, `--start` and `--stop` can be defined. |
+|       | `--start`    | `current day - 5` | Starting date.                                                                     |
+|       | `--stop`     | `current day `    | Stopping date.                                                                     |
+| `-p`  | `--products` | all               | Processed products, e.g, `radar,lidar,categorize,classification`.                  |
+
 
 
 ### Commands
@@ -48,24 +49,25 @@ General arguments. These arguments are available for all commands. The arguments
 
 ### `process`
 
-The `process` command processes standard cloudnet products, such as `radar`, `lidar`, `categorize`, and `classification` products.
+The `process` command processes standard Cloudnet products, such as `radar`, `lidar`, `categorize`, and `classification` products.
 
 In addition to the general arguments, it accepts the following special arguments.
 
-| Short | Long             | Default           | Description                                | 
-| :---  | :----------             | :---              | :---                                       |
-| `-r`  | `--reprocess`    | `False`           | See below. |
-|       | `--reprocess_volatile`  | `False`    | Reprocess volatile files only (and create new volatile file from unprocessed). |
+| Short | Long                   | Default | Description                                                                    | 
+|:------|:-----------------------|:--------|:-------------------------------------------------------------------------------|
+| `-r`  | `--reprocess`          | `False` | See below.                                                                     |
+|       | `--reprocess_volatile` | `False` | Reprocess volatile files only (and create new volatile file from unprocessed). |
+
 Behavior of the `--reprocess` flag:
 
-| Existing file | `--reprocess` | Action          |
-| :---          | :---          | :---            |
-| -             | `False`       | Create volatile file. |
-| -             | `True`        | Create volatile file. |
-| `volatile`    | `False`       | Reprocess the volatile file (Level 1 products only if new raw data).|
-| `volatile`    | `True`        | Reprocess the volatile file. |
-| `stable` (legacy or not)      | `False`       | - |
-| `stable`      | `True`        | Create new stable file version.|
+| Existing file                   | `--reprocess`   | Action                                                               |
+|:--------------------------------|:----------------|:---------------------------------------------------------------------|
+| -                               | `False`         | Create volatile file.                                                |
+| -                               | `True`          | Create volatile file.                                                |
+| `volatile`                      | `False`         | Reprocess the volatile file (Level 1 products only if new raw data). |
+| `volatile`                      | `True`          | Reprocess the volatile file.                                         |
+| `stable` (legacy or not)        | `False`         | -                                                                    |
+| `stable`                        | `True`          | Create new stable file version.                                      |
 
 ### `model`
 Create Cloudnet model products.
@@ -77,30 +79,35 @@ Create Cloudnet level 3 model evaluation products (experimental).
 
 Additional arguments:
 
-| Short | Long             | Default           | Description                                |
-| :---  | :----------             | :---              | :---                                       |
-| `-r`  | `--reprocess`    | `False`           | Process new version of the stable files and reprocess volatile files. |
+| Short | Long          | Default | Description                                                           |
+|:------|:--------------|:--------|:----------------------------------------------------------------------|
+| `-r`  | `--reprocess` | `False` | Process new version of the stable files and reprocess volatile files. |
 
 ### `plot`
 Don't process anything, only plot images for products.
 
-This command takes no additional arguments
+Additional arguments:
+
+| Short | Long        | Default | Description                                                              |
+|:------|:------------|:--------|:-------------------------------------------------------------------------|
+| `-m`  | `--missing` | `False` | Only plot images for files that do not have any previous images plotted. |
 
 
 ### `qc`
 Don't process anything, only create quality control reports for products.
-
 
 This command takes no additional arguments
 
 ### `freeze`
 Freeze selected files by adding a PID to the files and setting their state to `stable`, preventing further changes to the data.
 
+Note: With this script, all sites can be selected using `--site all` argument.
+
 Additional arguments:
 
-| Short | Long             | Default     | Description                                | 
-| :---  | :---             | :---        | :---                                       |
-| `-f`  | `--force`         | False             | Ignore environment variables `FREEZE_AFTER_DAYS` and `FREEZE_MODEL_AFTER_DAYS`. Allows freezing recently changed files.                      |
+| Short | Long      | Default | Description                                                                                                             | 
+|:------|:----------|:--------|:------------------------------------------------------------------------------------------------------------------------|
+| `-f`  | `--force` | False   | Ignore environment variables `FREEZE_AFTER_DAYS` and `FREEZE_MODEL_AFTER_DAYS`. Allows freezing recently changed files. |
 
 
 ### Examples
@@ -109,13 +116,17 @@ Process classification product for the Bucharest site for the date 2021-12-07:
 
     scripts/cloudnet.py -s bucharest -d 2021-12-07 -p classification process
 
+Plot missing images for Hyytiälä (since 2000-01-01):
+
+    scripts/cloudnet.py -s hyytiala --start 2000-01-01 plot -m
+
 Freeze all files whose measurement date is 2021-01-01 or later:
 
-    scripts/cloudnet.py --start 2021-01-01 freeze
+    scripts/cloudnet.py -s * --start 2021-01-01 freeze
 
-Reprocess all level 2 files between 2021-01-01 and 2021-01-31:
+Reprocess all level 2 files between 2021-01-01 and 2021-01-31 for Norunda:
 
-    scripts/cloudnet.py --start 2021-01-01 --stop 2021-01-31 -p classification,drizzle,iwc,lwc process -r
+    scripts/cloudnet.py -s norunda --start 2021-01-01 --stop 2021-01-31 -p classification,drizzle,iwc,lwc process -r
 
 ## Other scripts
 
@@ -131,25 +142,25 @@ usage: put-legacy-files.py [-h] [-y YYYY] PATH
 
 Positional arguments:
 
-| Name   | Description | 
-| :---   | :---        |
+| Name   | Description                                                            | 
+|:-------|:-----------------------------------------------------------------------|
 | `path` | Root path of the site containing legacy data, e.g, `/foo/bar/munich/`. |
 
 Optional arguments:
 
-| Short | Long             | Default     | Description                                | 
-| :---  | :---             | :---        | :---                                       |
-| `-h`  | `--help`         |             | Show help and exit.                        |
-|  `-y` | `--year`         | all         | Process only some certain year.            |
+| Short | Long     | Default | Description                     | 
+|:------|:---------|:--------|:--------------------------------|
+| `-h`  | `--help` |         | Show help and exit.             |
+| `-y`  | `--year` | all     | Process only some certain year. |
 
 Behavior:
 
-| Existing file          | Action          |
-| :---                   | :---            |
-| -                      | Add stable legacy file. |
-| `volatile`             | - |
-| `stable` (legacy)      | - |
-| `stable` (non-legacy)  | Add stable legacy file as oldest version. |
+| Existing file         | Action                                    |
+|:----------------------|:------------------------------------------|
+| -                     | Add stable legacy file.                   |
+| `volatile`            | -                                         |
+| `stable` (legacy)     | -                                         |
+| `stable` (non-legacy) | Add stable legacy file as oldest version. |
 
 
 

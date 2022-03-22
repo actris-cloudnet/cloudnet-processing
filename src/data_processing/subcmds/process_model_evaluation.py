@@ -3,7 +3,6 @@
 import logging
 import warnings
 from tempfile import NamedTemporaryFile
-from typing import Optional
 import requests
 from cloudnetpy.utils import date_range
 from data_processing import processing_tools
@@ -21,37 +20,35 @@ warnings.simplefilter("ignore", RuntimeWarning)
 def main(args, storage_session=requests.session()):
     config = utils.read_main_conf()
     start_date, stop_date = utils.get_processing_dates(args)
-    for site in args.sites:
-        args.site = site
-        process = ProcessModelEvaluation(args, config, storage_session=storage_session)
-        for date in date_range(start_date, stop_date):
-            date_str = date.strftime("%Y-%m-%d")
-            process.date_str = date_str
-            for product in args.products:
-                if product not in utils.get_product_types('3'):
-                    raise ValueError('No such product')
-                if product == 'model':
-                    continue
-                processing_tools.clean_dir(process.temp_dir.name)
-                logging.info(f'Processing {product} product, {args.site} {date_str}')
-                uuid = Uuid()
-                uuid.volatile = process.fetch_volatile_uuid(product)
-                try:
-                    models_metadata = process.fetch_model_params()
-                except MiscError as err:
-                    logging.warning(err)
-                    continue
-                for model, m_meta in models_metadata.items():
-                    if product in utils.get_product_types(level='3'):
-                        try:
-                            uuid = process.process_level3_day(uuid, product, model, m_meta)
-                            process.upload_product(process.temp_file.name, product, uuid, model)
-                            process.create_and_upload_images(process.temp_file.name, product, uuid.product, model)
-                            process.print_info()
-                        except (RawDataMissingError, MiscError, NotImplementedError) as err:
-                            logging.warning(err)
-                        except (HTTPError, ConnectionError, RuntimeError, ValueError) as err:
-                            utils.send_slack_alert(err, 'data', args.site, date_str, product)
+    process = ProcessModelEvaluation(args, config, storage_session=storage_session)
+    for date in date_range(start_date, stop_date):
+        date_str = date.strftime("%Y-%m-%d")
+        process.date_str = date_str
+        for product in args.products:
+            if product not in utils.get_product_types('3'):
+                raise ValueError('No such product')
+            if product == 'model':
+                continue
+            processing_tools.clean_dir(process.temp_dir.name)
+            logging.info(f'Processing {product} product, {args.site} {date_str}')
+            uuid = Uuid()
+            uuid.volatile = process.fetch_volatile_uuid(product)
+            try:
+                models_metadata = process.fetch_model_params()
+            except MiscError as err:
+                logging.warning(err)
+                continue
+            for model, m_meta in models_metadata.items():
+                if product in utils.get_product_types(level='3'):
+                    try:
+                        uuid = process.process_level3_day(uuid, product, model, m_meta)
+                        process.upload_product(process.temp_file.name, product, uuid, model)
+                        process.create_and_upload_images(process.temp_file.name, product, uuid.product, model)
+                        process.print_info()
+                    except (RawDataMissingError, MiscError, NotImplementedError) as err:
+                        logging.warning(err)
+                    except (HTTPError, ConnectionError, RuntimeError, ValueError) as err:
+                        utils.send_slack_alert(err, 'data', args.site, date_str, product)
 
 
 class ProcessModelEvaluation(ProcessBase):

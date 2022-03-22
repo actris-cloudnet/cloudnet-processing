@@ -482,6 +482,13 @@ def get_cloudnet_sites() -> list:
     return sites
 
 
+def get_all_but_hidden_sites() -> list:
+    """Returns all but hidden site identifiers."""
+    sites = get_from_data_portal_api('api/sites')
+    sites = [site['id'] for site in sites if 'hidden' not in site['type']]
+    return sites
+
+
 def get_from_data_portal_api(end_point: str, payload: Optional[dict] = None) -> list:
     """Reads from data portal API."""
     data_portal_url = fetch_data_portal_url()

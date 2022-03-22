@@ -191,7 +191,7 @@ def reset_log_file(script_path: str):
 
 def parse_args(args) -> tuple:
     args = json.loads(args)
-    return args['sites'][0], args['date'], args['products'][0]
+    return args['site'], args['date'], args['products'][0]
 
 
 def read_log_file(script_path: str):
