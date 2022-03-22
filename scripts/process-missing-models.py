@@ -24,4 +24,4 @@ else:
     for site in sites:
         subprocess.check_call([interpreter, wrapper, interpreter, script, '-s', site, subcommand])
 
-    subprocess.check_call([interpreter, wrapper, interpreter, script, subcommand_freeze])
+    subprocess.check_call([interpreter, wrapper, interpreter, script, '-s', 'all', subcommand_freeze])
