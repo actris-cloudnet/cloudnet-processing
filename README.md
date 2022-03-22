@@ -101,7 +101,7 @@ This command takes no additional arguments
 ### `freeze`
 Freeze selected files by adding a PID to the files and setting their state to `stable`, preventing further changes to the data.
 
-Note: With this script, all sites can be selected using `--site *` argument.
+Note: With this script, all sites can be selected using `--site all` argument.
 
 Additional arguments:
 

@@ -53,7 +53,7 @@ class Img(ProcessBase):
         n_images_max = len(utils.get_fields_for_plot(row['product']['id'])[0])
         if n_images > n_images_max:
             logging.warning(f'Too many images: https://cloudnet.fmi.fi/file/{row["uuid"]}')
-        return False if n_images == 0 else True
+        return n_images > 0
 
 
 def add_arguments(subparser):
