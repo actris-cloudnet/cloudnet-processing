@@ -33,11 +33,11 @@ def main(args, storage_session=requests.session()):
     temp_dir = TemporaryDirectory()
     error = False
     for row in metadata:
+        args.site = row['site']['id']  # Needed for slack alerts
         try:
             full_path = storage_api.download_product(row, temp_dir.name)
         except HTTPError as err:
-            utils.send_slack_alert(err, 'pid', row['site']['id'], row['measurementDate'],
-                                   row['product']['id'])
+            utils.send_slack_alert(err, 'pid', args, row['measurementDate'], row['product']['id'])
             continue
         s3key = row['filename']
         try:
@@ -58,8 +58,7 @@ def main(args, storage_session=requests.session()):
             md_api.post('files', payload)
             storage_api.delete_volatile_product(s3key)
         except OSError as err:
-            utils.send_slack_alert(err, 'pid', row['site']['id'], row['measurementDate'],
-                                   row['product']['id'])
+            utils.send_slack_alert(err, 'pid', args, row['measurementDate'], row['product']['id'])
         for filename in glob.glob(f'{temp_dir.name}/*'):
             os.remove(filename)
     if error is True:
