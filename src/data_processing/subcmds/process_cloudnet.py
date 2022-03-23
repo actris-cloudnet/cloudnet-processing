@@ -57,7 +57,7 @@ def main(args, storage_session=requests.session()):
             except (InconsistentDataError, DisdrometerDataError, ValidTimeStampError) as err:
                 logging.error(err)
             except (HTTPError, ConnectionError, RuntimeError, ValueError) as err:
-                utils.send_slack_alert(err, 'data', args.site, date_str, product)
+                utils.send_slack_alert(err, 'data', args, date_str, product)
 
 
 class ProcessCloudnet(ProcessBase):

@@ -3,6 +3,7 @@
 import sys
 import warnings
 import argparse
+from tempfile import NamedTemporaryFile
 
 from data_processing import utils
 from data_processing.subcmds import freeze, process_cloudnet, process_model, process_model_evaluation, \
@@ -25,7 +26,9 @@ modules = {
 
 def main(args):
     args = _parse_args(args)
-    utils.init_logger(args)
+    logfile = NamedTemporaryFile()
+    utils.init_logger(args, logfile.name)
+    args.log_filename = logfile.name
     cmd = args.cmd
     modules[cmd].main(args)
 

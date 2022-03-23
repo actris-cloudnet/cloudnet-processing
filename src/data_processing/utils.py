@@ -9,8 +9,9 @@ import re
 import shutil
 import string
 import sys
-from typing import Tuple, Optional, List, Dict
+from typing import Tuple, Optional
 from typing import Union
+from argparse import Namespace
 import netCDF4
 import pytz
 import requests
@@ -127,7 +128,7 @@ def get_date_from_past(n: int, reference_date: Optional[str] = None) -> str:
 
 def send_slack_alert(error_msg,
                      error_source: str,
-                     site: Optional[str] = None,
+                     args: Optional[Namespace] = None,
                      date: Optional[str] = None,
                      product: Optional[str] = None,
                      critical: bool = False) -> None:
@@ -155,12 +156,16 @@ def send_slack_alert(error_msg,
     else:
         raise ValueError('Unknown error source')
 
-    with open('all.log') as file:
-        log = file.readlines()
+    if args is not None:
+        with open(args.log_filename) as file:
+            log = file.readlines()
+    else:
+        log = ['']
 
     padding = ' '*7
     msg = f'*{label}*\n\n'
 
+    site = getattr(args, 'site', None)
     for name, var in zip(('Site', 'Date', 'Product'), (site, date, product)):
         if var is not None:
             msg += f'*{name}:* {var}{padding}'
@@ -376,12 +381,12 @@ def remove_header_lines(filename: str, n_lines: int):
         file.writelines(lines[n_lines:])
 
 
-def init_logger(args) -> None:
+def init_logger(args, log_filename: str):
     """Initializes logger."""
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-    output_file_handler = logging.FileHandler("all.log", mode='w')
+    output_file_handler = logging.FileHandler(log_filename, mode='w')
     output_file_handler.setFormatter(formatter)
     stderr_handler = logging.StreamHandler(sys.stderr)
     stderr_handler.setFormatter(formatter)

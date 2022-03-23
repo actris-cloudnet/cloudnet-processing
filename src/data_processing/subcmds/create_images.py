@@ -44,7 +44,7 @@ def main(args, storage_session=requests.session()):
         try:
             full_path = storage_api.download_product(row, temp_dir.name)
         except HTTPError as err:
-            utils.send_slack_alert(err, 'img', img.site, img.date_str, product)
+            utils.send_slack_alert(err, 'img', args, img.date_str, product)
             continue
         try:
             identifier = row['downloadUrl'].split('_')[-1][:-3]
@@ -54,7 +54,7 @@ def main(args, storage_session=requests.session()):
                                          identifier,
                                          legacy=row.get('legacy', False))
         except OSError as err:
-            utils.send_slack_alert(err, 'img', img.site, img.date_str, product)
+            utils.send_slack_alert(err, 'img', args, img.date_str, product)
         for filename in glob.glob(f'{temp_dir.name}/*'):
             os.remove(filename)
 

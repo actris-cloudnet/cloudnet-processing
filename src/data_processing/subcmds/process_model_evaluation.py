@@ -48,7 +48,7 @@ def main(args, storage_session=requests.session()):
                     except (RawDataMissingError, MiscError, NotImplementedError) as err:
                         logging.warning(err)
                     except (HTTPError, ConnectionError, RuntimeError, ValueError) as err:
-                        utils.send_slack_alert(err, 'data', args.site, date_str, product)
+                        utils.send_slack_alert(err, 'data', args, date_str, product)
 
 
 class ProcessModelEvaluation(ProcessBase):

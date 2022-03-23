@@ -31,7 +31,7 @@ def main(args, storage_session=requests.session()):
         except MiscError as err:
             logging.warning(err)
         except (HTTPError, ConnectionError, RuntimeError) as err:
-            utils.send_slack_alert(err, 'model', args.site, date_str, model)
+            utils.send_slack_alert(err, 'model', args, date_str, model)
 
 
 class ProcessModel(ProcessBase):
