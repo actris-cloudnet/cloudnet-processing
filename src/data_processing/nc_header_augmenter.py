@@ -53,6 +53,7 @@ def harmonize_hatpro_file(data: dict) -> str:
     hatpro = HatproNc(nc_raw, nc, data)
     hatpro.copy_file()
     hatpro.add_lwp()
+    hatpro.check_lwp_data()
     hatpro.sort_time()
     hatpro.convert_time()
     hatpro.check_time_reference()
@@ -325,6 +326,14 @@ class HatproNc(Level1Nc):
         self.harmonize_standard_attributes(key)
         if hasattr(lwp, 'comment'):
             delattr(lwp, 'comment')
+
+    def check_lwp_data(self):
+        """Sanity checks LWP data."""
+        threshold_kg = 10
+        lwp = self.nc.variables['lwp'][:]
+        positive_lwp_values = lwp[lwp > 0] / 1000
+        if (median_value := np.median(positive_lwp_values)) > threshold_kg:
+            raise MiscError(f'Invalid LWP data, median value: {np.round(median_value, 2)} kg')
 
     def sort_time(self):
         """Sorts time array."""
