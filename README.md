@@ -122,7 +122,7 @@ Plot missing images for Hyytiälä (since 2000-01-01):
 
 Freeze all files whose measurement date is 2021-01-01 or later:
 
-    scripts/cloudnet.py -s * --start 2021-01-01 freeze
+    scripts/cloudnet.py -s all --start 2021-01-01 freeze
 
 Reprocess all level 2 files between 2021-01-01 and 2021-01-31 for Norunda:
 
