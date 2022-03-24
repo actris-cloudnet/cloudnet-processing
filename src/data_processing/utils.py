@@ -472,6 +472,10 @@ def _get_test_description(test_name: str) -> str:
         return 'Find variables that should be included.'
     if test_name == 'missingGlobalAttributes':
         return 'Find global attributes that should be included.'
+    if test_name == 'medianLwp':
+        return 'Find abnormally high median LWP.'
+    if test_name == 'timeVectorStep':
+        return 'Find non-continuous time vector steps.'
     return ''
 
 
