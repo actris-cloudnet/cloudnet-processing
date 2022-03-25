@@ -32,7 +32,7 @@ class TestModelProcessing:
     def test_that_calls_metadata_api(self):
         data = read_log_file(SCRIPT_PATH)
 
-        n_gets = 3
+        n_gets = 2
         n_file_puts = 2
         n_img_puts = len(self.images)
         n_metadata_posts = 1
@@ -48,18 +48,11 @@ class TestModelProcessing:
             '&developer=True&model=ecmwf HTTP/1.1" 200 -' in data[1]
         )
 
-        # GET certain day / model
-        assert (
-            '"GET /upload-model-metadata?dateFrom=2020-10-22&dateTo=2020-10-22&site=bucharest'
-            '&developer=True&model=ecmwf&status%5B%5D=uploaded&status%5B%5D=processed HTTP/1.1" 200 -'
-            in data[2]
-        )
-
         # PUT file
-        assert '"PUT /files/20201022_bucharest_ecmwf.nc HTTP/1.1" 201 -' in data[3]
+        assert '"PUT /files/20201022_bucharest_ecmwf.nc HTTP/1.1" 201 -' in data[2]
 
         # POST metadata
-        assert '"POST /upload-metadata HTTP/1.1" 200 -' in data[4]
+        assert '"POST /upload-metadata HTTP/1.1" 200 -' in data[3]
 
         # PUT images
         img_put = '"PUT /visualizations/20201022_bucharest_ecmwf-'
