@@ -1,8 +1,12 @@
 from setuptools import setup, find_packages
 
+version = {}
+with open(f"src/data_processing/version.py") as f:
+    exec(f.read(), version)
 
 setup(name='data_processing',
       description='Software for running Cloudnet processing.',
+      version=version['__version__'],
       author='Finnish Meteorological Institute',
       license='MIT License',
       install_requires=['cloudnetpy_qc>=0.1.1',
