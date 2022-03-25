@@ -9,6 +9,7 @@ import re
 import shutil
 import string
 import sys
+from pathlib import Path
 from typing import Tuple, Optional
 from typing import Union
 from argparse import Namespace
@@ -19,6 +20,7 @@ from cloudnetpy.plotting.plot_meta import ATTRIBUTES as ATTR
 from cloudnetpy.plotting.plotting import Dimensions
 from cloudnetpy_qc import Quality
 from cloudnetpy.utils import get_time
+import data_processing.version
 
 
 def create_product_put_payload(full_path: str,
@@ -38,6 +40,7 @@ def create_product_put_payload(full_path: str,
         'uuid': getattr(nc, 'file_uuid', ''),
         'pid': getattr(nc, 'pid', ''),
         'history': getattr(nc, 'history', ''),
+        'dataProcessingVersion': get_data_processing_version(),
         ** storage_service_response
     }
     source_uuids = getattr(nc, 'source_file_uuids', None)
@@ -46,6 +49,14 @@ def create_product_put_payload(full_path: str,
     payload['cloudnetpyVersion'] = getattr(nc, 'cloudnetpy_version', '')
     nc.close()
     return payload
+
+
+def get_data_processing_version() -> str:
+    version_file = Path(os.path.abspath(data_processing.version.__file__))
+    version: dict = {}
+    with open(version_file) as f:
+        exec(f.read(), version)
+    return version['__version__']
 
 
 def get_file_format(nc: netCDF4.Dataset):
