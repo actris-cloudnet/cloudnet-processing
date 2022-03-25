@@ -71,6 +71,14 @@ def get_file_format(nc: netCDF4.Dataset):
     raise RuntimeError('Unknown file type')
 
 
+def add_version_to_global_attributes(full_path: str):
+    """Add data-processing package version to file attributes."""
+    version = get_data_processing_version()
+    nc = netCDF4.Dataset(full_path, 'r+')
+    nc.cloudnet_data_pipeline_version = version
+    nc.close()
+
+
 def read_site_info(site_name: str) -> dict:
     """Reads site information from Cloudnet http API."""
     sites = get_from_data_portal_api('api/sites', {'developer': True})
