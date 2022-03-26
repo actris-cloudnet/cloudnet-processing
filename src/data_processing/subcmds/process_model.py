@@ -26,6 +26,7 @@ def main(args, storage_session: Optional[requests.Session] = None):
         try:
             uuid.volatile = process.fetch_volatile_model_uuid(row)
             uuid = process.process_model(uuid, row)
+            utils.add_version_to_global_attributes(process.temp_file.name)
             process.upload_product(process.temp_file.name, 'model', uuid, row["model"]["id"])
             process.create_and_upload_images(process.temp_file.name, 'model', uuid.product, row["model"]["id"])
             process.upload_quality_report(process.temp_file.name, uuid.product)
