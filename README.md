@@ -1,13 +1,16 @@
 # ACTRIS Cloudnet data-processing
+
 ![](https://github.com/actris-cloudnet/data-processing/workflows/Test%20and%20lint/badge.svg)
 
 Various scripts used in Cloudnet data transfer and processing.
 
 ## Installation
+
 The data processing tools are distributed as a docker container as a part of the Cloudnet development toolkit.
 Refer to [README of the dev-toolkit repository](https://github.com/actris-cloudnet/dev-toolkit/) on how to set up the CLU development environment.
 
 ## Scripts
+
 Once the CLU development environment is running, scripts can be run inside the data-processing container with
 the `./run` wrapper.
 The scripts are located in `scripts/` folder and should be run from the root:
@@ -17,10 +20,12 @@ The scripts are located in `scripts/` folder and should be run from the root:
 The following scripts are provided:
 
 ### `cloudnet.py`
+
 The main wrapper for running all the processing steps.
 
+
     usage: cloudnet.py [-h] -s SITE [-d YYYY-MM-DD] [--start YYYY-MM-DD]
-                       [--stop YYYY-MM-DD] [-p ...] COMMAND ...
+                           [--stop YYYY-MM-DD] [-p ...] COMMAND ...
 
 Positional arguments:
 
@@ -28,7 +33,7 @@ Positional arguments:
 |:----------|:---------------------------------------------------------------------------------------------------------------------------------|
 | `command` | Command to execute. Must be one of `freeze`, `process`, `model`, `me`, `plot`, or `qc`. Commands are detailed [here](#commands). |
 
-General arguments. These arguments are available for all commands. The arguments must be issued before the command argument.
+General arguments. These arguments are available for most commands. The arguments must be issued before the command argument.
 
 | Short | Long         | Default           | Description                                                                        |
 |:------|:-------------|:------------------|:-----------------------------------------------------------------------------------|
@@ -63,21 +68,8 @@ Behavior of the `--reprocess` flag:
 | `stable` (legacy or not)        | `False`         | -                                                                    |
 | `stable`                        | `True`          | Create new stable file version.                                      |
 
-### `model`
-Create Cloudnet model products.
-
-This command takes no additional arguments
-
-### `me`
-Create Cloudnet level 3 model evaluation products (experimental).
-
-Additional arguments:
-
-| Short | Long          | Default | Description                                                           |
-|:------|:--------------|:--------|:----------------------------------------------------------------------|
-| `-r`  | `--reprocess` | `False` | Process new version of the stable files and reprocess volatile files. |
-
 ### `plot`
+
 Don't process anything, only plot images for products.
 
 Additional arguments:
@@ -87,11 +79,32 @@ Additional arguments:
 | `-m`  | `--missing` | `False` | Only plot images for files that do not have any previous images plotted. |
 
 ### `qc`
+
 Don't process anything, only create quality control reports for products.
 
-This command takes no additional arguments
+This command takes no additional arguments.
+
+### `model`
+
+Create Cloudnet model products.
+
+Currently, with this command, arguments `start`, `stop`, `date` and `products` have no effect.
+Thus, all unprocessed model files will be processed.
+
+This command takes no additional arguments.
+
+### `me`
+
+Create Cloudnet level 3 model evaluation products (experimental).
+
+Additional arguments:
+
+| Short | Long          | Default | Description                                                           |
+|:------|:--------------|:--------|:----------------------------------------------------------------------|
+| `-r`  | `--reprocess` | `False` | Process new version of the stable files and reprocess volatile files. |
 
 ### `freeze`
+
 Freeze selected files by adding a PID to the files and setting their state to `stable`, preventing further changes to the data.
 
 Note: With this script, all sites can be selected using `--site all` argument.
@@ -119,6 +132,10 @@ Freeze all files whose measurement date is 2021-01-01 or later:
 Reprocess all level 2 files between 2021-01-01 and 2021-01-31 for Norunda:
 
     scripts/cloudnet.py -s norunda --start 2021-01-01 --stop 2021-01-31 -p classification,drizzle,iwc,lwc process -r
+
+Process missing model files for Munich:
+
+    scripts/cloudnet.py -s munich model
 
 ## Other scripts
 
@@ -153,6 +170,7 @@ Behavior:
 | `stable` (non-legacy) | Add stable legacy file as oldest version. |
 
 ### `map-variable-names.py`
+
 Print list of Cloudnet variables.
 
     usage: map-variable-names.py
@@ -180,4 +198,5 @@ Run end-to-end tests:
     docker run -tv $PWD/tests:/app/tests -v $PWD/src:/app/src --env-file e2e-test.env test /bin/sh -c 'for f in tests/e2e/*/main.py; do $f; done'
 
 ### Licence
+
 MIT
