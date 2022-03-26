@@ -16,7 +16,6 @@ $ ./run scripts/<script_name.py> --arg1 foo --arg2 bar ...
 ```
 The following scripts are provided:
 
-
 ### `cloudnet.py`
 The main wrapper for running all the processing steps.
 
@@ -31,7 +30,7 @@ Positional arguments:
 |:----------|:---------------------------------------------------------------------------------------------------------------------------------|
 | `command` | Command to execute. Must be one of `freeze`, `process`, `model`, `me`, `plot`, or `qc`. Commands are detailed [here](#commands). |
 
-General arguments. These arguments are available for all commands. The arguments must be issued before the command argument.
+General arguments. These arguments are available for most commands. The arguments must be issued before the command argument.
 
 | Short | Long         | Default           | Description                                                                        | 
 |:------|:-------------|:------------------|:-----------------------------------------------------------------------------------|
@@ -42,10 +41,7 @@ General arguments. These arguments are available for all commands. The arguments
 |       | `--stop`     | `current day `    | Stopping date.                                                                     |
 | `-p`  | `--products` | all               | Processed products, e.g, `radar,lidar,categorize,classification`.                  |
 
-
-
 ### Commands
-
 
 ### `process`
 
@@ -69,20 +65,6 @@ Behavior of the `--reprocess` flag:
 | `stable` (legacy or not)        | `False`         | -                                                                    |
 | `stable`                        | `True`          | Create new stable file version.                                      |
 
-### `model`
-Create Cloudnet model products.
-
-This command takes no additional arguments
-
-### `me`
-Create Cloudnet level 3 model evaluation products (experimental).
-
-Additional arguments:
-
-| Short | Long          | Default | Description                                                           |
-|:------|:--------------|:--------|:----------------------------------------------------------------------|
-| `-r`  | `--reprocess` | `False` | Process new version of the stable files and reprocess volatile files. |
-
 ### `plot`
 Don't process anything, only plot images for products.
 
@@ -92,11 +74,27 @@ Additional arguments:
 |:------|:------------|:--------|:-------------------------------------------------------------------------|
 | `-m`  | `--missing` | `False` | Only plot images for files that do not have any previous images plotted. |
 
-
 ### `qc`
 Don't process anything, only create quality control reports for products.
 
-This command takes no additional arguments
+This command takes no additional arguments.
+
+### `model`
+Create Cloudnet model products.
+
+Currently, with this command, arguments `start`, `stop`, `date` and `products` have no effect. 
+Thus, all unprocessed model files will be processed.
+
+This command takes no additional arguments.
+
+### `me`
+Create Cloudnet level 3 model evaluation products (experimental).
+
+Additional arguments:
+
+| Short | Long          | Default | Description                                                           |
+|:------|:--------------|:--------|:----------------------------------------------------------------------|
+| `-r`  | `--reprocess` | `False` | Process new version of the stable files and reprocess volatile files. |
 
 ### `freeze`
 Freeze selected files by adding a PID to the files and setting their state to `stable`, preventing further changes to the data.
@@ -108,7 +106,6 @@ Additional arguments:
 | Short | Long      | Default | Description                                                                                                             | 
 |:------|:----------|:--------|:------------------------------------------------------------------------------------------------------------------------|
 | `-f`  | `--force` | False   | Ignore environment variables `FREEZE_AFTER_DAYS` and `FREEZE_MODEL_AFTER_DAYS`. Allows freezing recently changed files. |
-
 
 ### Examples
 
@@ -128,6 +125,10 @@ Reprocess all level 2 files between 2021-01-01 and 2021-01-31 for Norunda:
 
     scripts/cloudnet.py -s norunda --start 2021-01-01 --stop 2021-01-31 -p classification,drizzle,iwc,lwc process -r
 
+Process missing model files for Munich:
+
+    scripts/cloudnet.py -s munich model
+
 ## Other scripts
 
 Code that is not involved in the cloudnet data processing chain can be found in other scripts under the `scripts` directory.
@@ -136,9 +137,7 @@ Code that is not involved in the cloudnet data processing chain can be found in 
 
 Upload Matlab processed legacy products (`categorize`, and level 2 products) to data portal.
 
-```
-usage: put-legacy-files.py [-h] [-y YYYY] PATH
-```
+    usage: put-legacy-files.py [-h] [-y YYYY] PATH
 
 Positional arguments:
 
@@ -162,42 +161,32 @@ Behavior:
 | `stable` (legacy)     | -                                         |
 | `stable` (non-legacy) | Add stable legacy file as oldest version. |
 
-
-
 ### `map-variable-names.py`
 Print list of Cloudnet variables.
 
-```
-usage: map-variable-names.py
-```
+    usage: map-variable-names.py
 
 ### Development
 
 For development, you may open a bash session inside the container with:
 
-```
-$ docker-compose -f ../dev-toolkit/docker-compose.yml run --entrypoint bash data-processing
-```
+    docker-compose -f ../dev-toolkit/docker-compose.yml run --entrypoint bash data-processing
 
 The changes made to the source files on the host computer will be reflected in the container.
 
 ### Tests
 
 First, build a separate test container:
-```
-$ docker build -t test .
-```
+
+    docker build -t test .
 
 Run unit tests:
-```
-$ docker run -tv $PWD/tests:/app/tests -v $PWD/src:/app/src --env-file test.env test pytest
-```
+
+    docker run -tv $PWD/tests:/app/tests -v $PWD/src:/app/src --env-file test.env test pytest
 
 Run end-to-end tests:
-```
-$ docker run -tv $PWD/tests:/app/tests -v $PWD/src:/app/src --env-file e2e-test.env test /bin/sh -c 'for f in tests/e2e/*/main.py; do $f; done'
-```
 
+    docker run -tv $PWD/tests:/app/tests -v $PWD/src:/app/src --env-file e2e-test.env test /bin/sh -c 'for f in tests/e2e/*/main.py; do $f; done'
 
 ### Licence
 MIT
