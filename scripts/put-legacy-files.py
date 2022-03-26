@@ -66,6 +66,7 @@ def main():
             temp_file = NamedTemporaryFile(suffix=legacy_file.filename)
             uuid = fix_legacy_file(file, temp_file.name)
             pid_utils.add_pid_to_file(temp_file.name)
+            utils.add_version_to_global_attributes(temp_file.name)
             upload_info = storage_api.upload_product(temp_file.name, s3key)
             payload = utils.create_product_put_payload(temp_file.name,
                                                        upload_info,
