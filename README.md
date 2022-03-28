@@ -1,5 +1,5 @@
 # ACTRIS Cloudnet-processing
-![](https://github.com/actris-cloudnet/data-processing/workflows/Test%20and%20lint/badge.svg)
+![](https://github.com/actris-cloudnet/cloudnet-processing/workflows/Test%20and%20lint/badge.svg)
 
 Various scripts used in Cloudnet data transfer and processing.
 
@@ -8,7 +8,7 @@ The data processing tools are distributed as a docker container as a part of the
 Refer to [README of the dev-toolkit repository](https://github.com/actris-cloudnet/dev-toolkit/) on how to set up the CLU development environment.
 
 ## Scripts
-Once the CLU development environment is running, scripts can be run inside the data-processing container with
+Once the CLU development environment is running, scripts can be run inside the cloudnet-processing container with
 the `./run` wrapper.
 The scripts are located in `scripts/` folder and should be run from the root: 
 ```
@@ -170,7 +170,7 @@ Print list of Cloudnet variables.
 
 For development, you may open a bash session inside the container with:
 
-    docker-compose -f ../dev-toolkit/docker-compose.yml run --entrypoint bash data-processing
+    docker-compose -f ../dev-toolkit/docker-compose.yml run --entrypoint bash cloudnet-processing
 
 The changes made to the source files on the host computer will be reflected in the container.
 

@@ -42,7 +42,7 @@ def create_product_put_payload(full_path: str,
         'uuid': getattr(nc, 'file_uuid', ''),
         'pid': getattr(nc, 'pid', ''),
         'history': getattr(nc, 'history', ''),
-        'dataProcessingVersion': get_cloudnet_processing_version(),
+        'processingVersion': get_cloudnet_processing_version(),
         ** storage_service_response
     }
     source_uuids = getattr(nc, 'source_file_uuids', None)
@@ -72,7 +72,7 @@ def get_file_format(nc: netCDF4.Dataset):
 
 
 def add_version_to_global_attributes(full_path: str):
-    """Add data-processing package version to file attributes."""
+    """Add software version to file attributes."""
     version = get_cloudnet_processing_version()
     nc = netCDF4.Dataset(full_path, 'r+')
     nc.cloudnet_processing_version = version
