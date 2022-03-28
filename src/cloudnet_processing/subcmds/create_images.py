@@ -6,11 +6,11 @@ import logging
 from tempfile import TemporaryDirectory
 import requests
 from requests.exceptions import HTTPError
-from data_processing import metadata_api
-from data_processing import utils
-from data_processing.utils import read_main_conf
-from data_processing.storage_api import StorageApi
-from data_processing.processing_tools import ProcessBase
+from cloudnet_processing import metadata_api
+from cloudnet_processing import utils
+from cloudnet_processing.utils import read_main_conf
+from cloudnet_processing.storage_api import StorageApi
+from cloudnet_processing.processing_tools import ProcessBase
 
 
 def main(args, storage_session=requests.session()):

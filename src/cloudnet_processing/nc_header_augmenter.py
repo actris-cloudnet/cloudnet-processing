@@ -11,8 +11,8 @@ from cloudnetpy.utils import get_uuid, get_time, seconds2date
 from cloudnetpy.metadata import COMMON_ATTRIBUTES
 from cloudnetpy.instruments import instruments
 from cloudnetpy.exceptions import ValidTimeStampError
-from data_processing import utils
-from data_processing.utils import MiscError
+from cloudnet_processing import utils
+from cloudnet_processing.utils import MiscError
 
 
 def fix_legacy_file(legacy_file_full_path: str, target_full_path: str) -> str:

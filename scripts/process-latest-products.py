@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import subprocess
 from datetime import datetime, timedelta
-from data_processing import utils
+from cloudnet_processing import utils
 from sys import argv
 
 default_sites = utils.get_cloudnet_sites()

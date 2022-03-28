@@ -1,10 +1,10 @@
 from setuptools import setup, find_packages
 
 version = {}
-with open(f"src/data_processing/version.py") as f:
+with open(f"src/cloudnet_processing/version.py") as f:
     exec(f.read(), version)
 
-setup(name='data_processing',
+setup(name='cloudnet_processing',
       description='Software for running Cloudnet processing.',
       version=version['__version__'],
       author='Finnish Meteorological Institute',

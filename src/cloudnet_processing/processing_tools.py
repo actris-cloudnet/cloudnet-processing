@@ -6,11 +6,11 @@ import requests
 import numpy as np
 from typing import Union, Tuple, Optional
 from tempfile import NamedTemporaryFile, TemporaryDirectory
-from data_processing import utils
-from data_processing.utils import MiscError, RawDataMissingError
-from data_processing.metadata_api import MetadataApi
-from data_processing.storage_api import StorageApi
-from data_processing.pid_utils import PidUtils
+from cloudnet_processing import utils
+from cloudnet_processing.utils import MiscError, RawDataMissingError
+from cloudnet_processing.metadata_api import MetadataApi
+from cloudnet_processing.storage_api import StorageApi
+from cloudnet_processing.pid_utils import PidUtils
 from cloudnetpy.plotting import generate_figure
 
 

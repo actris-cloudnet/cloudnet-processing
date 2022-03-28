@@ -1,7 +1,7 @@
 import datetime
 from pathlib import Path
 import pytest
-import data_processing.utils as utils
+import cloudnet_processing.utils as utils
 
 test_file_path = Path(__file__).parent.absolute()
 

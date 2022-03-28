@@ -3,7 +3,7 @@ import os
 from sys import argv
 from urllib.error import HTTPError
 
-from data_processing import utils
+from cloudnet_processing import utils
 from datetime import datetime
 import re
 import requests

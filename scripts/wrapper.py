@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import subprocess
 import sys
-from data_processing import utils
+from cloudnet_processing import utils
 
 
 def main(args):

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import subprocess
-from data_processing import utils
+from cloudnet_processing import utils
 
 interpreter = 'python3'
 wrapper = 'scripts/wrapper.py'

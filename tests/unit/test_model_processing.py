@@ -3,7 +3,7 @@ import re
 import json
 import requests
 import requests_mock
-from data_processing.subcmds import process_model
+from cloudnet_processing.subcmds import process_model
 
 sys.path.append('scripts/')
 cloudnet = __import__('cloudnet')

@@ -1,7 +1,7 @@
 from os import path
 import pytest
 import netCDF4
-from data_processing import utils
+from cloudnet_processing import utils
 from test_utils.utils import count_strings, read_log_file
 
 SCRIPT_PATH = path.dirname(path.realpath(__file__))

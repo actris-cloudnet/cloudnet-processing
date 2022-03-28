@@ -6,7 +6,7 @@ import re
 from pathlib import Path
 from dataclasses import dataclass
 
-VERSION_FILE = 'src/data_processing/version.py'
+VERSION_FILE = 'src/cloudnet_processing/version.py'
 
 
 def main(component: str):

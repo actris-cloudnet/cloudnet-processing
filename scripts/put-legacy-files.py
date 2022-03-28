@@ -8,13 +8,13 @@ import netCDF4
 import requests
 from requests import HTTPError
 import logging
-from data_processing.metadata_api import MetadataApi
-from data_processing.storage_api import StorageApi
-from data_processing.pid_utils import PidUtils
-from data_processing import utils
-from data_processing.nc_header_augmenter import fix_legacy_file
-from data_processing.utils import MiscError
-from data_processing.processing_tools import ProcessBase
+from cloudnet_processing.metadata_api import MetadataApi
+from cloudnet_processing.storage_api import StorageApi
+from cloudnet_processing.pid_utils import PidUtils
+from cloudnet_processing import utils
+from cloudnet_processing.nc_header_augmenter import fix_legacy_file
+from cloudnet_processing.utils import MiscError
+from cloudnet_processing.processing_tools import ProcessBase
 import cloudnetpy.utils
 
 

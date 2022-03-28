@@ -7,11 +7,11 @@ import sys
 from tempfile import TemporaryDirectory
 from uuid import UUID
 import requests
-from data_processing import metadata_api
-from data_processing import utils
-from data_processing.pid_utils import PidUtils
-from data_processing.storage_api import StorageApi
-from data_processing.utils import read_main_conf
+from cloudnet_processing import metadata_api
+from cloudnet_processing import utils
+from cloudnet_processing.pid_utils import PidUtils
+from cloudnet_processing.storage_api import StorageApi
+from cloudnet_processing.utils import read_main_conf
 from requests.exceptions import HTTPError
 
 

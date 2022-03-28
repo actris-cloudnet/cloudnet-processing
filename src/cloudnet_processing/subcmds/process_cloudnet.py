@@ -11,11 +11,11 @@ from cloudnetpy.categorize import generate_categorize
 from cloudnetpy.exceptions import InconsistentDataError, DisdrometerDataError, ValidTimeStampError
 from cloudnetpy.exceptions import ModelDataError
 from cloudnetpy.utils import date_range
-from data_processing import instrument_process
-from data_processing import processing_tools
-from data_processing import utils
-from data_processing.processing_tools import Uuid, ProcessBase
-from data_processing.utils import MiscError, RawDataMissingError
+from cloudnet_processing import instrument_process
+from cloudnet_processing import processing_tools
+from cloudnet_processing import utils
+from cloudnet_processing.processing_tools import Uuid, ProcessBase
+from cloudnet_processing.utils import MiscError, RawDataMissingError
 from requests.exceptions import HTTPError
 
 warnings.simplefilter("ignore", UserWarning)

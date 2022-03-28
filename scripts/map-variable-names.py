@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Script for printing Cloudnet variable names."""
 import json
-import data_processing.utils as process_utils
+import cloudnet_processing.utils as process_utils
 
 
 def main():

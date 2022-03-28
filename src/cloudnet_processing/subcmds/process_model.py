@@ -4,10 +4,10 @@ import logging
 import warnings
 from typing import Union
 import requests
-from data_processing import nc_header_augmenter
-from data_processing import utils
-from data_processing.processing_tools import Uuid, ProcessBase
-from data_processing.utils import MiscError
+from cloudnet_processing import nc_header_augmenter
+from cloudnet_processing import utils
+from cloudnet_processing.processing_tools import Uuid, ProcessBase
+from cloudnet_processing.utils import MiscError
 from requests.exceptions import HTTPError
 
 warnings.simplefilter("ignore", UserWarning)

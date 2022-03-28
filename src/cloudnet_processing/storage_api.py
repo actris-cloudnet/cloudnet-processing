@@ -4,7 +4,7 @@ from typing import Optional, Tuple
 from tempfile import NamedTemporaryFile
 import requests
 import logging
-from data_processing import utils
+from cloudnet_processing import utils
 
 
 class StorageApi:

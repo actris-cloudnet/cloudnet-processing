@@ -20,7 +20,7 @@ from cloudnetpy.plotting.plot_meta import ATTRIBUTES as ATTR
 from cloudnetpy.plotting.plotting import Dimensions
 from cloudnetpy_qc import Quality
 from cloudnetpy.utils import get_time
-import data_processing.version
+import cloudnet_processing.version
 
 
 def create_product_put_payload(full_path: str,
@@ -40,7 +40,7 @@ def create_product_put_payload(full_path: str,
         'uuid': getattr(nc, 'file_uuid', ''),
         'pid': getattr(nc, 'pid', ''),
         'history': getattr(nc, 'history', ''),
-        'dataProcessingVersion': get_data_processing_version(),
+        'dataProcessingVersion': get_cloudnet_processing_version(),
         ** storage_service_response
     }
     source_uuids = getattr(nc, 'source_file_uuids', None)
@@ -51,8 +51,8 @@ def create_product_put_payload(full_path: str,
     return payload
 
 
-def get_data_processing_version() -> str:
-    version_file = Path(os.path.abspath(data_processing.version.__file__))
+def get_cloudnet_processing_version() -> str:
+    version_file = Path(os.path.abspath(cloudnet_processing.version.__file__))
     version: dict = {}
     with open(version_file) as f:
         exec(f.read(), version)
@@ -71,7 +71,7 @@ def get_file_format(nc: netCDF4.Dataset):
 
 def add_version_to_global_attributes(full_path: str):
     """Add data-processing package version to file attributes."""
-    version = get_data_processing_version()
+    version = get_cloudnet_processing_version()
     nc = netCDF4.Dataset(full_path, 'r+')
     nc.cloudnet_data_pipeline_version = version
     nc.close()
