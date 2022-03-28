@@ -1,4 +1,4 @@
-from data_processing.storage_api import StorageApi
+from cloudnet_processing.storage_api import StorageApi
 from tempfile import TemporaryDirectory
 import os
 from test_utils import utils as utils

@@ -11,11 +11,11 @@ import time
 import socket
 import requests
 import requests_mock
-from data_processing.utils import get_product_types
+from cloudnet_processing.utils import get_product_types
 sys.path.append('scripts/')
 cloudnet = __import__('cloudnet')
 
-from data_processing.subcmds import process_cloudnet, process_model, process_model_evaluation
+from cloudnet_processing.subcmds import process_cloudnet, process_model, process_model_evaluation
 
 
 def init_test_session():

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import subprocess
 from sys import argv
-from data_processing import utils
+from cloudnet_processing import utils
 
 default_sites = utils.get_cloudnet_sites()
 additional_sites = argv[1:]

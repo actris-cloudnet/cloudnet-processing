@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import subprocess
 import logging
-from data_processing import utils
+from cloudnet_processing import utils
 
 MINIMUM_SIZE = 20200
 

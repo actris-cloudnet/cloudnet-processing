@@ -5,8 +5,8 @@ import warnings
 import argparse
 from tempfile import NamedTemporaryFile
 
-from data_processing import utils
-from data_processing.subcmds import freeze, process_cloudnet, process_model, process_model_evaluation, \
+from cloudnet_processing import utils
+from cloudnet_processing.subcmds import freeze, process_cloudnet, process_model, process_model_evaluation, \
                                     create_images, create_qc_reports
 
 

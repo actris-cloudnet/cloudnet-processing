@@ -3,22 +3,19 @@
 import os
 import glob
 import logging
-from typing import Optional
 from tempfile import TemporaryDirectory
 import requests
 from requests.exceptions import HTTPError
-from data_processing import metadata_api
-from data_processing import utils
-from data_processing.utils import make_session, read_main_conf
-from data_processing.storage_api import StorageApi
-from data_processing.processing_tools import ProcessBase
+from cloudnet_processing import metadata_api
+from cloudnet_processing import utils
+from cloudnet_processing.utils import read_main_conf
+from cloudnet_processing.storage_api import StorageApi
+from cloudnet_processing.processing_tools import ProcessBase
 
 
-def main(args, storage_session: Optional[requests.Session] = None):
-    if storage_session is None:
-        storage_session = make_session()
+def main(args, storage_session=requests.session()):
     config = read_main_conf()
-    md_api = metadata_api.MetadataApi(config, make_session())
+    md_api = metadata_api.MetadataApi(config, requests.session())
     storage_api = StorageApi(config, storage_session)
     metadata = md_api.find_product_metadata(args)
     temp_dir_root = utils.get_temp_dir(config)

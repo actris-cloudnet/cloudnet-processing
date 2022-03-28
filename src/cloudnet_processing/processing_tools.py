@@ -6,11 +6,11 @@ import requests
 import numpy as np
 from typing import Union, Tuple, Optional
 from tempfile import NamedTemporaryFile, TemporaryDirectory
-from data_processing import utils
-from data_processing.utils import MiscError, RawDataMissingError, make_session
-from data_processing.metadata_api import MetadataApi
-from data_processing.storage_api import StorageApi
-from data_processing.pid_utils import PidUtils
+from cloudnet_processing import utils
+from cloudnet_processing.utils import MiscError, RawDataMissingError
+from cloudnet_processing.metadata_api import MetadataApi
+from cloudnet_processing.storage_api import StorageApi
+from cloudnet_processing.pid_utils import PidUtils
 from cloudnetpy.plotting import generate_figure
 
 
@@ -32,12 +32,8 @@ class ProcessBase:
     def __init__(self,
                  args,
                  config: dict,
-                 storage_session: Optional[requests.Session] = None,
-                 metadata_session: Optional[requests.Session] = None):
-        if storage_session is None:
-            storage_session = make_session()
-        if metadata_session is None:
-            metadata_session = make_session()
+                 storage_session: requests.Session = requests.Session(),
+                 metadata_session: requests.Session = requests.Session()):
         self.site_meta, self.site, self._site_type = _read_site_info(args)
         self.config = config
         self.is_reprocess = getattr(args, 'reprocess', False)

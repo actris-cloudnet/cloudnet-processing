@@ -3,7 +3,7 @@ import pytest
 import requests
 import requests_mock
 from unittest import TestCase
-from data_processing import metadata_api
+from cloudnet_processing import metadata_api
 from argparse import Namespace
 from urllib.parse import parse_qs, urlparse
 import re

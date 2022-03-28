@@ -1,8 +1,8 @@
 import shutil
 import netCDF4
 import os
-from data_processing import nc_header_augmenter as nca
-from data_processing.utils import MiscError
+from cloudnet_processing import nc_header_augmenter as nca
+from cloudnet_processing.utils import MiscError
 import pytest
 from pathlib import Path
 import numpy as np

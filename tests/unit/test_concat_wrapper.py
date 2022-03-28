@@ -1,5 +1,5 @@
 import netCDF4
-from data_processing import concat_wrapper as lib
+from cloudnet_processing import concat_wrapper as lib
 
 
 def test__validate_date_attributes(nc_file):

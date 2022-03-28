@@ -1,5 +1,5 @@
-from data_processing import instrument_process
-from data_processing.processing_tools import Uuid
+from cloudnet_processing import instrument_process
+from cloudnet_processing.processing_tools import Uuid
 import tempfile
 import glob
 import pytest

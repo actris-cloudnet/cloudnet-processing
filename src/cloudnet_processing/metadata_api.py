@@ -5,7 +5,7 @@ from typing import Union, Optional
 import logging
 import os
 import requests
-from data_processing import utils
+from cloudnet_processing import utils
 
 
 class MetadataApi:
