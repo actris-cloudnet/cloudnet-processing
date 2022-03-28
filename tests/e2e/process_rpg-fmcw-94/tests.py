@@ -29,6 +29,8 @@ class TestRPGFMCW94Processing:
         assert nc.cloudnet_file_type == self.product
         assert nc.Conventions == 'CF-1.8'
         assert hasattr(nc, 'pid') is False
+        assert hasattr(nc, 'cloudnetpy_version')
+        assert hasattr(nc, 'cloudnet_processing_version')
         nc.close()
 
     def test_that_calls_metadata_api(self):

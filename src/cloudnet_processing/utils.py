@@ -73,7 +73,7 @@ def add_version_to_global_attributes(full_path: str):
     """Add data-processing package version to file attributes."""
     version = get_cloudnet_processing_version()
     nc = netCDF4.Dataset(full_path, 'r+')
-    nc.cloudnet_data_pipeline_version = version
+    nc.cloudnet_processing_version = version
     nc.close()
 
 

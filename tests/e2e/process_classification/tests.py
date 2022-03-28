@@ -25,6 +25,8 @@ class TestClassificationProcessing:
         assert nc.cloudnet_file_type == self.product
         assert nc.Conventions == 'CF-1.8'
         assert nc.source_file_uuids == 'd963776b33844dc7b979d4c31d84a86b'
+        assert hasattr(nc, 'cloudnetpy_version')
+        assert hasattr(nc, 'cloudnet_processing_version')
         nc.close()
 
     def test_that_calls_metadata_api(self):

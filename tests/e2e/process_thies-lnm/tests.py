@@ -21,6 +21,8 @@ class TestProcessing:
         assert self.nc.cloudnet_file_type == 'disdrometer'
         assert self.nc.Conventions == 'CF-1.8'
         assert hasattr(self.nc, 'pid') is False
+        assert hasattr(self.nc, 'cloudnetpy_version')
+        assert hasattr(self.nc, 'cloudnet_processing_version')
 
     def test_time_is_sorted(self):
         time = self.nc.variables['time'][:]
