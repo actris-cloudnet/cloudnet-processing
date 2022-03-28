@@ -19,6 +19,8 @@ class Test:
     def test_product_file(self):
         nc = netCDF4.Dataset(self.full_path)
         assert len(nc.variables['time']) == 4*12
+        assert hasattr(nc, 'cloudnetpy_version')
+        assert hasattr(nc, 'cloudnet_processing_version')
         nc.close()
 
     def test_metadata_api_calls(self):

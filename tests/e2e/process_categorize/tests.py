@@ -24,6 +24,8 @@ class TestCategorizeProcessing:
         assert hasattr(nc, 'pid') is True
         assert nc.cloudnet_file_type == self.product
         assert nc.Conventions == 'CF-1.8'
+        assert hasattr(nc, 'cloudnetpy_version')
+        assert hasattr(nc, 'cloudnet_processing_version')
         for uuid in ('2d485fa6d3af40ca9c93612a0abf0430', '38a41d8f-f688-4196-8b88-2b401f433fed',
                      '0d4fbbd9-85c3-451c-989b-4f26e044c0ed'):
             assert uuid.replace('-', '') in nc.source_file_uuids

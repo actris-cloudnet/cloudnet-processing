@@ -32,6 +32,8 @@ class TestMIRAProcessing:
         assert nc.source == 'METEK MIRA-35'
         assert nc.references == 'https://doi.org/10.21105/joss.02123'
         assert hasattr(nc, 'pid') is False
+        assert hasattr(nc, 'cloudnetpy_version')
+        assert hasattr(nc, 'cloudnet_processing_version')
         nc.close()
 
     def test_data_values(self):

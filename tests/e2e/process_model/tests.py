@@ -25,6 +25,7 @@ class TestModelProcessing:
         assert nc.title == 'ECMWF single-site output over Bucharest'
         assert nc.cloudnet_file_type == self.product
         assert 'netcdf4' in nc.file_format.lower()
+        assert hasattr(nc, 'cloudnet_processing_version')
         nc.close()
 
     def test_that_calls_metadata_api(self):
