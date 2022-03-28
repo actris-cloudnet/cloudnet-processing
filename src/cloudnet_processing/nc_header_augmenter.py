@@ -160,8 +160,9 @@ class Level1Nc:
 
     def add_history(self, product: str):
         """Adds history attribute."""
+        version = utils.get_cloudnet_processing_version()
         old_history = getattr(self.nc_raw, 'history', '')
-        history = f"{get_time()} - {product} metadata harmonized by CLU using data-processing Python package"
+        history = f"{get_time()} - {product} metadata harmonized by CLU using cloudnet-processing v{version}"
         if len(old_history) > 0:
             history = f"{history}\n{old_history}"
         self.nc.history = history
