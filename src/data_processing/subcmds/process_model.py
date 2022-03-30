@@ -2,19 +2,21 @@
 """Master script for Cloudnet model processing."""
 import logging
 import warnings
-from typing import Union
+from typing import Optional, Union
 import requests
 from data_processing import nc_header_augmenter
 from data_processing import utils
 from data_processing.processing_tools import Uuid, ProcessBase
-from data_processing.utils import MiscError
+from data_processing.utils import MiscError, make_session
 from requests.exceptions import HTTPError
 
 warnings.simplefilter("ignore", UserWarning)
 warnings.simplefilter("ignore", RuntimeWarning)
 
 
-def main(args, storage_session=requests.session()):
+def main(args, storage_session: Optional[requests.Session] = None):
+    if storage_session is None:
+        storage_session = make_session()
     config = utils.read_main_conf()
     process = ProcessModel(args, config, storage_session=storage_session)
     for date_str, model, raw_uuid in process.get_models_to_process():

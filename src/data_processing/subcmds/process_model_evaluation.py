@@ -2,13 +2,14 @@
 """Master script for Model evaluation processing."""
 import logging
 import warnings
+from typing import Optional
 from tempfile import NamedTemporaryFile
 import requests
 from cloudnetpy.utils import date_range
 from data_processing import processing_tools
 from data_processing import utils
 from data_processing.processing_tools import Uuid, ProcessBase
-from data_processing.utils import MiscError, RawDataMissingError
+from data_processing.utils import MiscError, RawDataMissingError, make_session
 from model_evaluation.plotting.plotting import generate_L3_day_plots
 from model_evaluation.products import product_resampling
 from requests.exceptions import HTTPError
@@ -17,7 +18,9 @@ warnings.simplefilter("ignore", UserWarning)
 warnings.simplefilter("ignore", RuntimeWarning)
 
 
-def main(args, storage_session=requests.session()):
+def main(args, storage_session: Optional[requests.Session] = None):
+    if storage_session is None:
+        storage_session = make_session()
     config = utils.read_main_conf()
     start_date, stop_date = utils.get_processing_dates(args)
     process = ProcessModelEvaluation(args, config, storage_session=storage_session)

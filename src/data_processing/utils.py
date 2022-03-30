@@ -15,6 +15,8 @@ from argparse import Namespace
 import netCDF4
 import pytz
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 from cloudnetpy.plotting.plot_meta import ATTRIBUTES as ATTR
 from cloudnetpy.plotting.plotting import Dimensions
 from cloudnetpy_qc import Quality
@@ -581,3 +583,12 @@ def check_chm_version(filename: str, expected_version: str):
     nc.close()
     if (expected_version == 'chm15x' and source != 'chx') or (expected_version == 'chm15k' and source != 'chm'):
         logging.warning(f'Data submitted with incorrect instrument id')
+
+
+def make_session() -> requests.Session:
+    retry_strategy = Retry(total=10, backoff_factor=0.1)
+    adapter = HTTPAdapter(max_retries=retry_strategy)
+    http = requests.Session()
+    http.mount("https://", adapter)
+    http.mount("http://", adapter)
+    return http

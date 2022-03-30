@@ -4,6 +4,7 @@ import glob
 import logging
 import os
 import sys
+from typing import Optional
 from tempfile import TemporaryDirectory
 from uuid import UUID
 import requests
@@ -11,11 +12,13 @@ from data_processing import metadata_api
 from data_processing import utils
 from data_processing.pid_utils import PidUtils
 from data_processing.storage_api import StorageApi
-from data_processing.utils import read_main_conf
+from data_processing.utils import make_session, read_main_conf
 from requests.exceptions import HTTPError
 
 
-def main(args, storage_session=requests.session()):
+def main(args, storage_session: Optional[requests.Session] = None):
+    if storage_session is None:
+        storage_session = make_session()
 
     if args.site == 'all':
         args.site = None
@@ -26,7 +29,7 @@ def main(args, storage_session=requests.session()):
 
     config = read_main_conf()
     pid_utils = PidUtils(config)
-    md_api = metadata_api.MetadataApi(config, requests.session())
+    md_api = metadata_api.MetadataApi(config, make_session())
     storage_api = StorageApi(config, storage_session)
     metadata = md_api.find_files_to_freeze(args)
     logging.info(f'Found {len(metadata)} files to freeze.')
