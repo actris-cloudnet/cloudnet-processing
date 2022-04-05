@@ -1,11 +1,11 @@
 import pytest
 
-args = ['full_path', 'args']
+args = ["full_path", "args"]
 
 
 def pytest_addoption(parser):
     for arg in args:
-        parser.addoption(f"--{arg}", action='store')
+        parser.addoption(f"--{arg}", action="store")
 
 
 @pytest.fixture

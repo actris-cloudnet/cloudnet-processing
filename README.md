@@ -10,7 +10,7 @@ Refer to [README of the dev-toolkit repository](https://github.com/actris-cloudn
 ## Scripts
 Once the CLU development environment is running, scripts can be run inside the cloudnet-processing container with
 the `./run` wrapper.
-The scripts are located in `scripts/` folder and should be run from the root: 
+The scripts are located in `scripts/` folder and should be run from the root:
 ```
 $ ./run scripts/<script_name.py> --arg1 foo --arg2 bar ...
 ```
@@ -26,13 +26,13 @@ usage: cloudnet.py [-h] -s SITE [-d YYYY-MM-DD] [--start YYYY-MM-DD]
 
 Positional arguments:
 
-| Name      | Description                                                                                                                      | 
+| Name      | Description                                                                                                                      |
 |:----------|:---------------------------------------------------------------------------------------------------------------------------------|
 | `command` | Command to execute. Must be one of `freeze`, `process`, `model`, `me`, `plot`, or `qc`. Commands are detailed [here](#commands). |
 
 General arguments. These arguments are available for most commands. The arguments must be issued before the command argument.
 
-| Short | Long         | Default           | Description                                                                        | 
+| Short | Long         | Default           | Description                                                                        |
 |:------|:-------------|:------------------|:-----------------------------------------------------------------------------------|
 | `-h`  | `--help`     |                   | Show help and exit.                                                                |
 | `-s`  | `--site`     |                   | Site to process data from, e.g, `hyytiala`. Required.                              |
@@ -49,7 +49,7 @@ The `process` command processes standard Cloudnet products, such as `radar`, `li
 
 In addition to the general arguments, it accepts the following special arguments.
 
-| Short | Long                   | Default | Description                                                                    | 
+| Short | Long                   | Default | Description                                                                    |
 |:------|:-----------------------|:--------|:-------------------------------------------------------------------------------|
 | `-r`  | `--reprocess`          | `False` | See below.                                                                     |
 |       | `--reprocess_volatile` | `False` | Reprocess volatile files only (and create new volatile file from unprocessed). |
@@ -82,7 +82,7 @@ This command takes no additional arguments.
 ### `model`
 Create Cloudnet model products.
 
-Currently, with this command, arguments `start`, `stop`, `date` and `products` have no effect. 
+Currently, with this command, arguments `start`, `stop`, `date` and `products` have no effect.
 Thus, all unprocessed model files will be processed.
 
 This command takes no additional arguments.
@@ -103,7 +103,7 @@ Note: With this script, all sites can be selected using `--site all` argument.
 
 Additional arguments:
 
-| Short | Long      | Default | Description                                                                                                             | 
+| Short | Long      | Default | Description                                                                                                             |
 |:------|:----------|:--------|:------------------------------------------------------------------------------------------------------------------------|
 | `-f`  | `--force` | False   | Ignore environment variables `FREEZE_AFTER_DAYS` and `FREEZE_MODEL_AFTER_DAYS`. Allows freezing recently changed files. |
 
@@ -141,13 +141,13 @@ Upload Matlab processed legacy products (`categorize`, and level 2 products) to 
 
 Positional arguments:
 
-| Name   | Description                                                            | 
+| Name   | Description                                                            |
 |:-------|:-----------------------------------------------------------------------|
 | `path` | Root path of the site containing legacy data, e.g, `/foo/bar/munich/`. |
 
 Optional arguments:
 
-| Short | Long     | Default | Description                     | 
+| Short | Long     | Default | Description                     |
 |:------|:---------|:--------|:--------------------------------|
 | `-h`  | `--help` |         | Show help and exit.             |
 | `-y`  | `--year` | all     | Process only some certain year. |
@@ -190,4 +190,3 @@ Run end-to-end tests:
 
 ### Licence
 MIT
-

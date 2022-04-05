@@ -1,28 +1,35 @@
-import json
-from tempfile import NamedTemporaryFile
 import atexit
+import io
+import json
 import os
 import re
-import io
-import sys
 import shutil
-import subprocess
-import time
 import socket
+import subprocess
+import sys
+import time
+from tempfile import NamedTemporaryFile
+
 import requests
 import requests_mock
-from cloudnet_processing.utils import get_product_types
-sys.path.append('scripts/')
-cloudnet = __import__('cloudnet')
 
-from cloudnet_processing.subcmds import process_cloudnet, process_model, process_model_evaluation
+from cloudnet_processing.utils import get_product_types
+
+sys.path.append("scripts/")
+cloudnet = __import__("cloudnet")
+
+from cloudnet_processing.subcmds import (
+    process_cloudnet,
+    process_model,
+    process_model_evaluation,
+)
 
 
 def init_test_session():
     adapter = requests_mock.Adapter()
     session = requests.Session()
-    session.mount('http://', adapter)
-    mock_addr = 'http://test/'
+    session.mount("http://", adapter)
+    mock_addr = "http://test/"
     return session, adapter, mock_addr
 
 
@@ -39,7 +46,7 @@ def reset_output(old_stderr, stderr):
     return output
 
 
-def wait_for_port(port, host='localhost', timeout=10.0):
+def wait_for_port(port, host="localhost", timeout=10.0):
     """Wait until a port starts accepting TCP connections. Used in e2e-tests.
     Args:
         port (int): Port number.
@@ -56,8 +63,10 @@ def wait_for_port(port, host='localhost', timeout=10.0):
         except OSError as ex:
             time.sleep(0.01)
             if time.perf_counter() - start_time >= timeout:
-                raise TimeoutError('Waited too long for the port {} on host {} to start accepting '
-                                   'connections.'.format(port, host)) from ex
+                raise TimeoutError(
+                    "Waited too long for the port {} on host {} to start accepting "
+                    "connections.".format(port, host)
+                ) from ex
 
 
 def remove_dir(target):
@@ -70,28 +79,29 @@ def remove_dir(target):
 def remove_dirs(target, keep=()):
     for item in os.listdir(target):
         if item not in keep:
-            shutil.rmtree('/'.join((target, item)))
+            shutil.rmtree("/".join((target, item)))
 
 
 def remove_files(target):
     for file in os.listdir(target):
-        full_path = '/'.join((target, file))
+        full_path = "/".join((target, file))
         if os.path.isfile(full_path):
             os.remove(full_path)
 
 
 def copy_files(source, target):
     for file in os.listdir(source):
-        full_src_path = '/'.join((source, file))
-        full_trg_path = '/'.join((target, file))
+        full_src_path = "/".join((source, file))
+        full_trg_path = "/".join((target, file))
         if os.path.isfile(full_src_path):
             shutil.copy(full_src_path, full_trg_path)
 
 
 def start_server(port, document_root, log_path):
-    logfile = open(log_path, 'w')
-    md_server = subprocess.Popen(['python3', '-u', 'src/test_utils/server.py', document_root,
-                                  str(port)], stderr=logfile)
+    logfile = open(log_path, "w")
+    md_server = subprocess.Popen(
+        ["python3", "-u", "src/test_utils/server.py", document_root, str(port)], stderr=logfile
+    )
     atexit.register(md_server.terminate)
     wait_for_port(port)
 
@@ -106,97 +116,112 @@ def count_strings(data: list, string: str) -> int:
     return n
 
 
-def register_storage_urls(temp_file,
-                          source_data: list,
-                          site: str,
-                          date: str,
-                          identifier: str,
-                          is_volatile: bool,
-                          products=None):
+def register_storage_urls(
+    temp_file,
+    source_data: list,
+    site: str,
+    date: str,
+    identifier: str,
+    is_volatile: bool,
+    products=None,
+):
     def save_file(request):
-        with open(temp_file.name, mode='wb') as file:
+        with open(temp_file.name, mode="wb") as file:
             file.write(request.body.read())
         return True
 
     session, adapter, mock_addr = init_test_session()
     source_dir, end_point, is_level_2_product = _get_source_file_paths(identifier)
     for uuid, filename in source_data:
-        prefix = '' if is_level_2_product else f'/{site}/{uuid}'
-        url = f'{mock_addr}{end_point}{prefix}/{filename}'
-        adapter.register_uri('GET', url, body=open(f'{source_dir}/{filename}', 'rb'))
-    bucket_suffix = '-volatile' if is_volatile is True else ''
-    date_stripped = date.replace('-', '')
+        prefix = "" if is_level_2_product else f"/{site}/{uuid}"
+        url = f"{mock_addr}{end_point}{prefix}/{filename}"
+        adapter.register_uri("GET", url, body=open(f"{source_dir}/{filename}", "rb"))
+    bucket_suffix = "-volatile" if is_volatile is True else ""
+    date_stripped = date.replace("-", "")
     if products is None:
         products = (_fix_identifier(identifier),)
     for product in products:
-        url = f'{mock_addr}cloudnet-product{bucket_suffix}/{date_stripped}_{site}_{product}.nc'
-        adapter.register_uri('PUT', url, additional_matcher=save_file, json={'size': 65,
-                                                                             'version': ''})
-    adapter.register_uri('PUT', re.compile(f'{mock_addr}cloudnet-img/(.*?)'))
+        url = f"{mock_addr}cloudnet-product{bucket_suffix}/{date_stripped}_{site}_{product}.nc"
+        adapter.register_uri(
+            "PUT", url, additional_matcher=save_file, json={"size": 65, "version": ""}
+        )
+    adapter.register_uri("PUT", re.compile(f"{mock_addr}cloudnet-img/(.*?)"))
     return session
 
 
 def _fix_identifier(identifier: str) -> str:
     for n in range(10):
-        identifier = identifier.replace(f'_{n}', '')
+        identifier = identifier.replace(f"_{n}", "")
     return identifier
 
 
 def _get_source_file_paths(identifier: str) -> tuple:
     is_level_2_product = False
-    for product in get_product_types('2'):
-        if product in identifier or identifier in ['categorize', 'model_evaluation']:
+    for product in get_product_types("2"):
+        if product in identifier or identifier in ["categorize", "model_evaluation"]:
             is_level_2_product = True
     if is_level_2_product is True:
-        source_dir = 'tests/data/products'
-        end_point = 'cloudnet-product'
+        source_dir = "tests/data/products"
+        end_point = "cloudnet-product"
     else:
-        source_dir = f'tests/data/raw/{identifier}'
-        end_point = 'cloudnet-upload'
+        source_dir = f"tests/data/raw/{identifier}"
+        end_point = "cloudnet-upload"
     return source_dir, end_point, is_level_2_product
 
 
 def start_test_servers(instrument: str, script_path: str):
-    dir_name = 'tests/data/server/'
-    start_server(5000, f'{dir_name}metadata/process_{instrument}', f'{script_path}/md.log')
-    start_server(5001, f'{dir_name}pid', f'{script_path}/pid.log')
+    dir_name = "tests/data/server/"
+    start_server(5000, f"{dir_name}metadata/process_{instrument}", f"{script_path}/md.log")
+    start_server(5001, f"{dir_name}pid", f"{script_path}/pid.log")
 
 
-def process(session,
-            main_args: list,
-            temp_file,
-            script_path: str,
-            marker: str = None,
-            processing_mode: str = ''):
+def process(
+    session,
+    main_args: list,
+    temp_file,
+    script_path: str,
+    marker: str = None,
+    processing_mode: str = "",
+):
     main_args = cloudnet._parse_args(main_args)
-    if processing_mode == 'model':
+    if processing_mode == "model":
         process_model.main(main_args, storage_session=session)
-    elif processing_mode == 'model_evaluation':
+    elif processing_mode == "model_evaluation":
         process_model_evaluation.main(main_args, storage_session=session)
     else:
         process_cloudnet.main(main_args, storage_session=session)
-    pytest_args = ['pytest', '-v', '-s', f'{script_path}/tests.py', '--full_path', temp_file.name,
-                   '--args', json.dumps(vars(main_args))]
+    pytest_args = [
+        "pytest",
+        "-v",
+        "-s",
+        f"{script_path}/tests.py",
+        "--full_path",
+        temp_file.name,
+        "--args",
+        json.dumps(vars(main_args)),
+    ]
     try:
         if marker is not None:
-            pytest_args += ['-m', marker]
+            pytest_args += ["-m", marker]
         subprocess.check_call(pytest_args)
     except subprocess.CalledProcessError:
         raise
 
 
 def reset_log_file(script_path: str):
-    open(f'{script_path}/md.log', 'w').close()
+    open(f"{script_path}/md.log", "w").close()
 
 
 def parse_args(args) -> tuple:
     args = json.loads(args)
-    return args['site'], args['date'], args['products'][0]
+    return args["site"], args["date"], args["products"][0]
 
 
 def read_log_file(script_path: str):
-    f = open(f'{script_path}/md.log')
+    f = open(f"{script_path}/md.log")
     data = f.readlines()
-    data = [line for line in data if '/api/sites' not in line and '/api/products' not in line]  # ignore trash lines
+    data = [
+        line for line in data if "/api/sites" not in line and "/api/products" not in line
+    ]  # ignore trash lines
     f.close()
     return data

@@ -1,6 +1,8 @@
 from os import path
-import pytest
+
 import netCDF4
+import pytest
+
 from cloudnet_processing import utils
 from test_utils.utils import count_strings, read_log_file
 
@@ -9,23 +11,23 @@ SCRIPT_PATH = path.dirname(path.realpath(__file__))
 
 class TestModelProcessing:
 
-    product = 'model'
+    product = "model"
     images = utils.get_fields_for_plot(product)[0]
 
     @pytest.fixture(autouse=True)
     def _fetch_params(self, params):
-        self.full_path = params['full_path']
+        self.full_path = params["full_path"]
 
     def test_that_has_correct_attributes(self):
         nc = netCDF4.Dataset(self.full_path)
-        assert nc.year == '2020'
-        assert nc.month == '10'
-        assert nc.day == '22'
-        assert hasattr(nc, 'pid') is False
-        assert nc.title == 'ECMWF single-site output over Bucharest'
+        assert nc.year == "2020"
+        assert nc.month == "10"
+        assert nc.day == "22"
+        assert hasattr(nc, "pid") is False
+        assert nc.title == "ECMWF single-site output over Bucharest"
         assert nc.cloudnet_file_type == self.product
-        assert 'netcdf4' in nc.file_format.lower()
-        assert hasattr(nc, 'cloudnet_processing_version')
+        assert "netcdf4" in nc.file_format.lower()
+        assert hasattr(nc, "cloudnet_processing_version")
         nc.close()
 
     def test_that_calls_metadata_api(self):
@@ -42,8 +44,10 @@ class TestModelProcessing:
         assert '"GET /upload-model-metadata?site=bucharest&status=uploaded' in data[0]
 
         # Check product status
-        assert '"GET /api/model-files?dateFrom=2020-10-22&dateTo=2020-10-22&site=bucharest' \
-               '&developer=True&model=ecmwf HTTP/1.1" 200 -' in data[1]
+        assert (
+            '"GET /api/model-files?dateFrom=2020-10-22&dateTo=2020-10-22&site=bucharest'
+            '&developer=True&model=ecmwf HTTP/1.1" 200 -' in data[1]
+        )
 
         # PUT file
         assert '"PUT /files/20201022_bucharest_ecmwf.nc HTTP/1.1" 201 -' in data[2]
@@ -54,4 +58,3 @@ class TestModelProcessing:
         # PUT images
         img_put = '"PUT /visualizations/20201022_bucharest_ecmwf-'
         assert count_strings(data, img_put) == n_img_puts
-
