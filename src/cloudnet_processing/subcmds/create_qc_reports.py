@@ -4,6 +4,7 @@ import glob
 import logging
 import os
 from tempfile import TemporaryDirectory
+from typing import Optional
 
 import requests
 from requests.exceptions import HTTPError
@@ -11,12 +12,14 @@ from requests.exceptions import HTTPError
 from cloudnet_processing import metadata_api, utils
 from cloudnet_processing.processing_tools import ProcessBase
 from cloudnet_processing.storage_api import StorageApi
-from cloudnet_processing.utils import read_main_conf
+from cloudnet_processing.utils import make_session, read_main_conf
 
 
-def main(args, storage_session=requests.session()):
+def main(args, storage_session: Optional[requests.Session] = None):
+    if storage_session is None:
+        storage_session = make_session()
     config = read_main_conf()
-    md_api = metadata_api.MetadataApi(config, requests.session())
+    md_api = metadata_api.MetadataApi(config, make_session())
     storage_api = StorageApi(config, storage_session)
     metadata = md_api.find_product_metadata(args, legacy_files=False)
     temp_dir_root = utils.get_temp_dir(config)

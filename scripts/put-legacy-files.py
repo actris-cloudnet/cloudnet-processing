@@ -8,7 +8,6 @@ from tempfile import NamedTemporaryFile
 
 import cloudnetpy.utils
 import netCDF4
-import requests
 from requests import HTTPError
 
 from cloudnet_processing import utils
@@ -17,7 +16,7 @@ from cloudnet_processing.nc_header_augmenter import fix_legacy_file
 from cloudnet_processing.pid_utils import PidUtils
 from cloudnet_processing.processing_tools import ProcessBase
 from cloudnet_processing.storage_api import StorageApi
-from cloudnet_processing.utils import MiscError
+from cloudnet_processing.utils import MiscError, make_session
 
 
 def main():
@@ -26,8 +25,8 @@ def main():
     logging.basicConfig(level="INFO")
 
     config = utils.read_main_conf()
-    md_api = MetadataApi(config, requests.session())
-    storage_api = StorageApi(config, requests.session())
+    md_api = MetadataApi(config, make_session())
+    storage_api = StorageApi(config, make_session())
     pid_utils = PidUtils(config)
     ARGS.site = PurePath(ARGS.path[0]).name
 

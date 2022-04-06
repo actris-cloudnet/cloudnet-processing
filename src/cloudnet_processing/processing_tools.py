@@ -13,7 +13,7 @@ from cloudnet_processing import utils
 from cloudnet_processing.metadata_api import MetadataApi
 from cloudnet_processing.pid_utils import PidUtils
 from cloudnet_processing.storage_api import StorageApi
-from cloudnet_processing.utils import MiscError, RawDataMissingError
+from cloudnet_processing.utils import MiscError, RawDataMissingError, make_session
 
 
 class Uuid:
@@ -35,9 +35,13 @@ class ProcessBase:
         self,
         args,
         config: dict,
-        storage_session: requests.Session = requests.Session(),
-        metadata_session: requests.Session = requests.Session(),
+        storage_session: Optional[requests.Session] = None,
+        metadata_session: Optional[requests.Session] = None,
     ):
+        if storage_session is None:
+            storage_session = make_session()
+        if metadata_session is None:
+            metadata_session = make_session()
         self.site_meta, self.site, self._site_type = _read_site_info(args)
         self.config = config
         self.is_reprocess = getattr(args, "reprocess", False)

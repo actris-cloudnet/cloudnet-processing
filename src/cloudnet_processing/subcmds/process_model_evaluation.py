@@ -3,6 +3,7 @@
 import logging
 import warnings
 from tempfile import NamedTemporaryFile
+from typing import Optional
 
 import requests
 from cloudnetpy.utils import date_range
@@ -12,13 +13,15 @@ from requests.exceptions import HTTPError
 
 from cloudnet_processing import processing_tools, utils
 from cloudnet_processing.processing_tools import ProcessBase, Uuid
-from cloudnet_processing.utils import MiscError, RawDataMissingError
+from cloudnet_processing.utils import MiscError, RawDataMissingError, make_session
 
 warnings.simplefilter("ignore", UserWarning)
 warnings.simplefilter("ignore", RuntimeWarning)
 
 
-def main(args, storage_session=requests.session()):
+def main(args, storage_session: Optional[requests.Session] = None):
+    if storage_session is None:
+        storage_session = make_session()
     config = utils.read_main_conf()
     start_date, stop_date = utils.get_processing_dates(args)
     process = ProcessModelEvaluation(args, config, storage_session=storage_session)

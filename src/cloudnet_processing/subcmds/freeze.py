@@ -5,6 +5,7 @@ import logging
 import os
 import sys
 from tempfile import TemporaryDirectory
+from typing import Optional
 from uuid import UUID
 
 import requests
@@ -13,10 +14,12 @@ from requests.exceptions import HTTPError
 from cloudnet_processing import metadata_api, utils
 from cloudnet_processing.pid_utils import PidUtils
 from cloudnet_processing.storage_api import StorageApi
-from cloudnet_processing.utils import read_main_conf
+from cloudnet_processing.utils import make_session, read_main_conf
 
 
-def main(args, storage_session=requests.session()):
+def main(args, storage_session: Optional[requests.Session] = None):
+    if storage_session is None:
+        storage_session = make_session()
 
     if args.site == "all":
         args.site = None
@@ -27,7 +30,7 @@ def main(args, storage_session=requests.session()):
 
     config = read_main_conf()
     pid_utils = PidUtils(config)
-    md_api = metadata_api.MetadataApi(config, requests.session())
+    md_api = metadata_api.MetadataApi(config, make_session())
     storage_api = StorageApi(config, storage_session)
     metadata = md_api.find_files_to_freeze(args)
     logging.info(f"Found {len(metadata)} files to freeze.")
