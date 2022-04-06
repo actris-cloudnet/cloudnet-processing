@@ -4,7 +4,6 @@ import gzip
 import logging
 import os
 import shutil
-from typing import Optional
 
 from cloudnetpy.instruments import (
     basta2nc,
@@ -153,14 +152,14 @@ class ProcessLidar(ProcessInstrument):
         try:
             if self.base.is_reprocess:
                 raise SkipBlock  # Move to next block and re-create daily file
-            tmp_file, uuid = self.base.download_instrument(
+            tmp_file, _ = self.base.download_instrument(
                 model, include_pattern=self.file_id, largest_only=True
             )
             full_paths, raw_uuids = self.base.download_uploaded(model, exclude_pattern=self.file_id)
             valid_full_paths = concat_wrapper.update_daily_file(full_paths, tmp_file)
             shutil.copy(tmp_file, self.base.daily_file.name)
             msg = "Raw data already processed"
-        except (RawDataMissingError, SkipBlock):
+        except (RawDataMissingError, SkipBlock) as err:
             msg = None
             full_paths, raw_uuids = self.base.download_instrument(
                 model, exclude_pattern=self.file_id
@@ -168,7 +167,7 @@ class ProcessLidar(ProcessInstrument):
             if full_paths:
                 logging.info(f"Creating daily file from {len(full_paths)} files")
             else:
-                raise RawDataMissingError
+                raise RawDataMissingError from err
             variables = ["x_pol", "p_pol", "beta_att", "time"]
             valid_full_paths = concat_wrapper.concat_netcdf_files(
                 full_paths,
@@ -258,12 +257,12 @@ def _unzip_gz_files(full_paths: list) -> str:
 
 
 def _fix_cl51_timestamps(filename: str, hours: int) -> None:
-    with open(filename, "r") as file:
+    with open(filename, "r", encoding="utf-8") as file:
         lines = file.readlines()
     for ind, line in enumerate(lines):
         if is_timestamp(line):
             date_time = line.strip("-").strip("\n")
             date_time_utc = utils.shift_datetime(date_time, hours)
             lines[ind] = f"-{date_time_utc}\n"
-    with open(filename, "w") as file:
+    with open(filename, "w", encoding="utf-8") as file:
         file.writelines(lines)

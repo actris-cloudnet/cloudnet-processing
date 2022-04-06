@@ -1,8 +1,8 @@
 from setuptools import find_packages, setup
 
 version: dict = {}
-with open(f"src/cloudnet_processing/version.py") as f:
-    exec(f.read(), version)
+with open("src/cloudnet_processing/version.py", encoding="utf-8") as f:
+    exec(f.read(), version)  # pylint: disable=W0122
 
 setup(
     name="cloudnet_processing",

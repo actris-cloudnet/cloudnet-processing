@@ -59,7 +59,7 @@ class ProcessBase:
     def fetch_volatile_uuid(self, product: str) -> Union[str, None]:
         payload = self._get_payload(product=product)
         payload["showLegacy"] = True
-        metadata = self.md_api.get(f"api/files", payload)
+        metadata = self.md_api.get("api/files", payload)
         uuid = self._read_volatile_uuid(metadata)
         self._create_new_version = self._is_create_new_version(metadata)
         return uuid
@@ -118,7 +118,7 @@ class ProcessBase:
                     title=False,
                     dpi=120,
                 )
-            except (IndexError, ValueError, TypeError) as err:
+            except (IndexError, ValueError, TypeError):
                 logging.warning(f"Skipping {field}")
                 continue
 
@@ -178,8 +178,7 @@ class ProcessBase:
                 ]
                 models_meta[m_id] = m_metas
             return models_meta
-        else:
-            raise MiscError("No existing model files")
+        raise MiscError("No existing model files")
 
     def _is_create_new_version(self, metadata) -> bool:
         if self._parse_volatile_value(metadata) is False:
@@ -187,8 +186,7 @@ class ProcessBase:
                 raise MiscError("Skip reprocessing of a stable file.")
             if self.is_reprocess is True:
                 return True
-            else:
-                raise MiscError('Existing freezed file and no "reprocess" flag')
+            raise MiscError('Existing freezed file and no "reprocess" flag')
         return False
 
     def _parse_volatile_value(self, metadata: list) -> Union[bool, None]:
@@ -197,10 +195,9 @@ class ProcessBase:
             value = str(metadata[0]["volatile"])
             if value == "True":
                 return True
-            elif value == "False":
+            if value == "False":
                 return False
-            else:
-                raise RuntimeError(f"Unexpected value in metadata: {value}")
+            raise RuntimeError(f"Unexpected value in metadata: {value}")
         return None
 
     def _download_raw_files(
@@ -227,7 +224,7 @@ class ProcessBase:
 
     @staticmethod
     def _is_unprocessed_data(metadata: list) -> bool:
-        return any([row["status"] == "uploaded" for row in metadata])
+        return any(row["status"] == "uploaded" for row in metadata)
 
     def _get_payload(
         self,
@@ -280,7 +277,7 @@ class ProcessBase:
 
     def _get_product_timestamp(self, product: str) -> Union[str, None]:
         payload = self._get_payload(product=product)
-        product_metadata = self.md_api.get(f"api/files", payload)
+        product_metadata = self.md_api.get("api/files", payload)
         if product_metadata and self.is_reprocess is False and self.is_reprocess_volatile is False:
             return product_metadata[0]["updatedAt"]
         return None

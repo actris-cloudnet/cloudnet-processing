@@ -57,8 +57,8 @@ def create_product_put_payload(
 def get_cloudnet_processing_version() -> str:
     version_file = Path(os.path.abspath(cloudnet_processing.version.__file__))
     version: dict = {}
-    with open(version_file) as f:
-        exec(f.read(), version)
+    with open(version_file, encoding="utf-8") as f:
+        exec(f.read(), version)  # pylint: disable=W0122
     return version["__version__"]
 
 
@@ -144,7 +144,7 @@ def get_date_from_past(n: int, reference_date: Optional[str] = None) -> str:
     return str(date)
 
 
-def send_slack_alert(
+def send_slack_alert(  # pylint: disable=R0912
     error_msg,
     error_source: str,
     args: Optional[Namespace] = None,
@@ -177,7 +177,7 @@ def send_slack_alert(
         raise ValueError("Unknown error source")
 
     if args is not None:
-        with open(args.log_filename) as file:
+        with open(args.log_filename, encoding="utf-8") as file:
             log = file.readlines()
     else:
         log = [""]
@@ -405,7 +405,7 @@ def get_helsinki_datetime() -> datetime.datetime:
 
 def concatenate_text_files(filenames: list, output_filename: str) -> None:
     """Concatenates text files."""
-    with open(output_filename, "wb") as target:
+    with open(output_filename, "wb", encoding="utf-8") as target:
         for filename in filenames:
             with open(filename, "rb") as source:
                 shutil.copyfileobj(source, target)
@@ -413,7 +413,7 @@ def concatenate_text_files(filenames: list, output_filename: str) -> None:
 
 def remove_header_lines(filename: str, n_lines: int):
     """Removes first lines of text file."""
-    with open(filename, "r+") as file:
+    with open(filename, "r+", encoding="utf-8") as file:
         lines = file.readlines()
         file.seek(0)
         file.truncate()
@@ -505,7 +505,7 @@ def _format_test_name(test_name: str) -> str:
     return test_name.capitalize()
 
 
-def _get_test_description(test_name: str) -> str:
+def _get_test_description(test_name: str) -> str:  # pylint: disable=R0911
     if test_name == "outOfBounds":
         return "Find data values that are unexpectedly large or small."
     if test_name == "invalidGlobalAttributeValues":
@@ -626,4 +626,4 @@ def check_chm_version(filename: str, expected_version: str):
     if (expected_version == "chm15x" and source != "chx") or (
         expected_version == "chm15k" and source != "chm"
     ):
-        logging.warning(f"Data submitted with incorrect instrument id")
+        logging.warning("Data submitted with incorrect instrument id")

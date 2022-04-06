@@ -5,7 +5,6 @@ import logging
 import warnings
 from typing import List, Optional, Tuple, Union
 
-import netCDF4
 import requests
 from cloudnetpy.categorize import generate_categorize
 from cloudnetpy.exceptions import (
@@ -94,7 +93,7 @@ class ProcessCloudnet(ProcessBase):
             input_files["mwr"] = input_files["radar"]
         try:
             uuid.product = generate_categorize(input_files, self.temp_file.name, uuid=uuid.volatile)
-        except ModelDataError:
+        except ModelDataError as err:
             payload = self._get_payload(model="gdas1")
             metadata = self.md_api.get("api/model-files", payload)
             if len(metadata) == 1:
@@ -105,7 +104,7 @@ class ProcessCloudnet(ProcessBase):
                     input_files, self.temp_file.name, uuid=uuid.volatile
                 )
             else:
-                raise MiscError("Bad ecmwf model data and no gdas1")
+                raise MiscError("Bad ecmwf model data and no gdas1") from err
         return uuid, "categorize"
 
     def _get_level1b_metadata_for_categorize(self, source_products: list) -> dict:

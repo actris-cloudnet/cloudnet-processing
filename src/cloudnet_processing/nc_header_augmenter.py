@@ -104,8 +104,8 @@ class Level1Nc:
         self.data = data
 
     def copy_file_contents(self, keys: Optional[tuple] = None, time_ind: Optional[list] = None):
-        """Copies all variables and global attributes from one file to another. Optionally copies only
-        certain keys and / or uses certain time indices only.
+        """Copies all variables and global attributes from one file to another. Optionally
+        copies only certain keys and / or uses certain time indices only.
         """
         for key, dimension in self.nc_raw.dimensions.items():
             if key == "time" and time_ind is not None:
@@ -118,7 +118,8 @@ class Level1Nc:
         self._copy_global_attributes()
 
     def copy_variable(self, key: str, time_ind: Optional[list] = None):
-        """Copies one variable from source file to target. Optionally uses certain time indices only."""
+        """Copies one variable from source file to target. Optionally uses certain time indices
+        only."""
         if key not in self.nc_raw.variables.keys():
             logging.warning(f"Key {key} not found from the source file.")
             return
@@ -165,7 +166,10 @@ class Level1Nc:
         """Adds history attribute."""
         version = utils.get_cloudnet_processing_version()
         old_history = getattr(self.nc_raw, "history", "")
-        history = f"{get_time()} - {product} metadata harmonized by CLU using cloudnet-processing v{version}"
+        history = (
+            f"{get_time()} - {product} metadata harmonized by CLU using "
+            f"cloudnet-processing v{version}"
+        )
         if len(old_history) > 0:
             history = f"{history}\n{old_history}"
         self.nc.history = history
@@ -192,7 +196,7 @@ class Level1Nc:
     def clean_variable_attributes(self):
         """Removes obsolete variable attributes."""
         accepted = ("_FillValue", "units")
-        for key, item in self.nc.variables.items():
+        for _, item in self.nc.variables.items():
             for attr in item.ncattrs():
                 if attr not in accepted:
                     delattr(item, attr)
@@ -306,10 +310,10 @@ class HatproNc(Level1Nc):
 
     bad_lwp_keys = ("LWP", "LWP_data", "clwvi", "atmosphere_liquid_water_content")
 
-    def copy_file(self, all: bool = False):
+    def copy_file(self, all_variables: bool = False):
         """Copies essential fields only."""
         valid_ind = self._get_valid_timestamps()
-        if all is True:
+        if all_variables is True:
             possible_keys = None
         else:
             possible_keys = ("lwp", "time") + self.bad_lwp_keys

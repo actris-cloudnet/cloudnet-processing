@@ -2,7 +2,6 @@
 import argparse
 import re
 import subprocess
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -21,7 +20,7 @@ def main(component: str):
         new_version = Version(old_version.major + 1, 0, 0)
     elif component == "minor":
         new_version = Version(old_version.major, old_version.minor + 1, 0)
-    elif component == "patch":
+    else:
         new_version = Version(old_version.major, old_version.minor, old_version.patch + 1)
     if not _confirm(f"Updating version {old_version} -> {new_version}. Continue?"):
         return
@@ -67,7 +66,7 @@ def _write_int(text: str, key: str, value: int) -> str:
 
 
 def _read_version() -> Version:
-    text = Path(VERSION_FILE).read_text()
+    text = Path(VERSION_FILE).read_text(encoding="utf-8")
     return Version(
         major=_read_int(text, "MAJOR"),
         minor=_read_int(text, "MINOR"),
@@ -77,11 +76,11 @@ def _read_version() -> Version:
 
 def _write_version(version: Version):
     p = Path(VERSION_FILE)
-    text = p.read_text()
+    text = p.read_text(encoding="utf-8")
     text = _write_int(text, "MAJOR", version.major)
     text = _write_int(text, "MINOR", version.minor)
     text = _write_int(text, "PATCH", version.patch)
-    p.write_text(text)
+    p.write_text(text, encoding="utf-8")
 
 
 if __name__ == "__main__":

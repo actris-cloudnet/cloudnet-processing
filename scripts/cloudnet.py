@@ -18,7 +18,7 @@ from cloudnet_processing.subcmds import (
 warnings.simplefilter("ignore", UserWarning)
 warnings.simplefilter("ignore", RuntimeWarning)
 
-"""All modules MUST have an add_arguments function which adds the subcommand to the subparser."""
+#  All modules MUST have an add_arguments function which adds the subcommand to the subparser.
 modules = {
     "freeze": freeze,
     "process": process_cloudnet,

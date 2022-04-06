@@ -24,10 +24,10 @@ class PidUtils:
             res = requests.post(self._pid_service_url, json=payload)
             try:
                 res.raise_for_status()
-            except HTTPError:
+            except HTTPError as err:
                 raise HTTPError(
                     f'PID service failed with status {res.status_code}:\n{res.json()["detail"]}'
-                )
+                ) from err
             pid = res.json()["pid"]
         else:
             pid = "https://www.example.pid/"

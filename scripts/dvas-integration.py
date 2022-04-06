@@ -4,7 +4,6 @@ import os
 import re
 from datetime import datetime
 from sys import argv
-from urllib.error import HTTPError
 
 import requests
 
@@ -14,7 +13,10 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 
 
 def create_title(file):
-    return f"{file['product']['humanReadableName']} file from {file['site']['humanReadableName']} on {file['measurementDate']}"
+    return (
+        f"{file['product']['humanReadableName']} file "
+        f"from {file['site']['humanReadableName']} on {file['measurementDate']}"
+    )
 
 
 def parse_affiliation(site):
@@ -29,17 +31,15 @@ def parse_affiliation(site):
 def parse_instrument_type(product):
     if product["id"] == "model":
         return ["UNKNOWN"]
-    elif product["level"] == "1b":
+    if product["level"] == "1b":
         return [product["id"]]
-    else:
-        return ["radar", "lidar", "mwr"]
+    return ["radar", "lidar", "mwr"]
 
 
 def main():
     lastsuccesspath = argv[1]
-    lastsuccessfile = open(lastsuccesspath, "r")
-    lines = lastsuccessfile.readlines()
-    lastsuccessfile.close()
+    with open(lastsuccesspath, "r", encoding="utf-8") as lastsuccessfile:
+        lines = lastsuccessfile.readlines()
 
     startdate = lines[0].strip()
     enddate = datetime.now().isoformat()
@@ -70,7 +70,7 @@ def main():
         site = file["site"]
         product = file["product"]
         site_dvas_id = site["dvasId"]
-        file_vars = list(filter(lambda var: var["id"] == product["id"], variables))
+        file_vars = [var for var in variables if var["id"] == product["id"]]
         var_ids = list(map(lambda var: re.sub(r".*-", "", var["id"]), file_vars[0]["variables"]))
         pid = (
             {"id": file["pid"].replace("https://hdl.handle.net/", ""), "type": "Handle"}
@@ -87,7 +87,10 @@ def main():
             "md_metadata": {  # mandatory
                 "file_identifier": file["filename"],
                 "language": "en",  # mandatory
-                "hierarchy_level": "dataset",  # mandatory, fixed list ['attribute','attributeType','collectionHardware','collectionSession','dataset','series','nonGeographicDataset','dimensionGroup','feature','featureType','propertyType','fieldSession','software','service','model','tile']
+                "hierarchy_level": "dataset",  # mandatory, fixed list ['attribute','attributeType',
+                # 'collectionHardware','collectionSession','dataset','series',
+                # 'nonGeographicDataset','dimensionGroup','feature','featureType','propertyType',
+                # 'fieldSession','software','service','model','tile']
                 "datestamp": datetime.now().isoformat(),  # mandatory
                 "contact": [
                     {  # mandatory
@@ -96,7 +99,9 @@ def main():
                         "organisation_name": "Finnish Meteorological Institute (FMI)",  # mandatory
                         "role_code": [
                             "pointOfContact"
-                        ],  # mandatory, fixed list ['resourceProvider','custodian','owner,'user,'distributor,'originator,'pointOfContact,'principalInvestigator,'processor,'publisher,'author]
+                        ],  # mandatory, fixed list ['resourceProvider','custodian','owner,'user,
+                        # 'distributor,'originator,'pointOfContact,'principalInvestigator,
+                        # 'processor,'publisher,'author]
                         "country": "Finland",  # mandatory
                         "country_code": "FI",
                     }
@@ -110,7 +115,8 @@ def main():
                 "title": create_title(file),  # mandatory
                 "identifier": pid,  # optional
                 "date": file["measurementDate"],  # mandatory
-                "date_type": "creation",  # mandatory, fixed list ['publication', 'revision', 'creation'
+                "date_type": "creation",  # mandatory, fixed list ['publication', 'revision',
+                # 'creation'
                 "contact": [
                     {  # mandatory
                         "first_name": "Simo",  # mandatory
@@ -128,7 +134,8 @@ def main():
             "md_constraints": {  # mandatory
                 "access_constraints": "otherRestrictions",  # mandatory
                 "use_constraints": "otherRestrictions",  # mandatory
-                "other_constraints": "http://actris.nilu.no/Content/Documents/DataPolicy.pdf",  # mandatory
+                # mandatory:
+                "other_constraints": "http://actris.nilu.no/Content/Documents/DataPolicy.pdf",
             },
             "md_keywords": {  # mandatory
                 "keywords": [
@@ -153,7 +160,8 @@ def main():
                 "time_period_begin": file["measurementDate"],  # mandatory
                 "time_period_end": file["measurementDate"],  # mandatory
             },
-            "ex_vertical_extent": {  # optional, range of measurement, left out because we don't want to parse it
+            "ex_vertical_extent": {  # optional, range of measurement, left out because
+                # we don't want to parse it
                 "minimum_value": None,  # optional
                 "maximum_value": None,  # optional
                 "unit_of_measure": "m above sea level",  # optional
@@ -162,7 +170,9 @@ def main():
                 "attribute_descriptions": list(
                     map(lambda var: re.sub(r"[-_]", ".", var), var_ids)
                 ),  # mandatory, list of parameters
-                "content_type": "physicalMeasurement",  # mandatory, fixed list ['image','thematicClassification','physicalMeasurement']
+                "content_type": "physicalMeasurement",  # mandatory, fixed list
+                # ['image','thematicClassification',
+                #  'physicalMeasurement']
             },
             "md_distribution_information": {  # mandatory
                 "data_format": file["format"],  # mandatory
@@ -177,7 +187,8 @@ def main():
                 },
             },
             "md_actris_specific": {  # mandatory
-                "platform_type": "surface_station",  # mandatory ["surface_station", "simulation_chamber", "ballon"]
+                "platform_type": "surface_station",  # mandatory ["surface_station",
+                # "simulation_chamber", "ballon"]
                 "product_type": "model"
                 if product["id"] == "model"
                 else "observation",  # mandatory ["model", "observation", "fundamental_parameter"]
@@ -186,7 +197,8 @@ def main():
                 "instrument_type": parse_instrument_type(product),  # mandatory
                 "program_affiliation": parse_affiliation(
                     site
-                ),  # mandatory, fixed list ['ACTRIS', 'AMAP', 'AMAP_public','EUSAAR','EMEP','ACTRIS_preliminary','GAW-WDCA','GAW-WDCRG','NOAA-ESRL']
+                ),  # mandatory, fixed list ['ACTRIS', 'AMAP', 'AMAP_public','EUSAAR','EMEP',
+                # 'ACTRIS_preliminary','GAW-WDCA','GAW-WDCRG','NOAA-ESRL']
                 "legacy_data": file["legacy"],  # mandatory
                 "data_level": product["level"][0],  # mandatory, fixed list [0, 1, 2, 3]
                 "data_sublevel": product["level"][1]
@@ -194,19 +206,23 @@ def main():
                 else None,  # optional
                 "data_product": "near-realtime-data"
                 if file["quality"] == "nrt"
-                else "quality assured data",  # mandatory, need fixed list e.g. ['higher level data','quality assured data', 'near-realtime-data']
+                else "quality assured data",  # mandatory, need fixed list e.g. ['higher level
+                # data','quality assured data', 'near-realtime-data']
             },
             "dq_data_quality_information": {  # optional
-                "level": "dataset",  # optional, fixed list ['attribute', 'attributeType', 'collectionHardware', 'collectionSession', 'dataset', 'series', 'nonGeographicDataset', 'dimensionGroup', 'feature', 'featureType', 'propertyType', 'fieldSession', 'software', 'service', 'model', 'tile']
+                "level": "dataset",  # optional, fixed list ['attribute', 'attributeType',
+                # 'collectionHardware', 'collectionSession', 'dataset', 'series',
+                # 'nonGeographicDataset', 'dimensionGroup', 'feature', 'featureType',
+                # 'propertyType', 'fieldSession', 'software', 'service', 'model', 'tile']
             },
         }
 
         res = s.post(f"{os.environ['DVAS_PORTAL_URL']}/Metadata/add", json=actris_json)
         if not res.ok:
             logging.error(f"{res.status_code} {res.text}")
-            exit(2)
+            exit(2)  # pylint: disable=R1722
 
-    filehandle = open(lastsuccesspath, "w")
+    filehandle = open(lastsuccesspath, "w", encoding="utf-8")
     filehandle.write(enddate)
     filehandle.close()
 
@@ -217,12 +233,12 @@ def add_arguments(subparser):
 
 
 if __name__ == "__main__":
-    if not len(argv) > 1:
+    if len(argv) <= 1:
         logging.error("Last success file not specified")
-        exit(1)
+        exit(1)  # pylint: disable=R1722
     if "DVAS_PORTAL_URL" not in os.environ or "DVAS_PORTAL_TOKEN" not in os.environ:
         logging.error(
             "DVAS_PORTAL_URL and DVAS_PORTAL_TOKEN must be specified as environment variables."
         )
-        exit(1)
+        exit(1)  # pylint: disable=R1722
     main()

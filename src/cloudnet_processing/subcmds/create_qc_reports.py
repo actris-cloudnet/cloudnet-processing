@@ -24,7 +24,8 @@ def main(args, storage_session=requests.session()):
     qc = ProcessBase(args, config)
     for row in metadata:
         logging.info(
-            f'Creating QC report: {row["site"]["id"]} - {row["measurementDate"]} - {row["product"]["id"]}'
+            f'Creating QC report: {row["site"]["id"]} - {row["measurementDate"]} - '
+            f'{row["product"]["id"]}'
         )
         try:
             full_path = storage_api.download_product(row, temp_dir.name)
