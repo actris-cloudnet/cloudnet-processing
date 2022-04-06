@@ -30,7 +30,7 @@ repos:
         types: [python]
         require_serial: true
         args: ["--errors-only", "--jobs=4"]
-    hooks:
+        exclude: ^(tests/)
       - id: mypy
         name: mypy
         entry: mypy
