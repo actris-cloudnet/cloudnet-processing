@@ -13,13 +13,13 @@ jobs:
       - name: Build docker image
         run: docker build -t test .
 
-      - name: Lint
-        run: docker run --env-file test.env test pylint **/*.py --errors-only --ignored-modules=netCDF4
+      - name: Run pylint
+        run: docker run --env-file test.env test pylint scripts/ src/
 
-      - name: Check type hints
-        run: docker run --env-file test.env test /bin/bash -c "mypy --ignore-missing-imports scripts/ src/"
+      - name: Run mypy
+        run: docker run --env-file test.env test mypy --ignore-missing-imports scripts/ src/
 
-      - name: Test
+      - name: Run pytest
         run: docker run --env-file test.env test pytest
 
       - name: Run e2e tests

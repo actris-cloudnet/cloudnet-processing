@@ -8,21 +8,19 @@ import socket
 import subprocess
 import sys
 import time
-from tempfile import NamedTemporaryFile
 
 import requests
 import requests_mock
-
-from cloudnet_processing.utils import get_product_types
-
-sys.path.append("scripts/")
-cloudnet = __import__("cloudnet")
 
 from cloudnet_processing.subcmds import (
     process_cloudnet,
     process_model,
     process_model_evaluation,
 )
+from cloudnet_processing.utils import get_product_types
+
+sys.path.append("scripts/")
+cloudnet = __import__("cloudnet")
 
 
 def init_test_session():
@@ -64,8 +62,8 @@ def wait_for_port(port, host="localhost", timeout=10.0):
             time.sleep(0.01)
             if time.perf_counter() - start_time >= timeout:
                 raise TimeoutError(
-                    "Waited too long for the port {} on host {} to start accepting "
-                    "connections.".format(port, host)
+                    f"Waited too long for the port {port} on host {host} to start accepting "
+                    "connections."
                 ) from ex
 
 
@@ -98,7 +96,7 @@ def copy_files(source, target):
 
 
 def start_server(port, document_root, log_path):
-    logfile = open(log_path, "w")
+    logfile = open(log_path, "w", encoding="utf-8")
     md_server = subprocess.Popen(
         ["python3", "-u", "src/test_utils/server.py", document_root, str(port)], stderr=logfile
     )
@@ -126,7 +124,7 @@ def register_storage_urls(
     products=None,
 ):
     def save_file(request):
-        with open(temp_file.name, mode="wb") as file:
+        with open(temp_file.name, mode="wb") as file:  # pylint: disable=W1514:
             file.write(request.body.read())
         return True
 
@@ -183,7 +181,7 @@ def process(
     marker: str = None,
     processing_mode: str = "",
 ):
-    main_args = cloudnet._parse_args(main_args)
+    main_args = cloudnet._parse_args(main_args)  # pylint: disable=W0212
     if processing_mode == "model":
         process_model.main(main_args, storage_session=session)
     elif processing_mode == "model_evaluation":
@@ -204,12 +202,12 @@ def process(
         if marker is not None:
             pytest_args += ["-m", marker]
         subprocess.check_call(pytest_args)
-    except subprocess.CalledProcessError:
+    except subprocess.CalledProcessError:  # pylint: disable=W0706
         raise
 
 
 def reset_log_file(script_path: str):
-    open(f"{script_path}/md.log", "w").close()
+    open(f"{script_path}/md.log", "w", encoding="utf-8").close()
 
 
 def parse_args(args) -> tuple:
@@ -218,7 +216,7 @@ def parse_args(args) -> tuple:
 
 
 def read_log_file(script_path: str):
-    f = open(f"{script_path}/md.log")
+    f = open(f"{script_path}/md.log", encoding="utf-8")
     data = f.readlines()
     data = [
         line for line in data if "/api/sites" not in line and "/api/products" not in line

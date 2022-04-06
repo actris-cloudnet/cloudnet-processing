@@ -1,10 +1,12 @@
 import os
-import sys
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from sys import argv
 
 
 class Server(BaseHTTPRequestHandler):
+
+    path = ""
+
     def _set_headers(self, code):
         self.send_response(code)
         self.send_header("Content-type", "application/json")
@@ -72,7 +74,7 @@ class Server(BaseHTTPRequestHandler):
 
 
 def run(server_class=HTTPServer, handler_class=Server):
-    _, root, port = argv
+    _, root, port = argv  # pylint: disable=W0632
     server_address = ("localhost", int(port))
     httpd = server_class(server_address, handler_class)
 
