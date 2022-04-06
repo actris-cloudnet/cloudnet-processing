@@ -405,9 +405,9 @@ def get_helsinki_datetime() -> datetime.datetime:
 
 def concatenate_text_files(filenames: list, output_filename: str) -> None:
     """Concatenates text files."""
-    with open(output_filename, "wb", encoding="utf-8") as target:
+    with open(output_filename, "w", encoding="utf-8") as target:
         for filename in filenames:
-            with open(filename, "rb") as source:
+            with open(filename, "r", encoding="utf-8") as source:
                 shutil.copyfileobj(source, target)
 
 
