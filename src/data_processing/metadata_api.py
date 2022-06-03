@@ -1,7 +1,7 @@
 """Metadata API for Cloudnet files."""
 from argparse import Namespace
 from datetime import timedelta
-from typing import Union, Optional
+from typing import Union, Optional, Tuple
 import logging
 import os
 import requests
@@ -28,7 +28,7 @@ class MetadataApi:
     def post(self,
              end_point: str,
              payload: dict,
-             auth: Optional[tuple] = None) -> requests.Response:
+             auth: Optional[Tuple[str, str]] = None) -> requests.Response:
         """Update upload / product metadata."""
         url = os.path.join(self._url, end_point)
         res = self.session.post(url, json=payload, auth=auth)
@@ -49,7 +49,7 @@ class MetadataApi:
                  end_point: str,
                  resource: str,
                  full_path: str,
-                 auth: tuple) -> requests.Response:
+                 auth: Tuple[str, str]) -> requests.Response:
         """PUT file to Cloudnet data portal."""
         url = os.path.join(self._url, end_point, resource)
         res = requests.put(url, data=open(full_path, 'rb'), auth=auth)
