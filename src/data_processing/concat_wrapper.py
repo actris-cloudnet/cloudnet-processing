@@ -1,10 +1,11 @@
 """Module containing helper functions for CH15k concatenation."""
-import netCDF4
+import logging
+import shutil
 from typing import Optional
+
+import netCDF4
 from cloudnetpy import concat_lib as clib
 from cloudnetpy.utils import get_epoch, seconds2date
-import shutil
-import logging
 
 
 def update_daily_file(new_files: list, daily_file: str) -> list:
@@ -17,15 +18,17 @@ def update_daily_file(new_files: list, daily_file: str) -> list:
         success = clib.update_nc(daily_file, file)
         if success == 1:
             valid_files.append(file)
-    logging.info(f'Added {len(valid_files)} new files')
+    logging.info(f"Added {len(valid_files)} new files")
     return valid_files
 
 
-def concat_netcdf_files(files: list,
-                        date: str,
-                        output_file: str,
-                        concat_dimension: str = 'time',
-                        variables: Optional[list] = None) -> list:
+def concat_netcdf_files(
+    files: list,
+    date: str,
+    output_file: str,
+    concat_dimension: str = "time",
+    variables: Optional[list] = None,
+) -> list:
     """Concatenates several netcdf files into daily file."""
     if len(files) == 1:
         shutil.copy(files[0], output_file)
@@ -36,24 +39,23 @@ def concat_netcdf_files(files: list,
             nc = netCDF4.Dataset(file)
         except OSError:
             continue
-        time = nc.variables['time']
+        time = nc.variables["time"]
         time_array = time[:]
         time_units = time.units
         nc.close()
         epoch = get_epoch(time_units)
         for timestamp in time_array:
-            if seconds2date(timestamp, epoch)[:3] == date.split('-'):
+            if seconds2date(timestamp, epoch)[:3] == date.split("-"):
                 valid_files.append(file)
                 break
-    clib.concatenate_files(valid_files,
-                           output_file,
-                           concat_dimension=concat_dimension,
-                           variables=variables)
+    clib.concatenate_files(
+        valid_files, output_file, concat_dimension=concat_dimension, variables=variables
+    )
     return valid_files
 
 
 def concat_chm15k_files(files: list, date: str, output_file: str) -> list:
-    """ Concatenate several small chm15k files into a daily file.
+    """Concatenate several small chm15k files into a daily file.
 
     Args:
         files (list): List of file to be concatenated.
@@ -70,15 +72,16 @@ def concat_chm15k_files(files: list, date: str, output_file: str) -> list:
     valid_files = _remove_files_with_wrong_date(files, date)
     if len(valid_files) == 0:
         raise ValueError
-    variables = ['time', 'beta_raw', 'stddev', 'nn1', 'nn2', 'nn3', 'beta_att']
-    clib.concatenate_files(valid_files, output_file, variables=variables,
-                           new_attributes={'Conventions': 'CF-1.8'})
+    variables = ["time", "beta_raw", "stddev", "nn1", "nn2", "nn3", "beta_att"]
+    clib.concatenate_files(
+        valid_files, output_file, variables=variables, new_attributes={"Conventions": "CF-1.8"}
+    )
     return valid_files
 
 
 def _remove_files_with_wrong_date(files: list, date_str: str) -> list:
     """Remove files that contain wrong date."""
-    date = date_str.split('-')
+    date = date_str.split("-")
     date_as_ints = [int(x) for x in date]
     valid_files = []
     for file in files:
@@ -90,7 +93,7 @@ def _remove_files_with_wrong_date(files: list, date_str: str) -> list:
 
 
 def _validate_date_attributes(obj: netCDF4.Dataset, date: list) -> bool:
-    for ind, attr in enumerate(('year', 'month', 'day')):
+    for ind, attr in enumerate(("year", "month", "day")):
         if getattr(obj, attr) != date[ind]:
             return False
     return True

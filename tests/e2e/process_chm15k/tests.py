@@ -1,19 +1,21 @@
-import netCDF4
 from os import path
-from test_utils.utils import count_strings, read_log_file
+
+import netCDF4
 import pytest
+
+from test_utils.utils import count_strings, read_log_file
 
 SCRIPT_PATH = path.dirname(path.realpath(__file__))
 
 
 class TestChm15kProcessing:
 
-    product = 'lidar'
-    instrument = 'chm15k'
+    product = "lidar"
+    instrument = "chm15k"
 
     @pytest.fixture(autouse=True)
     def _fetch_params(self, params):
-        self.full_path = params['full_path']
+        self.full_path = params["full_path"]
 
     @pytest.mark.first_run
     def test_that_refuses_to_process_without_reprocess_flag(self):
@@ -24,12 +26,14 @@ class TestChm15kProcessing:
     def test_that_calls_metadata_api_only_once(self):
         data = read_log_file(SCRIPT_PATH)
         assert len(data) == 1
-        assert '"GET /api/files?dateFrom=2020-10-22&dateTo=2020-10-22&site=bucharest&developer=True' \
-               '&product=lidar&showLegacy=True HTTP/1.1" 200 -' in data[0]
+        assert (
+            '"GET /api/files?dateFrom=2020-10-22&dateTo=2020-10-22&site=bucharest&developer=True'
+            '&product=lidar&showLegacy=True HTTP/1.1" 200 -' in data[0]
+        )
 
     @pytest.mark.first_run
     def test_that_does_not_call_pid_api(self):
-        f = open(f'{SCRIPT_PATH}/pid.log')
+        f = open(f"{SCRIPT_PATH}/pid.log")
         data = f.readlines()
         assert len(data) == 0
 
@@ -40,12 +44,12 @@ class TestChm15kProcessing:
         assert nc.month == "10"
         assert nc.day == "22"
         assert nc.cloudnet_file_type == self.product
-        assert hasattr(nc, 'pid') is True
+        assert hasattr(nc, "pid") is True
         nc.close()
 
     @pytest.mark.reprocess
     def test_that_calls_pid_api(self):
-        f = open(f'{SCRIPT_PATH}/pid.log')
+        f = open(f"{SCRIPT_PATH}/pid.log")
         data = f.readlines()
         assert len(data) == 1
         assert 'POST /pid/ HTTP/1.1" 200 -' in data[0]
@@ -64,17 +68,25 @@ class TestChm15kProcessing:
         assert len(data) == n_gets + n_puts + n_posts
 
         # Check product status
-        assert '"GET /api/files?dateFrom=2020-10-22&dateTo=2020-10-22&site=bucharest&developer=True' \
-               '&product=lidar&showLegacy=True HTTP/1.1" 200 -' in data[0]
+        assert (
+            '"GET /api/files?dateFrom=2020-10-22&dateTo=2020-10-22&site=bucharest&developer=True'
+            '&product=lidar&showLegacy=True HTTP/1.1" 200 -' in data[0]
+        )
 
         # Two API calls the get instrument status...
 
         # GET raw data
-        assert '"GET /upload-metadata?dateFrom=2020-10-22&dateTo=2020-10-22&site=bucharest' \
-               '&developer=True&instrument=chm15k&status%5B%5D=uploaded&status%5B%5D=processed HTTP/1.1" 200 -' in data[3]
+        assert (
+            '"GET /upload-metadata?dateFrom=2020-10-22&dateTo=2020-10-22&site=bucharest'
+            '&developer=True&instrument=chm15k&status%5B%5D=uploaded&status%5B%5D=processed HTTP/1.1" 200 -'
+            in data[3]
+        )
 
         # GET calibration
-        assert '"GET /api/calibration?site=bucharest&date=2020-10-22&instrument=chm15k HTTP/1.1" 200 -' in data[4]
+        assert (
+            '"GET /api/calibration?site=bucharest&date=2020-10-22&instrument=chm15k HTTP/1.1" 200 -'
+            in data[4]
+        )
 
         # PUT file
         assert '"PUT /files/20201022_bucharest_chm15k.nc HTTP/1.1"' in data[5]

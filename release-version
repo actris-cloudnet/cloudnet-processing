@@ -1,25 +1,29 @@
 #!/usr/bin/env python3
-import subprocess
 import argparse
-import sys
 import re
-from pathlib import Path
+import subprocess
+import sys
 from dataclasses import dataclass
+from pathlib import Path
 
-VERSION_FILE = 'src/data_processing/version.py'
+VERSION_FILE = "src/data_processing/version.py"
 
 
 def main(component: str):
-    current_branch = subprocess.check_output(['git', 'rev-parse', '--abbrev-ref', 'HEAD']).decode("utf-8").strip()
-    assert current_branch == 'master', 'FATAL: Not in master branch'
+    current_branch = (
+        subprocess.check_output(["git", "rev-parse", "--abbrev-ref", "HEAD"])
+        .decode("utf-8")
+        .strip()
+    )
+    assert current_branch == "master", "FATAL: Not in master branch"
     old_version = _read_version()
-    if component == 'major':
+    if component == "major":
         new_version = Version(old_version.major + 1, 0, 0)
-    elif component == 'minor':
+    elif component == "minor":
         new_version = Version(old_version.major, old_version.minor + 1, 0)
-    elif component == 'patch':
+    elif component == "patch":
         new_version = Version(old_version.major, old_version.minor, old_version.patch + 1)
-    if not _confirm(f'Updating version {old_version} -> {new_version}. Continue?'):
+    if not _confirm(f"Updating version {old_version} -> {new_version}. Continue?"):
         return
     _write_version(new_version)
     _commit_and_push(new_version)
@@ -32,55 +36,59 @@ class Version:
     patch: int
 
     def __str__(self):
-        return f'{self.major}.{self.minor}.{self.patch}'
+        return f"{self.major}.{self.minor}.{self.patch}"
 
 
 def _confirm(msg: str) -> bool:
-    return input(f'{msg} y/n [y] ').lower() in ('y', '')
+    return input(f"{msg} y/n [y] ").lower() in ("y", "")
 
 
 def _commit_and_push(version: Version):
     git_commands = [
-        ['add', VERSION_FILE],
-        ['commit', '-m', f'Release version {version}'],
-        ['push'],
-        ['tag', f'v{version}'],
-        ['push', '--tags']
+        ["add", VERSION_FILE],
+        ["commit", "-m", f"Release version {version}"],
+        ["push"],
+        ["tag", f"v{version}"],
+        ["push", "--tags"],
     ]
     for command in git_commands:
-        subprocess.run(['git'] + command, check=True)
+        subprocess.run(["git"] + command, check=True)
 
 
 def _read_int(text: str, key: str) -> int:
-    return int(re.search(f'^{key} = (\d+)$', text, flags=re.M)[1])
+    return int(re.search(f"^{key} = (\d+)$", text, flags=re.M)[1])
 
 
 def _write_int(text: str, key: str, value: int) -> str:
-    return re.sub(f'^{key} = \d+$', f'{key} = {value}', text, flags=re.M)
+    return re.sub(f"^{key} = \d+$", f"{key} = {value}", text, flags=re.M)
 
 
 def _read_version() -> Version:
     text = Path(VERSION_FILE).read_text()
-    return Version(major=_read_int(text, 'MAJOR'),
-                   minor=_read_int(text, 'MINOR'),
-                   patch=_read_int(text, 'PATCH'))
+    return Version(
+        major=_read_int(text, "MAJOR"),
+        minor=_read_int(text, "MINOR"),
+        patch=_read_int(text, "PATCH"),
+    )
 
 
 def _write_version(version: Version):
     p = Path(VERSION_FILE)
     text = p.read_text()
-    text = _write_int(text, 'MAJOR', version.major)
-    text = _write_int(text, 'MINOR', version.minor)
-    text = _write_int(text, 'PATCH', version.patch)
+    text = _write_int(text, "MAJOR", version.major)
+    text = _write_int(text, "MINOR", version.minor)
+    text = _write_int(text, "PATCH", version.patch)
     p.write_text(text)
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Bump data-processing version number.')
-    parser.add_argument('component',
-                        choices=['major', 'minor', 'patch'],
-                        type=str,
-                        help='Version number component to be updated.')
+    parser = argparse.ArgumentParser(description="Bump data-processing version number.")
+    parser.add_argument(
+        "component",
+        choices=["major", "minor", "patch"],
+        type=str,
+        help="Version number component to be updated.",
+    )
     args = parser.parse_args()
     try:
         main(args.component)

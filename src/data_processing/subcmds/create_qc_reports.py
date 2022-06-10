@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
 """A script for creating Cloudnet quality control (QC) reports."""
-import os
 import glob
 import logging
+import os
 from tempfile import TemporaryDirectory
 from typing import Optional
+
 import requests
 from requests.exceptions import HTTPError
-from data_processing import utils
-from data_processing import metadata_api
-from data_processing.utils import read_main_conf, make_session
-from data_processing.storage_api import StorageApi
+
+from data_processing import metadata_api, utils
 from data_processing.processing_tools import ProcessBase
+from data_processing.storage_api import StorageApi
+from data_processing.utils import make_session, read_main_conf
 
 
 def main(args, storage_session: Optional[requests.Session] = None):
@@ -25,20 +26,22 @@ def main(args, storage_session: Optional[requests.Session] = None):
     temp_dir = TemporaryDirectory(dir=temp_dir_root)
     qc = ProcessBase(args, config)
     for row in metadata:
-        logging.info(f'Creating QC report: {row["site"]["id"]} - {row["measurementDate"]} - {row["product"]["id"]}')
+        logging.info(
+            f'Creating QC report: {row["site"]["id"]} - {row["measurementDate"]} - {row["product"]["id"]}'
+        )
         try:
             full_path = storage_api.download_product(row, temp_dir.name)
         except HTTPError as err:
             logging.error(err)
             continue
         try:
-            qc.upload_quality_report(full_path, row['uuid'])
+            qc.upload_quality_report(full_path, row["uuid"])
         except OSError as err:
             logging.error(err)
-        for filename in glob.glob(f'{temp_dir.name}/*'):
+        for filename in glob.glob(f"{temp_dir.name}/*"):
             os.remove(filename)
 
 
 def add_arguments(subparser):
-    subparser.add_parser('qc', help='Create Quality Control reports.')
+    subparser.add_parser("qc", help="Create Quality Control reports.")
     return subparser
