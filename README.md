@@ -11,19 +11,16 @@ Refer to [README of the dev-toolkit repository](https://github.com/actris-cloudn
 Once the CLU development environment is running, scripts can be run inside the data-processing container with
 the `./run` wrapper.
 The scripts are located in `scripts/` folder and should be run from the root:
-```
-$ ./run scripts/<script_name.py> --arg1 foo --arg2 bar ...
-```
-The following scripts are provided:
 
+    ./run scripts/<script_name.py> --arg1 foo --arg2 bar ...
+
+The following scripts are provided:
 
 ### `cloudnet.py`
 The main wrapper for running all the processing steps.
 
-```
-usage: cloudnet.py [-h] -s SITE [-d YYYY-MM-DD] [--start YYYY-MM-DD]
-                           [--stop YYYY-MM-DD] [-p ...] COMMAND ...
-```
+    usage: cloudnet.py [-h] -s SITE [-d YYYY-MM-DD] [--start YYYY-MM-DD]
+                       [--stop YYYY-MM-DD] [-p ...] COMMAND ...
 
 Positional arguments:
 
@@ -42,10 +39,7 @@ General arguments. These arguments are available for all commands. The arguments
 |       | `--stop`     | `current day `    | Stopping date.                                                                     |
 | `-p`  | `--products` | all               | Processed products, e.g, `radar,lidar,categorize,classification`.                  |
 
-
-
 ### Commands
-
 
 ### `process`
 
@@ -92,7 +86,6 @@ Additional arguments:
 |:------|:------------|:--------|:-------------------------------------------------------------------------|
 | `-m`  | `--missing` | `False` | Only plot images for files that do not have any previous images plotted. |
 
-
 ### `qc`
 Don't process anything, only create quality control reports for products.
 
@@ -108,7 +101,6 @@ Additional arguments:
 | Short | Long      | Default | Description                                                                                                             |
 |:------|:----------|:--------|:------------------------------------------------------------------------------------------------------------------------|
 | `-f`  | `--force` | False   | Ignore environment variables `FREEZE_AFTER_DAYS` and `FREEZE_MODEL_AFTER_DAYS`. Allows freezing recently changed files. |
-
 
 ### Examples
 
@@ -136,9 +128,7 @@ Code that is not involved in the cloudnet data processing chain can be found in 
 
 Upload Matlab processed legacy products (`categorize`, and level 2 products) to data portal.
 
-```
-usage: put-legacy-files.py [-h] [-y YYYY] PATH
-```
+    usage: put-legacy-files.py [-h] [-y YYYY] PATH
 
 Positional arguments:
 
@@ -162,42 +152,32 @@ Behavior:
 | `stable` (legacy)     | -                                         |
 | `stable` (non-legacy) | Add stable legacy file as oldest version. |
 
-
-
 ### `map-variable-names.py`
 Print list of Cloudnet variables.
 
-```
-usage: map-variable-names.py
-```
+    usage: map-variable-names.py
 
 ### Development
 
 For development, you may open a bash session inside the container with:
 
-```
-$ docker-compose -f ../dev-toolkit/docker-compose.yml run --entrypoint bash data-processing
-```
+    docker-compose -f ../dev-toolkit/docker-compose.yml run --entrypoint bash data-processing
 
 The changes made to the source files on the host computer will be reflected in the container.
 
 ### Tests
 
 First, build a separate test container:
-```
-$ docker build -t test .
-```
+
+    docker build -t test .
 
 Run unit tests:
-```
-$ docker run -tv $PWD/tests:/app/tests -v $PWD/src:/app/src --env-file test.env test pytest
-```
+
+    docker run -tv $PWD/tests:/app/tests -v $PWD/src:/app/src --env-file test.env test pytest
 
 Run end-to-end tests:
-```
-$ docker run -tv $PWD/tests:/app/tests -v $PWD/src:/app/src --env-file e2e-test.env test /bin/sh -c 'for f in tests/e2e/*/main.py; do $f; done'
-```
 
+    docker run -tv $PWD/tests:/app/tests -v $PWD/src:/app/src --env-file e2e-test.env test /bin/sh -c 'for f in tests/e2e/*/main.py; do $f; done'
 
 ### Licence
 MIT
