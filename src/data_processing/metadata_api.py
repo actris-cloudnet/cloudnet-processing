@@ -73,13 +73,16 @@ class MetadataApi:
                                date: str,
                                site: str,
                                filename: Optional[str] = None):
-        auth = (site, 'letmein')
+        username = self.config.get('DATA_SUBMISSION_USERNAME', site)
+        password = self.config.get('DATA_SUBMISSION_PASSWORD', 'letmein')
+        auth = (username, password)
         checksum = utils.md5sum(full_path)
         metadata = {
             'filename': filename or os.path.basename(full_path),
             'checksum': checksum,
             'instrument': instrument,
-            'measurementDate': date
+            'measurementDate': date,
+            'site': site
         }
         try:
             self.post('upload/metadata', metadata, auth=auth)
