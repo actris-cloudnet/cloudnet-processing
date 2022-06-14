@@ -79,6 +79,9 @@ class ProcessRadar(ProcessInstrument):
         full_path, self.uuid.raw = self.base.download_instrument("basta", largest_only=True)
         self.uuid.product = basta2nc(full_path, *self._args, **self._kwargs)
 
+    def process_copernicus(self):
+        raise NotImplementedError("Copernicus cloud radar not yet implemented!")
+
     @staticmethod
     def _fix_suffices(dir_name: str, suffix: str) -> None:
         """Fixes filenames that have incorrect suffix."""
