@@ -10,6 +10,7 @@ import shutil
 import string
 import sys
 from argparse import Namespace
+from pathlib import Path
 from typing import Optional, Tuple, Union
 
 import netCDF4
@@ -21,6 +22,8 @@ from cloudnetpy.utils import get_time
 from cloudnetpy_qc import Quality
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+
+import data_processing.version
 
 
 def create_product_put_payload(
@@ -42,6 +45,7 @@ def create_product_put_payload(
         "uuid": getattr(nc, "file_uuid", ""),
         "pid": getattr(nc, "pid", ""),
         "history": getattr(nc, "history", ""),
+        "dataProcessingVersion": get_data_processing_version(),
         **storage_service_response,
     }
     source_uuids = getattr(nc, "source_file_uuids", None)
@@ -52,6 +56,14 @@ def create_product_put_payload(
     return payload
 
 
+def get_data_processing_version() -> str:
+    version_file = Path(os.path.abspath(data_processing.version.__file__))
+    version: dict = {}
+    with open(version_file) as f:
+        exec(f.read(), version)
+    return version["__version__"]
+
+
 def get_file_format(nc: netCDF4.Dataset):
     """Returns netCDF file format."""
     file_format = nc.file_format.lower()
@@ -60,6 +72,14 @@ def get_file_format(nc: netCDF4.Dataset):
     if "netcdf3" in file_format:
         return "NetCDF3"
     raise RuntimeError("Unknown file type")
+
+
+def add_version_to_global_attributes(full_path: str):
+    """Add data-processing package version to file attributes."""
+    version = get_data_processing_version()
+    nc = netCDF4.Dataset(full_path, "r+")
+    nc.cloudnet_processing_version = version
+    nc.close()
 
 
 def read_site_info(site_name: str) -> dict:

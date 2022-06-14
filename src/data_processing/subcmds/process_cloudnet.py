@@ -54,6 +54,7 @@ def main(args, storage_session: Optional[requests.Session] = None):
                     logging.info(f"Skipping product {product}")
                     continue
                 process.add_pid(process.temp_file.name)
+                utils.add_version_to_global_attributes(process.temp_file.name)
                 process.upload_product(process.temp_file.name, product, uuid, identifier)
                 process.create_and_upload_images(
                     process.temp_file.name, product, uuid.product, identifier

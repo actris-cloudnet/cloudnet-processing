@@ -45,6 +45,8 @@ class TestChm15kProcessing:
         assert nc.day == "22"
         assert nc.cloudnet_file_type == self.product
         assert hasattr(nc, "pid") is True
+        assert hasattr(nc, "cloudnetpy_version")
+        assert hasattr(nc, "cloudnet_processing_version")
         nc.close()
 
     @pytest.mark.reprocess
