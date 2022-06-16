@@ -44,7 +44,6 @@ def create_product_put_payload(
         "volatile": not hasattr(nc, "pid"),
         "uuid": getattr(nc, "file_uuid", ""),
         "pid": getattr(nc, "pid", ""),
-        "history": getattr(nc, "history", ""),
         "processingVersion": get_data_processing_version(),
         **storage_service_response,
     }
