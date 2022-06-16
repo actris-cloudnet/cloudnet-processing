@@ -4,7 +4,6 @@ import gzip
 import logging
 import os
 import shutil
-from typing import Optional
 
 from cloudnetpy.instruments import (
     basta2nc,
