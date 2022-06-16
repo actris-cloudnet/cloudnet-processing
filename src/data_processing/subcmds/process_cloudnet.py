@@ -158,7 +158,7 @@ class ProcessCloudnet(ProcessBase):
         include_pattern: Optional[str] = None,
         largest_only: bool = False,
         exclude_pattern: Optional[str] = None,
-    ) -> Tuple[Union[list, str], list]:
+    ) -> Tuple[Union[list, str], list, str]:
         payload = self._get_payload(instrument=instrument, skip_created=True)
         upload_metadata = self.md_api.get("upload-metadata", payload)
         if include_pattern is not None:
@@ -176,6 +176,7 @@ class ProcessCloudnet(ProcessBase):
     def download_uploaded(
         self, instrument: str, exclude_pattern: Optional[str]
     ) -> Tuple[Union[list, str], list]:
+        """For self-generated CL61-D daily files."""
         payload = self._get_payload(instrument=instrument)
         payload["status"] = "uploaded"
         upload_metadata = self.md_api.get("upload-metadata", payload)
