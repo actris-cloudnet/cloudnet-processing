@@ -82,6 +82,9 @@ class ProcessRadar(ProcessInstrument):
     def process_copernicus(self):
         raise NotImplementedError("Copernicus cloud radar not yet implemented!")
 
+    def process_galileo(self):
+        raise NotImplementedError("Galileo cloud radar not yet implemented!")
+
     @staticmethod
     def _fix_suffices(dir_name: str, suffix: str) -> None:
         """Fixes filenames that have incorrect suffix."""
