@@ -47,7 +47,7 @@ class ProcessModel(ProcessBase):
         return [row for row in metadata if int(row["size"]) > minimum_size]
 
     def process_model(self, uuid: Uuid, metadata: dict) -> Uuid:
-        full_path, uuid.raw = self._download_raw_files([metadata], self.temp_file)
+        full_path, uuid.raw, _ = self._download_raw_files([metadata], self.temp_file)
         data = {
             "site_name": self.site,
             "date": self.date_str,

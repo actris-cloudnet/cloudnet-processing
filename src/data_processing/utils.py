@@ -45,6 +45,7 @@ def create_product_put_payload(
         "uuid": getattr(nc, "file_uuid", ""),
         "pid": getattr(nc, "pid", ""),
         "processingVersion": get_data_processing_version(),
+        "instrumentPid": getattr(nc, "instrument_pid", None),
         **storage_service_response,
     }
     source_uuids = getattr(nc, "source_file_uuids", None)

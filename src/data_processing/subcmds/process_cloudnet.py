@@ -5,6 +5,7 @@ import logging
 import warnings
 from typing import List, Optional, Tuple, Union
 
+import netCDF4
 import requests
 from cloudnetpy.categorize import generate_categorize
 from cloudnetpy.exceptions import (
@@ -49,7 +50,8 @@ def main(args, storage_session: Optional[requests.Session] = None):
                 elif product == "categorize":
                     uuid, identifier = process.process_categorize(uuid)
                 elif product in utils.get_product_types(level="1b"):
-                    uuid, identifier = process.process_instrument(uuid, product)
+                    uuid, identifier, instrument_pids = process.process_instrument(uuid, product)
+                    process.add_instrument_pid(process.temp_file.name, instrument_pids)
                 else:
                     logging.info(f"Skipping product {product}")
                     continue
@@ -78,7 +80,7 @@ class ProcessCloudnet(ProcessBase):
         instrument = (
             "halo-doppler-lidar" if instrument == "halo-doppler-lidar-calibrated" else instrument
         )
-        return process.uuid, instrument
+        return process.uuid, instrument, process.instrument_pids
 
     def process_categorize(self, uuid: Uuid) -> Tuple[Uuid, str]:
         l1_products = utils.get_product_types(level="1b")
@@ -158,7 +160,8 @@ class ProcessCloudnet(ProcessBase):
         include_pattern: Optional[str] = None,
         largest_only: bool = False,
         exclude_pattern: Optional[str] = None,
-    ) -> Tuple[Union[list, str], list, str]:
+    ) -> Tuple[Union[List, str], List, List]:
+        """Download raw files for given instrument."""
         payload = self._get_payload(instrument=instrument, skip_created=True)
         upload_metadata = self.md_api.get("upload-metadata", payload)
         if include_pattern is not None:
@@ -175,8 +178,8 @@ class ProcessCloudnet(ProcessBase):
 
     def download_uploaded(
         self, instrument: str, exclude_pattern: Optional[str]
-    ) -> Tuple[Union[list, str], list]:
-        """For self-generated CL61-D daily files."""
+    ) -> Tuple[Union[list, str], List, List]:
+        """Download self-generated daily files (e.g. CL61-D)."""
         payload = self._get_payload(instrument=instrument)
         payload["status"] = "uploaded"
         upload_metadata = self.md_api.get("upload-metadata", payload)
@@ -186,7 +189,9 @@ class ProcessCloudnet(ProcessBase):
             )
         return self._download_raw_files(upload_metadata)
 
-    def download_adjoining_daily_files(self, instrument: str) -> Tuple[Union[List, str], List]:
+    def download_adjoining_daily_files(
+        self, instrument: str
+    ) -> Tuple[Union[List, str], List, List]:
         next_day = utils.get_date_from_past(-1, self.date_str)
         payload = self._get_payload(instrument=instrument, skip_created=True)
         payload["dateFrom"] = self.date_str
@@ -199,11 +204,12 @@ class ProcessCloudnet(ProcessBase):
             self.is_reprocess or self.is_reprocess_volatile
         ):
             raise MiscError("Raw data already processed")
-        full_paths, _ = self._download_raw_files(upload_metadata)
+        full_paths, _, instrument_pids = self._download_raw_files(upload_metadata)
+        # Return all full paths but only current day UUIDs
         uuids_of_current_day = [
             meta["uuid"] for meta in upload_metadata if meta["measurementDate"] == self.date_str
         ]
-        return full_paths, uuids_of_current_day
+        return full_paths, uuids_of_current_day, instrument_pids
 
     def _detect_uploaded_instrument(self, instrument_type: str) -> str:
         instrument_metadata = self.md_api.get("api/instruments")
@@ -235,6 +241,15 @@ class ProcessCloudnet(ProcessBase):
                 f"More than one type of {instrument_type} data, " f"using {selected_instrument}"
             )
         return selected_instrument
+
+    @staticmethod
+    def add_instrument_pid(full_path: str, instrument_pids: list) -> None:
+        if len(set(instrument_pids)) > 1:
+            logging.error("Several instrument PIDs found")
+        if instrument_pids and (instrument_pid := instrument_pids[0]) is not None:
+            nc = netCDF4.Dataset(full_path, "r+")
+            nc.instrument_pid = instrument_pid
+            nc.close()
 
 
 def add_arguments(subparser):

@@ -4,6 +4,7 @@ import gzip
 import logging
 import os
 import shutil
+from typing import List
 
 from cloudnetpy.instruments import (
     basta2nc,
@@ -27,6 +28,7 @@ class ProcessInstrument:
         self.base = process_cloudnet
         self.temp_file = temp_file
         self.uuid = uuid
+        self.instrument_pids: List = []
         self._kwargs = self._get_kwargs()
         self._args = self._get_args()
 
@@ -62,20 +64,24 @@ class ProcessInstrument:
 
 class ProcessRadar(ProcessInstrument):
     def process_rpg_fmcw_94(self):
-        full_paths, raw_uuids = self.base.download_instrument("rpg-fmcw-94", ".lv1$")
+        full_paths, raw_uuids, self.instrument_pids = self.base.download_instrument(
+            "rpg-fmcw-94", ".lv1$"
+        )
         self.uuid.product, valid_full_paths = rpg2nc(
             self.base.temp_dir.name, *self._args, **self._kwargs
         )
         self.uuid.raw = _get_valid_uuids(raw_uuids, full_paths, valid_full_paths)
 
     def process_mira(self):
-        full_paths, self.uuid.raw = self.base.download_instrument("mira")
+        full_paths, self.uuid.raw, self.instrument_pids = self.base.download_instrument("mira")
         dir_name = _unzip_gz_files(full_paths)
         self._fix_suffices(dir_name, ".mmclx")
         self.uuid.product = mira2nc(dir_name, *self._args, **self._kwargs)
 
     def process_basta(self):
-        full_path, self.uuid.raw = self.base.download_instrument("basta", largest_only=True)
+        full_path, self.uuid.raw, self.instrument_pids = self.base.download_instrument(
+            "basta", largest_only=True
+        )
         self.uuid.product = basta2nc(full_path, *self._args, **self._kwargs)
 
     def process_copernicus(self):
@@ -102,7 +108,7 @@ class ProcessLidar(ProcessInstrument):
         self._process_chm_lidar("chm15x")
 
     def _process_chm_lidar(self, model: str):
-        full_paths, raw_uuids = self.base.download_instrument(model)
+        full_paths, raw_uuids, self.instrument_pids = self.base.download_instrument(model)
         valid_full_paths = concat_wrapper.concat_chm15k_files(
             full_paths, self.base.date_str, self.base.daily_file.name
         )
@@ -111,7 +117,9 @@ class ProcessLidar(ProcessInstrument):
         self._call_ceilo2nc(model)
 
     def process_ct25k(self):
-        full_path, self.uuid.raw = self.base.download_instrument("ct25k", largest_only=True)
+        full_path, self.uuid.raw, self.instrument_pids = self.base.download_instrument(
+            "ct25k", largest_only=True
+        )
         shutil.move(full_path, self.base.daily_file.name)
         self._call_ceilo2nc("ct25k")
 
@@ -123,14 +131,14 @@ class ProcessLidar(ProcessInstrument):
         self._process_halo_lidar()
 
     def _process_halo_lidar(self, suffix: str = ""):
-        full_path, self.uuid.raw = self.base.download_instrument(
+        full_path, self.uuid.raw, self.instrument_pids = self.base.download_instrument(
             f"halo-doppler-lidar{suffix}", largest_only=True
         )
         data = self._get_payload_for_nc_file_augmenter(full_path)
         self.uuid.product = nc_header_augmenter.harmonize_halo_file(data)
 
     def process_pollyxt(self):
-        full_paths, self.uuid.raw = self.base.download_instrument("pollyxt")
+        full_paths, self.uuid.raw, self.instrument_pids = self.base.download_instrument("pollyxt")
         self.uuid.product = pollyxt2nc(
             os.path.dirname(full_paths[0]),
             self.temp_file.name,
@@ -141,9 +149,13 @@ class ProcessLidar(ProcessInstrument):
 
     def process_cl51(self):
         if self.base.site == "norunda":
-            full_paths, self.uuid.raw = self.base.download_adjoining_daily_files("cl51")
+            (
+                full_paths,
+                self.uuid.raw,
+                self.instrument_pids,
+            ) = self.base.download_adjoining_daily_files("cl51")
         else:
-            full_paths, self.uuid.raw = self.base.download_instrument("cl51")
+            full_paths, self.uuid.raw, self.instrument_pids = self.base.download_instrument("cl51")
         full_paths.sort()
         utils.concatenate_text_files(full_paths, self.base.daily_file.name)
         date = utils.date_string_to_date(self.base.date_str)
@@ -158,16 +170,18 @@ class ProcessLidar(ProcessInstrument):
         try:
             if self.base.is_reprocess:
                 raise SkipBlock  # Move to next block and re-create daily file
-            tmp_file, uuid = self.base.download_instrument(
+            tmp_file, uuid, self.instrument_pids = self.base.download_instrument(
                 model, include_pattern=self.file_id, largest_only=True
             )
-            full_paths, raw_uuids = self.base.download_uploaded(model, exclude_pattern=self.file_id)
+            full_paths, raw_uuids, self.instrument_pids = self.base.download_uploaded(
+                model, exclude_pattern=self.file_id
+            )
             valid_full_paths = concat_wrapper.update_daily_file(full_paths, tmp_file)
             shutil.copy(tmp_file, self.base.daily_file.name)
             msg = "Raw data already processed"
         except (RawDataMissingError, SkipBlock):
             msg = None
-            full_paths, raw_uuids = self.base.download_instrument(
+            full_paths, raw_uuids, self.instrument_pids = self.base.download_instrument(
                 model, exclude_pattern=self.file_id
             )
             if full_paths:
@@ -213,13 +227,17 @@ class ProcessLidar(ProcessInstrument):
 class ProcessMwr(ProcessInstrument):
     def process_hatpro(self):
         try:
-            full_paths, raw_uuids = self.base.download_instrument("hatpro", "^(?!.*scan).*\.lwp$")
+            full_paths, raw_uuids, self.instrument_pids = self.base.download_instrument(
+                "hatpro", "^(?!.*scan).*\.lwp$"
+            )
             self.uuid.product, valid_full_paths = hatpro2nc(
                 self.base.temp_dir.name, *self._args, **self._kwargs
             )
         except RawDataMissingError:
             pattern = "(ufs_l2a.nc$|clwvi.*.nc$|.lwp.*.nc$)"
-            full_paths, raw_uuids = self.base.download_instrument("hatpro", pattern)
+            full_paths, raw_uuids, self.instrument_pids = self.base.download_instrument(
+                "hatpro", pattern
+            )
             valid_full_paths = concat_wrapper.concat_netcdf_files(
                 full_paths, self.base.date_str, self.temp_file.name
             )
@@ -228,7 +246,9 @@ class ProcessMwr(ProcessInstrument):
         self.uuid.raw = _get_valid_uuids(raw_uuids, full_paths, valid_full_paths)
 
     def process_radiometrics(self):
-        full_paths, self.uuid.raw = self.base.download_instrument("radiometrics")
+        full_paths, self.uuid.raw, self.instrument_pids = self.base.download_instrument(
+            "radiometrics"
+        )
         full_paths.sort()
         for full_path in full_paths[1:]:
             utils.remove_header_lines(full_path, 1)
@@ -238,11 +258,13 @@ class ProcessMwr(ProcessInstrument):
 
 class ProcessDisdrometer(ProcessInstrument):
     def process_parsivel(self):
-        full_path, self.uuid.raw = self.base.download_instrument("parsivel", largest_only=True)
+        full_path, self.uuid.raw, self.instrument_pids = self.base.download_instrument(
+            "parsivel", largest_only=True
+        )
         self.uuid.product = disdrometer2nc(full_path, *self._args, **self._kwargs)
 
     def process_thies_lnm(self):
-        full_paths, self.uuid.raw = self.base.download_instrument("thies-lnm")
+        full_paths, self.uuid.raw, self.instrument_pids = self.base.download_instrument("thies-lnm")
         full_paths.sort()
         utils.concatenate_text_files(full_paths, self.base.daily_file.name)
         self.uuid.product = disdrometer2nc(self.base.daily_file.name, *self._args, **self._kwargs)

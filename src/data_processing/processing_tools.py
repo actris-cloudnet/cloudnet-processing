@@ -209,18 +209,18 @@ class ProcessBase:
 
     def _download_raw_files(
         self, upload_metadata: list, temp_file=None
-    ) -> Tuple[Union[list, str], list]:
+    ) -> Tuple[Union[list, str], list, list]:
         if temp_file is not None:
             if len(upload_metadata) > 1:
                 logging.warning("Several daily raw files")
             upload_metadata = [upload_metadata[0]]
-        full_paths, uuids = self._storage_api.download_raw_files(
+        full_paths, uuids, instrument_pids = self._storage_api.download_raw_data(
             upload_metadata, self.temp_dir.name
         )
         if temp_file is not None:
             shutil.move(full_paths[0], temp_file.name)
             full_paths = temp_file.name
-        return full_paths, uuids
+        return full_paths, uuids, instrument_pids
 
     def _check_raw_data_status(self, metadata: list) -> None:
         if not metadata:

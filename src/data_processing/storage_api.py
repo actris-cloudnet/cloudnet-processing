@@ -26,14 +26,15 @@ class StorageApi:
         res = self._put(url, full_path, headers).json()
         return {"version": res.get("version", ""), "size": int(res["size"])}
 
-    def download_raw_files(self, metadata: list, dir_name: str) -> Tuple[list, list]:
+    def download_raw_data(self, metadata: list, dir_name: str) -> Tuple[list, list, list]:
         """Download raw files."""
         urls = [path.join(self._url, row["s3path"][1:]) for row in metadata]
         full_paths = [path.join(dir_name, row["filename"]) for row in metadata]
         for args in zip(urls, full_paths):
             self._get(*args)
         uuids = [row["uuid"] for row in metadata]
-        return full_paths, uuids
+        instrument_pids = [row["instrumentPid"] for row in metadata if "instrumentPid" in row]
+        return full_paths, uuids, instrument_pids
 
     def download_product(self, metadata: dict, dir_name: str) -> str:
         """Download a product."""
