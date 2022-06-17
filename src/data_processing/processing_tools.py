@@ -84,6 +84,7 @@ class ProcessBase:
         payload = utils.create_product_put_payload(full_path, file_info, site=self.site)
         if product == "model":
             del payload["cloudnetpyVersion"]
+            del payload["instrumentPid"]
             payload["model"] = model_or_instrument_id
         payload["product"] = product  # L3 files use different products in NC vars
         self.md_api.put("files", s3key, payload)
