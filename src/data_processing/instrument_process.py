@@ -139,10 +139,12 @@ class ProcessLidar(ProcessInstrument):
 
     def process_pollyxt(self):
         full_paths, self.uuid.raw, self.instrument_pids = self.base.download_instrument("pollyxt")
+        site_meta = self.base.site_meta
+        site_meta["snr_limit"] = 25
         self.uuid.product = pollyxt2nc(
             os.path.dirname(full_paths[0]),
             self.temp_file.name,
-            site_meta=self.base.site_meta,
+            site_meta=site_meta,
             uuid=self.uuid.volatile,
             date=self.base.date_str,
         )
