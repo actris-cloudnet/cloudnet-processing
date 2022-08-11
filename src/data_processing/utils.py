@@ -266,7 +266,7 @@ def get_fields_for_plot(cloudnet_file_type: str) -> Tuple[list, int]:
     elif cloudnet_file_type == "lidar":
         fields = ["beta", "beta_raw", "depolarisation", "depolarisation_raw"]
     elif cloudnet_file_type == "mwr":
-        fields = ["lwp"]
+        fields = ["lwp", "iwv"]
     elif cloudnet_file_type == "radar":
         fields = ["Zh", "v", "width", "ldr", "sldr"]
     elif cloudnet_file_type == "disdrometer":

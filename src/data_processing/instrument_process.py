@@ -230,7 +230,7 @@ class ProcessMwr(ProcessInstrument):
     def process_hatpro(self):
         try:
             full_paths, raw_uuids, self.instrument_pids = self.base.download_instrument(
-                "hatpro", "^(?!.*scan).*\.lwp$"
+                "hatpro", "^(?!.*scan).*\.lwp$|^(?!.*scan).*\.iwv$"
             )
             self.uuid.product, valid_full_paths = hatpro2nc(
                 self.base.temp_dir.name, *self._args, **self._kwargs
