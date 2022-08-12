@@ -197,6 +197,11 @@ Run end-to-end tests:
 
     docker run -tv $PWD/tests:/app/tests -v $PWD/src:/app/src --env-file e2e-test.env test /bin/sh -c 'for f in tests/e2e/*/main.py; do $f; done'
 
+### Note about releasing
+
+Do not release new versions manually. New version is automatically released
+during deploy into Cloudnet production servers.
+
 ### Licence
 
 MIT
