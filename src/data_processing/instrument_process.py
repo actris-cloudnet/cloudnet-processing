@@ -9,6 +9,7 @@ from typing import List
 from cloudnetpy.instruments import (
     basta2nc,
     ceilo2nc,
+    copernicus2nc,
     disdrometer2nc,
     hatpro2nc,
     mira2nc,
@@ -85,7 +86,12 @@ class ProcessRadar(ProcessInstrument):
         self.uuid.product = basta2nc(full_path, *self._args, **self._kwargs)
 
     def process_copernicus(self):
-        raise NotImplementedError("Copernicus cloud radar not yet implemented!")
+        full_paths, self.uuid.raw, self.instrument_pids = self.base.download_instrument(
+            "copernicus"
+        )
+        self.uuid.product = copernicus2nc(
+            os.path.dirname(full_paths[0]), *self._args, **self._kwargs
+        )
 
     def process_galileo(self):
         raise NotImplementedError("Galileo cloud radar not yet implemented!")
