@@ -175,11 +175,11 @@ Print list of Cloudnet variables.
 
     usage: map-variable-names.py
 
-### Development
+## Development
 
 For development, you may open a bash session inside the container with:
 
-    docker-compose -f ../dev-toolkit/docker-compose.yml run --entrypoint bash data-processing
+    docker compose -f ../dev-toolkit/docker-compose.yml run --entrypoint bash data-processing
 
 The changes made to the source files on the host computer will be reflected in the container.
 
