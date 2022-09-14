@@ -157,9 +157,9 @@ def send_slack_alert(
     """Sends notification to slack."""
     config = read_main_conf()
     if critical is True:
-        logging.critical(error_msg)
+        logging.critical(error_msg, exc_info=True)
     else:
-        logging.error(error_msg)
+        logging.error(error_msg, exc_info=True)
 
     key = "SLACK_API_TOKEN"
     if key not in config or config[key] == "":
