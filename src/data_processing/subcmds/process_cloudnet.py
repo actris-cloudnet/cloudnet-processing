@@ -225,7 +225,7 @@ class ProcessCloudnet(ProcessBase):
         selected_instrument = instrument[0]
         if len(instrument) > 1:
             # First choose the preferred instrument
-            preferred = ("rpg-fmcw-94", "chm15k", "chm15x")
+            preferred = ("rpg-fmcw-94", "mira", "chm15k", "chm15kx", "chm15x")
             for instru in instrument:
                 if instru in preferred:
                     selected_instrument = instru

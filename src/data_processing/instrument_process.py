@@ -113,6 +113,9 @@ class ProcessLidar(ProcessInstrument):
     def process_chm15x(self):
         self._process_chm_lidar("chm15x")
 
+    def process_chm15kx(self):
+        self._process_chm_lidar("chm15kx")
+
     def _process_chm_lidar(self, model: str):
         full_paths, raw_uuids, self.instrument_pids = self.base.download_instrument(model)
         valid_full_paths = concat_wrapper.concat_chm15k_files(

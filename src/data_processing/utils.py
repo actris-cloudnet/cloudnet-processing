@@ -621,14 +621,16 @@ def dimensions2dict(dimensions: Dimensions) -> dict:
     }
 
 
-def check_chm_version(filename: str, expected_version: str):
-    nc = netCDF4.Dataset(filename)
-    source = getattr(nc, "source", "")[:3].lower()
-    nc.close()
-    if (expected_version == "chm15x" and source != "chx") or (
-        expected_version == "chm15k" and source != "chm"
-    ):
-        logging.warning(f"Data submitted with incorrect instrument id")
+def check_chm_version(filename: str, identifier: str):
+    def print_warning(expected: str):
+        logging.warning(f"{expected} data submitted with incorrect identifier {identifier}")
+
+    with netCDF4.Dataset(filename) as nc:
+        source = getattr(nc, "source", "")[:3].lower()
+    if source == "chx" and identifier in ("chm15x", "chm15k"):
+        print_warning("chm15kx")
+    if source == "chm" and identifier in ("chm15x", "chm15kx"):
+        print_warning("chm15k")
 
 
 def make_session() -> requests.Session:
