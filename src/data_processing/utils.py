@@ -105,7 +105,10 @@ def get_product_types(level: Optional[str] = None) -> list:
 def get_product_types_excluding_level3() -> list:
     """Returns Cloudnet processing types (other than level 3)."""
     products = get_from_data_portal_api("api/products")
-    return [product["id"] for product in products if product["level"] != "3"]
+    l1b = [product["id"] for product in products if product["level"] == "1b"]
+    l1c = [product["id"] for product in products if product["level"] == "1c"]
+    l2 = [product["id"] for product in products if product["level"] == "2"]
+    return l1b + l1c + l2
 
 
 def get_calibration_factor(site: str, date: str, instrument: str) -> Union[float, None]:

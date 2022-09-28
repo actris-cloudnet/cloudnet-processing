@@ -57,7 +57,7 @@ def _parse_args(args):
         help="Products to be processed, e.g., radar,lidar,mwr,categorize,iwc.\
                         Default is all regular products.",
         type=lambda s: s.split(","),
-        default=utils.get_product_types(),
+        default=utils.get_product_types_excluding_level3(),
     )
     group.add_argument(
         "--start",
