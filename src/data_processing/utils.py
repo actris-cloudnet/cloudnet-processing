@@ -2,6 +2,7 @@
 import base64
 import datetime
 import hashlib
+import json
 import logging
 import os
 import random
@@ -19,7 +20,7 @@ import requests
 from cloudnetpy.plotting.plot_meta import ATTRIBUTES as ATTR
 from cloudnetpy.plotting.plotting import Dimensions
 from cloudnetpy.utils import get_time
-from cloudnetpy_qc import Quality
+from cloudnetpy_qc import quality
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
@@ -441,94 +442,8 @@ def init_logger(args, log_filename: str):
 
 def create_quality_report(filename: str) -> dict:
     """Creates quality report for data portal."""
-    quality = Quality(filename)
-    meta_res = quality.check_metadata()
-    data_res = quality.check_data()
-    quality.close()
-    return {
-        "checkedAt": datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "overallScore": _calc_quality(quality),
-        "metadata": _parse_quality_result(meta_res),
-        "data": _parse_quality_result(data_res),
-    }
-
-
-def _parse_quality_result(quality_result: dict) -> list:
-    test_array = []
-    for test_name, value in quality_result.items():
-        errors = []
-        if test_name in ("outOfBounds", "invalidGlobalAttributeValues"):
-            for name, detected, limits in value:
-                prefix = "variable" if "Bounds" in test_name else "attribute"
-                diagnostics = {
-                    f"{prefix}Name": name,
-                    "lowerBound": float(limits[0]),
-                    "upperBound": float(limits[1]),
-                }
-                exceeding_key = "exceedingValue"
-                if test_name == "outOfBounds":
-                    min_value, max_value = [round(float(x), 4) for x in detected]
-                    if min_value < limits[0]:
-                        diagnostics[exceeding_key] = min_value
-                    if max_value > limits[1]:
-                        diagnostics[exceeding_key] = max_value
-                else:
-                    if detected < limits[0] or detected > limits[1]:
-                        diagnostics[exceeding_key] = detected
-                errors.append(diagnostics)
-        elif test_name == "invalidUnits":
-            for name, unit, expected_unit in value:
-                errors.append(
-                    {
-                        "variableName": name,
-                        "expectedUnit": expected_unit,
-                        "unit": unit,
-                    }
-                )
-        else:
-            errors = value
-        test_array.append(
-            {
-                "name": _format_test_name(test_name),
-                "report": errors,
-                "description": _get_test_description(test_name),
-            }
-        )
-    return test_array
-
-
-def _format_test_name(test_name: str) -> str:
-    """Changes 'outOfBounds' to 'Out of bounds', etc."""
-    capitalized_indices = [ind for ind, c in enumerate(test_name) if c.isupper()]
-    capitalized_indices.reverse()
-    chars = [test_name[ind] for ind in capitalized_indices]
-    for ind, char in zip(capitalized_indices, chars):
-        test_name = test_name[:ind] + f" {char.lower()}" + test_name[ind + 1 :]
-    return test_name.capitalize()
-
-
-def _get_test_description(test_name: str) -> str:
-    if test_name == "outOfBounds":
-        return "Find data values that are unexpectedly large or small."
-    if test_name == "invalidGlobalAttributeValues":
-        return "Find attribute values that are unexpectedly large or small."
-    if test_name == "invalidUnits":
-        return "Find unexpected variable units."
-    if test_name == "missingVariables":
-        return "Find variables that should be included."
-    if test_name == "missingGlobalAttributes":
-        return "Find global attributes that should be included."
-    if test_name == "medianLwp":
-        return "Find abnormally high median LWP."
-    if test_name == "timeVectorStep":
-        return "Find non-continuous time vector steps."
-    return ""
-
-
-def _calc_quality(quality: Quality) -> float:
-    n_tests = quality.n_metadata_tests + quality.n_data_tests
-    n_failures = quality.n_metadata_test_failures + quality.n_data_test_failures
-    return round(1 - (n_failures / n_tests), 2)
+    report = quality.run_tests(Path(filename))
+    return report
 
 
 def get_temp_dir(config: dict) -> str:

@@ -53,12 +53,12 @@ class ProcessBase:
         self._create_new_version = False
         self._temp_dir_root = utils.get_temp_dir(config)
         self.temp_dir = TemporaryDirectory(dir=self._temp_dir_root)
-        self.temp_file = NamedTemporaryFile(dir=self._temp_dir_root)
-        self.daily_file = NamedTemporaryFile(dir=self._temp_dir_root)
+        self.temp_file = NamedTemporaryFile(dir=self._temp_dir_root, suffix=".nc")
+        self.daily_file = NamedTemporaryFile(dir=self._temp_dir_root, suffix=".nc")
 
     def init_temp_files(self):
-        self.temp_file = NamedTemporaryFile(dir=self._temp_dir_root)
-        self.daily_file = NamedTemporaryFile(dir=self._temp_dir_root)
+        self.temp_file = NamedTemporaryFile(dir=self._temp_dir_root, suffix=".nc")
+        self.daily_file = NamedTemporaryFile(dir=self._temp_dir_root, suffix=".nc")
 
     def fetch_volatile_uuid(self, product: str) -> Union[str, None]:
         payload = self._get_payload(product=product)
@@ -151,10 +151,6 @@ class ProcessBase:
 
     def upload_quality_report(self, full_path: str, uuid: str) -> None:
         quality_report = utils.create_quality_report(full_path)
-        if quality_report["overallScore"] == 1:
-            logging.info("QC passed")
-        else:
-            logging.info("Some QC tests failed")
         self.md_api.put("quality", uuid, quality_report)
 
     def _read_volatile_uuid(self, metadata: list) -> Union[str, None]:
