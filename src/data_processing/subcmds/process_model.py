@@ -31,6 +31,7 @@ def main(args, storage_session: Optional[requests.Session] = None):
             process.create_and_upload_images(
                 process.temp_file.name, "model", uuid.product, row["model"]["id"]
             )
+            logging.info("Creating QC report")
             process.upload_quality_report(process.temp_file.name, uuid.product)
             process.print_info()
         except MiscError as err:
