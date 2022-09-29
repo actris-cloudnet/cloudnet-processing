@@ -26,8 +26,10 @@ def main(args, storage_session: Optional[requests.Session] = None):
     temp_dir = TemporaryDirectory(dir=temp_dir_root)
     qc = ProcessBase(args, config)
     for row in metadata:
+        product = row["product"]["id"]
+        uuid = row['uuid']
         logging.info(
-            f'Creating QC report: {row["site"]["id"]} - {row["measurementDate"]} - {row["product"]["id"]}'
+            f'Creating QC report: {row["site"]["id"]} - {row["measurementDate"]} - {product}'
         )
         try:
             full_path = storage_api.download_product(row, temp_dir.name)
@@ -35,7 +37,10 @@ def main(args, storage_session: Optional[requests.Session] = None):
             logging.error(err)
             continue
         try:
-            qc.upload_quality_report(full_path, row["uuid"])
+            if row['legacy']:
+                qc.upload_quality_report(full_path, uuid, product)
+            else:
+                qc.upload_quality_report(full_path, uuid)
         except OSError as err:
             logging.error(err)
         for filename in glob.glob(f"{temp_dir.name}/*"):

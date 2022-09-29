@@ -149,8 +149,8 @@ class ProcessBase:
             "dimensions": utils.dimensions2dict(dimensions) if dimensions is not None else None,
         }
 
-    def upload_quality_report(self, full_path: str, uuid: str) -> None:
-        quality_report = utils.create_quality_report(full_path)
+    def upload_quality_report(self, full_path: str, uuid: str, product: Optional[str] = None) -> None:
+        quality_report = utils.create_quality_report(full_path, product=product)
         self.md_api.put("quality", uuid, quality_report)
 
     def _read_volatile_uuid(self, metadata: list) -> Union[str, None]:
