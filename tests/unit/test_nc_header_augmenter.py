@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 from cloudnetpy.exceptions import ValidTimeStampError
 from cloudnetpy.metadata import COMMON_ATTRIBUTES
-from cloudnetpy_qc import Quality
+from cloudnetpy_qc import quality
 
 from data_processing import nc_header_augmenter as nca
 from data_processing.utils import MiscError
@@ -92,7 +92,7 @@ class TestMwr:
 
     def test_palaiseau_mwr(self):
         test_file = f"{TEST_FILE_PATH}/../data/raw/hatpro/palaiseau_hatpro.nc"
-        temp_file = NamedTemporaryFile()
+        temp_file = NamedTemporaryFile(suffix=".nc")
         shutil.copy(test_file, temp_file.name)
         self.data["full_path"] = temp_file.name
         self.data["date"] = "2021-10-07"
@@ -119,7 +119,7 @@ class TestMwr:
 )
 def test_production_mwr_files(filename, site):
     test_file = f"{TEST_FILE_PATH}/../data/raw/hatpro/{filename}"
-    temp_file = NamedTemporaryFile()
+    temp_file = NamedTemporaryFile(suffix=".nc")
     shutil.copy(test_file, temp_file.name)
     data = {
         "site_name": site,
@@ -141,7 +141,7 @@ def test_production_mwr_files(filename, site):
 )
 def test_halo_fix(filename):
     test_file = f"{TEST_FILE_PATH}/../data/raw/halo/{filename}"
-    temp_file = NamedTemporaryFile()
+    temp_file = NamedTemporaryFile(suffix=".nc")
     shutil.copy(test_file, temp_file.name)
     data = {
         "site_name": "hyytiala",
@@ -194,7 +194,7 @@ class TestModel:
 
     def test_punta_arenas_ecmwf(self):
         test_file = f"{TEST_FILE_PATH}/../data/raw/model/20211120_punta-arenas_ecmwf.nc"
-        temp_file = NamedTemporaryFile()
+        temp_file = NamedTemporaryFile(suffix=".nc")
         shutil.copy(test_file, temp_file.name)
         self.data["full_path"] = temp_file.name
         self.data["date"] = "2021-11-20"
@@ -211,7 +211,7 @@ class TestModel:
 
     def test_bucharest_ecmwf(self):
         test_file = f"{TEST_FILE_PATH}/../data/raw/model/20220118_bucharest_ecmwf.nc"
-        temp_file = NamedTemporaryFile()
+        temp_file = NamedTemporaryFile(suffix=".nc")
         shutil.copy(test_file, temp_file.name)
         self.data["full_path"] = temp_file.name
         self.data["date"] = "2022-01-18"
@@ -234,8 +234,4 @@ def test_get_epoch(arg, expected):
 
 
 def run_quality_tests(filename: str):
-    quality = Quality(filename)
-    res_data = quality.check_data()
-    res_metadata = quality.check_metadata()
-    assert quality.n_metadata_test_failures == 0, res_metadata
-    assert quality.n_data_test_failures == 0, res_data
+    quality.run_tests(Path(filename))

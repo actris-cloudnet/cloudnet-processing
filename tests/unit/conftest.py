@@ -29,7 +29,7 @@ def nc_file_with_pid(tmpdir_factory):
 
 @pytest.fixture(scope="function")
 def mwr_file(tmpdir_factory):
-    file_name = tmpdir_factory.mktemp("data").join("201023.LWP.NC")
+    file_name = tmpdir_factory.mktemp("data").join("201023.LWP.nc")
     root_grp = netCDF4.Dataset(file_name, "w", format="NETCDF3_CLASSIC")
     root_grp.createDimension("time", None)
     time = root_grp.createVariable("time", "i4", ("time",))
