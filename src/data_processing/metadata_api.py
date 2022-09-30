@@ -2,7 +2,7 @@
 import logging
 import os
 from argparse import Namespace
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Optional, Tuple, Union
 
 import requests
@@ -135,6 +135,7 @@ class MetadataApi:
                 **common_payload,
             }
             files += self.get("api/model-files", model_files_payload)
+        files.sort(key=lambda x: datetime.strptime(x["measurementDate"], "%Y-%m-%d"))
         return files
 
 
