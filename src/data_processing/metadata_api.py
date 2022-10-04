@@ -138,6 +138,13 @@ class MetadataApi:
         files.sort(key=lambda x: datetime.strptime(x["measurementDate"], "%Y-%m-%d"))
         return files
 
+    def get_qc_version(self, uuid: str) -> Union[dict, None]:
+        try:
+            data = self.get(f"api/quality/{uuid}")
+            return {"result": data["errorLevel"], "qc_version": data["qcVersion"]}
+        except requests.exceptions.HTTPError:
+            return None
+
 
 def _get_common_payload(args: Namespace) -> dict:
     if args.date is not None:

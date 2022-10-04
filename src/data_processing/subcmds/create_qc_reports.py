@@ -6,6 +6,7 @@ import os
 from tempfile import TemporaryDirectory
 from typing import Optional
 
+import cloudnetpy_qc.version
 import requests
 from requests.exceptions import HTTPError
 
@@ -27,7 +28,11 @@ def main(args, storage_session: Optional[requests.Session] = None):
     qc = ProcessBase(args, config)
     for row in metadata:
         product = row["product"]["id"]
-        uuid = row['uuid']
+        uuid = row["uuid"]
+        qc_info = md_api.get_qc_version(uuid)
+        if qc_info and qc_info["qc_version"] == cloudnetpy_qc.version.__version__:
+            logging.info("Same cloudnetpy-qc version, skipping.")
+            continue
         logging.info(
             f'Creating QC report: {row["site"]["id"]} - {row["measurementDate"]} - {product}'
         )
@@ -37,7 +42,7 @@ def main(args, storage_session: Optional[requests.Session] = None):
             logging.error(err)
             continue
         try:
-            if row['legacy']:
+            if row["legacy"]:
                 qc.upload_quality_report(full_path, uuid, product)
             else:
                 qc.upload_quality_report(full_path, uuid)
