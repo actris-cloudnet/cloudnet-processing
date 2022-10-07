@@ -8,7 +8,6 @@ import socket
 import subprocess
 import sys
 import time
-from tempfile import NamedTemporaryFile
 
 import requests
 import requests_mock

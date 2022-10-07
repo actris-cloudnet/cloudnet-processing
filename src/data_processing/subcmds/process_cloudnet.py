@@ -244,9 +244,8 @@ class ProcessCloudnet(ProcessBase):
         if len(set(instrument_pids)) > 1:
             logging.error("Several instrument PIDs found")
         if instrument_pids and (instrument_pid := instrument_pids[0]) is not None:
-            nc = netCDF4.Dataset(self.temp_file.name, "r+")
-            nc.instrument_pid = instrument_pid
-            nc.close()
+            with netCDF4.Dataset(self.temp_file.name, "r+") as nc:
+                nc.instrument_pid = instrument_pid
 
 
 def add_arguments(subparser):

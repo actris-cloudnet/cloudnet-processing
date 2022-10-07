@@ -35,25 +35,24 @@ def create_product_put_payload(
     date_str: Optional[str] = None,
 ) -> dict:
     """Creates put payload for data portal."""
-    nc = netCDF4.Dataset(full_path, "r")
-    payload = {
-        "product": product or nc.cloudnet_file_type,
-        "site": site or nc.location.lower(),
-        "measurementDate": date_str or f"{nc.year}-{nc.month}-{nc.day}",
-        "format": get_file_format(nc),
-        "checksum": sha256sum(full_path),
-        "volatile": not hasattr(nc, "pid"),
-        "uuid": getattr(nc, "file_uuid", ""),
-        "pid": getattr(nc, "pid", ""),
-        "processingVersion": get_data_processing_version(),
-        "instrumentPid": getattr(nc, "instrument_pid", None),
-        **storage_service_response,
-    }
-    source_uuids = getattr(nc, "source_file_uuids", None)
-    if source_uuids:
-        payload["sourceFileIds"] = source_uuids.replace(" ", "").split(",")
-    payload["cloudnetpyVersion"] = getattr(nc, "cloudnetpy_version", "")
-    nc.close()
+    with netCDF4.Dataset(full_path, "r") as nc:
+        payload = {
+            "product": product or nc.cloudnet_file_type,
+            "site": site or nc.location.lower(),
+            "measurementDate": date_str or f"{nc.year}-{nc.month}-{nc.day}",
+            "format": get_file_format(nc),
+            "checksum": sha256sum(full_path),
+            "volatile": not hasattr(nc, "pid"),
+            "uuid": getattr(nc, "file_uuid", ""),
+            "pid": getattr(nc, "pid", ""),
+            "processingVersion": get_data_processing_version(),
+            "instrumentPid": getattr(nc, "instrument_pid", None),
+            **storage_service_response,
+        }
+        source_uuids = getattr(nc, "source_file_uuids", None)
+        if source_uuids:
+            payload["sourceFileIds"] = source_uuids.replace(" ", "").split(",")
+        payload["cloudnetpyVersion"] = getattr(nc, "cloudnetpy_version", "")
     return payload
 
 
@@ -78,9 +77,8 @@ def get_file_format(nc: netCDF4.Dataset):
 def add_version_to_global_attributes(full_path: str):
     """Add data-processing package version to file attributes."""
     version = get_data_processing_version()
-    nc = netCDF4.Dataset(full_path, "r+")
-    nc.cloudnet_processing_version = version
-    nc.close()
+    with netCDF4.Dataset(full_path, "r+") as nc:
+        nc.cloudnet_processing_version = version
 
 
 def read_site_info(site_name: str) -> dict:
@@ -335,9 +333,8 @@ def get_product_bucket(volatile: bool = False) -> str:
 
 def is_volatile_file(filename: str) -> bool:
     """Check if nc-file is volatile."""
-    nc = netCDF4.Dataset(filename)
-    is_missing_pid = not hasattr(nc, "pid")
-    nc.close()
+    with netCDF4.Dataset(filename) as nc:
+        is_missing_pid = not hasattr(nc, "pid")
     return is_missing_pid
 
 

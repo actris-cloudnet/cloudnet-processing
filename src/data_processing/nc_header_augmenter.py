@@ -19,81 +19,81 @@ from data_processing.utils import MiscError
 
 def fix_legacy_file(legacy_file_full_path: str, target_full_path: str) -> str:
     """Fixes legacy netCDF file."""
-    nc_legacy = netCDF4.Dataset(legacy_file_full_path, "r")
-    nc = netCDF4.Dataset(target_full_path, "w", format="NETCDF4_CLASSIC")
-    legacy = Level1Nc(nc_legacy, nc, {"uuid": None})
-    legacy.copy_file_contents()
-    uuid = legacy.add_uuid()
-    legacy.add_history("")
-    legacy.close()
+    with netCDF4.Dataset(legacy_file_full_path, "r") as nc_legacy, netCDF4.Dataset(
+        target_full_path, "w", format="NETCDF4_CLASSIC"
+    ) as nc:
+        legacy = Level1Nc(nc_legacy, nc, {"uuid": None})
+        legacy.copy_file_contents()
+        uuid = legacy.add_uuid()
+        legacy.add_history("")
     return uuid
 
 
 def harmonize_model_file(data: dict) -> str:
     """Harmonizes model netCDF file."""
     temp_file = NamedTemporaryFile()
-    nc_raw = netCDF4.Dataset(data["full_path"], "r")
-    nc = netCDF4.Dataset(temp_file.name, "w", format="NETCDF4_CLASSIC")
-    model = ModelNc(nc_raw, nc, data)
-    model.copy_file_contents()
-    model.harmonize_attribute("units", ("latitude", "longitude", "altitude"))
-    uuid = model.add_uuid()
-    model.add_global_model_attributes()
-    model.check_time_dimension()
-    model.add_date()
-    model.add_history("model")
-    model.close()
-    shutil.copy(temp_file.name, data["full_path"])
+    with netCDF4.Dataset(data["full_path"], "r") as nc_raw, netCDF4.Dataset(
+        temp_file.name, "w", format="NETCDF4_CLASSIC"
+    ) as nc:
+        model = ModelNc(nc_raw, nc, data)
+        model.copy_file_contents()
+        model.harmonize_attribute("units", ("latitude", "longitude", "altitude"))
+        uuid = model.add_uuid()
+        model.add_global_model_attributes()
+        model.check_time_dimension()
+        model.add_date()
+        model.add_history("model")
+        shutil.copy(temp_file.name, data["full_path"])
     return uuid
 
 
 def harmonize_hatpro_file(data: dict) -> str:
     """Harmonizes calibrated HATPRO netCDF file."""
     temp_file = NamedTemporaryFile()
-    nc_raw = netCDF4.Dataset(data["full_path"], "r")
-    nc = netCDF4.Dataset(temp_file.name, "w", format="NETCDF4_CLASSIC")
-    hatpro = HatproNc(nc_raw, nc, data)
-    hatpro.copy_file()
-    hatpro.add_lwp()
-    hatpro.check_lwp_data()
-    hatpro.sort_time()
-    hatpro.convert_time()
-    hatpro.check_time_reference()
-    hatpro.add_geolocation()
-    hatpro.clean_global_attributes()
-    uuid = hatpro.add_uuid()
-    hatpro.add_date()
-    hatpro.add_global_attributes("mwr", instruments.HATPRO)
-    hatpro.add_history("mwr")
-    hatpro.close()
-    shutil.copy(temp_file.name, data["full_path"])
+    with netCDF4.Dataset(data["full_path"], "r") as nc_raw, netCDF4.Dataset(
+        temp_file.name, "w", format="NETCDF4_CLASSIC"
+    ) as nc:
+        hatpro = HatproNc(nc_raw, nc, data)
+        hatpro.copy_file()
+        hatpro.add_lwp()
+        hatpro.check_lwp_data()
+        hatpro.sort_time()
+        hatpro.convert_time()
+        hatpro.check_time_reference()
+        hatpro.add_geolocation()
+        hatpro.clean_global_attributes()
+        uuid = hatpro.add_uuid()
+        hatpro.add_date()
+        hatpro.add_global_attributes("mwr", instruments.HATPRO)
+        hatpro.add_history("mwr")
+        shutil.copy(temp_file.name, data["full_path"])
     return uuid
 
 
 def harmonize_halo_file(data: dict) -> str:
     """Harmonizes calibrated HALO Doppler lidar netCDF file."""
     temp_file = NamedTemporaryFile()
-    nc_raw = netCDF4.Dataset(data["full_path"], "r")
-    nc = netCDF4.Dataset(temp_file.name, "w", format="NETCDF4_CLASSIC")
-    halo = HaloNc(nc_raw, nc, data)
-    valid_ind = halo.get_valid_time_indices()
-    halo.copy_file(valid_ind)
-    halo.clean_global_attributes()
-    halo.add_geolocation()
-    halo.add_date()
-    halo.add_global_attributes("lidar", instruments.HALO)
-    uuid = halo.add_uuid()
-    halo.add_zenith_angle()
-    halo.check_zenith_angle()
-    halo.add_range()
-    halo.add_wavelength()
-    halo.clean_variable_attributes()
-    halo.fix_time_units()
-    for attribute in ("units", "long_name", "standard_name"):
-        halo.harmonize_attribute(attribute)
-    halo.add_history("lidar")
-    halo.close()
-    shutil.copy(temp_file.name, data["full_path"])
+    with netCDF4.Dataset(data["full_path"], "r") as nc_raw, netCDF4.Dataset(
+        temp_file.name, "w", format="NETCDF4_CLASSIC"
+    ) as nc:
+        halo = HaloNc(nc_raw, nc, data)
+        valid_ind = halo.get_valid_time_indices()
+        halo.copy_file(valid_ind)
+        halo.clean_global_attributes()
+        halo.add_geolocation()
+        halo.add_date()
+        halo.add_global_attributes("lidar", instruments.HALO)
+        uuid = halo.add_uuid()
+        halo.add_zenith_angle()
+        halo.check_zenith_angle()
+        halo.add_range()
+        halo.add_wavelength()
+        halo.clean_variable_attributes()
+        halo.fix_time_units()
+        for attribute in ("units", "long_name", "standard_name"):
+            halo.harmonize_attribute(attribute)
+        halo.add_history("lidar")
+        shutil.copy(temp_file.name, data["full_path"])
     return uuid
 
 
@@ -202,11 +202,6 @@ class Level1Nc:
         for attr in self.nc.ncattrs():
             delattr(self.nc, attr)
 
-    def close(self):
-        """Closes open files."""
-        self.nc.close()
-        self.nc_raw.close()
-
     def _copy_global_attributes(self):
         for name in self.nc_raw.ncattrs():
             setattr(self.nc, name, self.nc_raw.getncattr(name))
@@ -239,7 +234,6 @@ class ModelNc(Level1Nc):
             return
         if self.data["model"] != "gdas1" and n_steps == n_steps_expected:
             return
-        self.close()
         raise MiscError("Incomplete model file.")
 
     def add_date(self):
@@ -269,7 +263,6 @@ class HaloNc(Level1Nc):
         """Checks zenith angle value."""
         threshold = 15
         if (zenith_angle := self.nc.variables["zenith_angle"][:]) > threshold:
-            self.close()
             raise ValueError(f"Invalid zenith angle {zenith_angle}")
 
     def add_range(self):
@@ -297,7 +290,6 @@ class HaloNc(Level1Nc):
                     continue
                 valid_ind.append(ind)
         if not valid_ind:
-            self.close()
             raise ValidTimeStampError
         return valid_ind
 
@@ -365,7 +357,6 @@ class HatproNc(Level1Nc):
         key = "time_reference"
         if key in self.nc_raw.variables:
             if self.nc_raw.variables[key][:] != 1:  # not UTC
-                self.close()
                 raise ValueError
 
     def _get_valid_timestamps(self) -> list:
@@ -379,7 +370,6 @@ class HatproNc(Level1Nc):
             ):
                 valid_ind.append(ind)
         if not valid_ind:
-            self.close()
             raise ValidTimeStampError
         _, ind = np.unique(time_stamps[valid_ind], return_index=True)
         return list(np.array(valid_ind)[ind])
