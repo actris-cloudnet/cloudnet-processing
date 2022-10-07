@@ -46,14 +46,14 @@ def main(args, storage_session: Optional[requests.Session] = None):
         product = row["product"]["id"]
         logging.info(f"Plotting images for: {img.site} - {img.date_str} - {product}")
         try:
-            full_path = storage_api.download_product(row, temp_dir.name)
+            img.temp_file.name = storage_api.download_product(row, temp_dir.name)
         except HTTPError as err:
             utils.send_slack_alert(err, "img", args, img.date_str, product)
             continue
         try:
             identifier = row["downloadUrl"].split("_")[-1][:-3]
             img.create_and_upload_images(
-                full_path, product, row["uuid"], identifier, legacy=row.get("legacy", False)
+                product, row["uuid"], identifier, legacy=row.get("legacy", False)
             )
         except OSError as err:
             utils.send_slack_alert(err, "img", args, img.date_str, product)

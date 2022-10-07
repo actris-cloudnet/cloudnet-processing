@@ -21,23 +21,22 @@ def main(args, storage_session: Optional[requests.Session] = None):
     config = utils.read_main_conf()
     process = ProcessModel(args, config, storage_session=storage_session)
     for row in process.get_uploaded_model_metadata():
+        model_id = row["model"]["id"]
         process.date_str = row["measurementDate"]
-        logging.info(f'{process.site}, {process.date_str}, {row["model"]["id"]}')
+        logging.info(f"{process.site}, {process.date_str}, {model_id}")
         uuid = Uuid()
         try:
             uuid.volatile = process.fetch_volatile_model_uuid(row)
             uuid = process.process_model(uuid, row)
-            process.upload_product(process.temp_file.name, "model", uuid, row["model"]["id"])
-            process.create_and_upload_images(
-                process.temp_file.name, "model", uuid.product, row["model"]["id"]
-            )
+            process.upload_product("model", uuid, model_id)
+            process.create_and_upload_images("model", uuid.product, model_id)
             logging.info("Creating QC report")
             process.upload_quality_report(process.temp_file.name, uuid.product)
             process.print_info()
         except MiscError as err:
             logging.warning(err)
         except (HTTPError, ConnectionError, RuntimeError) as err:
-            utils.send_slack_alert(err, "model", args, process.date_str, row["model"]["id"])
+            utils.send_slack_alert(err, "model", args, process.date_str, model_id)
 
 
 class ProcessModel(ProcessBase):

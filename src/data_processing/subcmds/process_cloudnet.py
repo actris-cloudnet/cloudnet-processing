@@ -51,16 +51,14 @@ def main(args, storage_session: Optional[requests.Session] = None):
                     uuid, identifier = process.process_categorize(uuid)
                 elif product in utils.get_product_types(level="1b"):
                     uuid, identifier, instrument_pids = process.process_instrument(uuid, product)
-                    process.add_instrument_pid(process.temp_file.name, instrument_pids)
+                    process.add_instrument_pid(instrument_pids)
                 else:
                     logging.info(f"Skipping product {product}")
                     continue
-                process.add_pid(process.temp_file.name)
+                process.add_pid()
                 utils.add_version_to_global_attributes(process.temp_file.name)
-                process.upload_product(process.temp_file.name, product, uuid, identifier)
-                process.create_and_upload_images(
-                    process.temp_file.name, product, uuid.product, identifier
-                )
+                process.upload_product(product, uuid, identifier)
+                process.create_and_upload_images(product, uuid.product, identifier)
                 process.upload_quality_report(process.temp_file.name, uuid.product)
                 process.print_info()
             except (RawDataMissingError, MiscError, NotImplementedError) as err:
@@ -150,9 +148,9 @@ class ProcessCloudnet(ProcessBase):
         identifier = utils.get_product_identifier(product)
         return uuid, identifier
 
-    def add_pid(self, full_path: str) -> None:
+    def add_pid(self) -> None:
         if self._create_new_version:
-            self._pid_utils.add_pid_to_file(full_path)
+            self._pid_utils.add_pid_to_file(self.temp_file.name)
 
     def download_instrument(
         self,
@@ -242,12 +240,11 @@ class ProcessCloudnet(ProcessBase):
             )
         return selected_instrument
 
-    @staticmethod
-    def add_instrument_pid(full_path: str, instrument_pids: list) -> None:
+    def add_instrument_pid(self, instrument_pids: list) -> None:
         if len(set(instrument_pids)) > 1:
             logging.error("Several instrument PIDs found")
         if instrument_pids and (instrument_pid := instrument_pids[0]) is not None:
-            nc = netCDF4.Dataset(full_path, "r+")
+            nc = netCDF4.Dataset(self.temp_file.name, "r+")
             nc.instrument_pid = instrument_pid
             nc.close()
 
