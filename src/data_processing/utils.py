@@ -2,7 +2,6 @@
 import base64
 import datetime
 import hashlib
-import json
 import logging
 import os
 import random
@@ -15,6 +14,7 @@ from pathlib import Path
 from typing import Optional, Tuple, Union
 
 import netCDF4
+import numpy as np
 import pytz
 import requests
 from cloudnetpy.plotting.plot_meta import ATTRIBUTES as ATTR
@@ -555,3 +555,76 @@ def make_session() -> requests.Session:
     http.mount("https://", adapter)
     http.mount("http://", adapter)
     return http
+
+
+def are_identical_nc_files(filename1: str, filename2: str) -> bool:
+    with netCDF4.Dataset(filename1, "r") as nc1, netCDF4.Dataset(filename2, "r") as nc2:
+        try:
+            _compare_dimensions(nc1, nc2)
+            _compare_global_attributes(nc1, nc2)
+            _compare_variables(nc1, nc2)
+            _compare_variable_attributes(nc1, nc2)
+        except AssertionError as err:
+            logging.info(err)
+            return False
+    return True
+
+
+def _compare_dimensions(nc1: netCDF4.Dataset, nc2: netCDF4.Dataset):
+    dims1 = nc1.dimensions.keys()
+    dims2 = nc2.dimensions.keys()
+    assert len(set(dims1) ^ set(dims2)) == 0, f"different dimensions: {dims1} vs {dims2}"
+    for dim in nc1.dimensions:
+        value1 = len(nc1.dimensions[dim])
+        value2 = len(nc2.dimensions[dim])
+        assert value1 == value2, _log("dimensions", dim, value1, value2)
+
+
+def _compare_global_attributes(nc1: netCDF4.Dataset, nc2: netCDF4.Dataset):
+    attribute_skips = (
+        "history",
+        "cloudnetpy_version",
+        "cloudnet_processing_version",
+        "file_uuid",
+    )
+    l1 = [a for a in nc1.ncattrs() if a not in attribute_skips]
+    l2 = [a for a in nc2.ncattrs() if a not in attribute_skips]
+    assert len(set(l1) ^ set(l2)) == 0, f"different global attributes: {l1} vs. {l2}"
+    for name in l1:
+        value1 = getattr(nc1, name)
+        value2 = getattr(nc2, name)
+        assert value1 == value2, _log("global attributes", name, value1, value2)
+
+
+def _compare_variables(nc1: netCDF4.Dataset, nc2: netCDF4.Dataset):
+    vars1 = nc1.variables.keys()
+    vars2 = nc2.variables.keys()
+    assert len(set(vars1) ^ set(vars2)) == 0, f"different variables: {vars1} vs. {vars2}"
+    for name in vars1:
+        value1 = nc1.variables[name][:]
+        value2 = nc2.variables[name][:]
+        assert np.isclose(value1, value2, rtol=1e-4).all(), _log(
+            "variable values", name, value1, value2
+        )
+        value1 = nc1.variables[name].dtype
+        value2 = nc2.variables[name].dtype
+        assert value1 == value2, _log("variable data types", name, value1, value2)
+
+
+def _compare_variable_attributes(nc1: netCDF4.Dataset, nc2: netCDF4.Dataset):
+    for name in nc1.variables:
+        attrs1 = nc1.variables[name].ncattrs()
+        attrs2 = nc2.variables[name].ncattrs()
+        assert len(set(attrs1) ^ set(attrs2)) == 0, _log(
+            "variable attributes", name, attrs1, attrs2
+        )
+        for attr in attrs1:
+            value1 = getattr(nc1.variables[name], attr)
+            value2 = getattr(nc2.variables[name], attr)
+            assert value1 == value2, _log(
+                "variable attribute values", f"{name} - {attr}", value1, value2
+            )
+
+
+def _log(text: str, var_name: str, value1, value2):
+    logging.info(f"{text} differ in {var_name}: {value1} vs. {value2}")

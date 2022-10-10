@@ -3,6 +3,7 @@
 import importlib
 import logging
 import warnings
+from tempfile import TemporaryDirectory
 from typing import List, Optional, Tuple, Union
 
 import netCDF4
@@ -55,6 +56,7 @@ def main(args, storage_session: Optional[requests.Session] = None):
                 else:
                     logging.info(f"Skipping product {product}")
                     continue
+                process.compare_file_content(product)
                 process.add_pid()
                 utils.add_version_to_global_attributes(process.temp_file.name)
                 process.upload_product(product, uuid, identifier)
@@ -70,6 +72,16 @@ def main(args, storage_session: Optional[requests.Session] = None):
 
 
 class ProcessCloudnet(ProcessBase):
+    def compare_file_content(self, product: str):
+        payload = {"site": self.site, "product": product, "date": self.date_str}
+        meta = self.md_api.get("api/files", payload)
+        if not meta:
+            return
+        with TemporaryDirectory() as temp_dir:
+            full_path = self._storage_api.download_product(meta[0], temp_dir)
+            if utils.are_identical_nc_files(full_path, self.temp_file.name) is True:
+                raise MiscError("Abort processing: File has not changed.")
+
     def process_instrument(self, uuid: Uuid, instrument_type: str):
         instrument = self._detect_uploaded_instrument(instrument_type)
         process_class = getattr(instrument_process, f"Process{instrument_type.capitalize()}")

@@ -191,3 +191,11 @@ def test_get_model_identifier(filename, identifier):
 )
 def test_datetime_to_utc(dtime, zone, expected):
     assert utils.datetime_to_utc(dtime, zone) == expected
+
+
+def test_are_identical_nc_files():
+    fname1 = "tests/data/misc/20180703_granada_classification_old.nc"
+    fname2 = "tests/data/misc/20180703_granada_classification.nc"
+    fname3 = "tests/data/misc/20180703_granada_classification_reprocessed.nc"
+    assert utils.are_identical_nc_files(fname1, fname2) is False
+    assert utils.are_identical_nc_files(fname2, fname3) is True
