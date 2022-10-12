@@ -12,10 +12,26 @@ site = "hyytiala"
 date = "2021-09-11"
 instrument = "cl61d"
 source_data = [
-    ("5d5aae0d-4351-4d40-a359-5e7ff0560a56", "HYYlive_20210911_182940.nc"),
-    ("14cf8fa5-7d0f-471a-b85d-6ed0ee0d8c6d", "HYYlive_20210911_182740.nc"),
-    ("be23a333-1a65-4d7d-99df-5f4134fb616e", "HYYlive_20210911_182640.nc"),
-    ("9c2a67e0-ecfb-4914-93bf-3b77ee95a06b", "HYYlive_20210911_191440.nc"),
+    (
+        "5d5aae0d-4351-4d40-a359-5e7ff0560a56",
+        "tests/data/raw/cl61d_2/HYYlive_20210911_182940.nc",
+        "cloudnet-upload",
+    ),
+    (
+        "14cf8fa5-7d0f-471a-b85d-6ed0ee0d8c6d",
+        "tests/data/raw/cl61d_2/HYYlive_20210911_182740.nc",
+        "cloudnet-upload",
+    ),
+    (
+        "be23a333-1a65-4d7d-99df-5f4134fb616e",
+        "tests/data/raw/cl61d_2/HYYlive_20210911_182640.nc",
+        "cloudnet-upload",
+    ),
+    (
+        "9c2a67e0-ecfb-4914-93bf-3b77ee95a06b",
+        "tests/data/raw/cl61d_2/HYYlive_20210911_191440.nc",
+        "cloudnet-upload",
+    ),
 ]
 
 

@@ -12,8 +12,16 @@ site = "bucharest"
 date = "2020-10-22"
 instrument = "model"
 source_data = [
-    ("eb176ca3-374e-471c-9c82-fc9a45578883", "20201022_bucharest_ecmwf.nc"),
-    ("80c2fab5-2dc5-4692-bafe-a7274071770e", "20201022_bucharest_gdas1.nc"),
+    (
+        "eb176ca3-374e-471c-9c82-fc9a45578883",
+        "tests/data/raw/model/20201022_bucharest_ecmwf.nc",
+        "cloudnet-upload",
+    ),
+    (
+        "80c2fab5-2dc5-4692-bafe-a7274071770e",
+        "tests/data/raw/model/20201022_bucharest_gdas1.nc",
+        "cloudnet-upload",
+    ),
 ]
 
 

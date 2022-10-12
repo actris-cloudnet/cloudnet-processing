@@ -43,7 +43,7 @@ class Test:
             in data[3]
         )
 
-        # It exist, get uploaded raw files and append
+        # It exists, get uploaded raw files and append
         assert f"GET /upload-metadata?{fix}{instru}&status=uploaded" in data[4]
 
         # Submit updated daily raw file
@@ -54,7 +54,7 @@ class Test:
         assert "GET /api/calibration" in data[7]
 
         # PUT product file
-        assert f"PUT /files/{self.date_short}_{self.site}_{self.instrument}.nc" in data[8]
+        assert f"PUT /files/{self.date_short}_{self.site}_{self.instrument}.nc" in data[9]
 
         # Update status of raw files
         file_put = '"POST /upload-metadata HTTP/1.1" 200 -'

@@ -47,7 +47,7 @@ class TestCategorizeProcessing:
         n_gets = len(utils.get_product_types(level="1b"))
         n_puts = 2
         n_checks_for_updated_at = 1
-        assert len(data) == n_gets + self.n_img + n_puts + n_checks_for_updated_at
+        assert len(data) == n_gets + self.n_img + n_puts + n_checks_for_updated_at + 1
 
         # Check product status
         assert (
@@ -65,7 +65,7 @@ class TestCategorizeProcessing:
         assert count_strings(data, f'"GET /api/model-files?{sub_str} HTTP/1.1" 200 -') == 1
 
         # PUT file
-        assert '"PUT /files/20201022_bucharest_categorize.nc HTTP/1.1" 201 -' in data[6]
+        assert '"PUT /files/20201022_bucharest_categorize.nc HTTP/1.1" 201 -' in data[7]
 
         # PUT images
         img_put = '"PUT /visualizations/20201022_bucharest_categorize-'

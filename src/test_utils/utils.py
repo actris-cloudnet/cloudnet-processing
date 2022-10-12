@@ -130,11 +130,11 @@ def register_storage_urls(
         return True
 
     session, adapter, mock_addr = init_test_session()
-    source_dir, end_point, is_level_2_product = _get_source_file_paths(identifier)
-    for uuid, filename in source_data:
-        prefix = "" if is_level_2_product else f"/{site}/{uuid}"
+    for uuid, file_path, end_point in source_data:
+        filename = os.path.basename(file_path)
+        prefix = "" if end_point != "cloudnet-upload" else f"/{site}/{uuid}"
         url = f"{mock_addr}{end_point}{prefix}/{filename}"
-        adapter.register_uri("GET", url, body=open(f"{source_dir}/{filename}", "rb"))
+        adapter.register_uri("GET", url, body=open(file_path, "rb"))
     bucket_suffix = "-volatile" if is_volatile is True else ""
     date_stripped = date.replace("-", "")
     if products is None:
@@ -152,20 +152,6 @@ def _fix_identifier(identifier: str) -> str:
     for n in range(10):
         identifier = identifier.replace(f"_{n}", "")
     return identifier
-
-
-def _get_source_file_paths(identifier: str) -> tuple:
-    is_level_2_product = False
-    for product in get_product_types("2"):
-        if product in identifier or identifier in ["categorize", "model_evaluation"]:
-            is_level_2_product = True
-    if is_level_2_product is True:
-        source_dir = "tests/data/products"
-        end_point = "cloudnet-product"
-    else:
-        source_dir = f"tests/data/raw/{identifier}"
-        end_point = "cloudnet-upload"
-    return source_dir, end_point, is_level_2_product
 
 
 def start_test_servers(instrument: str, script_path: str):

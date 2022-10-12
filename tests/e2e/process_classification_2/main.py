@@ -10,7 +10,10 @@ SCRIPT_PATH = path.dirname(path.realpath(__file__))
 site = "bucharest"
 date = "2020-10-22"
 identifier = "classification_2"
-source_data = [("", "20201022_bucharest_categorize.nc")]
+source_data = [
+    ("", "tests/data/products/20201022_bucharest_categorize.nc", "cloudnet-product"),
+    ("", "tests/data/products/20201022_bucharest_classification.nc", "cloudnet-product"),
+]
 
 
 def main():
@@ -21,7 +24,7 @@ def main():
     utils.process(session, main_args, temp_file, SCRIPT_PATH, "first_run")
     utils.reset_log_file(SCRIPT_PATH)
     temp_file = NamedTemporaryFile()
-    session = utils.register_storage_urls(temp_file, source_data, site, date, identifier, True)
+    session = utils.register_storage_urls(temp_file, source_data, site, date, identifier, False)
     main_args += ["-r"]
     utils.process(session, main_args, temp_file, SCRIPT_PATH, "reprocess")
 

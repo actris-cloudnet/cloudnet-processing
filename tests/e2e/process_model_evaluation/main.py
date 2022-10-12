@@ -10,7 +10,10 @@ SCRIPT_PATH = path.dirname(path.realpath(__file__))
 site = "bucharest"
 date = "2020-10-22"
 identifier = "model_evaluation"
-source_data = [("", "20201022_bucharest_categorize.nc"), ("", "20201022_bucharest_ecmwf.nc")]
+source_data = [
+    ("", "tests/data/products/20201022_bucharest_categorize.nc", "cloudnet-product"),
+    ("", "tests/data/products/20201022_bucharest_ecmwf.nc", "cloudnet-product"),
+]
 products = ["l3-cf_downsampled_ecmwf"]
 
 

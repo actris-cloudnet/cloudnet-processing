@@ -12,9 +12,10 @@ site = "bucharest"
 date = "2020-10-22"
 product = "categorize"
 source_data = [
-    ("", "20201022_bucharest_chm15k.nc"),
-    ("", "20201022_bucharest_rpg-fmcw-94.nc"),
-    ("", "20201022_bucharest_ecmwf.nc"),
+    ("", "tests/data/products/20201022_bucharest_chm15k.nc", "cloudnet-product"),
+    ("", "tests/data/products/20201022_bucharest_rpg-fmcw-94.nc", "cloudnet-product"),
+    ("", "tests/data/products/20201022_bucharest_ecmwf.nc", "cloudnet-product"),
+    ("", "tests/data/products/20201022_bucharest_categorize.nc", "cloudnet-product"),
 ]
 
 
