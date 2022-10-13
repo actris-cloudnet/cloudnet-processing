@@ -15,6 +15,7 @@ from typing import Optional, Tuple, Union
 
 import netCDF4
 import numpy as np
+import numpy.ma as ma
 import pytz
 import requests
 from cloudnetpy.plotting.plot_meta import ATTRIBUTES as ATTR
@@ -565,7 +566,7 @@ def are_identical_nc_files(filename1: str, filename2: str) -> bool:
             _compare_variables(nc1, nc2)
             _compare_variable_attributes(nc1, nc2)
         except AssertionError as err:
-            logging.info(err)
+            logging.debug(err)
             return False
     return True
 
@@ -603,12 +604,18 @@ def _compare_variables(nc1: netCDF4.Dataset, nc2: netCDF4.Dataset):
     for name in vars1:
         value1 = nc1.variables[name][:]
         value2 = nc2.variables[name][:]
+        assert value1.shape == value2.shape
+        assert ma.count_masked(value1) == ma.count_masked(value2)
+        if hasattr(value1, "mask") and hasattr(value2, "mask"):
+            value1 = value1[~value1.mask]
+            value2 = value2[~value2.mask]
         assert np.isclose(value1, value2, rtol=1e-4).all(), _log(
             "variable values", name, value1, value2
         )
-        value1 = nc1.variables[name].dtype
-        value2 = nc2.variables[name].dtype
-        assert value1 == value2, _log("variable data types", name, value1, value2)
+        for attr in ("dtype", "dimensions"):
+            value1 = getattr(nc1.variables[name], attr)
+            value2 = getattr(nc2.variables[name], attr)
+            assert value1 == value2, _log(f"variable {attr}", name, value1, value2)
 
 
 def _compare_variable_attributes(nc1: netCDF4.Dataset, nc2: netCDF4.Dataset):
@@ -626,5 +633,5 @@ def _compare_variable_attributes(nc1: netCDF4.Dataset, nc2: netCDF4.Dataset):
             )
 
 
-def _log(text: str, var_name: str, value1, value2):
-    logging.info(f"{text} differ in {var_name}: {value1} vs. {value2}")
+def _log(text: str, var_name: str, value1, value2) -> str:
+    return f"{text} differ in {var_name}: {value1} vs. {value2}"

@@ -80,7 +80,7 @@ class ProcessCloudnet(ProcessBase):
         with TemporaryDirectory() as temp_dir:
             full_path = self._storage_api.download_product(meta[0], temp_dir)
             if utils.are_identical_nc_files(full_path, self.temp_file.name) is True:
-                raise MiscError("Abort processing: File has not changed.")
+                raise MiscError("Abort processing: File has not changed")
 
     def process_instrument(self, uuid: Uuid, instrument_type: str):
         instrument = self._detect_uploaded_instrument(instrument_type)
