@@ -604,10 +604,8 @@ def _compare_variables(nc1: netCDF4.Dataset, nc2: netCDF4.Dataset):
     for name in vars1:
         value1 = nc1.variables[name][:]
         value2 = nc2.variables[name][:]
-        assert value1.shape == value2.shape
-        assert ma.allclose(value1, value2, rtol=1e-4), _log(
-            "variable values", name, value1, value2
-        )
+        assert value1.shape == value2.shape, _log(f"shapes", name, value1.shape, value2.shape)
+        assert ma.allclose(value1, value2, rtol=1e-4), _log("variable values", name, value1, value2)
         for attr in ("dtype", "dimensions"):
             value1 = getattr(nc1.variables[name], attr)
             value2 = getattr(nc2.variables[name], attr)
