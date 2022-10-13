@@ -605,11 +605,7 @@ def _compare_variables(nc1: netCDF4.Dataset, nc2: netCDF4.Dataset):
         value1 = nc1.variables[name][:]
         value2 = nc2.variables[name][:]
         assert value1.shape == value2.shape
-        assert ma.count_masked(value1) == ma.count_masked(value2)
-        if hasattr(value1, "mask") and hasattr(value2, "mask"):
-            value1 = value1[~value1.mask]
-            value2 = value2[~value2.mask]
-        assert np.isclose(value1, value2, rtol=1e-4).all(), _log(
+        assert ma.allclose(value1, value2, rtol=1e-4), _log(
             "variable values", name, value1, value2
         )
         for attr in ("dtype", "dimensions"):
