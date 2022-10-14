@@ -36,13 +36,12 @@ def concat_netcdf_files(
     valid_files = []
     for file in files:
         try:
-            nc = netCDF4.Dataset(file)
+            with netCDF4.Dataset(file) as nc:
+                time = nc.variables["time"]
+                time_array = time[:]
+                time_units = time.units
         except OSError:
             continue
-        time = nc.variables["time"]
-        time_array = time[:]
-        time_units = time.units
-        nc.close()
         epoch = get_epoch(time_units)
         for timestamp in time_array:
             if seconds2date(timestamp, epoch)[:3] == date.split("-"):
@@ -85,10 +84,9 @@ def _remove_files_with_wrong_date(files: list, date_str: str) -> list:
     date_as_ints = [int(x) for x in date]
     valid_files = []
     for file in files:
-        nc = netCDF4.Dataset(file)
-        if _validate_date_attributes(nc, date_as_ints):
-            valid_files.append(file)
-        nc.close()
+        with netCDF4.Dataset(file) as nc:
+            if _validate_date_attributes(nc, date_as_ints):
+                valid_files.append(file)
     return valid_files
 
 

@@ -3,6 +3,7 @@
 import importlib
 import logging
 import warnings
+from tempfile import TemporaryDirectory
 from typing import List, Optional, Tuple, Union
 
 import netCDF4
@@ -51,16 +52,15 @@ def main(args, storage_session: Optional[requests.Session] = None):
                     uuid, identifier = process.process_categorize(uuid)
                 elif product in utils.get_product_types(level="1b"):
                     uuid, identifier, instrument_pids = process.process_instrument(uuid, product)
-                    process.add_instrument_pid(process.temp_file.name, instrument_pids)
+                    process.add_instrument_pid(instrument_pids)
                 else:
                     logging.info(f"Skipping product {product}")
                     continue
-                process.add_pid(process.temp_file.name)
+                process.compare_file_content(product)
+                process.add_pid()
                 utils.add_version_to_global_attributes(process.temp_file.name)
-                process.upload_product(process.temp_file.name, product, uuid, identifier)
-                process.create_and_upload_images(
-                    process.temp_file.name, product, uuid.product, identifier
-                )
+                process.upload_product(product, uuid, identifier)
+                process.create_and_upload_images(product, uuid.product, identifier)
                 process.upload_quality_report(process.temp_file.name, uuid.product)
                 process.print_info()
             except (RawDataMissingError, MiscError, NotImplementedError) as err:
@@ -72,6 +72,16 @@ def main(args, storage_session: Optional[requests.Session] = None):
 
 
 class ProcessCloudnet(ProcessBase):
+    def compare_file_content(self, product: str):
+        payload = {"site": self.site, "product": product, "date": self.date_str}
+        meta = self.md_api.get("api/files", payload)
+        if not meta:
+            return
+        with TemporaryDirectory() as temp_dir:
+            full_path = self._storage_api.download_product(meta[0], temp_dir)
+            if utils.are_identical_nc_files(full_path, self.temp_file.name) is True:
+                raise MiscError("Abort processing: File has not changed")
+
     def process_instrument(self, uuid: Uuid, instrument_type: str):
         instrument = self._detect_uploaded_instrument(instrument_type)
         process_class = getattr(instrument_process, f"Process{instrument_type.capitalize()}")
@@ -150,9 +160,9 @@ class ProcessCloudnet(ProcessBase):
         identifier = utils.get_product_identifier(product)
         return uuid, identifier
 
-    def add_pid(self, full_path: str) -> None:
+    def add_pid(self) -> None:
         if self._create_new_version:
-            self._pid_utils.add_pid_to_file(full_path)
+            self._pid_utils.add_pid_to_file(self.temp_file.name)
 
     def download_instrument(
         self,
@@ -242,14 +252,12 @@ class ProcessCloudnet(ProcessBase):
             )
         return selected_instrument
 
-    @staticmethod
-    def add_instrument_pid(full_path: str, instrument_pids: list) -> None:
+    def add_instrument_pid(self, instrument_pids: list) -> None:
         if len(set(instrument_pids)) > 1:
             logging.error("Several instrument PIDs found")
         if instrument_pids and (instrument_pid := instrument_pids[0]) is not None:
-            nc = netCDF4.Dataset(full_path, "r+")
-            nc.instrument_pid = instrument_pid
-            nc.close()
+            with netCDF4.Dataset(self.temp_file.name, "r+") as nc:
+                nc.instrument_pid = instrument_pid
 
 
 def add_arguments(subparser):

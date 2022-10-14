@@ -67,7 +67,7 @@ class TestChm15kProcessing:
         n_puts = n_img + 2
         n_posts = n_raw_files
 
-        assert len(data) == n_gets + n_puts + n_posts
+        assert len(data) == n_gets + n_puts + n_posts + 1
 
         # Check product status
         assert (
@@ -91,7 +91,7 @@ class TestChm15kProcessing:
         )
 
         # PUT file
-        assert '"PUT /files/20201022_bucharest_chm15k.nc HTTP/1.1"' in data[5]
+        assert '"PUT /files/20201022_bucharest_chm15k.nc HTTP/1.1"' in data[6]
 
         # PUT images
         img_put = '"PUT /visualizations/20201022_bucharest_chm15k-'

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import argparse
 from os import path
 from tempfile import NamedTemporaryFile
 
@@ -12,10 +11,27 @@ site = "bucharest"
 date = "2020-10-22"
 instrument = "chm15k"
 source_data = [
-    ("27d8ac0d-3bab-45fe-9d85-1cc2528e9f95", "00100_A202010221900_CHM170137.nc"),
-    ("80c2fab5-2dc5-4692-bafe-a7274071770e", "00100_A202010221205_CHM170137.nc"),
-    ("d72d71af-a949-4094-aa14-73d1894c6aa5", "00100_A202010220835_CHM170137.nc"),
-    ("ada7f659-68e8-45aa-b88d-e5cd54520052", "00100_A202010212350_CHM170137.nc"),
+    (
+        "27d8ac0d-3bab-45fe-9d85-1cc2528e9f95",
+        "tests/data/raw/chm15k/00100_A202010221900_CHM170137.nc",
+        "cloudnet-upload",
+    ),
+    (
+        "80c2fab5-2dc5-4692-bafe-a7274071770e",
+        "tests/data/raw/chm15k/00100_A202010221205_CHM170137.nc",
+        "cloudnet-upload",
+    ),
+    (
+        "d72d71af-a949-4094-aa14-73d1894c6aa5",
+        "tests/data/raw/chm15k/00100_A202010220835_CHM170137.nc",
+        "cloudnet-upload",
+    ),
+    (
+        "ada7f659-68e8-45aa-b88d-e5cd54520052",
+        "tests/data/raw/chm15k/00100_A202010212350_CHM170137.nc",
+        "cloudnet-upload",
+    ),
+    ("", "tests/data/products/20201022_bucharest_chm15k.nc", "cloudnet-product"),
 ]
 
 

@@ -57,7 +57,7 @@ class Test:
         assert "GET /api/calibration" in data[7]
 
         # PUT product file
-        assert f"PUT /files/{self.date_short}_{self.site}_{self.instrument}.nc" in data[8]
+        assert f"PUT /files/{self.date_short}_{self.site}_{self.instrument}.nc" in data[9]
 
         # Update status of raw files
         file_put = '"POST /upload-metadata HTTP/1.1" 200 -'
@@ -66,7 +66,7 @@ class Test:
         # PUT image
         assert (
             f"PUT /visualizations/{self.date_short}_{self.site}_{self.instrument}-"
-            in data[9 + n_raw_files]
+            in data[10 + n_raw_files]
         )
 
         # Submit QC report

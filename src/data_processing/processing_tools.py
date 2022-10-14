@@ -73,15 +73,13 @@ class ProcessBase:
             f"Created: " f'{"New version" if self._create_new_version is True else "Volatile file"}'
         )
 
-    def upload_product(
-        self, full_path: str, product: str, uuid: Uuid, model_or_instrument_id: str
-    ) -> None:
+    def upload_product(self, product: str, uuid: Uuid, model_or_instrument_id: str) -> None:
         if product in utils.get_product_types(level="3"):
             s3key = self._get_l3_product_key(product, model_or_instrument_id)
         else:
             s3key = self._get_product_key(model_or_instrument_id)
-        file_info = self._storage_api.upload_product(full_path, s3key)
-        payload = utils.create_product_put_payload(full_path, file_info, site=self.site)
+        file_info = self._storage_api.upload_product(self.temp_file.name, s3key)
+        payload = utils.create_product_put_payload(self.temp_file.name, file_info, site=self.site)
         if product == "model":
             del payload["cloudnetpyVersion"]
             del payload["instrumentPid"]
@@ -93,7 +91,6 @@ class ProcessBase:
 
     def create_and_upload_images(
         self,
-        nc_file_full_path: str,
         product: str,
         uuid: str,
         model_or_instrument_id: str,
@@ -114,7 +111,7 @@ class ProcessBase:
         for field in fields:
             try:
                 dimensions = generate_figure(
-                    nc_file_full_path,
+                    self.temp_file.name,
                     [field],
                     show=False,
                     image_name=temp_file.name,
@@ -123,7 +120,7 @@ class ProcessBase:
                     title=False,
                     dpi=120,
                 )
-            except (IndexError, ValueError, TypeError) as err:
+            except (IndexError, ValueError, TypeError):
                 logging.warning(f"Skipping {field}")
                 continue
 
@@ -149,7 +146,9 @@ class ProcessBase:
             "dimensions": utils.dimensions2dict(dimensions) if dimensions is not None else None,
         }
 
-    def upload_quality_report(self, full_path: str, uuid: str, product: Optional[str] = None) -> None:
+    def upload_quality_report(
+        self, full_path: str, uuid: str, product: Optional[str] = None
+    ) -> None:
         quality_report = utils.create_quality_report(full_path, product=product)
         self.md_api.put("quality", uuid, quality_report)
 

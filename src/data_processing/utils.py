@@ -2,7 +2,6 @@
 import base64
 import datetime
 import hashlib
-import json
 import logging
 import os
 import random
@@ -15,6 +14,8 @@ from pathlib import Path
 from typing import Optional, Tuple, Union
 
 import netCDF4
+import numpy as np
+import numpy.ma as ma
 import pytz
 import requests
 from cloudnetpy.plotting.plot_meta import ATTRIBUTES as ATTR
@@ -35,25 +36,24 @@ def create_product_put_payload(
     date_str: Optional[str] = None,
 ) -> dict:
     """Creates put payload for data portal."""
-    nc = netCDF4.Dataset(full_path, "r")
-    payload = {
-        "product": product or nc.cloudnet_file_type,
-        "site": site or nc.location.lower(),
-        "measurementDate": date_str or f"{nc.year}-{nc.month}-{nc.day}",
-        "format": get_file_format(nc),
-        "checksum": sha256sum(full_path),
-        "volatile": not hasattr(nc, "pid"),
-        "uuid": getattr(nc, "file_uuid", ""),
-        "pid": getattr(nc, "pid", ""),
-        "processingVersion": get_data_processing_version(),
-        "instrumentPid": getattr(nc, "instrument_pid", None),
-        **storage_service_response,
-    }
-    source_uuids = getattr(nc, "source_file_uuids", None)
-    if source_uuids:
-        payload["sourceFileIds"] = source_uuids.replace(" ", "").split(",")
-    payload["cloudnetpyVersion"] = getattr(nc, "cloudnetpy_version", "")
-    nc.close()
+    with netCDF4.Dataset(full_path, "r") as nc:
+        payload = {
+            "product": product or nc.cloudnet_file_type,
+            "site": site or nc.location.lower(),
+            "measurementDate": date_str or f"{nc.year}-{nc.month}-{nc.day}",
+            "format": get_file_format(nc),
+            "checksum": sha256sum(full_path),
+            "volatile": not hasattr(nc, "pid"),
+            "uuid": getattr(nc, "file_uuid", ""),
+            "pid": getattr(nc, "pid", ""),
+            "processingVersion": get_data_processing_version(),
+            "instrumentPid": getattr(nc, "instrument_pid", None),
+            **storage_service_response,
+        }
+        source_uuids = getattr(nc, "source_file_uuids", None)
+        if source_uuids:
+            payload["sourceFileIds"] = source_uuids.replace(" ", "").split(",")
+        payload["cloudnetpyVersion"] = getattr(nc, "cloudnetpy_version", "")
     return payload
 
 
@@ -78,9 +78,8 @@ def get_file_format(nc: netCDF4.Dataset):
 def add_version_to_global_attributes(full_path: str):
     """Add data-processing package version to file attributes."""
     version = get_data_processing_version()
-    nc = netCDF4.Dataset(full_path, "r+")
-    nc.cloudnet_processing_version = version
-    nc.close()
+    with netCDF4.Dataset(full_path, "r+") as nc:
+        nc.cloudnet_processing_version = version
 
 
 def read_site_info(site_name: str) -> dict:
@@ -335,9 +334,8 @@ def get_product_bucket(volatile: bool = False) -> str:
 
 def is_volatile_file(filename: str) -> bool:
     """Check if nc-file is volatile."""
-    nc = netCDF4.Dataset(filename)
-    is_missing_pid = not hasattr(nc, "pid")
-    nc.close()
+    with netCDF4.Dataset(filename) as nc:
+        is_missing_pid = not hasattr(nc, "pid")
     return is_missing_pid
 
 
@@ -558,3 +556,76 @@ def make_session() -> requests.Session:
     http.mount("https://", adapter)
     http.mount("http://", adapter)
     return http
+
+
+def are_identical_nc_files(filename1: str, filename2: str) -> bool:
+    with netCDF4.Dataset(filename1, "r") as nc1, netCDF4.Dataset(filename2, "r") as nc2:
+        try:
+            _compare_dimensions(nc1, nc2)
+            _compare_global_attributes(nc1, nc2)
+            _compare_variables(nc1, nc2)
+            _compare_variable_attributes(nc1, nc2)
+        except AssertionError as err:
+            logging.debug(err)
+            return False
+    return True
+
+
+def _compare_dimensions(nc1: netCDF4.Dataset, nc2: netCDF4.Dataset):
+    dims1 = nc1.dimensions.keys()
+    dims2 = nc2.dimensions.keys()
+    assert len(set(dims1) ^ set(dims2)) == 0, f"different dimensions: {dims1} vs {dims2}"
+    for dim in nc1.dimensions:
+        value1 = len(nc1.dimensions[dim])
+        value2 = len(nc2.dimensions[dim])
+        assert value1 == value2, _log("dimensions", dim, value1, value2)
+
+
+def _compare_global_attributes(nc1: netCDF4.Dataset, nc2: netCDF4.Dataset):
+    attribute_skips = (
+        "history",
+        "cloudnetpy_version",
+        "cloudnet_processing_version",
+        "file_uuid",
+    )
+    l1 = [a for a in nc1.ncattrs() if a not in attribute_skips]
+    l2 = [a for a in nc2.ncattrs() if a not in attribute_skips]
+    assert len(set(l1) ^ set(l2)) == 0, f"different global attributes: {l1} vs. {l2}"
+    for name in l1:
+        value1 = getattr(nc1, name)
+        value2 = getattr(nc2, name)
+        assert value1 == value2, _log("global attributes", name, value1, value2)
+
+
+def _compare_variables(nc1: netCDF4.Dataset, nc2: netCDF4.Dataset):
+    vars1 = nc1.variables.keys()
+    vars2 = nc2.variables.keys()
+    assert len(set(vars1) ^ set(vars2)) == 0, f"different variables: {vars1} vs. {vars2}"
+    for name in vars1:
+        value1 = nc1.variables[name][:]
+        value2 = nc2.variables[name][:]
+        assert value1.shape == value2.shape, _log(f"shapes", name, value1.shape, value2.shape)
+        assert ma.allclose(value1, value2, rtol=1e-4), _log("variable values", name, value1, value2)
+        for attr in ("dtype", "dimensions"):
+            value1 = getattr(nc1.variables[name], attr)
+            value2 = getattr(nc2.variables[name], attr)
+            assert value1 == value2, _log(f"variable {attr}", name, value1, value2)
+
+
+def _compare_variable_attributes(nc1: netCDF4.Dataset, nc2: netCDF4.Dataset):
+    for name in nc1.variables:
+        attrs1 = nc1.variables[name].ncattrs()
+        attrs2 = nc2.variables[name].ncattrs()
+        assert len(set(attrs1) ^ set(attrs2)) == 0, _log(
+            "variable attributes", name, attrs1, attrs2
+        )
+        for attr in attrs1:
+            value1 = getattr(nc1.variables[name], attr)
+            value2 = getattr(nc2.variables[name], attr)
+            assert value1 == value2, _log(
+                "variable attribute values", f"{name} - {attr}", value1, value2
+            )
+
+
+def _log(text: str, var_name: str, value1, value2) -> str:
+    return f"{text} differ in {var_name}: {value1} vs. {value2}"

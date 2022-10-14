@@ -12,8 +12,16 @@ site = "lindenberg"
 date = "2021-09-15"
 instrument = "thies-lnm"
 source_data = [
-    ("737df008-b8f3-4798-bbe6-12168bf0f843", "2021091510.txt"),
-    ("8db08368-f92c-44ab-af25-37189d15f4da", "2021091509.txt"),
+    (
+        "737df008-b8f3-4798-bbe6-12168bf0f843",
+        "tests/data/raw/thies-lnm/2021091510.txt",
+        "cloudnet-upload",
+    ),
+    (
+        "8db08368-f92c-44ab-af25-37189d15f4da",
+        "tests/data/raw/thies-lnm/2021091509.txt",
+        "cloudnet-upload",
+    ),
 ]
 
 

@@ -38,7 +38,7 @@ class TestRPGFMCW94Processing:
     def test_that_calls_metadata_api(self):
         data = read_log_file(SCRIPT_PATH)
         n_raw_files = 2
-        n_gets = 4  # product check (1) + instrument checks (2)  + rpg-fmcw-94 raw (1)
+        n_gets = 5  # product check (1) + instrument checks (2)  + rpg-fmcw-94 raw (1) + previous product (1)
         n_img = 4
         n_puts = 2 + n_img
         n_posts = n_raw_files
@@ -59,7 +59,7 @@ class TestRPGFMCW94Processing:
         )
 
         # PUT file
-        assert '"PUT /files/20201022_bucharest_rpg-fmcw-94.nc HTTP/1.1" 201 -' in data[4]
+        assert '"PUT /files/20201022_bucharest_rpg-fmcw-94.nc HTTP/1.1" 201 -' in data[5]
 
         # PUT images
         img_put = '"PUT /visualizations/20201022_bucharest_rpg-fmcw-94-'

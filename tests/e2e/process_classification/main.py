@@ -11,7 +11,7 @@ temp_file = NamedTemporaryFile()
 site = "bucharest"
 date = "2020-10-22"
 product = "classification"
-source_data = [("", "20201022_bucharest_categorize.nc")]
+source_data = [("", "tests/data/products/20201022_bucharest_categorize.nc", "cloudnet-product")]
 
 
 def main():

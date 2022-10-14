@@ -8,7 +8,6 @@ from tempfile import NamedTemporaryFile
 
 import cloudnetpy.utils
 import netCDF4
-import requests
 from requests import HTTPError
 
 from data_processing import utils
@@ -65,13 +64,13 @@ def main():
             # fix file
             s3key = _get_s3key(info)
             logging.info(s3key)
-            temp_file = NamedTemporaryFile(suffix=legacy_file.filename)
-            uuid = fix_legacy_file(file, temp_file.name)
-            pid_utils.add_pid_to_file(temp_file.name)
-            utils.add_version_to_global_attributes(temp_file.name)
-            upload_info = storage_api.upload_product(temp_file.name, s3key)
+            legacy_file.temp_file = NamedTemporaryFile(suffix=legacy_file.filename)
+            uuid = fix_legacy_file(file, legacy_file.temp_file.name)
+            pid_utils.add_pid_to_file(legacy_file.temp_file.name)
+            utils.add_version_to_global_attributes(legacy_file.temp_file.name)
+            upload_info = storage_api.upload_product(legacy_file.temp_file.name, s3key)
             payload = utils.create_product_put_payload(
-                temp_file.name,
+                legacy_file.temp_file.name,
                 upload_info,
                 product=product,
                 date_str=legacy_file.date_str,
@@ -81,10 +80,8 @@ def main():
             md_api.put("files", s3key, payload)
 
             # images
-            legacy_file.create_and_upload_images(
-                temp_file.name, product, uuid, info["identifier"], legacy=True
-            )
-            temp_file.close()
+            legacy_file.create_and_upload_images(product, uuid, info["identifier"], legacy=True)
+            legacy_file.temp_file.close()
 
 
 class LegacyFile(ProcessBase):

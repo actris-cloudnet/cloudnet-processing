@@ -12,8 +12,16 @@ site = "juelich"
 date = "2021-01-27"
 instrument = "mira"
 raw_data = [
-    ("18641b51-ac8c-4a53-a1b9-54f41c045296", "20210127_0206.mmclx.gz"),
-    ("2c3a10dc-ebab-4fd6-bbb3-f559eb64bc37", "20210127_0106.mmclx.gz"),
+    (
+        "18641b51-ac8c-4a53-a1b9-54f41c045296",
+        "tests/data/raw/mira/20210127_0206.mmclx.gz",
+        "cloudnet-upload",
+    ),
+    (
+        "2c3a10dc-ebab-4fd6-bbb3-f559eb64bc37",
+        "tests/data/raw/mira/20210127_0106.mmclx.gz",
+        "cloudnet-upload",
+    ),
 ]
 
 

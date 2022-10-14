@@ -48,7 +48,9 @@ class TestMIRAProcessing:
     def test_that_calls_metadata_api(self):
         data = read_log_file(SCRIPT_PATH)
         n_raw_files = 2
-        n_gets = 4  # instrument checks (2) + product check (1) + mira raw (1)
+        n_gets = (
+            5  # instrument checks (2) + product check (1) + mira raw (1) + previous product (1)
+        )
         n_puts = 2 + self.n_img
         n_posts = n_raw_files
 
@@ -68,7 +70,7 @@ class TestMIRAProcessing:
         )
 
         # PUT file
-        assert '"PUT /files/20210127_juelich_mira.nc HTTP/1.1" 201 -' in data[4]
+        assert '"PUT /files/20210127_juelich_mira.nc HTTP/1.1" 201 -' in data[5]
 
         # PUT images
         img_put = '"PUT /visualizations/20210127_juelich_mira-'

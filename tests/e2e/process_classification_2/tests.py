@@ -40,7 +40,7 @@ class TestClassificationProcessing:
         data = read_log_file(SCRIPT_PATH)
         n_gets = 3
         n_puts = 2
-        assert len(data) == n_gets + n_puts + self.n_img
+        assert len(data) == n_gets + n_puts + self.n_img + 1
 
         # Check product status
         assert (
@@ -55,7 +55,7 @@ class TestClassificationProcessing:
         )
 
         # PUT file
-        assert '"PUT /files/20201022_bucharest_classification.nc HTTP/1.1" 201 -' in data[3]
+        assert '"PUT /files/20201022_bucharest_classification.nc HTTP/1.1" 201 -' in data[4]
 
         # PUT images
         img_put = '"PUT /visualizations/20201022_bucharest_classification-'

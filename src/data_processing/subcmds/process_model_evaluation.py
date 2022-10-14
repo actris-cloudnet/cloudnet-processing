@@ -46,10 +46,8 @@ def main(args, storage_session: Optional[requests.Session] = None):
                 if product in utils.get_product_types(level="3"):
                     try:
                         uuid = process.process_level3_day(uuid, product, model, m_meta)
-                        process.upload_product(process.temp_file.name, product, uuid, model)
-                        process.create_and_upload_images(
-                            process.temp_file.name, product, uuid.product, model
-                        )
+                        process.upload_product(product, uuid, model)
+                        process.create_and_upload_images(product, uuid.product, model)
                         process.print_info()
                     except (RawDataMissingError, MiscError, NotImplementedError) as err:
                         logging.warning(err)
@@ -101,7 +99,6 @@ class ProcessModelEvaluation(ProcessBase):
 
     def create_and_upload_images(
         self,
-        nc_file_full_path: str,
         product: str,
         uuid: str,
         model_or_instrument_id: str,
@@ -119,7 +116,7 @@ class ProcessModelEvaluation(ProcessBase):
 
         # Statistic plot
         generate_L3_day_plots(
-            nc_file_full_path,
+            self.temp_file.name,
             l3_product,
             model_or_instrument_id,
             var_list=fields,
@@ -133,7 +130,7 @@ class ProcessModelEvaluation(ProcessBase):
         )
         # Statistic error plot
         generate_L3_day_plots(
-            nc_file_full_path,
+            self.temp_file.name,
             l3_product,
             model_or_instrument_id,
             var_list=fields,
@@ -148,7 +145,7 @@ class ProcessModelEvaluation(ProcessBase):
         # Single plots
         for field in fields:
             generate_L3_day_plots(
-                nc_file_full_path,
+                self.temp_file.name,
                 l3_product,
                 model_or_instrument_id,
                 var_list=[field],
