@@ -318,8 +318,10 @@ class HatproNc(Level1Nc):
         if "kg" in lwp.units:
             lwp[:] *= 1000
         self.harmonize_standard_attributes(key)
-        if hasattr(lwp, "comment"):
-            delattr(lwp, "comment")
+        attributes_to_be_removed = ("comment", "missing_value")
+        for attr in attributes_to_be_removed:
+            if hasattr(lwp, attr):
+                delattr(lwp, attr)
 
     def check_lwp_data(self):
         """Sanity checks LWP data."""
