@@ -158,6 +158,12 @@ class ProcessLidar(ProcessInstrument):
             date=self.base.date_str,
         )
 
+    def process_cl31(self):
+        full_paths, self.uuid.raw, self.instrument_pids = self.base.download_instrument("cl31")
+        full_paths.sort()
+        utils.concatenate_text_files(full_paths, self.base.daily_file.name)
+        self._call_ceilo2nc("cl31")
+
     def process_cl51(self):
         if self.base.site == "norunda":
             (
