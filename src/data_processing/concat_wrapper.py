@@ -48,7 +48,11 @@ def concat_netcdf_files(
                 valid_files.append(file)
                 break
     clib.concatenate_files(
-        valid_files, output_file, concat_dimension=concat_dimension, variables=variables
+        valid_files,
+        output_file,
+        concat_dimension=concat_dimension,
+        variables=variables,
+        ignore=("minimum", "maximum"),
     )
     return valid_files
 
