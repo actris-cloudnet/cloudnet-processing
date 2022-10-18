@@ -52,7 +52,7 @@ def concat_netcdf_files(
         output_file,
         concat_dimension=concat_dimension,
         variables=variables,
-        ignore=("minimum", "maximum"),
+        ignore=("minimum", "maximum", "number_integrated_samples"),
     )
     return valid_files
 
