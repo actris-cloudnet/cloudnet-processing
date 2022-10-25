@@ -30,6 +30,9 @@ def concat_netcdf_files(
     variables: Optional[list] = None,
 ) -> list:
     """Concatenates several netcdf files into daily file."""
+    with netCDF4.Dataset(files[0]) as nc:
+        if concat_dimension not in nc.dimensions:
+            raise KeyError
     if len(files) == 1:
         shutil.copy(files[0], output_file)
         return files

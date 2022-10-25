@@ -206,13 +206,19 @@ class ProcessLidar(ProcessInstrument):
             else:
                 raise RawDataMissingError
             variables = ["x_pol", "p_pol", "beta_att", "time"]
-            valid_full_paths = concat_wrapper.concat_netcdf_files(
-                full_paths,
-                self.base.date_str,
-                self.base.daily_file.name,
-                concat_dimension="profile",
-                variables=variables,
-            )
+            try:
+                valid_full_paths = concat_wrapper.concat_netcdf_files(
+                    full_paths, self.base.date_str, self.base.daily_file.name, variables=variables
+                )
+            except KeyError:
+                valid_full_paths = concat_wrapper.concat_netcdf_files(
+                    full_paths,
+                    self.base.date_str,
+                    self.base.daily_file.name,
+                    concat_dimension="profile",
+                    variables=variables,
+                )
+
         if not valid_full_paths:
             raise RawDataMissingError(msg)
         filename = self._create_daily_file_name(model)
