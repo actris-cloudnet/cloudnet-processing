@@ -25,8 +25,8 @@ from data_processing.utils import RawDataMissingError, SkipBlock
 
 
 class ProcessInstrument:
-    def __init__(self, process_cloudnet, temp_file, uuid: Uuid):
-        self.base = process_cloudnet
+    def __init__(self, base, temp_file, uuid: Uuid):
+        self.base = base
         self.temp_file = temp_file
         self.uuid = uuid
         self.instrument_pids: List = []
@@ -215,13 +215,12 @@ class ProcessLidar(ProcessInstrument):
             )
         if not valid_full_paths:
             raise RawDataMissingError(msg)
-        self.base.md_api.upload_instrument_file(
-            self.base.daily_file.name,
-            model,
-            self.base.date_str,
-            self.base.site,
-            filename=self._create_daily_file_name(model),
-        )
+        filename = self._create_daily_file_name(model)
+        try:
+            instrument_pid = self.instrument_pids[0]
+        except IndexError:
+            instrument_pid = None
+        self.base.md_api.upload_instrument_file(self.base, model, filename, instrument_pid)
         self._call_ceilo2nc(model)
         self.uuid.raw = _get_valid_uuids(raw_uuids, full_paths, valid_full_paths)
 

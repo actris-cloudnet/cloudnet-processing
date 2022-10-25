@@ -60,25 +60,26 @@ class MetadataApi:
             self.put("visualizations", data["s3key"], payload)
 
     def upload_instrument_file(
-        self, full_path: str, instrument: str, date: str, site: str, filename: Optional[str] = None
+        self, base, instrument: str, filename: str, instrument_pid: Optional[str] = None
     ):
-        username = self.config.get("DATA_SUBMISSION_USERNAME", site)
-        password = self.config.get("DATA_SUBMISSION_PASSWORD", "letmein")
+        username = self.config.get("DATA_SUBMISSION_USERNAME", "admin")
+        password = self.config.get("DATA_SUBMISSION_PASSWORD", "admin")
         auth = (username, password)
-        checksum = utils.md5sum(full_path)
+        checksum = utils.md5sum(base.daily_file.name)
         metadata = {
-            "filename": filename or os.path.basename(full_path),
+            "filename": filename,
             "checksum": checksum,
             "instrument": instrument,
-            "measurementDate": date,
-            "site": site,
+            "measurementDate": base.date_str,
+            "site": base.site,
+            "instrumentPid": instrument_pid,
         }
         try:
             self.post("upload/metadata", metadata, auth=auth)
         except requests.exceptions.HTTPError as err:
             logging.info(err)
             return
-        self.put_file("upload/data", checksum, full_path, auth)
+        self.put_file("upload/data", checksum, base.daily_file.name, auth)
 
     def find_files_to_freeze(self, args: Namespace) -> list:
         """Find volatile files released before certain time limit."""
