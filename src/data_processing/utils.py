@@ -629,3 +629,7 @@ def _compare_variable_attributes(nc1: netCDF4.Dataset, nc2: netCDF4.Dataset):
 
 def _log(text: str, var_name: str, value1, value2) -> str:
     return f"{text} differ in {var_name}: {value1} vs. {value2}"
+
+
+def remove_duplicate_dicts(list_of_dicts: list) -> list:
+    return [dict(t) for t in {tuple(d.items()) for d in list_of_dicts}]

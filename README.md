@@ -52,10 +52,11 @@ The `process` command processes standard Cloudnet products, such as `radar`, `li
 
 In addition to the general arguments, it accepts the following special arguments.
 
-| Short | Long                   | Default | Description                                                                    |
-|:------|:-----------------------|:--------|:-------------------------------------------------------------------------------|
-| `-r`  | `--reprocess`          | `False` | See below.                                                                     |
-|       | `--reprocess_volatile` | `False` | Reprocess volatile files only (and create new volatile file from unprocessed). |
+| Short | Long                   | Default | Description                                                                                                                                    |
+|:------|:-----------------------|:--------|:-----------------------------------------------------------------------------------------------------------------------------------------------|
+| `-r`  | `--reprocess`          | `False` | See below.                                                                                                                                     |
+|       | `--reprocess_volatile` | `False` | Reprocess volatile files only (and create new volatile file from unprocessed).                                                                 |
+| `-u`  | `--updated_since`      |         | Process all raw files submitted within `--updated_since` in days. Ignores other arguments than `--site`. Note: Creates only Level 1b products. |
 
 Behavior of the `--reprocess` flag:
 
