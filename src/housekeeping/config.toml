@@ -1,0 +1,10 @@
+[global]
+instruments = [
+  "chm15k",
+]
+vars = [
+  "temp_int",
+  "temp_ext",
+  "temp_det",
+  "temp_lom",
+]

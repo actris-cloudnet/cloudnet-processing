@@ -13,7 +13,9 @@ from data_processing.subcmds import (
     process_cloudnet,
     process_model,
     process_model_evaluation,
+    process_housekeeping,
 )
+
 
 warnings.simplefilter("ignore", UserWarning)
 warnings.simplefilter("ignore", RuntimeWarning)
@@ -26,6 +28,7 @@ modules = {
     "me": process_model_evaluation,
     "plot": create_images,
     "qc": create_qc_reports,
+    "housekeeping": process_housekeeping,
 }
 
 
