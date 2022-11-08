@@ -42,6 +42,7 @@ class ProcessBase:
             storage_session = make_session()
         if metadata_session is None:
             metadata_session = make_session()
+        self.args = args
         self.site_meta, self.site, self._site_type = _read_site_info(args)
         self.config = config
         self.is_reprocess = getattr(args, "reprocess", False)

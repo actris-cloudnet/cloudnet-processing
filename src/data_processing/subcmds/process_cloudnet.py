@@ -33,59 +33,57 @@ def main(args, storage_session: Optional[requests.Session] = None):
     config = utils.read_main_conf()
     process = ProcessCloudnet(args, config, storage_session=storage_session)
     if args.updated_since:
-        process_raw_data_using_updated_at(process, args)
+        process.process_raw_data_using_updated_at()
     else:
         start_date, stop_date = utils.get_processing_dates(args)
         for date in date_range(start_date, stop_date):
             process.date_str = date.strftime("%Y-%m-%d")
             for product in args.products:
-                process_product(process, product, args)
-
-
-def process_raw_data_using_updated_at(process, args):
-    metadata = process.get_uploaded_raw_metadata(args)
-    for row in metadata:
-        process.date_str = row["date"]
-        process_product(process, row["product"], args)
-
-
-def process_product(process, product, args):
-    processing_tools.clean_dir(process.temp_dir.name)
-    process.init_temp_files()
-    if product == "model":
-        return
-    logging.info(f"Processing {product} product, {process.site} {process.date_str}")
-    uuid = Uuid()
-    try:
-        uuid.volatile = process.fetch_volatile_uuid(product)
-        if product in utils.get_product_types(level="2"):
-            uuid, identifier = process.process_level2(uuid, product)
-        elif product == "categorize":
-            uuid, identifier = process.process_categorize(uuid)
-        elif product in utils.get_product_types(level="1b"):
-            uuid, identifier, instrument_pids = process.process_instrument(uuid, product)
-            process.add_instrument_pid(instrument_pids)
-        else:
-            raise ValueError("Bad product")
-        process.compare_file_content(product)
-        process.add_pid()
-        utils.add_version_to_global_attributes(process.temp_file.name)
-        process.upload_product(product, uuid, identifier)
-        process.create_and_upload_images(product, uuid.product, identifier)
-        process.upload_quality_report(process.temp_file.name, uuid.product)
-        process.print_info()
-    except (RawDataMissingError, MiscError, NotImplementedError) as err:
-        logging.warning(err)
-    except (InconsistentDataError, DisdrometerDataError, ValidTimeStampError) as err:
-        logging.error(err)
-    except (HTTPError, ConnectionError, RuntimeError, ValueError) as err:
-        utils.send_slack_alert(err, "data", args, process.date_str, product)
+                process.process_product(product)
 
 
 class ProcessCloudnet(ProcessBase):
-    def get_uploaded_raw_metadata(self, args) -> list:
-        updated_at_from = datetime.date.today() - datetime.timedelta(days=args.updated_since)
-        payload = {"updatedAtFrom": updated_at_from, "status": "uploaded", "site": args.site}
+    def process_product(self, product: str):
+        processing_tools.clean_dir(self.temp_dir.name)
+        self.init_temp_files()
+        if product == "model":
+            return
+        logging.info(f"Processing {product} product, {self.site} {self.date_str}")
+        uuid = Uuid()
+        try:
+            uuid.volatile = self.fetch_volatile_uuid(product)
+            if product in utils.get_product_types(level="2"):
+                uuid, identifier = self.process_level2(uuid, product)
+            elif product == "categorize":
+                uuid, identifier = self.process_categorize(uuid)
+            elif product in utils.get_product_types(level="1b"):
+                uuid, identifier, instrument_pids = self.process_instrument(uuid, product)
+                self.add_instrument_pid(instrument_pids)
+            else:
+                raise ValueError("Bad product")
+            self.compare_file_content(product)
+            self.add_pid()
+            utils.add_version_to_global_attributes(self.temp_file.name)
+            self.upload_product(product, uuid, identifier)
+            self.create_and_upload_images(product, uuid.product, identifier)
+            self.upload_quality_report(self.temp_file.name, uuid.product)
+            self.print_info()
+        except (RawDataMissingError, MiscError, NotImplementedError) as err:
+            logging.warning(err)
+        except (InconsistentDataError, DisdrometerDataError, ValidTimeStampError) as err:
+            logging.error(err)
+        except (HTTPError, ConnectionError, RuntimeError, ValueError) as err:
+            utils.send_slack_alert(err, "data", self.args, self.date_str, product)
+
+    def process_raw_data_using_updated_at(self):
+        metadata = self._get_uploaded_raw_metadata()
+        for row in metadata:
+            self.date_str = row["date"]
+            self.process_product(row["product"])
+
+    def _get_uploaded_raw_metadata(self) -> list:
+        updated_at_from = datetime.date.today() - datetime.timedelta(days=self.args.updated_since)
+        payload = {"updatedAtFrom": updated_at_from, "status": "uploaded", "site": self.args.site}
         metadata = self.md_api.get("api/raw-files", payload)
         ignored_extensions = (".lv0",)
         metadata = [
