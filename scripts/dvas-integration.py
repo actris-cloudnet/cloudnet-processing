@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+# type: ignore
+# flake8: noqa
+raise NotImplementedError
+# get_from_data_portal_api func returns list, not a dict
+
+
 import logging
 import os
 import re

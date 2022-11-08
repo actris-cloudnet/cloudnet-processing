@@ -194,9 +194,29 @@ Run unit tests:
 
     docker run -tv $PWD/tests:/app/tests -v $PWD/src:/app/src --env-file test.env test pytest
 
+Run unit tests and debug on failure:
+
+    docker run -itv $PWD/tests:/app/tests -v $PWD/src:/app/src --env-file test.env test pytest --pdb
+
 Run end-to-end tests:
 
     docker run -tv $PWD/tests:/app/tests -v $PWD/src:/app/src --env-file e2e-test.env test /bin/sh -c 'for f in tests/e2e/*/main.py; do $f; done'
+
+Type hints:
+
+    docker run -tv $PWD/tests:/app/tests -v $PWD/src:/app/src --env-file test.env test /bin/bash -c "mypy scripts/ src/"
+
+Flake8:
+
+    docker run -tv $PWD/tests:/app/tests -v $PWD/src:/app/src --env-file test.env test /bin/bash -c "flake8"
+
+Linter:
+
+    docker run --env-file test.env test pylint **/*.py --errors-only --ignored-modules=netCDF4
+
+
+
+
 
 ### Note about releasing
 

@@ -11,11 +11,10 @@ from data_processing.subcmds import (
     create_qc_reports,
     freeze,
     process_cloudnet,
+    process_housekeeping,
     process_model,
     process_model_evaluation,
-    process_housekeeping,
 )
-
 
 warnings.simplefilter("ignore", UserWarning)
 warnings.simplefilter("ignore", RuntimeWarning)

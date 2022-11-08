@@ -5,10 +5,10 @@ import sys
 from tempfile import NamedTemporaryFile
 
 import test_utils.utils as utils
+from data_processing.subcmds import freeze
 
 sys.path.append("scripts/")
 cloudnet = __import__("cloudnet")
-from data_processing.subcmds import freeze
 
 SCRIPT_PATH = os.path.dirname(os.path.realpath(__file__))
 

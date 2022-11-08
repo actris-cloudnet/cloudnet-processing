@@ -1,10 +1,45 @@
 [global]
 instruments = [
   "chm15k",
+  "hatpro",
+  "rpg-fmcw-94",
 ]
+
+[[configs]]
+id = "chm15k"
 vars = [
   "temp_int",
   "temp_ext",
   "temp_det",
   "temp_lom",
+]
+
+[[configs]]
+id = "hatpro"
+vars = [
+  "ambient_Target1_temperature",
+  "ambient_Target2_temperature",
+  "receiver1_temperature",
+  "receiver2_temperature",
+]
+
+[[configs]]
+id = "hatpro-hkd"
+vars = [
+  "T0",
+  "T1",
+  "T2",
+  "T3",
+]
+
+[[configs]]
+id = "rpg-fmcw-94"
+vars = [
+  "TransT",
+  "RecT",
+  "EnvTemp",
+  "DDVolt",
+  "PCT",
+  "TransPow",
+  "Status",
 ]

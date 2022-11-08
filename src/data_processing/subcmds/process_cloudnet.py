@@ -35,7 +35,9 @@ def main(args, storage_session: Optional[requests.Session] = None):
     if args.updated_since:
         process.process_raw_data_using_updated_at()
     else:
-        start_date, stop_date = utils.get_processing_dates(args)
+        _start_date, _stop_date = utils.get_processing_dates(args)
+        start_date = utils.isodate2date(_start_date)
+        stop_date = utils.isodate2date(_stop_date)
         for date in date_range(start_date, stop_date):
             process.date_str = date.strftime("%Y-%m-%d")
             for product in args.products:

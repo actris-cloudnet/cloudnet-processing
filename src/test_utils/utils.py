@@ -13,14 +13,14 @@ from typing import Optional
 import requests
 import requests_mock
 
-sys.path.append("scripts/")
-cloudnet = __import__("cloudnet")
-
 from data_processing.subcmds import (
     process_cloudnet,
     process_model,
     process_model_evaluation,
 )
+
+sys.path.append("scripts/")
+cloudnet = __import__("cloudnet")
 
 
 def init_test_session():

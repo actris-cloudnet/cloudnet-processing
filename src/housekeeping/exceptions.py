@@ -1,0 +1,2 @@
+class HousekeepingEmptyWarning(Warning):
+    pass

@@ -34,7 +34,7 @@ class Test:
         assert f"GET /api/files?{fix}&product={self.product}&showLegacy=True" in data[0]
 
         # Detect uploaded instruments
-        assert f"GET /api/instruments" in data[1]
+        assert "GET /api/instruments" in data[1]
         assert f"GET /upload-metadata?{fix}" in data[2]
 
         # Try to find daily raw file
@@ -47,8 +47,8 @@ class Test:
         assert f"GET /upload-metadata?{fix}{instru}&status=uploaded" in data[4]
 
         # Submit updated daily raw file
-        assert f"POST /upload/metadata" in data[5]
-        assert f"PUT /upload/data" in data[6]
+        assert "POST /upload/metadata" in data[5]
+        assert "PUT /upload/data" in data[6]
 
         # GET calibration
         assert "GET /api/calibration" in data[7]
@@ -61,4 +61,4 @@ class Test:
         assert count_strings(data, file_put) == n_raw_files
 
         # Submit QC report
-        assert f"PUT /quality/" in data[-1]
+        assert "PUT /quality/" in data[-1]

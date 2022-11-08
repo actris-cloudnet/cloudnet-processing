@@ -1,7 +1,7 @@
 from setuptools import find_packages, setup
 
 version = {}
-with open(f"src/data_processing/version.py") as f:
+with open("src/data_processing/version.py") as f:
     exec(f.read(), version)
 
 setup(
@@ -22,9 +22,12 @@ setup(
         "types-pytz",
         "types-requests",
         "types-urllib3",
+        "types-toml",
         "toml",
         "pandas",
         "influxdb-client[ciso]",
+        "cftime",
+        "flake8",
     ],
     include_package_data=True,
     package_dir={"": "src"},

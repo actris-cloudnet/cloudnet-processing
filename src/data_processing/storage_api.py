@@ -1,7 +1,5 @@
 """Metadata API for Cloudnet files."""
-import logging
 from os import path
-from tempfile import NamedTemporaryFile
 from typing import Optional, Tuple
 
 import requests

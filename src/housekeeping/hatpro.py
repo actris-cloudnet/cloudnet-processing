@@ -5,15 +5,13 @@ from typing import BinaryIO, List, Tuple, Union
 import numpy as np
 
 
-def _read_from_file(
-    file: BinaryIO, fields: List[Tuple[str, str]], count: int = 1
-) -> dict:
+def _read_from_file(file: BinaryIO, fields: List[Tuple[str, str]], count: int = 1) -> dict:
     arr = np.fromfile(file, np.dtype(fields), count)
     if (read := len(arr)) != count:
         raise IOError(f"Read {read} of {count} records from file")
     if count == 1:
         arr = arr[0]
-    return {field: arr[field] for field, type in fields}
+    return {field: arr[field] for field, _type in fields}
 
 
 def _check_eof(file: BinaryIO):
@@ -87,6 +85,4 @@ class HatproHkd:
         if self.header["HKDSelect"] & 0x20:
             fields.append(("Status", "<i4"))
         self.data = _read_from_file(file, fields, self.header["N"])
-        self.data["T"] = np.datetime64("2001-01-01") + self.data["T"].astype(
-            "timedelta64[s]"
-        )
+        self.data["T"] = np.datetime64("2001-01-01") + self.data["T"].astype("timedelta64[s]")

@@ -64,7 +64,7 @@ class ProcessBase:
     def fetch_volatile_uuid(self, product: str) -> Union[str, None]:
         payload = self._get_payload(product=product)
         payload["showLegacy"] = True
-        metadata = self.md_api.get(f"api/files", payload)
+        metadata = self.md_api.get("api/files", payload)
         uuid = self._read_volatile_uuid(metadata)
         self._create_new_version = self._is_create_new_version(metadata)
         return uuid
@@ -281,7 +281,7 @@ class ProcessBase:
 
     def _get_product_timestamp(self, product: str) -> Union[str, None]:
         payload = self._get_payload(product=product)
-        product_metadata = self.md_api.get(f"api/files", payload)
+        product_metadata = self.md_api.get("api/files", payload)
         if product_metadata and self.is_reprocess is False and self.is_reprocess_volatile is False:
             return product_metadata[0]["updatedAt"]
         return None
