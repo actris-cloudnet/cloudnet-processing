@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import subprocess
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sys import argv
 
 from data_processing import utils
@@ -16,7 +16,7 @@ wrapper = "scripts/wrapper.py"
 products = "l3-cf,l3-iwc,l3-lwc"
 
 for site in sites:
-    date = datetime.now() - timedelta(3)
+    date = datetime.now(timezone.utc) - timedelta(3)
     subprocess.check_call(
         [
             interpreter,

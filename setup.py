@@ -19,7 +19,6 @@ setup(
         "mypy",
         "requests",
         "requests_mock",
-        "types-pytz",
         "types-requests",
         "types-urllib3",
         "types-toml",

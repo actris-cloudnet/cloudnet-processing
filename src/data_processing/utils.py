@@ -15,7 +15,6 @@ from typing import Optional, Tuple, Union
 
 import netCDF4
 import numpy.ma as ma
-import pytz
 import requests
 from cloudnetpy.plotting.plot_meta import ATTRIBUTES as ATTR
 from cloudnetpy.plotting.plotting import Dimensions
@@ -198,8 +197,8 @@ def send_slack_alert(
         if var is not None:
             msg += f"*{name}:* {var}{padding}"
 
-    timestamp = str(get_helsinki_datetime())[:19]
-    msg += f"*Time:* {timestamp}\n\n"
+    timestamp = datetime.datetime.now(datetime.timezone.utc)
+    msg += f"*Time:* {timestamp:%Y-%m-%d %H:%M:%S}\n\n"
     msg += f"*Error:* {error_msg}"
 
     payload = {
@@ -386,28 +385,11 @@ class SkipBlock(Exception):
         super().__init__(self.message)
 
 
-def datetime_to_utc(date_time: str, time_zone_name: str) -> str:
-    """Converts local datetime at some time zone to UTC."""
-    time_zone = pytz.timezone(time_zone_name)
-    utc_timezone = pytz.timezone("UTC")
-    dt = datetime.datetime.strptime(date_time, "%Y-%m-%d %H:%M:%S")
-    dt = time_zone.localize(dt)
-    dt = dt.astimezone(utc_timezone)
-    return dt.strftime("%Y-%m-%d %H:%M:%S")
-
-
 def shift_datetime(date_time: str, offset: int) -> str:
     """Shifts datetime N hours."""
     dt = datetime.datetime.strptime(date_time, "%Y-%m-%d %H:%M:%S")
     dt = dt + datetime.timedelta(hours=offset)
     return dt.strftime("%Y-%m-%d %H:%M:%S")
-
-
-def get_helsinki_datetime() -> datetime.datetime:
-    """Returns Helsinki datetime in UTC."""
-    time_zone = pytz.timezone("Europe/Helsinki")
-    dt = datetime.datetime.now()
-    return dt.astimezone(time_zone)
 
 
 def concatenate_text_files(filenames: list, output_filename: str) -> None:

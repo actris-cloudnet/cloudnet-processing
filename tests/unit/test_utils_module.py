@@ -181,18 +181,6 @@ def test_get_model_identifier(filename, identifier):
     assert utils.get_model_identifier(filename) == identifier
 
 
-@pytest.mark.parametrize(
-    "dtime, zone, expected",
-    [
-        ("2021-03-15 15:00:00", "Europe/Stockholm", "2021-03-15 14:00:00"),
-        ("2021-06-15 15:00:00", "Europe/Stockholm", "2021-06-15 13:00:00"),
-        ("2021-06-15 00:00:01", "Europe/Helsinki", "2021-06-14 21:00:01"),
-    ],
-)
-def test_datetime_to_utc(dtime, zone, expected):
-    assert utils.datetime_to_utc(dtime, zone) == expected
-
-
 def test_are_identical_nc_files():
     fname1 = "tests/data/misc/20180703_granada_classification_old.nc"
     fname2 = "tests/data/misc/20180703_granada_classification.nc"
