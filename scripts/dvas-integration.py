@@ -8,9 +8,8 @@ raise NotImplementedError
 import logging
 import os
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from sys import argv
-from urllib.error import HTTPError
 
 import requests
 
@@ -48,7 +47,7 @@ def main():
     lastsuccessfile.close()
 
     startdate = lines[0].strip()
-    enddate = datetime.now().isoformat()
+    enddate = datetime.now(timezone.utc).isoformat()
     products = ["classification", "lwc", "iwc", "drizzle"]
 
     payload = dict(
@@ -94,7 +93,7 @@ def main():
                 "file_identifier": file["filename"],
                 "language": "en",  # mandatory
                 "hierarchy_level": "dataset",  # mandatory, fixed list ['attribute','attributeType','collectionHardware','collectionSession','dataset','series','nonGeographicDataset','dimensionGroup','feature','featureType','propertyType','fieldSession','software','service','model','tile']
-                "datestamp": datetime.now().isoformat(),  # mandatory
+                "datestamp": datetime.now(timezone.utc).isoformat(),  # mandatory
                 "contact": [
                     {  # mandatory
                         "first_name": "Ewan",  # mandatory
