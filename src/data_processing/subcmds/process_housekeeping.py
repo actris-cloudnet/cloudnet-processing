@@ -17,15 +17,23 @@ def main(args):
     cfg_hk = get_housekeeping_config()
     instruments = cfg_hk["instruments"]
     md_api = metadata_api.MetadataApi(cfg_main, _http_session())
+    query_params = {
+        "site": args.site,
+        "instrument": instruments,
+        "status": ["uploaded", "processed"],
+    }
+    if args.date is not None:
+        query_params.update({"date": args.date})
+    else:
+        query_params.update(
+            {
+                "dateFrom": args.start,
+                "dateTo": args.stop,
+            }
+        )
     metadata = md_api.get(
         "api/raw-files",
-        {
-            "site": args.site,
-            "instrument": instruments,
-            "dateFrom": args.start,
-            "dateTo": args.stop,
-            "status": ["uploaded", "processed"],
-        },
+        query_params,
     )
     re_nc = re.compile(r"^.+\.nc$", re.I)
     re_hkd = re.compile(r"^.+\.hkd$", re.I)

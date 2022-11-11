@@ -116,6 +116,18 @@ Additional arguments:
 |:------|:----------|:--------|:------------------------------------------------------------------------------------------------------------------------|
 | `-f`  | `--force` | False   | Ignore environment variables `FREEZE_AFTER_DAYS` and `FREEZE_MODEL_AFTER_DAYS`. Allows freezing recently changed files. |
 
+### `housekeeping`
+
+Processes housekeeping data based on [config file](src/housekeeping/config.toml).
+
+Example usage:
+```bash
+./scripts/cloudnet.py -s palaiseau housekeeping
+./scripts/cloudnet.py -s palaiseau -d 2022-11-01 housekeeping
+./scripts/cloudnet.py -s palaiseau --start 2022-11-01 housekeeping
+./scripts/cloudnet.py -s palaiseau --start 2022-11-01 --stop 2022-11-05 housekeeping
+```
+
 ### Examples
 
 Process classification product for the Bucharest site for the date 2021-12-07:
