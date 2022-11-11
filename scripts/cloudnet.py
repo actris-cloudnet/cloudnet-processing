@@ -11,6 +11,7 @@ from data_processing.subcmds import (
     create_qc_reports,
     freeze,
     process_cloudnet,
+    process_housekeeping,
     process_model,
     process_model_evaluation,
 )
@@ -26,6 +27,7 @@ modules = {
     "me": process_model_evaluation,
     "plot": create_images,
     "qc": create_qc_reports,
+    "housekeeping": process_housekeeping,
 }
 
 

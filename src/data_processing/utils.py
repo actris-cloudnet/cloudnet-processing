@@ -14,7 +14,6 @@ from pathlib import Path
 from typing import Optional, Tuple, Union
 
 import netCDF4
-import numpy as np
 import numpy.ma as ma
 import pytz
 import requests
@@ -26,6 +25,10 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 import data_processing.version
+
+
+def isodate2date(date_str: str) -> datetime.date:
+    return datetime.datetime.strptime(date_str, "%Y-%m-%d").date()
 
 
 def create_product_put_payload(
@@ -512,7 +515,7 @@ def exclude_records_with_pattern_in_filename(metadata: list, pattern: str) -> li
     return [row for row in metadata if not re.search(pattern.lower(), row["filename"].lower())]
 
 
-def get_processing_dates(args):
+def get_processing_dates(args) -> Tuple[str, str]:
     """Returns processing dates."""
     if args.date is not None:
         start_date = args.date
@@ -520,8 +523,8 @@ def get_processing_dates(args):
     else:
         start_date = args.start
         stop_date = args.stop
-    start_date = date_string_to_date(start_date)
-    stop_date = date_string_to_date(stop_date)
+    start_date = str(date_string_to_date(start_date))
+    stop_date = str(date_string_to_date(stop_date))
     return start_date, stop_date
 
 
@@ -604,7 +607,7 @@ def _compare_variables(nc1: netCDF4.Dataset, nc2: netCDF4.Dataset):
     for name in vars1:
         value1 = nc1.variables[name][:]
         value2 = nc2.variables[name][:]
-        assert value1.shape == value2.shape, _log(f"shapes", name, value1.shape, value2.shape)
+        assert value1.shape == value2.shape, _log("shapes", name, value1.shape, value2.shape)
         assert ma.allclose(value1, value2, rtol=1e-4), _log("variable values", name, value1, value2)
         for attr in ("dtype", "dimensions"):
             value1 = getattr(nc1.variables[name], attr)
@@ -629,3 +632,7 @@ def _compare_variable_attributes(nc1: netCDF4.Dataset, nc2: netCDF4.Dataset):
 
 def _log(text: str, var_name: str, value1, value2) -> str:
     return f"{text} differ in {var_name}: {value1} vs. {value2}"
+
+
+def remove_duplicate_dicts(list_of_dicts: list) -> list:
+    return [dict(t) for t in {tuple(d.items()) for d in list_of_dicts}]

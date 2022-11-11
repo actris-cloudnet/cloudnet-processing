@@ -2,7 +2,6 @@
 import argparse
 import re
 import subprocess
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -56,11 +55,11 @@ def _commit_and_push(version: Version):
 
 
 def _read_int(text: str, key: str) -> int:
-    return int(re.search(f"^{key} = (\d+)$", text, flags=re.M)[1])
+    return int(re.search(rf"^{key} = (\d+)$", text, flags=re.M)[1])
 
 
 def _write_int(text: str, key: str, value: int) -> str:
-    return re.sub(f"^{key} = \d+$", f"{key} = {value}", text, flags=re.M)
+    return re.sub(rf"^{key} = \d+$", f"{key} = {value}", text, flags=re.M)
 
 
 def _read_version() -> Version:

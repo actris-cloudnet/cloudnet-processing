@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import argparse
 from os import path
 from tempfile import NamedTemporaryFile
 

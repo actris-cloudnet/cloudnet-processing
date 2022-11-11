@@ -221,4 +221,4 @@ class TestMetadataApi:
                 json=json.loads(files_response),
             )
         md_api = metadata_api.MetadataApi(config, session)
-        metadata = md_api.find_files_to_freeze(args)
+        md_api.find_files_to_freeze(args)

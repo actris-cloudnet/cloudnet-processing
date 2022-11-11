@@ -59,7 +59,7 @@ class TestMwr:
         self.data["full_path"] = mwr_file
         self.data["original_filename"] = os.path.basename(mwr_file)
         self.data["latitude"] = None
-        uuid = nca.harmonize_hatpro_file(self.data)
+        nca.harmonize_hatpro_file(self.data)
         with netCDF4.Dataset(mwr_file) as nc:
             assert nc.variables["latitude"].shape == ()
 

@@ -8,20 +8,19 @@ import socket
 import subprocess
 import sys
 import time
+from typing import Optional
 
 import requests
 import requests_mock
-
-from data_processing.utils import get_product_types
-
-sys.path.append("scripts/")
-cloudnet = __import__("cloudnet")
 
 from data_processing.subcmds import (
     process_cloudnet,
     process_model,
     process_model_evaluation,
 )
+
+sys.path.append("scripts/")
+cloudnet = __import__("cloudnet")
 
 
 def init_test_session():
@@ -165,7 +164,7 @@ def process(
     main_args: list,
     temp_file,
     script_path: str,
-    marker: str = None,
+    marker: Optional[str] = None,
     processing_mode: str = "",
 ):
     main_args = cloudnet._parse_args(main_args)

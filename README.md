@@ -52,10 +52,11 @@ The `process` command processes standard Cloudnet products, such as `radar`, `li
 
 In addition to the general arguments, it accepts the following special arguments.
 
-| Short | Long                   | Default | Description                                                                    |
-|:------|:-----------------------|:--------|:-------------------------------------------------------------------------------|
-| `-r`  | `--reprocess`          | `False` | See below.                                                                     |
-|       | `--reprocess_volatile` | `False` | Reprocess volatile files only (and create new volatile file from unprocessed). |
+| Short | Long                   | Default | Description                                                                                                                                    |
+|:------|:-----------------------|:--------|:-----------------------------------------------------------------------------------------------------------------------------------------------|
+| `-r`  | `--reprocess`          | `False` | See below.                                                                                                                                     |
+|       | `--reprocess_volatile` | `False` | Reprocess volatile files only (and create new volatile file from unprocessed).                                                                 |
+| `-u`  | `--updated_since`      |         | Process all raw files submitted within `--updated_since` in days. Ignores other arguments than `--site`. Note: Creates only Level 1b products. |
 
 Behavior of the `--reprocess` flag:
 
@@ -114,6 +115,18 @@ Additional arguments:
 | Short | Long      | Default | Description                                                                                                             |
 |:------|:----------|:--------|:------------------------------------------------------------------------------------------------------------------------|
 | `-f`  | `--force` | False   | Ignore environment variables `FREEZE_AFTER_DAYS` and `FREEZE_MODEL_AFTER_DAYS`. Allows freezing recently changed files. |
+
+### `housekeeping`
+
+Processes housekeeping data based on [config file](src/housekeeping/config.toml).
+
+Example usage:
+```bash
+./scripts/cloudnet.py -s palaiseau housekeeping
+./scripts/cloudnet.py -s palaiseau -d 2022-11-01 housekeeping
+./scripts/cloudnet.py -s palaiseau --start 2022-11-01 housekeeping
+./scripts/cloudnet.py -s palaiseau --start 2022-11-01 --stop 2022-11-05 housekeeping
+```
 
 ### Examples
 
@@ -193,9 +206,29 @@ Run unit tests:
 
     docker run -tv $PWD/tests:/app/tests -v $PWD/src:/app/src --env-file test.env test pytest
 
+Run unit tests and debug on failure:
+
+    docker run -itv $PWD/tests:/app/tests -v $PWD/src:/app/src --env-file test.env test pytest --pdb
+
 Run end-to-end tests:
 
     docker run -tv $PWD/tests:/app/tests -v $PWD/src:/app/src --env-file e2e-test.env test /bin/sh -c 'for f in tests/e2e/*/main.py; do $f; done'
+
+Type hints:
+
+    docker run -tv $PWD/tests:/app/tests -v $PWD/src:/app/src --env-file test.env test /bin/bash -c "mypy scripts/ src/"
+
+Flake8:
+
+    docker run -tv $PWD/tests:/app/tests -v $PWD/src:/app/src --env-file test.env test /bin/bash -c "flake8"
+
+Linter:
+
+    docker run --env-file test.env test pylint **/*.py --errors-only --ignored-modules=netCDF4
+
+
+
+
 
 ### Note about releasing
 

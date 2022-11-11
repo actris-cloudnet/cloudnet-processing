@@ -21,7 +21,7 @@ class TestModelEvaluationProcessing:
         assert nc.year == "2020"
         assert nc.month == "10"
         assert nc.day == "22"
-        assert nc.title == f"Downsampled Cf of ecmwf from Bucharest"
+        assert nc.title == "Downsampled Cf of ecmwf from Bucharest"
         assert nc.cloudnet_file_type == "cf_ecmwf"
         assert nc.Conventions == "CF-1.8"
         assert (

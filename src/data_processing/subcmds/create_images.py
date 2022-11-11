@@ -32,7 +32,7 @@ def main(args, storage_session: Optional[requests.Session] = None):
             "site": img.site,
             "showLegacy": True,
         }
-        img_metadata = img.md_api.get(f"api/visualizations/", payload=payload)
+        img_metadata = img.md_api.get("api/visualizations/", payload=payload)
         source_file_uuids = [x["sourceFileId"] for x in img_metadata]
         metadata = [row for row in metadata if row["uuid"] not in source_file_uuids]
         if metadata:

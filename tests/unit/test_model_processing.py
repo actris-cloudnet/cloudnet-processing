@@ -15,7 +15,7 @@ session = requests.Session()
 session.mount("http://", adapter)
 mock_addr = "http://test/"
 
-args = cloudnet._parse_args([f"-s=bucharest", "model"])  # Initialize default arguments
+args = cloudnet._parse_args(["-s=bucharest", "model"])  # Initialize default arguments
 
 config = {
     "DATAPORTAL_URL": mock_addr,
