@@ -534,9 +534,19 @@ def check_chm_version(filename: str, identifier: str):
         print_warning("chm15k")
 
 
+class MyAdapter(HTTPAdapter):
+    def __init__(self):
+        retry_strategy = Retry(total=10, backoff_factor=0.1)
+        super().__init__(max_retries=retry_strategy)
+
+    def send(self, request, stream=False, timeout=None, verify=True, cert=None, proxies=None):
+        if timeout is None:
+            timeout = 30
+        return super().send(request, stream, timeout, verify, cert, proxies)
+
+
 def make_session() -> requests.Session:
-    retry_strategy = Retry(total=10, backoff_factor=0.1)
-    adapter = HTTPAdapter(max_retries=retry_strategy)
+    adapter = MyAdapter()
     http = requests.Session()
     http.mount("https://", adapter)
     http.mount("http://", adapter)
