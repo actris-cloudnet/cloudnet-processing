@@ -20,7 +20,11 @@ class PidUtils:
         with netCDF4.Dataset(filepath, "r+") as rootgrp:
             uuid = getattr(rootgrp, "file_uuid")
             if self._is_production:
-                payload = {"type": "file", "uuid": uuid, "url": f"https://cloudnet.fmi.fi/file/{uuid}"}
+                payload = {
+                    "type": "file",
+                    "uuid": uuid,
+                    "url": f"https://cloudnet.fmi.fi/file/{uuid}",
+                }
                 res = requests.post(self._pid_service_url, json=payload)
                 try:
                     res.raise_for_status()

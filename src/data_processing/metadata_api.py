@@ -115,7 +115,9 @@ class MetadataApi:
             )
             updated_before = None
         else:
-            updated_before = (datetime.now(timezone.utc) - timedelta(days=freeze_after_days)).isoformat()
+            updated_before = (
+                datetime.now(timezone.utc) - timedelta(days=freeze_after_days)
+            ).isoformat()
         return {"volatile": True, "releasedBefore": updated_before}
 
     def find_product_metadata(self, args: Namespace, legacy_files: bool = True) -> list:
