@@ -12,7 +12,7 @@ setup(
     license="MIT License",
     install_requires=[
         "cloudnetpy_qc>=1.1.1",
-        "cloudnetpy>=1.39.0",
+        "cloudnetpy>=1.40.0",
         "cloudnetme>=0.1.5",
         "pytest",
         "pylint",
@@ -34,8 +34,11 @@ setup(
     python_requires=">=3.8",
     classifiers=[
         "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
         "License :: OSI Approved :: MIT License",
         "Intended Audience :: Science/Research",
         "Topic :: Scientific/Engineering",
+        "Development Status :: 5 - Production/Stable",
     ],
 )
