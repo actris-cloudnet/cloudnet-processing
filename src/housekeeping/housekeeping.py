@@ -1,9 +1,10 @@
+import logging
 import re
 import tempfile
 from datetime import datetime
 from os import getenv
 from pathlib import Path
-from typing import Optional, Union
+from typing import Dict, List, Optional, Union
 
 import cftime
 import netCDF4
@@ -26,8 +27,7 @@ def hatprohkd2db(src: bytes, metadata: dict):
         f.write(src)
         hkd = HatproHkd(f.name)
     time = hkd.data["T"]
-    measurements = {var: hkd.data[var] for var in cfg["vars"] if var in hkd.data}
-    df = DataFrame(measurements, index=time)
+    df = _make_df(time, hkd.data, cfg["vars"])
     df2db(df, metadata)
 
 
@@ -47,8 +47,7 @@ def _rpg2df(src: Union[Path, bytes], cfg: dict) -> DataFrame:
         raise TypeError
 
     time = [_rpgtime2datetime(t) for t in data["Time"]]
-    measurements = {var: data[var] for var in cfg["vars"] if var in data}
-    return DataFrame(measurements, index=time)
+    return _make_df(time, data, cfg["vars"])
 
 
 def rpg2db(src: bytes, metadata: dict) -> None:
@@ -87,13 +86,8 @@ def _nc2df(nc_src: Union[Path, bytes], cfg: dict) -> DataFrame:
     else:
         raise TypeError("nc_src must have type Path or bytes")
     time = _nctime2datetime(nc["time"])
-    measurements = _collect_nc_vars2dict(nc, cfg["vars"])
-    return DataFrame(measurements, index=time)
-
-
-def _collect_nc_vars2dict(nc: Dataset, variables: dict) -> dict:
-    nc_keys = nc.variables.keys()
-    return {var: nc[var][:] for var in variables if var in nc_keys}
+    measurements = {var: nc[var][:] for var in nc.variables.keys()}
+    return _make_df(time, measurements, cfg["vars"])
 
 
 def df2db(df: DataFrame, metadata: dict) -> None:
@@ -113,11 +107,11 @@ def df2db(df: DataFrame, metadata: dict) -> None:
 
 
 def _nctime2datetime(time: netCDF4.Variable) -> npt.NDArray:
-    units = fix_invalid_cf_time_unit(time.units)
+    units = _fix_invalid_cf_time_unit(time.units)
     return cftime.num2pydate(time[:], units=units)
 
 
-def fix_invalid_cf_time_unit(unit: str) -> str:
+def _fix_invalid_cf_time_unit(unit: str) -> str:
     match_ = re.match(
         r"^(\w+) since (\d{1,2})\.(\d{1,2})\.(\d{4}), (\d{1,2}):(\d{1,2}):(\d{1,2})$", unit
     )
@@ -132,6 +126,16 @@ def fix_invalid_cf_time_unit(unit: str) -> str:
         new_unit = f"{_unit} since {year}-{month}-{day} {hour}:{minute}:{sec}"
         return new_unit
     return unit
+
+
+def _make_df(time: npt.NDArray, measurements: Dict[str, npt.NDArray], variables: List[str]):
+    data = {}
+    for var in variables:
+        if var not in measurements:
+            logging.warning(f"Variable '{var}' not found")
+            continue
+        data[var] = measurements[var]
+    return DataFrame(data, index=time)
 
 
 def get_write_arg() -> dict:
