@@ -4,7 +4,7 @@ import tempfile
 from datetime import datetime
 from os import getenv
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Dict, Optional, Union
 
 import cftime
 import netCDF4
@@ -128,13 +128,15 @@ def _fix_invalid_cf_time_unit(unit: str) -> str:
     return unit
 
 
-def _make_df(time: npt.NDArray, measurements: Dict[str, npt.NDArray], variables: List[str]):
+def _make_df(
+    time: npt.NDArray, measurements: Dict[str, npt.NDArray], variables: Dict[str, str]
+) -> DataFrame:
     data = {}
-    for var in variables:
-        if var not in measurements:
-            logging.warning(f"Variable '{var}' not found")
+    for src_name, dest_name in variables.items():
+        if src_name not in measurements:
+            logging.warning(f"Variable '{src_name}' not found (would be mapped to '{dest_name}')")
             continue
-        data[var] = measurements[var]
+        data[dest_name] = measurements[src_name]
     return DataFrame(data, index=time)
 
 

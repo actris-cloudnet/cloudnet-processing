@@ -7,86 +7,77 @@ instruments = [
 
 [[configs]]
 id = "chm15k"
-vars = [
-  "temp_int",
-  "temp_ext",
-  "temp_det",
-  "temp_lom",
-]
+vars.temp_int = "internal_temperature"
+vars.temp_ext = "external_temperature"
+vars.temp_det = "detector_temperature"
+vars.temp_lom = "laser_optic_module_temperature"
 
 [[configs]]
 id = "hatpro"
-vars = [
-  "ambient_Target1_temperature",
-  "ambient_Target2_temperature",
-  "receiver1_temperature",
-  "receiver2_temperature",
-]
+vars.ambient_Target1_temperature = "ambient_target_sensor1_temperature"
+vars.ambient_Target2_temperature = "ambient_target_sensor2_temperature"
+vars.receiver1_temperature = "humidity_profiler_temperature"
+vars.receiver2_temperature = "temperature_profiler_temperature"
 
 [[configs]]
 id = "hatpro-hkd"
-vars = [
-  "Alarm",
-  "T0",
-  "T1",
-  "T2",
-  "T3",
-  "Stab0",
-  "Stab1",
-  "Flash",
-  "QFLWP1",
-  "QFLWP2",
-  "QFIWV1",
-  "QFIWV2",
-  "QFDLY1",
-  "QFDLY2",
-  "QFHPC1",
-  "QFHPC2",
-  "QFTPC1",
-  "QFTPC2",
-  "QFTPB1",
-  "QFTPB2",
-  "QFSTA1",
-  "QFSTA2",
-  "QFLPR1",
-  "QFLPR2",
-  "HPCh1",
-  "HPCh2",
-  "HPCh3",
-  "HPCh4",
-  "HPCh5",
-  "HPCh6",
-  "HPCh7",
-  "TPCh1",
-  "TPCh2",
-  "TPCh3",
-  "TPCh4",
-  "TPCh5",
-  "TPCh6",
-  "TPCh7",
-  "RF",
-  "DB",
-  "BLM",
-  "SCa",
-  "GCa",
-  "NCa",
-  "ND1",
-  "ND2",
-  "R1St",
-  "R2St",
-  "PF",
-  "TarSt",
-  "NDSt",
-]
+vars.Alarm = "alarm"
+vars.T0 = "ambient_target_sensor1_temperature"
+vars.T1 = "ambient_target_sensor2_temperature"
+vars.T2 = "humidity_profiler_temperature"
+vars.T3 = "temperature_profiler_temperature"
+vars.Stab0 = "humidity_profiler_stability"
+vars.Stab1 = "temperature_profiler_stability"
+vars.Flash = "remaining_flash_memory"
+vars.QFLWP1 = "lwp_quality_level"
+vars.QFLWP2 = "lwp_quality_reason"
+vars.QFIWV1 = "iwv_quality_level"
+vars.QFIWV2 = "iwv_quality_reason"
+vars.QFDLY1 = "dly_quality_level"
+vars.QFDLY2 = "dly_quality_reason"
+vars.QFHPC1 = "hpc_quality_level"
+vars.QFHPC2 = "hpc_quality_reason"
+vars.QFTPC1 = "tpc_quality_level"
+vars.QFTPC2 = "tpc_quality_reason"
+vars.QFTPB1 = "tpb_quality_level"
+vars.QFTPB2 = "tpb_quality_reason"
+vars.QFSTA1 = "sta_quality_level"
+vars.QFSTA2 = "sta_quality_reason"
+vars.QFLPR1 = "lpr_quality_level"
+vars.QFLPR2 = "lpr_quality_reason"
+vars.HPCh1 = "humidity_profiler_channel1_status"
+vars.HPCh2 = "humidity_profiler_channel2_status"
+vars.HPCh3 = "humidity_profiler_channel3_status"
+vars.HPCh4 = "humidity_profiler_channel4_status"
+vars.HPCh5 = "humidity_profiler_channel5_status"
+vars.HPCh6 = "humidity_profiler_channel6_status"
+vars.HPCh7 = "humidity_profiler_channel7_status"
+vars.TPCh1 = "temperature_profiler_channel1_status"
+vars.TPCh2 = "temperature_profiler_channel2_status"
+vars.TPCh3 = "temperature_profiler_channel3_status"
+vars.TPCh4 = "temperature_profiler_channel4_status"
+vars.TPCh5 = "temperature_profiler_channel5_status"
+vars.TPCh6 = "temperature_profiler_channel6_status"
+vars.TPCh7 = "temperature_profiler_channel7_status"
+vars.RF = "rain_flag"
+vars.DB = "dew_blower_speed_status"
+vars.BLM = "boundary_layer_mode_status"
+vars.SCa = "sky_tipping_calibration_status"
+vars.GCa = "gain_calibration_status"
+vars.NCa = "noise_calibration_status"
+vars.ND1 = "humidity_profiler_noise_diode_status"
+vars.ND2 = "temperature_profiler_noise_diode_status"
+vars.R1St = "humidity_profiler_stability_status"
+vars.R2St = "temperature_profiler_stability_status"
+vars.PF = "power_failure_status"
+vars.TarSt = "ambient_target_stability_status"
+vars.NDSt = "noise_diode_status"
 
 [[configs]]
 id = "rpg-fmcw-94"
-vars = [
-  "TransT",
-  "RecT",
-  "EnvTemp",
-  "DDVolt",
-  "PCT",
-  "TransPow",
-  "Status",
-]
+vars.RecT = "receiver_temperature"
+vars.EnvTemp = "environment_temperature"
+vars.DDVolt = "direct_detection_voltage"
+vars.PCT = "pc_temperature"
+vars.TransPow = "transmitter_power"
+vars.TransT = "transmitter_temperature"
