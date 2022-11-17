@@ -22,6 +22,16 @@ def _check_eof(file: BinaryIO):
         raise IOError(f"{end_offset - current_offset} unread bytes")
 
 
+def _decode_bits(data, format: List[Tuple[str, int]]) -> dict:
+    bits = data.copy()
+    output = {}
+    for name, size in format:
+        if not name.startswith("_"):
+            output[name] = bits & (2**size - 1)
+        bits >>= size
+    return output
+
+
 class HatproHkdError(Exception):
     pass
 
@@ -62,7 +72,7 @@ class HatproHkd:
             raise HatproHkdError("Only UTC time reference is supported")
 
     def _read_data(self, file: BinaryIO):
-        fields = [("T", "<i4"), ("Alarm", "c")]
+        fields = [("T", "<i4"), ("Alarm", "b")]
         if self.header["HKDSelect"] & 0x1:
             # According to the file format description, coordinates are stored
             # as degrees and minutes packed in decimal numbers. In practice,
@@ -86,3 +96,62 @@ class HatproHkd:
             fields.append(("Status", "<i4"))
         self.data = _read_from_file(file, fields, self.header["N"])
         self.data["T"] = np.datetime64("2001-01-01") + self.data["T"].astype("timedelta64[s]")
+        self.data.update(
+            _decode_bits(
+                self.data["Quality"],
+                [
+                    ("QFLWP1", 2),
+                    ("QFLWP2", 2),
+                    ("QFIWV1", 2),
+                    ("QFIWV2", 2),
+                    ("QFDLY1", 2),
+                    ("QFDLY2", 2),
+                    ("QFHPC1", 2),
+                    ("QFHPC2", 2),
+                    ("QFTPC1", 2),
+                    ("QFTPC2", 2),
+                    ("QFTPB1", 2),
+                    ("QFTPB2", 2),
+                    ("QFSTA1", 2),
+                    ("QFSTA2", 2),
+                    ("QFLPR1", 2),
+                    ("QFLPR2", 2),
+                ],
+            )
+        )
+        self.data.update(
+            _decode_bits(
+                self.data["Status"],
+                [
+                    ("HPCh1", 1),
+                    ("HPCh2", 1),
+                    ("HPCh3", 1),
+                    ("HPCh4", 1),
+                    ("HPCh5", 1),
+                    ("HPCh6", 1),
+                    ("HPCh7", 1),
+                    ("_unused1", 1),
+                    ("TPCh1", 1),
+                    ("TPCh2", 1),
+                    ("TPCh3", 1),
+                    ("TPCh4", 1),
+                    ("TPCh5", 1),
+                    ("TPCh6", 1),
+                    ("TPCh7", 1),
+                    ("_unused2", 1),
+                    ("RF", 1),
+                    ("DB", 1),
+                    ("BLM", 1),
+                    ("SCa", 1),
+                    ("GCa", 1),
+                    ("NCa", 1),
+                    ("ND1", 1),
+                    ("ND2", 1),
+                    ("R1St", 2),
+                    ("R2St", 2),
+                    ("PF", 1),
+                    ("TarSt", 1),
+                    ("NDSt", 1),
+                ],
+            )
+        )
