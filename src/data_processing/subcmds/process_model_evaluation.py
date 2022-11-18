@@ -6,9 +6,9 @@ from tempfile import NamedTemporaryFile
 from typing import Optional
 
 import requests
+from cloudnetpy.model_evaluation.plotting.plotting import generate_L3_day_plots
+from cloudnetpy.model_evaluation.products import product_resampling
 from cloudnetpy.utils import date_range
-from model_evaluation.plotting.plotting import generate_L3_day_plots
-from model_evaluation.products import product_resampling
 from requests.exceptions import HTTPError
 
 from data_processing import processing_tools, utils

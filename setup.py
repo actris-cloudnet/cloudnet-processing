@@ -12,8 +12,7 @@ setup(
     license="MIT License",
     install_requires=[
         "cloudnetpy_qc>=1.1.1",
-        "cloudnetpy>=1.40.0",
-        "cloudnetme>=0.1.5",
+        "cloudnetpy>=1.41.0",
         "pytest",
         "pylint",
         "mypy",

@@ -15,4 +15,3 @@ tests/data/freeze
 build/
 !tests/data/output/bucharest/calibrated/ecmwf/2020/20200402_bucharest_ecmwf.nc
 scripts/last-success
-src/model_evaluation
