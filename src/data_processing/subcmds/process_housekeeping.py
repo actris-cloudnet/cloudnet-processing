@@ -5,17 +5,14 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
+import housekeeping
 from data_processing import metadata_api
 from data_processing.utils import read_main_conf
-from housekeeping import HousekeepingEmptyWarning
-from housekeeping import get_config as get_housekeeping_config
-from housekeeping import hatprohkd2db, nc2db, rpg2db
 
 
 def main(args):
     cfg_main = read_main_conf()
-    cfg_hk = get_housekeeping_config()
-    instruments = cfg_hk["instruments"]
+    instruments = housekeeping.list_instruments()
     md_api = metadata_api.MetadataApi(cfg_main, _http_session())
     query_params = {
         "site": args.site,
@@ -35,31 +32,23 @@ def main(args):
         "api/raw-files",
         query_params,
     )
-    re_nc = re.compile(r"^.+\.nc$", re.I)
-    re_hkd = re.compile(r"^.+\.hkd$", re.I)
-    re_rpg = re.compile(r"^.+\.LV1$", re.I)
     raw_api = RawApi(cfg_main)
     for record in metadata:
         fname = record["filename"]
         uuid = record["uuid"]
 
-        try:
-            if re_nc.match(fname):
-                logging.info(f"Processing housekeeping data: {fname}")
-                filebytes = raw_api.get_raw_file(uuid, fname)
-                nc2db(filebytes, record)
-            elif re_hkd.match(fname):
-                logging.info(f"Processing housekeeping data: {fname}")
-                filebytes = raw_api.get_raw_file(uuid, fname)
-                hatprohkd2db(filebytes, record)
-            elif re_rpg.match(fname) and record["instrumentId"] == "rpg-fmcw-94":
-                logging.info(f"Processing housekeeping data: {fname}")
-                filebytes = raw_api.get_raw_file(uuid, fname)
-                rpg2db(filebytes, record)
-            else:
-                logging.info(f"Skipping: {fname}")
-        except HousekeepingEmptyWarning:
+        reader = housekeeping.get_reader(record)
+        if reader is None:
+            logging.info(f"Skipping: {fname}")
+            continue
+
+        logging.info(f"Processing housekeeping data: {fname}")
+        filebytes = raw_api.get_raw_file(uuid, fname)
+        df = reader(filebytes)
+        if df.empty:
             logging.warning(f"No housekeeping data found: {fname}")
+            continue
+        housekeeping.write(df, record)
 
 
 class RawApi:

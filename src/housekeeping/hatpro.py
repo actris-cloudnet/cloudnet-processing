@@ -4,6 +4,8 @@ from typing import BinaryIO, List, Tuple, Union
 
 import numpy as np
 
+from .utils import decode_bits
+
 
 def _read_from_file(file: BinaryIO, fields: List[Tuple[str, str]], count: int = 1) -> dict:
     arr = np.fromfile(file, np.dtype(fields), count)
@@ -20,16 +22,6 @@ def _check_eof(file: BinaryIO):
     end_offset = file.tell()
     if current_offset != end_offset:
         raise IOError(f"{end_offset - current_offset} unread bytes")
-
-
-def _decode_bits(data, format: List[Tuple[str, int]]) -> dict:
-    bits = data.copy()
-    output = {}
-    for name, size in format:
-        if not name.startswith("_"):
-            output[name] = bits & (2**size - 1)
-        bits >>= size
-    return output
 
 
 class HatproHkdError(Exception):
@@ -97,7 +89,7 @@ class HatproHkd:
         self.data = _read_from_file(file, fields, self.header["N"])
         self.data["T"] = np.datetime64("2001-01-01") + self.data["T"].astype("timedelta64[s]")
         self.data.update(
-            _decode_bits(
+            decode_bits(
                 self.data["Quality"],
                 [
                     ("QFLWP1", 2),
@@ -120,7 +112,7 @@ class HatproHkd:
             )
         )
         self.data.update(
-            _decode_bits(
+            decode_bits(
                 self.data["Status"],
                 [
                     ("HPCh1", 1),

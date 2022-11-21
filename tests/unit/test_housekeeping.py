@@ -1,25 +1,29 @@
 import pathlib
 
+import numpy as np
 import pytest
 
-from housekeeping import get_config
-from housekeeping.housekeeping import _nc2df, _rpg2df
+from housekeeping.housekeeping import get_reader
+from housekeeping.utils import decode_bits
 
 
-@pytest.mark.parametrize("instrument_id", ["chm15k", "rpg-fmcw-94", "hatpro"])
+@pytest.mark.parametrize("instrument_id", ["chm15k", "rpg-fmcw-94"])
 def test_something(instrument_id):
     src_dir = pathlib.Path(f"./tests/data/raw/{instrument_id}")
-    if instrument_id == "rpg-fmcw-94":
-        cfg = get_config(cfg_id=instrument_id)
-        fun2df = _rpg2df
-    elif instrument_id == "hatpro":
-        cfg = {"vars": ["air_temperature", "azimuth_angle", "ele"]}
-        fun2df = _nc2df
-    else:
-        cfg = get_config(cfg_id=instrument_id)
-        fun2df = _nc2df
-    assert "vars" in cfg
-
-    for p in src_dir.iterdir():
-        df = fun2df(p, cfg)
+    for path in src_dir.iterdir():
+        reader = get_reader(
+            {
+                "instrumentId": instrument_id,
+                "filename": path.name,
+            }
+        )
+        df = reader(path.read_bytes())
         assert not df.empty
+
+
+def test_decode_bits():
+    values = decode_bits(np.array([0b101010]), [("A", 4), ("_B", 1), ("C", 1)])
+    assert values == {
+        "A": np.array([0b1010]),
+        "C": np.array([0b1]),
+    }

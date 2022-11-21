@@ -1,10 +1,10 @@
 import logging
 import re
 import tempfile
-from datetime import datetime
+from functools import partial
 from os import getenv
 from pathlib import Path
-from typing import Dict, Union
+from typing import Callable, Dict, List, Optional
 
 import cftime
 import netCDF4
@@ -15,75 +15,54 @@ from influxdb_client.client.write_api import SYNCHRONOUS
 from netCDF4 import Dataset as Dataset
 from pandas import DataFrame
 from rpgpy import read_rpg
-from rpgpy.utils import rpg_seconds2date
+from rpgpy.utils import rpg_seconds2datetime64
 
-from .exceptions import HousekeepingEmptyWarning
 from .hatpro import HatproHkd
 
 
-def hatprohkd2db(src: bytes, metadata: dict):
-    cfg = get_config("hatpro_hkd")
+def _handle_hatpro_hkd(src: bytes, cfg: dict):
     with tempfile.NamedTemporaryFile() as f:
         f.write(src)
         hkd = HatproHkd(f.name)
     time = hkd.data["T"]
-    df = _make_df(time, hkd.data, cfg["vars"])
-    df2db(df, metadata)
+    return _make_df(time, hkd.data, cfg["vars"])
 
 
-def _rpgtime2datetime(rpg_timestamp: int) -> datetime:
-    year, month, day, hour, minute, sec = [int(t) for t in rpg_seconds2date(rpg_timestamp)]
-    return datetime(year, month, day, hour, minute, sec)
-
-
-def _rpg2df(src: Union[Path, bytes], cfg: dict) -> DataFrame:
-    if isinstance(src, bytes):
-        with tempfile.NamedTemporaryFile() as f:
-            f.write(src)
-            head, data = read_rpg(f.name)
-    elif isinstance(src, Path):
-        head, data = read_rpg(src)
-    else:
-        raise TypeError
-
-    time = [_rpgtime2datetime(t) for t in data["Time"]]
+def _handle_rpg(src: bytes, cfg: dict) -> DataFrame:
+    with tempfile.NamedTemporaryFile() as f:
+        f.write(src)
+        head, data = read_rpg(f.name)
+    time = rpg_seconds2datetime64(data["Time"])
     return _make_df(time, data, cfg["vars"])
 
 
-def rpg2db(src: bytes, metadata: dict) -> None:
-    cfg = get_config(metadata["instrumentId"] + "_lv1")
-    df = _rpg2df(src, cfg)
-    df2db(df, metadata)
-
-
-def nc2db(src: Union[Path, bytes], metadata: dict) -> None:
-    cfg = get_config(metadata["instrumentId"] + "_nc")
-    df = _nc2df(src, cfg)
-    df2db(df, metadata)
-
-
-def get_config(format_id: str) -> dict:
-    src = Path(__file__).parent.joinpath("config.toml")
-    return toml.load(src)["format"][format_id]
-
-
-def _nc2df(nc_src: Union[Path, bytes], cfg: dict) -> DataFrame:
-    if isinstance(nc_src, Path):
-        if not nc_src.is_file():
-            raise FileNotFoundError(f"{nc_src} not found")
-        nc = Dataset(nc_src)
-    elif isinstance(nc_src, bytes):
-        nc = Dataset("dataset.nc", memory=nc_src)
-    else:
-        raise TypeError("nc_src must have type Path or bytes")
+def _handle_nc(src: bytes, cfg: dict) -> DataFrame:
+    nc = Dataset("dataset.nc", memory=src)
     time = _nctime2datetime(nc["time"])
     measurements = {var: nc[var][:] for var in nc.variables.keys()}
     return _make_df(time, measurements, cfg["vars"])
 
 
-def df2db(df: DataFrame, metadata: dict) -> None:
-    if df.empty:
-        raise HousekeepingEmptyWarning()
+def get_reader(metadata: dict) -> Optional[Callable[[bytes], DataFrame]]:
+    instrument_id = metadata["instrumentId"]
+    filename = metadata["filename"].lower()
+
+    if instrument_id == "hatpro":
+        if filename.endswith(".nc"):
+            return partial(_handle_nc, cfg=get_config("hatpro_nc"))
+        if filename.endswith(".hkd"):
+            return partial(_handle_hatpro_hkd, cfg=get_config("hatpro_hkd"))
+
+    if instrument_id == "rpg-fmcw-94" and filename.endswith(".lv1"):
+        return partial(_handle_rpg, cfg=get_config("rpg-fmcw-94_lv1"))
+
+    if instrument_id == "chm15k" and filename.endswith(".nc"):
+        return partial(_handle_nc, cfg=get_config("chm15k_nc"))
+
+    return None
+
+
+def write(df: DataFrame, metadata: dict) -> None:
     df["site_id"] = metadata["siteId"]
     df["instrument_id"] = metadata["instrumentId"]
     df["instrument_pid"] = metadata["instrumentPid"]
@@ -129,6 +108,16 @@ def _make_df(
             continue
         data[dest_name] = measurements[src_name]
     return DataFrame(data, index=time)
+
+
+def get_config(format_id: str) -> dict:
+    src = Path(__file__).parent.joinpath("config.toml")
+    return toml.load(src)["format"][format_id]
+
+
+def list_instruments() -> List[str]:
+    src = Path(__file__).parent.joinpath("config.toml")
+    return list(toml.load(src)["metadata"].keys())
 
 
 def get_write_arg() -> dict:
