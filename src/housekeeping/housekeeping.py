@@ -4,7 +4,7 @@ import tempfile
 from datetime import datetime
 from os import getenv
 from pathlib import Path
-from typing import Dict, Optional, Union
+from typing import Dict, Union
 
 import cftime
 import netCDF4
@@ -22,7 +22,7 @@ from .hatpro import HatproHkd
 
 
 def hatprohkd2db(src: bytes, metadata: dict):
-    cfg = get_config(cfg_id="hatpro-hkd")
+    cfg = get_config("hatpro_hkd")
     with tempfile.NamedTemporaryFile() as f:
         f.write(src)
         hkd = HatproHkd(f.name)
@@ -51,29 +51,20 @@ def _rpg2df(src: Union[Path, bytes], cfg: dict) -> DataFrame:
 
 
 def rpg2db(src: bytes, metadata: dict) -> None:
-    cfg = get_config(cfg_id=metadata["instrumentId"])
+    cfg = get_config(metadata["instrumentId"] + "_lv1")
     df = _rpg2df(src, cfg)
     df2db(df, metadata)
 
 
 def nc2db(src: Union[Path, bytes], metadata: dict) -> None:
-    cfg = get_config(cfg_id=metadata["instrumentId"])
+    cfg = get_config(metadata["instrumentId"] + "_nc")
     df = _nc2df(src, cfg)
     df2db(df, metadata)
 
 
-def get_config(cfg_id: Optional[str] = None) -> dict:
+def get_config(format_id: str) -> dict:
     src = Path(__file__).parent.joinpath("config.toml")
-    cfgs = toml.load(src)
-    if cfg_id is None:
-        return cfgs["global"]
-    _cfgs = [c for c in cfgs["configs"] if c["id"] == cfg_id]
-    if len(_cfgs) < 1:
-        raise ValueError(f"Cannot found config for id: {cfg_id}")
-    elif len(_cfgs) > 1:
-        raise ValueError(f"Ambiguous config id: {cfg_id}")
-    else:
-        return _cfgs[0]
+    return toml.load(src)["format"][format_id]
 
 
 def _nc2df(nc_src: Union[Path, bytes], cfg: dict) -> DataFrame:

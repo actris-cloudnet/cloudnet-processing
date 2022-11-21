@@ -1,26 +1,16 @@
-[global]
-instruments = [
-  "chm15k",
-  "hatpro",
-  "rpg-fmcw-94",
-]
-
-[[configs]]
-id = "chm15k"
+[format.chm15k_nc]
 vars.temp_int = "internal_temperature"
 vars.temp_ext = "external_temperature"
 vars.temp_det = "detector_temperature"
 vars.temp_lom = "laser_optic_module_temperature"
 
-[[configs]]
-id = "hatpro"
+[format.hatpro_nc]
 vars.ambient_Target1_temperature = "ambient_target_sensor1_temperature"
 vars.ambient_Target2_temperature = "ambient_target_sensor2_temperature"
 vars.receiver1_temperature = "humidity_profiler_temperature"
 vars.receiver2_temperature = "temperature_profiler_temperature"
 
-[[configs]]
-id = "hatpro-hkd"
+[format.hatpro_hkd]
 vars.Alarm = "alarm"
 vars.T0 = "ambient_target_sensor1_temperature"
 vars.T1 = "ambient_target_sensor2_temperature"
@@ -73,11 +63,51 @@ vars.PF = "power_failure_status"
 vars.TarSt = "ambient_target_stability_status"
 vars.NDSt = "noise_diode_status"
 
-[[configs]]
-id = "rpg-fmcw-94"
+[format.rpg-fmcw-94_lv1]
 vars.RecT = "receiver_temperature"
 vars.EnvTemp = "environment_temperature"
 vars.DDVolt = "direct_detection_voltage"
 vars.PCT = "pc_temperature"
 vars.TransPow = "transmitter_power"
 vars.TransT = "transmitter_temperature"
+
+[metadata.hatpro]
+vars.alarm.description = "The alarm flag is activated in the following cases:\n\n- interference or failure of a channel that is used in one of the retrievals\n- thermal receiver stability not sufficient for measurement\n- noise diode failure of one of the receivers\n- ambient target thermal sensor not stable"
+vars."*_temperature".unit = "K"
+vars."*_stability".unit = "K"
+vars.remaining_flash_memory.unit = "kB"
+vars."*_quality_level".description = "‘0’ = this level 2 product is not evaluated for quality control\n\n‘1’ = highest quality level\n\n‘2’ = reduced quality\n\n‘3’ = low quality. This sample should not be used."
+vars."*_quality_reason".description = "‘0’ = unknown\n\n‘1’ = possible external interference on a receiver channel or failure of a receiver channel that is used in the retrieval of this product.\n\n‘2’ = LWP too high. At high rain rates the scattering on rain drops can mask the water vapour line completely and no humidity profiling or IWV determination is possible. Also the temperature profiling may be affected when the oxygen line channels are all saturated due to droplets.\n\n‘3’ = free for future use."
+vars."*_profiler_channel*_status".description = "When a bit is set ‘1’, the corresponding channel is ok, otherwise the channel has a malfunction."
+vars.rain_flag.description = "‘1’ means raining, ‘0’ = no rain"
+vars.dew_blower_speed_status.description = "‘1’ = high speed mode, ‘0’ = low speed mode"
+vars.boundary_layer_mode_status.description = "‘1’ = boundary layer scanning active, ‘0’ = BL-mode not active"
+vars.sky_tipping_calibration_status.description = "‘1’ = sky tipping calibration running, ‘0’ = not active"
+vars.gain_calibration_status.description = "‘1’ = gain calibration running (using internal ambient target), ‘0’ = not active"
+vars.noise_calibration_status.description = "‘1’ = noise calibration running, ‘0’ = not active"
+vars.humidity_profiler_noise_diode_status.description = " ‘1’ = noise diode of humidity profiler ok, ‘0’ = noise diode not working"
+vars.temperature_profiler_noise_diode_status.description = "‘1’ = noise diode of temperature profiler ok, ‘0’ = noise diode not working"
+vars."*_profiler_stability_status".description = "‘0’ = unknown, not enough data samples recorded yet, ‘1’ = stability ok, ‘2’ = not sufficiently stable"
+vars.power_failure_status.description = "‘1’ = a power failure has occurred recently. When a new MDF has been started automatically after a power failure, the ‘1’ flag is kept for 1000 seconds and switching back to ‘0’ afterwards. ‘0’ = no power failure occurred."
+vars.ambient_target_stability_status.description = "Some radiometers are using two ambient target temperature sensors for monitoring the target’s physical temperature. When the temperature readings of these two sensors differ by more than 0.3 K, the flag turns to ‘1’. ‘0’ = sensors ok."
+vars.noise_diode_status.description = "‘0’ = noise diode is turned off for the current sample, ‘1’ = noise diode is turned on for the current sample."
+
+[metadata.rpg-fmcw-94]
+vars.receiver_temperature.description = "Receiver temperature of current sample"
+vars.receiver_temperature.unit = "K"
+vars.environment_temperature.description = "Environment temperature of current sample"
+vars.environment_temperature.unit = "K"
+vars.direct_detection_voltage.description = "Direct detection channel voltage of current sample"
+vars.direct_detection_voltage.unit = "V"
+vars.pc_temperature.description = "PC temperature of current sample"
+vars.pc_temperature.unit = "K"
+vars.transmitter_power.description = "Transmitter power of current sample"
+vars.transmitter_power.unit = "K"
+vars.transmitter_temperature.description = "Transmitter temperature of current sample"
+vars.transmitter_temperature.unit = "K"
+
+[metadata.chm15k]
+vars.internal_temperature.unit = "K"
+vars.external_temperature.unit = "K"
+vars.detector_temperature.unit = "K"
+vars.laser_optic_module_temperature.unit = "K"
