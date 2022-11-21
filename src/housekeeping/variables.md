@@ -649,6 +649,15 @@ Transmitter temperature of current sample
 <th>Description</th>
 </tr>
 <tr>
+<td>`detector_quality`</td>
+<td>percent</td>
+<td>
+
+Quality of detector signal
+
+</td>
+</tr>
+<tr>
 <td>`detector_temperature`</td>
 <td>K</td>
 <td>
@@ -681,6 +690,33 @@ Transmitter temperature of current sample
 <td>
 
 
+
+</td>
+</tr>
+<tr>
+<td>`laser_quality`</td>
+<td>percent</td>
+<td>
+
+Laser quality index
+
+</td>
+</tr>
+<tr>
+<td>`life_time`</td>
+<td>h</td>
+<td>
+
+Laser operating hours
+
+</td>
+</tr>
+<tr>
+<td>`optical_quality`</td>
+<td>percent</td>
+<td>
+
+Optical quality index
 
 </td>
 </tr>
