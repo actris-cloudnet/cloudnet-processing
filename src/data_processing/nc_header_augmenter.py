@@ -9,6 +9,7 @@ import numpy as np
 from cloudnetpy import output
 from cloudnetpy.exceptions import ValidTimeStampError
 from cloudnetpy.instruments import instruments
+from cloudnetpy.instruments.disdrometer import ATTRIBUTES
 from cloudnetpy.metadata import COMMON_ATTRIBUTES
 from cloudnetpy.utils import get_time, get_uuid, seconds2date
 
@@ -115,13 +116,54 @@ def harmonize_halo_file(data: dict) -> str:
     return uuid
 
 
+def harmonize_parsivel_file(data: dict) -> str:
+    temp_file = NamedTemporaryFile()
+    with netCDF4.Dataset(data["full_path"], "r") as nc_raw, netCDF4.Dataset(
+        temp_file.name, "w", format="NETCDF4_CLASSIC"
+    ) as nc:
+        parsivel = ParsivelNc(nc_raw, nc, data)
+        valid_ind = parsivel.get_valid_time_indices()
+        parsivel.copy_file_contents(time_ind=valid_ind, skip=("lat", "lon", "zsl", "time_bnds"))
+        parsivel.fix_variable_names()
+        parsivel.convert_time()
+        parsivel.add_date()
+        parsivel.add_geolocation()
+        uuid = parsivel.add_uuid()
+        parsivel.add_global_attributes("disdrometer", instruments.PARSIVEL2)
+        parsivel.add_history("disdrometer", source="History")
+        parsivel.clean_global_attributes()
+        parsivel.fix_long_names()
+        parsivel.fix_units()
+        parsivel.fix_standard_names()
+        parsivel.fix_comments()
+        shutil.copy(temp_file.name, data["full_path"])
+    return uuid
+
+
 class Level1Nc:
     def __init__(self, nc_raw: netCDF4.Dataset, nc: netCDF4.Dataset, data: dict):
         self.nc_raw = nc_raw
         self.nc = nc
         self.data = data
 
-    def copy_file_contents(self, keys: tuple | None = None, time_ind: list | None = None):
+    def convert_time(self):
+        """Converts time to decimal hour."""
+        time = self.nc.variables["time"]
+        if max(time[:]) > 24:
+            fraction_hour = cloudnetpy.utils.seconds2hours(time[:])
+            time[:] = fraction_hour
+        time.long_name = "Time UTC"
+        time.units = self._get_time_units()
+        for key in ("comment", "bounds"):
+            if hasattr(time, key):
+                delattr(time, key)
+        time.standard_name = "time"
+        time.axis = "T"
+        time.calendar = "standard"
+
+    def copy_file_contents(
+        self, keys: tuple | None = None, time_ind: list | None = None, skip: tuple | None = None
+    ):
         """Copies all variables and global attributes from one file to another.
         Optionally copies only certain keys and / or uses certain time indices only.
         """
@@ -132,7 +174,8 @@ class Level1Nc:
                 self.nc.createDimension(key, dimension.size)
         keys = keys if keys is not None else self.nc_raw.variables.keys()
         for key in keys:
-            self.copy_variable(key, time_ind)
+            if skip is None or key not in skip:
+                self.copy_variable(key, time_ind)
         self._copy_global_attributes()
 
     def copy_variable(self, key: str, time_ind: list | None = None):
@@ -181,10 +224,10 @@ class Level1Nc:
         self.nc.file_uuid = uuid
         return uuid
 
-    def add_history(self, product: str):
+    def add_history(self, product: str, source: str = "history"):
         """Adds history attribute."""
         version = utils.get_data_processing_version()
-        old_history = getattr(self.nc_raw, "history", "")
+        old_history = getattr(self.nc_raw, source, "")
         history = (
             f"{get_time()} - {product} metadata harmonized by CLU using "
             f"cloudnet-processing v{version}"
@@ -231,6 +274,10 @@ class Level1Nc:
 
     def _get_time_units(self) -> str:
         return f'hours since {self.data["date"]} 00:00:00 +00:00'
+
+    def delete_global_attribute(self, name: str):
+        if hasattr(self.nc, name):
+            delattr(self.nc, name)
 
     @staticmethod
     def _screen_data(variable: netCDF4.Variable, time_ind: list | None = None) -> np.ndarray:
@@ -363,21 +410,6 @@ class HatproNc(Level1Nc):
         self.nc.variables["time"][:] = time[ind]
         self.nc.variables["lwp"][:] = array[ind]
 
-    def convert_time(self):
-        """Converts time to decimal hour."""
-        time = self.nc.variables["time"]
-        if max(time[:]) > 24:
-            fraction_hour = cloudnetpy.utils.seconds2hours(time[:])
-            time[:] = fraction_hour
-        time.long_name = "Time UTC"
-        time.units = self._get_time_units()
-        for key in ("comment", "bounds"):
-            if hasattr(time, key):
-                delattr(time, key)
-        time.standard_name = "time"
-        time.axis = "T"
-        time.calendar = "standard"
-
     def check_time_reference(self):
         """Checks the reference time zone."""
         key = "time_reference"
@@ -422,7 +454,7 @@ class HatproNc(Level1Nc):
 
 
 def _get_epoch(units: str) -> tuple[int, int, int]:
-    fallback = (2001, 1, 1)
+    fallback = 2001, 1, 1
     try:
         date = units.split()[2]
     except IndexError:
@@ -438,5 +470,114 @@ def _get_epoch(units: str) -> tuple[int, int, int]:
     year, month, day = date_components
     current_year = datetime.datetime.today().year
     if (1900 < year <= current_year) and (0 < month < 13) and (0 < day < 32):
-        return (year, month, day)
+        return year, month, day
     return fallback
+
+
+class ParsivelNc(Level1Nc):
+    def fix_variable_names(self):
+        keymap = {"V_sensor": "V_power_supply", "E_kin": "kinetic_energy"}
+        for old_name, new_name in keymap.items():
+            self.nc.renameVariable(old_name, new_name)
+
+    def clean_global_attributes(self):
+        keys = (
+            "Title",
+            "Institute",
+            "Contact_person",
+            "Data_telegram_setting",
+            "Dependencies",
+            "Processing_date",
+            "Author",
+            "Comments",
+            "Licence",
+            "Station_Name",
+            "Sensor_ID",
+            "Date",
+            "Source",
+            "Institution",
+            "History",
+        )
+        for key in keys:
+            self.delete_global_attribute(key)
+
+    def get_valid_time_indices(self) -> list:
+        """Finds valid time indices."""
+        time_stamps = self.nc_raw.variables["time"][:]
+        time_stamps = cloudnetpy.utils.seconds2hours(time_stamps)
+        valid_ind: list[int] = []
+        for ind, t in enumerate(time_stamps):
+            if 0 < t < 24:
+                if len(valid_ind) > 1 and t <= time_stamps[valid_ind[-1]]:
+                    continue
+                valid_ind.append(ind)
+        if not valid_ind:
+            raise ValidTimeStampError
+        return valid_ind
+
+    def copy_variable(self, key: str, time_ind: list | None = None):
+        """Copies one variable from source file to target.
+        Optionally uses certain time indices only.
+        """
+        if key not in self.nc_raw.variables.keys():
+            logging.warning(f"Key {key} not found from the source file.")
+            return
+        variable = self.nc_raw.variables[key]
+        dtype = variable.dtype
+        dtype = "f4" if dtype == "f8" else dtype
+        if key == "time":
+            dtype = "f8"
+        var_out = self.nc.createVariable(
+            key,
+            dtype,
+            variable.dimensions,
+            zlib=True,
+            fill_value=getattr(variable, "_FillValue", None),
+        )
+        self._copy_variable_attributes(variable, var_out)
+        screened_data = self._screen_data(variable, time_ind)
+        var_out[:] = screened_data
+
+    def fix_long_names(self):
+        keymap = {
+            "diameter_bnds": "Diameter bounds",
+            "velocity_bnds": "Velocity bounds",
+            "synop_WaWa": "Synop code WaWa",
+            "synop_WW": "Synop code WW",
+            "T_sensor": "Temperature in the sensor housing",
+            "sig_laser": "Signal amplitude of the laser strip",
+            "rainfall_rate": "Rainfall rate",
+            "V_power_supply": "Power supply voltage",
+        }
+        for key, long_name in keymap.items():
+            if key in self.nc.variables:
+                self.nc.variables[key].long_name = long_name
+
+        skip = ("time", "visibility", "synop_WaWa", "synop_WW")
+        for key in self.nc.variables:
+            if key not in skip:
+                long_name = self.nc.variables[key].long_name
+                self.nc.variables[key].long_name = long_name.lower().capitalize()
+
+    def fix_units(self):
+        keymap = {
+            "velocity_spread": "m s-1",
+            "velocity_bnds": "m s-1",
+            "number_concentration": "m-3 mm-1",
+            "kinetic_energy": "J m-2 h-1",
+        }
+        for key, units in keymap.items():
+            self.nc.variables[key].units = units
+
+    def fix_standard_names(self):
+        self.nc.variables["visibility"].standard_name = "visibility_in_air"
+
+    def fix_comments(self):
+        for key, item in ATTRIBUTES.items():
+            if key not in self.nc.variables:
+                continue
+            if item.comment:
+                self.nc.variables[key].comment = item.comment
+            else:
+                if hasattr(self.nc.variables[key], "comment"):
+                    delattr(self.nc.variables[key], "comment")

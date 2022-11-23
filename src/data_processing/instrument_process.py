@@ -5,6 +5,7 @@ import logging
 import os
 import shutil
 
+from cloudnetpy.exceptions import DisdrometerDataError
 from cloudnetpy.instruments import (
     basta2nc,
     ceilo2nc,
@@ -283,7 +284,11 @@ class ProcessDisdrometer(ProcessInstrument):
         full_path, self.uuid.raw, self.instrument_pids = self.base.download_instrument(
             "parsivel", largest_only=True
         )
-        self.uuid.product = disdrometer2nc(full_path, *self._args, **self._kwargs)
+        try:
+            self.uuid.product = disdrometer2nc(full_path, *self._args, **self._kwargs)
+        except DisdrometerDataError:
+            data = self._get_payload_for_nc_file_augmenter(self.temp_file.name)
+            self.uuid.product = nc_header_augmenter.harmonize_parsivel_file(data)
 
     def process_thies_lnm(self):
         full_paths, self.uuid.raw, self.instrument_pids = self.base.download_instrument("thies-lnm")
