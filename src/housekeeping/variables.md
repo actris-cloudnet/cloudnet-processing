@@ -15,7 +15,11 @@
 <th>Description</th>
 </tr>
 <tr>
-<td>`alarm`</td>
+<td>
+
+`alarm`
+
+</td>
 <td></td>
 <td>
 
@@ -29,7 +33,11 @@ The alarm flag is activated in the following cases:
 </td>
 </tr>
 <tr>
-<td>`ambient_target_sensor1_temperature`</td>
+<td>
+
+`ambient_target_sensor1_temperature`
+
+</td>
 <td>K</td>
 <td>
 
@@ -38,7 +46,11 @@ The alarm flag is activated in the following cases:
 </td>
 </tr>
 <tr>
-<td>`ambient_target_sensor2_temperature`</td>
+<td>
+
+`ambient_target_sensor2_temperature`
+
+</td>
 <td>K</td>
 <td>
 
@@ -47,7 +59,11 @@ The alarm flag is activated in the following cases:
 </td>
 </tr>
 <tr>
-<td>`ambient_target_stability_status`</td>
+<td>
+
+`ambient_target_stability_status`
+
+</td>
 <td></td>
 <td>
 
@@ -56,7 +72,11 @@ Some radiometers are using two ambient target temperature sensors for monitoring
 </td>
 </tr>
 <tr>
-<td>`boundary_layer_mode_status`</td>
+<td>
+
+`boundary_layer_mode_status`
+
+</td>
 <td></td>
 <td>
 
@@ -65,7 +85,11 @@ Some radiometers are using two ambient target temperature sensors for monitoring
 </td>
 </tr>
 <tr>
-<td>`dew_blower_speed_status`</td>
+<td>
+
+`dew_blower_speed_status`
+
+</td>
 <td></td>
 <td>
 
@@ -74,7 +98,11 @@ Some radiometers are using two ambient target temperature sensors for monitoring
 </td>
 </tr>
 <tr>
-<td>`dly_quality_level`</td>
+<td>
+
+`dly_quality_level`
+
+</td>
 <td></td>
 <td>
 
@@ -89,7 +117,11 @@ Some radiometers are using two ambient target temperature sensors for monitoring
 </td>
 </tr>
 <tr>
-<td>`dly_quality_reason`</td>
+<td>
+
+`dly_quality_reason`
+
+</td>
 <td></td>
 <td>
 
@@ -104,7 +136,11 @@ Some radiometers are using two ambient target temperature sensors for monitoring
 </td>
 </tr>
 <tr>
-<td>`gain_calibration_status`</td>
+<td>
+
+`gain_calibration_status`
+
+</td>
 <td></td>
 <td>
 
@@ -113,7 +149,11 @@ Some radiometers are using two ambient target temperature sensors for monitoring
 </td>
 </tr>
 <tr>
-<td>`hpc_quality_level`</td>
+<td>
+
+`hpc_quality_level`
+
+</td>
 <td></td>
 <td>
 
@@ -128,7 +168,11 @@ Some radiometers are using two ambient target temperature sensors for monitoring
 </td>
 </tr>
 <tr>
-<td>`hpc_quality_reason`</td>
+<td>
+
+`hpc_quality_reason`
+
+</td>
 <td></td>
 <td>
 
@@ -143,7 +187,11 @@ Some radiometers are using two ambient target temperature sensors for monitoring
 </td>
 </tr>
 <tr>
-<td>`humidity_profiler_channel1_status`</td>
+<td>
+
+`humidity_profiler_channel1_status`
+
+</td>
 <td></td>
 <td>
 
@@ -152,7 +200,11 @@ When a bit is set ‘1’, the corresponding channel is ok, otherwise the channe
 </td>
 </tr>
 <tr>
-<td>`humidity_profiler_channel2_status`</td>
+<td>
+
+`humidity_profiler_channel2_status`
+
+</td>
 <td></td>
 <td>
 
@@ -161,7 +213,11 @@ When a bit is set ‘1’, the corresponding channel is ok, otherwise the channe
 </td>
 </tr>
 <tr>
-<td>`humidity_profiler_channel3_status`</td>
+<td>
+
+`humidity_profiler_channel3_status`
+
+</td>
 <td></td>
 <td>
 
@@ -170,7 +226,11 @@ When a bit is set ‘1’, the corresponding channel is ok, otherwise the channe
 </td>
 </tr>
 <tr>
-<td>`humidity_profiler_channel4_status`</td>
+<td>
+
+`humidity_profiler_channel4_status`
+
+</td>
 <td></td>
 <td>
 
@@ -179,7 +239,11 @@ When a bit is set ‘1’, the corresponding channel is ok, otherwise the channe
 </td>
 </tr>
 <tr>
-<td>`humidity_profiler_channel5_status`</td>
+<td>
+
+`humidity_profiler_channel5_status`
+
+</td>
 <td></td>
 <td>
 
@@ -188,7 +252,11 @@ When a bit is set ‘1’, the corresponding channel is ok, otherwise the channe
 </td>
 </tr>
 <tr>
-<td>`humidity_profiler_channel6_status`</td>
+<td>
+
+`humidity_profiler_channel6_status`
+
+</td>
 <td></td>
 <td>
 
@@ -197,7 +265,11 @@ When a bit is set ‘1’, the corresponding channel is ok, otherwise the channe
 </td>
 </tr>
 <tr>
-<td>`humidity_profiler_channel7_status`</td>
+<td>
+
+`humidity_profiler_channel7_status`
+
+</td>
 <td></td>
 <td>
 
@@ -206,7 +278,11 @@ When a bit is set ‘1’, the corresponding channel is ok, otherwise the channe
 </td>
 </tr>
 <tr>
-<td>`humidity_profiler_noise_diode_status`</td>
+<td>
+
+`humidity_profiler_noise_diode_status`
+
+</td>
 <td></td>
 <td>
 
@@ -215,7 +291,11 @@ When a bit is set ‘1’, the corresponding channel is ok, otherwise the channe
 </td>
 </tr>
 <tr>
-<td>`humidity_profiler_stability`</td>
+<td>
+
+`humidity_profiler_stability`
+
+</td>
 <td>K</td>
 <td>
 
@@ -224,7 +304,11 @@ When a bit is set ‘1’, the corresponding channel is ok, otherwise the channe
 </td>
 </tr>
 <tr>
-<td>`humidity_profiler_stability_status`</td>
+<td>
+
+`humidity_profiler_stability_status`
+
+</td>
 <td></td>
 <td>
 
@@ -233,7 +317,11 @@ When a bit is set ‘1’, the corresponding channel is ok, otherwise the channe
 </td>
 </tr>
 <tr>
-<td>`humidity_profiler_temperature`</td>
+<td>
+
+`humidity_profiler_temperature`
+
+</td>
 <td>K</td>
 <td>
 
@@ -242,7 +330,11 @@ When a bit is set ‘1’, the corresponding channel is ok, otherwise the channe
 </td>
 </tr>
 <tr>
-<td>`iwv_quality_level`</td>
+<td>
+
+`iwv_quality_level`
+
+</td>
 <td></td>
 <td>
 
@@ -257,7 +349,11 @@ When a bit is set ‘1’, the corresponding channel is ok, otherwise the channe
 </td>
 </tr>
 <tr>
-<td>`iwv_quality_reason`</td>
+<td>
+
+`iwv_quality_reason`
+
+</td>
 <td></td>
 <td>
 
@@ -272,7 +368,11 @@ When a bit is set ‘1’, the corresponding channel is ok, otherwise the channe
 </td>
 </tr>
 <tr>
-<td>`lpr_quality_level`</td>
+<td>
+
+`lpr_quality_level`
+
+</td>
 <td></td>
 <td>
 
@@ -287,7 +387,11 @@ When a bit is set ‘1’, the corresponding channel is ok, otherwise the channe
 </td>
 </tr>
 <tr>
-<td>`lpr_quality_reason`</td>
+<td>
+
+`lpr_quality_reason`
+
+</td>
 <td></td>
 <td>
 
@@ -302,7 +406,11 @@ When a bit is set ‘1’, the corresponding channel is ok, otherwise the channe
 </td>
 </tr>
 <tr>
-<td>`lwp_quality_level`</td>
+<td>
+
+`lwp_quality_level`
+
+</td>
 <td></td>
 <td>
 
@@ -317,7 +425,11 @@ When a bit is set ‘1’, the corresponding channel is ok, otherwise the channe
 </td>
 </tr>
 <tr>
-<td>`lwp_quality_reason`</td>
+<td>
+
+`lwp_quality_reason`
+
+</td>
 <td></td>
 <td>
 
@@ -332,7 +444,11 @@ When a bit is set ‘1’, the corresponding channel is ok, otherwise the channe
 </td>
 </tr>
 <tr>
-<td>`noise_calibration_status`</td>
+<td>
+
+`noise_calibration_status`
+
+</td>
 <td></td>
 <td>
 
@@ -341,7 +457,11 @@ When a bit is set ‘1’, the corresponding channel is ok, otherwise the channe
 </td>
 </tr>
 <tr>
-<td>`noise_diode_status`</td>
+<td>
+
+`noise_diode_status`
+
+</td>
 <td></td>
 <td>
 
@@ -350,7 +470,11 @@ When a bit is set ‘1’, the corresponding channel is ok, otherwise the channe
 </td>
 </tr>
 <tr>
-<td>`power_failure_status`</td>
+<td>
+
+`power_failure_status`
+
+</td>
 <td></td>
 <td>
 
@@ -359,7 +483,11 @@ When a bit is set ‘1’, the corresponding channel is ok, otherwise the channe
 </td>
 </tr>
 <tr>
-<td>`rain_flag`</td>
+<td>
+
+`rain_flag`
+
+</td>
 <td></td>
 <td>
 
@@ -368,7 +496,11 @@ When a bit is set ‘1’, the corresponding channel is ok, otherwise the channe
 </td>
 </tr>
 <tr>
-<td>`remaining_flash_memory`</td>
+<td>
+
+`remaining_flash_memory`
+
+</td>
 <td>kB</td>
 <td>
 
@@ -377,7 +509,11 @@ When a bit is set ‘1’, the corresponding channel is ok, otherwise the channe
 </td>
 </tr>
 <tr>
-<td>`sky_tipping_calibration_status`</td>
+<td>
+
+`sky_tipping_calibration_status`
+
+</td>
 <td></td>
 <td>
 
@@ -386,7 +522,11 @@ When a bit is set ‘1’, the corresponding channel is ok, otherwise the channe
 </td>
 </tr>
 <tr>
-<td>`sta_quality_level`</td>
+<td>
+
+`sta_quality_level`
+
+</td>
 <td></td>
 <td>
 
@@ -401,7 +541,11 @@ When a bit is set ‘1’, the corresponding channel is ok, otherwise the channe
 </td>
 </tr>
 <tr>
-<td>`sta_quality_reason`</td>
+<td>
+
+`sta_quality_reason`
+
+</td>
 <td></td>
 <td>
 
@@ -416,7 +560,11 @@ When a bit is set ‘1’, the corresponding channel is ok, otherwise the channe
 </td>
 </tr>
 <tr>
-<td>`temperature_profiler_channel1_status`</td>
+<td>
+
+`temperature_profiler_channel1_status`
+
+</td>
 <td></td>
 <td>
 
@@ -425,7 +573,11 @@ When a bit is set ‘1’, the corresponding channel is ok, otherwise the channe
 </td>
 </tr>
 <tr>
-<td>`temperature_profiler_channel2_status`</td>
+<td>
+
+`temperature_profiler_channel2_status`
+
+</td>
 <td></td>
 <td>
 
@@ -434,7 +586,11 @@ When a bit is set ‘1’, the corresponding channel is ok, otherwise the channe
 </td>
 </tr>
 <tr>
-<td>`temperature_profiler_channel3_status`</td>
+<td>
+
+`temperature_profiler_channel3_status`
+
+</td>
 <td></td>
 <td>
 
@@ -443,7 +599,11 @@ When a bit is set ‘1’, the corresponding channel is ok, otherwise the channe
 </td>
 </tr>
 <tr>
-<td>`temperature_profiler_channel4_status`</td>
+<td>
+
+`temperature_profiler_channel4_status`
+
+</td>
 <td></td>
 <td>
 
@@ -452,7 +612,11 @@ When a bit is set ‘1’, the corresponding channel is ok, otherwise the channe
 </td>
 </tr>
 <tr>
-<td>`temperature_profiler_channel5_status`</td>
+<td>
+
+`temperature_profiler_channel5_status`
+
+</td>
 <td></td>
 <td>
 
@@ -461,7 +625,11 @@ When a bit is set ‘1’, the corresponding channel is ok, otherwise the channe
 </td>
 </tr>
 <tr>
-<td>`temperature_profiler_channel6_status`</td>
+<td>
+
+`temperature_profiler_channel6_status`
+
+</td>
 <td></td>
 <td>
 
@@ -470,7 +638,11 @@ When a bit is set ‘1’, the corresponding channel is ok, otherwise the channe
 </td>
 </tr>
 <tr>
-<td>`temperature_profiler_channel7_status`</td>
+<td>
+
+`temperature_profiler_channel7_status`
+
+</td>
 <td></td>
 <td>
 
@@ -479,7 +651,11 @@ When a bit is set ‘1’, the corresponding channel is ok, otherwise the channe
 </td>
 </tr>
 <tr>
-<td>`temperature_profiler_noise_diode_status`</td>
+<td>
+
+`temperature_profiler_noise_diode_status`
+
+</td>
 <td></td>
 <td>
 
@@ -488,7 +664,11 @@ When a bit is set ‘1’, the corresponding channel is ok, otherwise the channe
 </td>
 </tr>
 <tr>
-<td>`temperature_profiler_stability`</td>
+<td>
+
+`temperature_profiler_stability`
+
+</td>
 <td>K</td>
 <td>
 
@@ -497,7 +677,11 @@ When a bit is set ‘1’, the corresponding channel is ok, otherwise the channe
 </td>
 </tr>
 <tr>
-<td>`temperature_profiler_stability_status`</td>
+<td>
+
+`temperature_profiler_stability_status`
+
+</td>
 <td></td>
 <td>
 
@@ -506,7 +690,11 @@ When a bit is set ‘1’, the corresponding channel is ok, otherwise the channe
 </td>
 </tr>
 <tr>
-<td>`temperature_profiler_temperature`</td>
+<td>
+
+`temperature_profiler_temperature`
+
+</td>
 <td>K</td>
 <td>
 
@@ -515,7 +703,11 @@ When a bit is set ‘1’, the corresponding channel is ok, otherwise the channe
 </td>
 </tr>
 <tr>
-<td>`tpb_quality_level`</td>
+<td>
+
+`tpb_quality_level`
+
+</td>
 <td></td>
 <td>
 
@@ -530,7 +722,11 @@ When a bit is set ‘1’, the corresponding channel is ok, otherwise the channe
 </td>
 </tr>
 <tr>
-<td>`tpb_quality_reason`</td>
+<td>
+
+`tpb_quality_reason`
+
+</td>
 <td></td>
 <td>
 
@@ -545,7 +741,11 @@ When a bit is set ‘1’, the corresponding channel is ok, otherwise the channe
 </td>
 </tr>
 <tr>
-<td>`tpc_quality_level`</td>
+<td>
+
+`tpc_quality_level`
+
+</td>
 <td></td>
 <td>
 
@@ -560,7 +760,11 @@ When a bit is set ‘1’, the corresponding channel is ok, otherwise the channe
 </td>
 </tr>
 <tr>
-<td>`tpc_quality_reason`</td>
+<td>
+
+`tpc_quality_reason`
+
+</td>
 <td></td>
 <td>
 
@@ -585,7 +789,11 @@ When a bit is set ‘1’, the corresponding channel is ok, otherwise the channe
 <th>Description</th>
 </tr>
 <tr>
-<td>`direct_detection_voltage`</td>
+<td>
+
+`direct_detection_voltage`
+
+</td>
 <td>V</td>
 <td>
 
@@ -594,7 +802,11 @@ Direct detection channel voltage of current sample
 </td>
 </tr>
 <tr>
-<td>`environment_temperature`</td>
+<td>
+
+`environment_temperature`
+
+</td>
 <td>K</td>
 <td>
 
@@ -603,7 +815,11 @@ Environment temperature of current sample
 </td>
 </tr>
 <tr>
-<td>`pc_temperature`</td>
+<td>
+
+`pc_temperature`
+
+</td>
 <td>K</td>
 <td>
 
@@ -612,7 +828,11 @@ PC temperature of current sample
 </td>
 </tr>
 <tr>
-<td>`receiver_temperature`</td>
+<td>
+
+`receiver_temperature`
+
+</td>
 <td>K</td>
 <td>
 
@@ -621,7 +841,11 @@ Receiver temperature of current sample
 </td>
 </tr>
 <tr>
-<td>`transmitter_power`</td>
+<td>
+
+`transmitter_power`
+
+</td>
 <td>K</td>
 <td>
 
@@ -630,7 +854,11 @@ Transmitter power of current sample
 </td>
 </tr>
 <tr>
-<td>`transmitter_temperature`</td>
+<td>
+
+`transmitter_temperature`
+
+</td>
 <td>K</td>
 <td>
 
@@ -649,7 +877,11 @@ Transmitter temperature of current sample
 <th>Description</th>
 </tr>
 <tr>
-<td>`afd_warning`</td>
+<td>
+
+`afd_warning`
+
+</td>
 <td></td>
 <td>
 
@@ -658,7 +890,11 @@ Transmitter temperature of current sample
 </td>
 </tr>
 <tr>
-<td>`configuration_warning`</td>
+<td>
+
+`configuration_warning`
+
+</td>
 <td></td>
 <td>
 
@@ -667,7 +903,11 @@ Transmitter temperature of current sample
 </td>
 </tr>
 <tr>
-<td>`create_netcdf_error`</td>
+<td>
+
+`create_netcdf_error`
+
+</td>
 <td></td>
 <td>
 
@@ -676,7 +916,11 @@ Transmitter temperature of current sample
 </td>
 </tr>
 <tr>
-<td>`detector_quality`</td>
+<td>
+
+`detector_quality`
+
+</td>
 <td>percent</td>
 <td>
 
@@ -685,7 +929,11 @@ Quality of detector signal
 </td>
 </tr>
 <tr>
-<td>`detector_temperature`</td>
+<td>
+
+`detector_temperature`
+
+</td>
 <td>K</td>
 <td>
 
@@ -694,7 +942,11 @@ Quality of detector signal
 </td>
 </tr>
 <tr>
-<td>`detector_temperature_warning`</td>
+<td>
+
+`detector_temperature_warning`
+
+</td>
 <td></td>
 <td>
 
@@ -703,7 +955,11 @@ Quality of detector signal
 </td>
 </tr>
 <tr>
-<td>`detector_voltage_error`</td>
+<td>
+
+`detector_voltage_error`
+
+</td>
 <td></td>
 <td>
 
@@ -712,7 +968,11 @@ Quality of detector signal
 </td>
 </tr>
 <tr>
-<td>`external_temperature`</td>
+<td>
+
+`external_temperature`
+
+</td>
 <td>K</td>
 <td>
 
@@ -721,7 +981,11 @@ Quality of detector signal
 </td>
 </tr>
 <tr>
-<td>`external_temperature_warning`</td>
+<td>
+
+`external_temperature_warning`
+
+</td>
 <td></td>
 <td>
 
@@ -730,7 +994,11 @@ Quality of detector signal
 </td>
 </tr>
 <tr>
-<td>`file_system_warning`</td>
+<td>
+
+`file_system_warning`
+
+</td>
 <td></td>
 <td>
 
@@ -739,7 +1007,11 @@ Quality of detector signal
 </td>
 </tr>
 <tr>
-<td>`internal_temperature`</td>
+<td>
+
+`internal_temperature`
+
+</td>
 <td>K</td>
 <td>
 
@@ -748,7 +1020,11 @@ Quality of detector signal
 </td>
 </tr>
 <tr>
-<td>`internal_temperature_warning`</td>
+<td>
+
+`internal_temperature_warning`
+
+</td>
 <td></td>
 <td>
 
@@ -757,7 +1033,11 @@ Quality of detector signal
 </td>
 </tr>
 <tr>
-<td>`laser_controller_error`</td>
+<td>
+
+`laser_controller_error`
+
+</td>
 <td></td>
 <td>
 
@@ -766,7 +1046,11 @@ Quality of detector signal
 </td>
 </tr>
 <tr>
-<td>`laser_detector_warning`</td>
+<td>
+
+`laser_detector_warning`
+
+</td>
 <td></td>
 <td>
 
@@ -775,7 +1059,11 @@ Quality of detector signal
 </td>
 </tr>
 <tr>
-<td>`laser_head_temperature_error`</td>
+<td>
+
+`laser_head_temperature_error`
+
+</td>
 <td></td>
 <td>
 
@@ -784,7 +1072,11 @@ Quality of detector signal
 </td>
 </tr>
 <tr>
-<td>`laser_optical_module_temperature`</td>
+<td>
+
+`laser_optical_module_temperature`
+
+</td>
 <td>K</td>
 <td>
 
@@ -793,7 +1085,11 @@ Quality of detector signal
 </td>
 </tr>
 <tr>
-<td>`laser_optical_module_temperature_error`</td>
+<td>
+
+`laser_optical_module_temperature_error`
+
+</td>
 <td></td>
 <td>
 
@@ -802,7 +1098,11 @@ Quality of detector signal
 </td>
 </tr>
 <tr>
-<td>`laser_optical_module_temperature_warning`</td>
+<td>
+
+`laser_optical_module_temperature_warning`
+
+</td>
 <td></td>
 <td>
 
@@ -811,7 +1111,11 @@ Quality of detector signal
 </td>
 </tr>
 <tr>
-<td>`laser_quality`</td>
+<td>
+
+`laser_quality`
+
+</td>
 <td>percent</td>
 <td>
 
@@ -820,7 +1124,11 @@ Laser quality index
 </td>
 </tr>
 <tr>
-<td>`laser_trigger_error`</td>
+<td>
+
+`laser_trigger_error`
+
+</td>
 <td></td>
 <td>
 
@@ -829,7 +1137,11 @@ Laser quality index
 </td>
 </tr>
 <tr>
-<td>`laser_warning`</td>
+<td>
+
+`laser_warning`
+
+</td>
 <td></td>
 <td>
 
@@ -838,7 +1150,11 @@ Laser quality index
 </td>
 </tr>
 <tr>
-<td>`layers_note`</td>
+<td>
+
+`layers_note`
+
+</td>
 <td></td>
 <td>
 
@@ -847,7 +1163,11 @@ Laser quality index
 </td>
 </tr>
 <tr>
-<td>`life_time`</td>
+<td>
+
+`life_time`
+
+</td>
 <td>h</td>
 <td>
 
@@ -856,7 +1176,11 @@ Laser operating hours
 </td>
 </tr>
 <tr>
-<td>`mainboard_error`</td>
+<td>
+
+`mainboard_error`
+
+</td>
 <td></td>
 <td>
 
@@ -865,16 +1189,24 @@ Laser operating hours
 </td>
 </tr>
 <tr>
-<td>`ntp_note`</td>
+<td>
+
+`ntp_note`
+
+</td>
 <td></td>
 <td>
 
-1 = NTP problem, 0 = otherwise
+1 = NTP problem, 0 = otherwise (introduced in firmware version 1.070 released in November 2020)
 
 </td>
 </tr>
 <tr>
-<td>`optical_quality`</td>
+<td>
+
+`optical_quality`
+
+</td>
 <td>percent</td>
 <td>
 
@@ -883,7 +1215,11 @@ Optical quality index
 </td>
 </tr>
 <tr>
-<td>`replace_laser_warning`</td>
+<td>
+
+`replace_laser_warning`
+
+</td>
 <td></td>
 <td>
 
@@ -892,7 +1228,11 @@ Optical quality index
 </td>
 </tr>
 <tr>
-<td>`rs485_error`</td>
+<td>
+
+`rs485_error`
+
+</td>
 <td></td>
 <td>
 
@@ -901,7 +1241,11 @@ Optical quality index
 </td>
 </tr>
 <tr>
-<td>`rs485_warning`</td>
+<td>
+
+`rs485_warning`
+
+</td>
 <td></td>
 <td>
 
@@ -910,7 +1254,11 @@ Optical quality index
 </td>
 </tr>
 <tr>
-<td>`sd_card_error`</td>
+<td>
+
+`sd_card_error`
+
+</td>
 <td></td>
 <td>
 
@@ -919,7 +1267,11 @@ Optical quality index
 </td>
 </tr>
 <tr>
-<td>`signal_processing_warning`</td>
+<td>
+
+`signal_processing_warning`
+
+</td>
 <td></td>
 <td>
 
@@ -928,7 +1280,11 @@ Optical quality index
 </td>
 </tr>
 <tr>
-<td>`signal_quality_error`</td>
+<td>
+
+`signal_quality_error`
+
+</td>
 <td></td>
 <td>
 
@@ -937,7 +1293,11 @@ Optical quality index
 </td>
 </tr>
 <tr>
-<td>`signal_quality_warning`</td>
+<td>
+
+`signal_quality_warning`
+
+</td>
 <td></td>
 <td>
 
@@ -946,7 +1306,11 @@ Optical quality index
 </td>
 </tr>
 <tr>
-<td>`signal_recording_error`</td>
+<td>
+
+`signal_recording_error`
+
+</td>
 <td></td>
 <td>
 
@@ -955,7 +1319,11 @@ Optical quality index
 </td>
 </tr>
 <tr>
-<td>`signal_value_error`</td>
+<td>
+
+`signal_value_error`
+
+</td>
 <td></td>
 <td>
 
@@ -964,7 +1332,11 @@ Optical quality index
 </td>
 </tr>
 <tr>
-<td>`standby_note`</td>
+<td>
+
+`standby_note`
+
+</td>
 <td></td>
 <td>
 
@@ -973,7 +1345,11 @@ Optical quality index
 </td>
 </tr>
 <tr>
-<td>`started_note`</td>
+<td>
+
+`started_note`
+
+</td>
 <td></td>
 <td>
 
@@ -982,7 +1358,11 @@ Optical quality index
 </td>
 </tr>
 <tr>
-<td>`windows_contaminated_warning`</td>
+<td>
+
+`windows_contaminated_warning`
+
+</td>
 <td></td>
 <td>
 
@@ -991,7 +1371,11 @@ Optical quality index
 </td>
 </tr>
 <tr>
-<td>`write_netcdf_error`</td>
+<td>
+
+`write_netcdf_error`
+
+</td>
 <td></td>
 <td>
 

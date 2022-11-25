@@ -26,7 +26,7 @@ if __name__ == "__main__":
             content += "<tr>\n"
             for pattern, pattern_meta in metadata["vars"].items():
                 if fnmatch.fnmatch(variable, pattern):
-                    content += f"<td>`{variable.strip()}`</td>\n"
+                    content += f"<td>\n\n`{variable.strip()}`\n\n</td>\n"
                     content += f"<td>{pattern_meta.get('unit', '')}</td>\n"
                     content += "<td>\n\n"
                     content += pattern_meta.get("description", "")
