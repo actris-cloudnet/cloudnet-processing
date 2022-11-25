@@ -649,6 +649,33 @@ Transmitter temperature of current sample
 <th>Description</th>
 </tr>
 <tr>
+<td>`afd_warning`</td>
+<td></td>
+<td>
+
+1 = AFD problem, 0 = otherwise
+
+</td>
+</tr>
+<tr>
+<td>`configuration_warning`</td>
+<td></td>
+<td>
+
+1 = Configuration problem, 0 = otherwise
+
+</td>
+</tr>
+<tr>
+<td>`create_netcdf_error`</td>
+<td></td>
+<td>
+
+1 = Create new NetCDF file error, 0 = otherwise
+
+</td>
+</tr>
+<tr>
 <td>`detector_quality`</td>
 <td>percent</td>
 <td>
@@ -667,11 +694,47 @@ Quality of detector signal
 </td>
 </tr>
 <tr>
+<td>`detector_temperature_warning`</td>
+<td></td>
+<td>
+
+1 = Detector temperature out of range, 0 = otherwise
+
+</td>
+</tr>
+<tr>
+<td>`detector_voltage_error`</td>
+<td></td>
+<td>
+
+1 = Detector voltage control failed or cable absent or defective, 0 = otherwise
+
+</td>
+</tr>
+<tr>
 <td>`external_temperature`</td>
 <td>K</td>
 <td>
 
 
+
+</td>
+</tr>
+<tr>
+<td>`external_temperature_warning`</td>
+<td></td>
+<td>
+
+1 = External temperature warning, 0 = otherwise
+
+</td>
+</tr>
+<tr>
+<td>`file_system_warning`</td>
+<td></td>
+<td>
+
+1 = File system, fsck repaired bad sectors, 0 = otherwise
 
 </td>
 </tr>
@@ -685,11 +748,65 @@ Quality of detector signal
 </td>
 </tr>
 <tr>
-<td>`laser_optic_module_temperature`</td>
+<td>`internal_temperature_warning`</td>
+<td></td>
+<td>
+
+1 = Inner housing temperature out of range, 0 = otherwise
+
+</td>
+</tr>
+<tr>
+<td>`laser_controller_error`</td>
+<td></td>
+<td>
+
+1 = Laser controller error, 0 = otherwise
+
+</td>
+</tr>
+<tr>
+<td>`laser_detector_warning`</td>
+<td></td>
+<td>
+
+1 = Laser detector misaligned or receiver window soiled, 0 = otherwise
+
+</td>
+</tr>
+<tr>
+<td>`laser_head_temperature_error`</td>
+<td></td>
+<td>
+
+1 = Laser head temperature error, 0 = otherwise
+
+</td>
+</tr>
+<tr>
+<td>`laser_optical_module_temperature`</td>
 <td>K</td>
 <td>
 
 
+
+</td>
+</tr>
+<tr>
+<td>`laser_optical_module_temperature_error`</td>
+<td></td>
+<td>
+
+1 = Laser optical unit temperature error, 0 = otherwise
+
+</td>
+</tr>
+<tr>
+<td>`laser_optical_module_temperature_warning`</td>
+<td></td>
+<td>
+
+1 = Laser optical unit temperature warning, 0 = otherwise
 
 </td>
 </tr>
@@ -703,6 +820,33 @@ Laser quality index
 </td>
 </tr>
 <tr>
+<td>`laser_trigger_error`</td>
+<td></td>
+<td>
+
+1 = Laser trigger not detected or laser disabled (safety-related), 0 = otherwise
+
+</td>
+</tr>
+<tr>
+<td>`laser_warning`</td>
+<td></td>
+<td>
+
+1 = General laser issue, 0 = otherwise
+
+</td>
+</tr>
+<tr>
+<td>`layers_note`</td>
+<td></td>
+<td>
+
+1 = Number of layers > 3 and telegram selected, 0 = otherwise
+
+</td>
+</tr>
+<tr>
 <td>`life_time`</td>
 <td>h</td>
 <td>
@@ -712,11 +856,146 @@ Laser operating hours
 </td>
 </tr>
 <tr>
+<td>`mainboard_error`</td>
+<td></td>
+<td>
+
+1 = Mainboard detection failed (APD bias) or firmware and CPU do not match, 0 = otherwise
+
+</td>
+</tr>
+<tr>
+<td>`ntp_note`</td>
+<td></td>
+<td>
+
+1 = NTP problem, 0 = otherwise
+
+</td>
+</tr>
+<tr>
 <td>`optical_quality`</td>
 <td>percent</td>
 <td>
 
 Optical quality index
+
+</td>
+</tr>
+<tr>
+<td>`replace_laser_warning`</td>
+<td></td>
+<td>
+
+1 = Replace laser – ageing, 0 = otherwise
+
+</td>
+</tr>
+<tr>
+<td>`rs485_error`</td>
+<td></td>
+<td>
+
+1 = RS485 telegram cannot be generated and transmitted, 0 = otherwise
+
+</td>
+</tr>
+<tr>
+<td>`rs485_warning`</td>
+<td></td>
+<td>
+
+1 = RS485 baud rate / transfer mode reset, 0 = otherwise
+
+</td>
+</tr>
+<tr>
+<td>`sd_card_error`</td>
+<td></td>
+<td>
+
+1 = SD card absent or defective, 0 = otherwise
+
+</td>
+</tr>
+<tr>
+<td>`signal_processing_warning`</td>
+<td></td>
+<td>
+
+1 = Signal processing warning, 0 = otherwise
+
+</td>
+</tr>
+<tr>
+<td>`signal_quality_error`</td>
+<td></td>
+<td>
+
+1 = Signal quality error, 0 = otherwise
+
+</td>
+</tr>
+<tr>
+<td>`signal_quality_warning`</td>
+<td></td>
+<td>
+
+1 = Signal quality – high noise level, 0 = otherwise
+
+</td>
+</tr>
+<tr>
+<td>`signal_recording_error`</td>
+<td></td>
+<td>
+
+1 = Signal recording error, 0 = otherwise
+
+</td>
+</tr>
+<tr>
+<td>`signal_value_error`</td>
+<td></td>
+<td>
+
+1 = Signal values null or void, 0 = otherwise
+
+</td>
+</tr>
+<tr>
+<td>`standby_note`</td>
+<td></td>
+<td>
+
+1 = Standby mode on, 0 = otherwise
+
+</td>
+</tr>
+<tr>
+<td>`started_note`</td>
+<td></td>
+<td>
+
+1 = Device was started, 0 = otherwise
+
+</td>
+</tr>
+<tr>
+<td>`windows_contaminated_warning`</td>
+<td></td>
+<td>
+
+1 = Windows contaminated, 0 = otherwise
+
+</td>
+</tr>
+<tr>
+<td>`write_netcdf_error`</td>
+<td></td>
+<td>
+
+1 = Write / add to NetCDF error, 0 = otherwise
 
 </td>
 </tr>

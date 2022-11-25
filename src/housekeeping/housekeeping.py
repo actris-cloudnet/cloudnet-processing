@@ -1,13 +1,10 @@
 import logging
-import re
 import tempfile
 from functools import partial
 from os import getenv
 from pathlib import Path
 from typing import Callable, Dict, List, Optional
 
-import cftime
-import netCDF4
 import numpy.typing as npt
 import toml
 from influxdb_client import InfluxDBClient
@@ -17,7 +14,9 @@ from pandas import DataFrame
 from rpgpy import read_rpg
 from rpgpy.utils import rpg_seconds2datetime64
 
+from .chm15k import read_chm15k
 from .hatpro import HatproHkd
+from .utils import cftime2datetime
 
 
 def _handle_hatpro_hkd(src: bytes, cfg: dict):
@@ -37,10 +36,16 @@ def _handle_rpg(src: bytes, cfg: dict) -> DataFrame:
 
 
 def _handle_nc(src: bytes, cfg: dict) -> DataFrame:
-    nc = Dataset("dataset.nc", memory=src)
-    time = _nctime2datetime(nc["time"])
-    measurements = {var: nc[var][:] for var in nc.variables.keys()}
-    return _make_df(time, measurements, cfg["vars"])
+    with Dataset("dataset.nc", memory=src) as nc:
+        time = cftime2datetime(nc["time"])
+        measurements = {var: nc[var][:] for var in nc.variables.keys()}
+        return _make_df(time, measurements, cfg["vars"])
+
+
+def _handle_chm15k_nc(src: bytes, cfg: dict) -> DataFrame:
+    with Dataset("dataset.nc", memory=src) as nc:
+        measurements = read_chm15k(nc)
+        return _make_df(measurements["time"], measurements, cfg["vars"])
 
 
 def get_reader(metadata: dict) -> Optional[Callable[[bytes], DataFrame]]:
@@ -57,7 +62,7 @@ def get_reader(metadata: dict) -> Optional[Callable[[bytes], DataFrame]]:
         return partial(_handle_rpg, cfg=get_config("rpg-fmcw-94_lv1"))
 
     if instrument_id == "chm15k" and filename.endswith(".nc"):
-        return partial(_handle_nc, cfg=get_config("chm15k_nc"))
+        return partial(_handle_chm15k_nc, cfg=get_config("chm15k_nc"))
 
     return None
 
@@ -74,28 +79,6 @@ def write(df: DataFrame, metadata: dict) -> None:
                 data_frame_measurement_name="housekeeping",
                 data_frame_tag_columns=["site_id", "instrument_id", "instrument_pid"],
             )
-
-
-def _nctime2datetime(time: netCDF4.Variable) -> npt.NDArray:
-    units = _fix_invalid_cf_time_unit(time.units)
-    return cftime.num2pydate(time[:], units=units)
-
-
-def _fix_invalid_cf_time_unit(unit: str) -> str:
-    match_ = re.match(
-        r"^(\w+) since (\d{1,2})\.(\d{1,2})\.(\d{4}), (\d{1,2}):(\d{1,2}):(\d{1,2})$", unit
-    )
-    if match_:
-        _unit = match_.group(1)
-        day = match_.group(2).zfill(2)
-        month = match_.group(3).zfill(2)
-        year = match_.group(4)
-        hour = match_.group(5).zfill(2)
-        minute = match_.group(6).zfill(2)
-        sec = match_.group(7).zfill(2)
-        new_unit = f"{_unit} since {year}-{month}-{day} {hour}:{minute}:{sec}"
-        return new_unit
-    return unit
 
 
 def _make_df(

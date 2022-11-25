@@ -1,5 +1,4 @@
 import logging
-import re
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -44,11 +43,14 @@ def main(args):
 
         logging.info(f"Processing housekeeping data: {fname}")
         filebytes = raw_api.get_raw_file(uuid, fname)
-        df = reader(filebytes)
-        if df.empty:
-            logging.warning(f"No housekeeping data found: {fname}")
-            continue
-        housekeeping.write(df, record)
+        try:
+            df = reader(filebytes)
+            if df.empty:
+                logging.warning("Unable to process file: No housekeeping data found")
+                continue
+            housekeeping.write(df, record)
+        except housekeeping.UnsupportedFile as e:
+            logging.warning(f"Unable to process file: {e}")
 
 
 class RawApi:
