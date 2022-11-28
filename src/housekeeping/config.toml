@@ -105,6 +105,10 @@ vars.DDVolt = "direct_detection_voltage"
 vars.PCT = "pc_temperature"
 vars.TransPow = "transmitter_power"
 vars.TransT = "transmitter_temperature"
+vars.heater = "heater_status"
+vars.blower = "blower_status"
+vars.hatpro_temperature = "hatpro_temperature_status"
+vars.hatpro_humidity = "hatpro_humidity_status"
 
 [metadata.hatpro]
 vars.alarm.description = "The alarm flag is activated in the following cases:\n\n- interference or failure of a channel that is used in one of the retrievals\n- thermal receiver stability not sufficient for measurement\n- noise diode failure of one of the receivers\n- ambient target thermal sensor not stable"
@@ -140,6 +144,10 @@ vars.transmitter_power.description = "Transmitter power of current sample"
 vars.transmitter_power.unit = "K"
 vars.transmitter_temperature.description = "Transmitter temperature of current sample"
 vars.transmitter_temperature.unit = "K"
+vars.heater_status.description = "1 = heater is on, 0 = otherwise (please note, that no RPG radar has a physical heater)"
+vars.blower_status.description = "1 = blower is on, 0 = otherwise"
+vars.hatpro_temperature_status.description = "1 = temperature profile is from a coupled HATPRO, 0 = otherwise"
+vars.hatpro_humidity_status.description = "1 = humidity profiles are from a coupled HATPRO, 0 = otherwise"
 
 [metadata.chm15k]
 vars.internal_temperature.unit = "K"

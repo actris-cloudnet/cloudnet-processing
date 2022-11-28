@@ -791,6 +791,19 @@ When a bit is set ‘1’, the corresponding channel is ok, otherwise the channe
 <tr>
 <td>
 
+`blower_status`
+
+</td>
+<td></td>
+<td>
+
+1 = blower is on, 0 = otherwise
+
+</td>
+</tr>
+<tr>
+<td>
+
 `direct_detection_voltage`
 
 </td>
@@ -811,6 +824,45 @@ Direct detection channel voltage of current sample
 <td>
 
 Environment temperature of current sample
+
+</td>
+</tr>
+<tr>
+<td>
+
+`hatpro_humidity_status`
+
+</td>
+<td></td>
+<td>
+
+1 = humidity profiles are from a coupled HATPRO, 0 = otherwise
+
+</td>
+</tr>
+<tr>
+<td>
+
+`hatpro_temperature_status`
+
+</td>
+<td></td>
+<td>
+
+1 = temperature profile is from a coupled HATPRO, 0 = otherwise
+
+</td>
+</tr>
+<tr>
+<td>
+
+`heater_status`
+
+</td>
+<td></td>
+<td>
+
+1 = heater is on, 0 = otherwise (please note, that no RPG radar has a physical heater)
 
 </td>
 </tr>

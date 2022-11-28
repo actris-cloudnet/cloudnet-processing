@@ -12,7 +12,7 @@ from influxdb_client.client.write_api import SYNCHRONOUS
 from netCDF4 import Dataset as Dataset
 from pandas import DataFrame
 from rpgpy import read_rpg
-from rpgpy.utils import rpg_seconds2datetime64
+from rpgpy.utils import decode_rpg_status_flags, rpg_seconds2datetime64
 
 from .chm15k import read_chm15k
 from .hatpro import HatproHkd
@@ -32,6 +32,7 @@ def _handle_rpg(src: bytes, cfg: dict) -> DataFrame:
         f.write(src)
         head, data = read_rpg(f.name)
     time = rpg_seconds2datetime64(data["Time"])
+    data.update(decode_rpg_status_flags(data["Status"])._asdict())
     return _make_df(time, data, cfg["vars"])
 
 
