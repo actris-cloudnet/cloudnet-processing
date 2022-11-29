@@ -30,7 +30,11 @@ def main(args, storage_session: Optional[requests.Session] = None):
         product = row["product"]["id"]
         uuid = row["uuid"]
         qc_info = md_api.get_qc_version(uuid)
-        if not args.force and qc_info and qc_info["qc_version"] == cloudnetpy_qc.version.__version__:
+        if (
+            not args.force
+            and qc_info
+            and qc_info["qc_version"] == cloudnetpy_qc.version.__version__
+        ):
             logging.info("Same cloudnetpy-qc version, skipping.")
             continue
         logging.info(
