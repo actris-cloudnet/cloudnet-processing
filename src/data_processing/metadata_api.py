@@ -3,7 +3,6 @@ import logging
 import os
 from argparse import Namespace
 from datetime import datetime, timedelta, timezone
-from typing import Optional, Tuple, Union
 
 import requests
 
@@ -18,7 +17,7 @@ class MetadataApi:
         self.session = session
         self._url = config["DATAPORTAL_URL"]
 
-    def get(self, end_point: str, payload: Optional[dict] = None):
+    def get(self, end_point: str, payload: dict | None = None):
         """Get Cloudnet metadata."""
         url = os.path.join(self._url, end_point)
         res = self.session.get(url, params=payload)
@@ -26,7 +25,7 @@ class MetadataApi:
         return res.json()
 
     def post(
-        self, end_point: str, payload: dict, auth: Optional[Tuple[str, str]] = None
+        self, end_point: str, payload: dict, auth: tuple[str, str] | None = None
     ) -> requests.Response:
         """Update upload / product metadata."""
         url = os.path.join(self._url, end_point)
@@ -42,7 +41,7 @@ class MetadataApi:
         return res
 
     def put_file(
-        self, end_point: str, resource: str, full_path: str, auth: Tuple[str, str]
+        self, end_point: str, resource: str, full_path: str, auth: tuple[str, str]
     ) -> requests.Response:
         """PUT file to Cloudnet data portal."""
         url = os.path.join(self._url, end_point, resource)
@@ -60,7 +59,7 @@ class MetadataApi:
             self.put("visualizations", data["s3key"], payload)
 
     def upload_instrument_file(
-        self, base, instrument: str, filename: str, instrument_pid: Optional[str] = None
+        self, base, instrument: str, filename: str, instrument_pid: str | None = None
     ):
         username = self.config.get("DATA_SUBMISSION_USERNAME", "admin")
         password = self.config.get("DATA_SUBMISSION_PASSWORD", "admin")
@@ -139,7 +138,7 @@ class MetadataApi:
         files.sort(key=lambda x: datetime.strptime(x["measurementDate"], "%Y-%m-%d"))
         return files
 
-    def get_qc_version(self, uuid: str) -> Union[dict, None]:
+    def get_qc_version(self, uuid: str) -> dict | None:
         try:
             data = self.get(f"api/quality/{uuid}")
             return {"result": data["errorLevel"], "qc_version": data["qcVersion"]}
@@ -156,7 +155,7 @@ def _get_common_payload(args: Namespace) -> dict:
     return payload
 
 
-def _get_regular_products(args: Namespace) -> Union[list, None]:
+def _get_regular_products(args: Namespace) -> list | None:
     if args.products:
         return [prod for prod in args.products if prod != "model"]
     return None

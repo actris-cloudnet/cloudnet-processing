@@ -1,7 +1,6 @@
 """Module containing helper functions for CH15k concatenation."""
 import logging
 import shutil
-from typing import Optional
 
 import netCDF4
 from cloudnetpy import concat_lib as clib
@@ -27,7 +26,7 @@ def concat_netcdf_files(
     date: str,
     output_file: str,
     concat_dimension: str = "time",
-    variables: Optional[list] = None,
+    variables: list | None = None,
 ) -> list:
     """Concatenates several netcdf files into daily file."""
     with netCDF4.Dataset(files[0]) as nc:
@@ -64,12 +63,12 @@ def concat_chm15k_files(files: list, date: str, output_file: str) -> list:
     """Concatenate several small chm15k files into a daily file.
 
     Args:
-        files (list): List of file to be concatenated.
+        files (list): list of file to be concatenated.
         date (str): Measurement date 'YYYY-MM-DD'.
         output_file (str): Output file name, e.g., 20201012_bucharest_chm15k.nc.
 
     Returns:
-        list: List of files that were valid and actually used in the concatenation.
+        list: list of files that were valid and actually used in the concatenation.
 
     Raises:
         ValueError: No valid files to be concatenated.

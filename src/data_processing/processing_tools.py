@@ -3,7 +3,6 @@ import logging
 import os
 import shutil
 from tempfile import NamedTemporaryFile, TemporaryDirectory
-from typing import Optional, Tuple, Union
 
 import numpy as np
 import requests
@@ -22,7 +21,7 @@ class Uuid:
     def __init__(self):
         self.raw: list = []
         self.product: str = ""
-        self.volatile: Union[str, None] = None
+        self.volatile: str | None = None
 
 
 def clean_dir(dir_name: str) -> None:
@@ -35,8 +34,8 @@ class ProcessBase:
         self,
         args,
         config: dict,
-        storage_session: Optional[requests.Session] = None,
-        metadata_session: Optional[requests.Session] = None,
+        storage_session: requests.Session | None = None,
+        metadata_session: requests.Session | None = None,
     ):
         if storage_session is None:
             storage_session = make_session()
@@ -47,7 +46,7 @@ class ProcessBase:
         self.config = config
         self.is_reprocess = getattr(args, "reprocess", False)
         self.is_reprocess_volatile = getattr(args, "reprocess_volatile", False)
-        self.date_str: Optional[str] = None
+        self.date_str: str | None = None
         self.md_api = MetadataApi(config, metadata_session)
         self._storage_api = StorageApi(config, storage_session)
         self._pid_utils = PidUtils(config)
@@ -61,7 +60,7 @@ class ProcessBase:
         self.temp_file = NamedTemporaryFile(dir=self._temp_dir_root, suffix=".nc")
         self.daily_file = NamedTemporaryFile(dir=self._temp_dir_root, suffix=".nc")
 
-    def fetch_volatile_uuid(self, product: str) -> Union[str, None]:
+    def fetch_volatile_uuid(self, product: str) -> str | None:
         payload = self._get_payload(product=product)
         payload["showLegacy"] = True
         metadata = self.md_api.get("api/files", payload)
@@ -147,20 +146,18 @@ class ProcessBase:
             "dimensions": utils.dimensions2dict(dimensions) if dimensions is not None else None,
         }
 
-    def upload_quality_report(
-        self, full_path: str, uuid: str, product: Optional[str] = None
-    ) -> None:
+    def upload_quality_report(self, full_path: str, uuid: str, product: str | None = None) -> None:
         quality_report = utils.create_quality_report(full_path, product=product)
         self.md_api.put("quality", uuid, quality_report)
 
-    def _read_volatile_uuid(self, metadata: list) -> Union[str, None]:
+    def _read_volatile_uuid(self, metadata: list) -> str | None:
         if self._parse_volatile_value(metadata) is True:
             uuid = metadata[0]["uuid"]
             assert isinstance(uuid, str) and len(uuid) > 0
             return uuid
         return None
 
-    def _read_stable_uuid(self, metadata: list) -> Union[str, None]:
+    def _read_stable_uuid(self, metadata: list) -> str | None:
         if self._parse_volatile_value(metadata) is False:
             uuid = metadata[0]["uuid"]
             assert isinstance(uuid, str) and len(uuid) > 0
@@ -192,7 +189,7 @@ class ProcessBase:
                 raise MiscError('Existing freezed file and no "reprocess" flag')
         return False
 
-    def _parse_volatile_value(self, metadata: list) -> Union[bool, None]:
+    def _parse_volatile_value(self, metadata: list) -> bool | None:
         self._check_response_length(metadata)
         if metadata:
             value = str(metadata[0]["volatile"])
@@ -206,7 +203,7 @@ class ProcessBase:
 
     def _download_raw_files(
         self, upload_metadata: list, temp_file=None
-    ) -> Tuple[Union[list, str], list, list]:
+    ) -> tuple[list | str, list, list]:
         if temp_file is not None:
             if len(upload_metadata) > 1:
                 logging.warning("Several daily raw files")
@@ -232,9 +229,9 @@ class ProcessBase:
 
     def _get_payload(
         self,
-        instrument: Optional[str] = None,
-        product: Optional[str] = None,
-        model: Optional[str] = None,
+        instrument: str | None = None,
+        product: str | None = None,
+        model: str | None = None,
         skip_created: bool = False,
     ) -> dict:
         payload = {
@@ -279,7 +276,7 @@ class ProcessBase:
         if np.all([timestamp < product_timestamp for timestamp in source_timestamps]):
             raise MiscError("Source data already processed")
 
-    def _get_product_timestamp(self, product: str) -> Union[str, None]:
+    def _get_product_timestamp(self, product: str) -> str | None:
         payload = self._get_payload(product=product)
         product_metadata = self.md_api.get("api/files", payload)
         if product_metadata and self.is_reprocess is False and self.is_reprocess_volatile is False:

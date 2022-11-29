@@ -5,7 +5,6 @@ import importlib
 import logging
 import warnings
 from tempfile import TemporaryDirectory
-from typing import List, Optional, Tuple, Union
 
 import netCDF4
 import requests
@@ -27,7 +26,7 @@ warnings.simplefilter("ignore", UserWarning)
 warnings.simplefilter("ignore", RuntimeWarning)
 
 
-def main(args, storage_session: Optional[requests.Session] = None):
+def main(args, storage_session: requests.Session | None = None):
     if storage_session is None:
         storage_session = make_session()
     config = utils.read_main_conf()
@@ -54,15 +53,16 @@ class ProcessCloudnet(ProcessBase):
         uuid = Uuid()
         try:
             uuid.volatile = self.fetch_volatile_uuid(product)
-            if product in utils.get_product_types(level="2"):
-                uuid, identifier = self.process_level2(uuid, product)
-            elif product == "categorize":
-                uuid, identifier = self.process_categorize(uuid)
-            elif product in utils.get_product_types(level="1b"):
-                uuid, identifier, instrument_pids = self.process_instrument(uuid, product)
-                self.add_instrument_pid(instrument_pids)
-            else:
-                raise ValueError("Bad product")
+            match product:
+                case product if product in utils.get_product_types(level="2"):
+                    uuid, identifier = self.process_level2(uuid, product)
+                case "categorize":
+                    uuid, identifier = self.process_categorize(uuid)
+                case product if product in utils.get_product_types(level="1b"):
+                    uuid, identifier, instrument_pids = self.process_instrument(uuid, product)
+                    self.add_instrument_pid(instrument_pids)
+                case bad_product:
+                    raise ValueError(f"Bad product: {bad_product}")
             self.compare_file_content(product)
             self.add_pid()
             utils.add_version_to_global_attributes(self.temp_file.name)
@@ -118,7 +118,7 @@ class ProcessCloudnet(ProcessBase):
         )
         return process.uuid, instrument, process.instrument_pids
 
-    def process_categorize(self, uuid: Uuid) -> Tuple[Uuid, str]:
+    def process_categorize(self, uuid: Uuid) -> tuple[Uuid, str]:
         l1_products = utils.get_product_types(level="1b")
         l1_products.remove("disdrometer")  # Not yet used
         meta_records = self._get_level1b_metadata_for_categorize(l1_products)
@@ -170,7 +170,7 @@ class ProcessCloudnet(ProcessBase):
             existing_products.append("mwr")
         return [product for product in required_products if product not in existing_products]
 
-    def process_level2(self, uuid: Uuid, product: str) -> Tuple[Uuid, str]:
+    def process_level2(self, uuid: Uuid, product: str) -> tuple[Uuid, str]:
         payload = self._get_payload(product="categorize")
         metadata = self.md_api.get("api/files", payload)
         self._check_response_length(metadata)
@@ -193,10 +193,10 @@ class ProcessCloudnet(ProcessBase):
     def download_instrument(
         self,
         instrument: str,
-        include_pattern: Optional[str] = None,
+        include_pattern: str | None = None,
         largest_only: bool = False,
-        exclude_pattern: Optional[str] = None,
-    ) -> Tuple[Union[List, str], List, List]:
+        exclude_pattern: str | None = None,
+    ) -> tuple[list | str, list, list]:
         """Download raw files for given instrument."""
         payload = self._get_payload(instrument=instrument, skip_created=True)
         upload_metadata = self.md_api.get("upload-metadata", payload)
@@ -213,8 +213,8 @@ class ProcessCloudnet(ProcessBase):
         return self._download_raw_files(upload_metadata, arg)
 
     def download_uploaded(
-        self, instrument: str, exclude_pattern: Optional[str]
-    ) -> Tuple[Union[list, str], List, List]:
+        self, instrument: str, exclude_pattern: str | None
+    ) -> tuple[list | str, list, list]:
         """Download self-generated daily files (e.g. CL61-D)."""
         payload = self._get_payload(instrument=instrument)
         payload["status"] = "uploaded"
@@ -225,9 +225,7 @@ class ProcessCloudnet(ProcessBase):
             )
         return self._download_raw_files(upload_metadata)
 
-    def download_adjoining_daily_files(
-        self, instrument: str
-    ) -> Tuple[Union[List, str], List, List]:
+    def download_adjoining_daily_files(self, instrument: str) -> tuple[list | str, list, list]:
         next_day = utils.get_date_from_past(-1, self.date_str)
         payload = self._get_payload(instrument=instrument, skip_created=True)
         payload["dateFrom"] = self.date_str

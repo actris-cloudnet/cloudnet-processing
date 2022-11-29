@@ -11,7 +11,6 @@ import string
 import sys
 from argparse import Namespace
 from pathlib import Path
-from typing import Optional, Tuple, Union
 
 import netCDF4
 import numpy.ma as ma
@@ -33,9 +32,9 @@ def isodate2date(date_str: str) -> datetime.date:
 def create_product_put_payload(
     full_path: str,
     storage_service_response: dict,
-    product: Optional[str] = None,
-    site: Optional[str] = None,
-    date_str: Optional[str] = None,
+    product: str | None = None,
+    site: str | None = None,
+    date_str: str | None = None,
 ) -> dict:
     """Creates put payload for data portal."""
     with netCDF4.Dataset(full_path, "r") as nc:
@@ -95,7 +94,7 @@ def read_site_info(site_name: str) -> dict:
     raise ValueError(f"Invalid site name: {site_name}")
 
 
-def get_product_types(level: Optional[str] = None) -> list:
+def get_product_types(level: str | None = None) -> list:
     """Returns Cloudnet processing types."""
     products = get_from_data_portal_api("api/products", {"developer": True})
     if level is not None:
@@ -112,7 +111,7 @@ def get_product_types_excluding_level3() -> list:
     return l1b + l1c + l2
 
 
-def get_calibration_factor(site: str, date: str, instrument: str) -> Union[float, None]:
+def get_calibration_factor(site: str, date: str, instrument: str) -> float | None:
     """Gets calibration factor."""
     data_portal_url = fetch_data_portal_url()
     url = f"{data_portal_url}api/calibration"
@@ -135,12 +134,12 @@ def date_string_to_date(date_string: str) -> datetime.date:
     return datetime.date(*date)
 
 
-def get_date_from_past(n: int, reference_date: Optional[str] = None) -> str:
+def get_date_from_past(n: int, reference_date: str | None = None) -> str:
     """Return date N-days ago.
 
     Args:
-        n (int): Number of days to skip (can be negative, when it means the future).
-        reference_date (str, optional): Date as "YYYY-MM-DD". Default is the current date.
+        n: Number of days to skip (can be negative, when it means the future).
+        reference_date: Date as "YYYY-MM-DD". Default is the current date.
 
     Returns:
         str: Date as "YYYY-MM-DD".
@@ -154,9 +153,9 @@ def get_date_from_past(n: int, reference_date: Optional[str] = None) -> str:
 def send_slack_alert(
     error_msg,
     error_source: str,
-    args: Optional[Namespace] = None,
-    date: Optional[str] = None,
-    product: Optional[str] = None,
+    args: Namespace | None = None,
+    date: str | None = None,
+    product: str | None = None,
     critical: bool = False,
 ) -> None:
     """Sends notification to slack."""
@@ -170,18 +169,19 @@ def send_slack_alert(
     if key not in config or config[key] == "":
         return
 
-    if error_source == "model":
-        label = ":earth_africa: Model processing"
-    elif error_source == "pid":
-        label = ":id: PID generation"
-    elif error_source == "data":
-        label = ":desktop_computer: Data processing"
-    elif error_source == "wrapper":
-        label = ":fire: Main wrapper"
-    elif error_source == "img":
-        label = ":frame_with_picture: Image creation"
-    else:
-        raise ValueError("Unknown error source")
+    match error_source:
+        case "model":
+            label = ":earth_africa: Model processing"
+        case "pid":
+            label = ":id: PID generation"
+        case "data":
+            label = ":desktop_computer: Data processing"
+        case "wrapper":
+            label = ":fire: Main wrapper"
+        case "img":
+            label = ":frame_with_picture: Image creation"
+        case unknown_source:
+            raise ValueError(f"Unknown error source: {unknown_source}")
 
     if args is not None:
         with open(args.log_filename) as file:
@@ -220,13 +220,13 @@ def read_main_conf() -> dict:
     return dict(os.environ)
 
 
-def str2bool(s: str) -> Union[bool, str]:
+def str2bool(s: str) -> bool | str:
     """Converts string to bool."""
     return False if s == "False" else True if s == "True" else s
 
 
 def get_plottable_variables_info(cloudnet_file_type: str) -> dict:
-    """Find variable IDs and corresponding human readable names."""
+    """Find variable IDs and corresponding human-readable names."""
     fields = get_fields_for_plot(cloudnet_file_type)[0]
     return {
         get_var_id(cloudnet_file_type, field): [f"{ATTR[field].name}", i]
@@ -234,7 +234,7 @@ def get_plottable_variables_info(cloudnet_file_type: str) -> dict:
     }
 
 
-def get_fields_for_plot(cloudnet_file_type: str) -> Tuple[list, int]:
+def get_fields_for_plot(cloudnet_file_type: str) -> tuple[list, int]:
     """Return list of variables and maximum altitude for Cloudnet quicklooks.
 
     Args:
@@ -246,41 +246,42 @@ def get_fields_for_plot(cloudnet_file_type: str) -> Tuple[list, int]:
 
     """
     max_alt = 12
-    if cloudnet_file_type == "categorize":
-        fields = [
-            "Z",
-            "v",
-            "width",
-            "ldr",
-            "v_sigma",
-            "beta",
-            "lwp",
-            "Tw",
-            "radar_gas_atten",
-            "radar_liquid_atten",
-        ]
-    elif cloudnet_file_type == "classification":
-        fields = ["target_classification", "detection_status"]
-    elif cloudnet_file_type == "iwc":
-        fields = ["iwc", "iwc_error", "iwc_retrieval_status"]
-    elif cloudnet_file_type == "lwc":
-        fields = ["lwc", "lwc_error", "lwc_retrieval_status"]
-        max_alt = 6
-    elif cloudnet_file_type == "model":
-        fields = ["cloud_fraction", "uwind", "vwind", "temperature", "q", "pressure"]
-    elif cloudnet_file_type == "lidar":
-        fields = ["beta", "beta_raw", "depolarisation", "depolarisation_raw"]
-    elif cloudnet_file_type == "mwr":
-        fields = ["lwp", "iwv"]
-    elif cloudnet_file_type == "radar":
-        fields = ["Zh", "v", "width", "ldr", "sldr", "zdr", "rho_hv", "srho_hv", "rho_cx"]
-    elif cloudnet_file_type == "disdrometer":
-        fields = ["rainfall_rate", "n_particles"]
-    elif cloudnet_file_type == "drizzle":
-        fields = ["Do", "drizzle_N"]
-        max_alt = 4
-    else:
-        raise NotImplementedError(cloudnet_file_type)
+    match cloudnet_file_type:
+        case "categorize":
+            fields = [
+                "Z",
+                "v",
+                "width",
+                "ldr",
+                "v_sigma",
+                "beta",
+                "lwp",
+                "Tw",
+                "radar_gas_atten",
+                "radar_liquid_atten",
+            ]
+        case "classification":
+            fields = ["target_classification", "detection_status"]
+        case "iwc":
+            fields = ["iwc", "iwc_error", "iwc_retrieval_status"]
+        case "lwc":
+            fields = ["lwc", "lwc_error", "lwc_retrieval_status"]
+            max_alt = 6
+        case "model":
+            fields = ["cloud_fraction", "uwind", "vwind", "temperature", "q", "pressure"]
+        case "lidar":
+            fields = ["beta", "beta_raw", "depolarisation", "depolarisation_raw"]
+        case "mwr":
+            fields = ["lwp", "iwv"]
+        case "radar":
+            fields = ["Zh", "v", "width", "ldr", "sldr", "zdr", "rho_hv", "srho_hv", "rho_cx"]
+        case "disdrometer":
+            fields = ["rainfall_rate", "n_particles"]
+        case "drizzle":
+            fields = ["Do", "drizzle_N"]
+            max_alt = 4
+        case _:
+            raise NotImplementedError(cloudnet_file_type)
     return fields, max_alt
 
 
@@ -291,17 +292,17 @@ def get_fields_for_l3_plot(product: str, model: str) -> list:
         product (str): Name of product, e.g., 'iwc'.
         model (str): Name of the model, e.g., 'ecmwf'.
     Returns:
-        list: List of wanted variables
+        list: list of wanted variables
     """
-    if product == "l3-iwc":
-        fields = [f"{model}_iwc", f"iwc_{model}"]
-    elif product == "l3-lwc":
-        fields = [f"{model}_lwc", f"lwc_{model}"]
-    elif product == "l3-cf":
-        fields = [f"{model}_cf", f"cf_V_{model}"]
-    else:
-        raise NotImplementedError
-    return fields
+    match product:
+        case "l3-iwc":
+            return [f"{model}_iwc", f"iwc_{model}"]
+        case "l3-lwc":
+            return [f"{model}_lwc", f"lwc_{model}"]
+        case "l3-cf":
+            return [f"{model}_cf", f"cf_V_{model}"]
+        case unknown_product:
+            raise NotImplementedError(f"Unknown product: {unknown_product}")
 
 
 def get_var_id(cloudnet_file_type: str, field: str) -> str:
@@ -426,7 +427,7 @@ def init_logger(args, log_filename: str):
     logging.info(msg)
 
 
-def create_quality_report(filename: str, product: Optional[str] = None) -> dict:
+def create_quality_report(filename: str, product: str | None = None) -> dict:
     """Creates quality report for data portal."""
     report = quality.run_tests(Path(filename), cloudnet_file_type=product)
     return report
@@ -451,7 +452,7 @@ def get_all_but_hidden_sites() -> list:
     return sites
 
 
-def get_from_data_portal_api(end_point: str, payload: Optional[dict] = None) -> list:
+def get_from_data_portal_api(end_point: str, payload: dict | None = None) -> list:
     """Reads from data portal API."""
     data_portal_url = fetch_data_portal_url()
     url = f"{data_portal_url}{end_point}"
@@ -497,7 +498,7 @@ def exclude_records_with_pattern_in_filename(metadata: list, pattern: str) -> li
     return [row for row in metadata if not re.search(pattern.lower(), row["filename"].lower())]
 
 
-def get_processing_dates(args) -> Tuple[str, str]:
+def get_processing_dates(args) -> tuple[str, str]:
     """Returns processing dates."""
     if args.date is not None:
         start_date = args.date
@@ -528,10 +529,11 @@ def check_chm_version(filename: str, identifier: str):
 
     with netCDF4.Dataset(filename) as nc:
         source = getattr(nc, "source", "")[:3].lower()
-    if source == "chx" and identifier in ("chm15x", "chm15k"):
-        print_warning("chm15kx")
-    if source == "chm" and identifier in ("chm15x", "chm15kx"):
-        print_warning("chm15k")
+    match source, identifier:
+        case "chx", "chm15x" | "chm15k":
+            print_warning("chm15kx")
+        case "chm", "chm15x" | "chm15kx":
+            print_warning("chm15k")
 
 
 class MyAdapter(HTTPAdapter):

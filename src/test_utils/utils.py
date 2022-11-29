@@ -8,7 +8,6 @@ import socket
 import subprocess
 import sys
 import time
-from typing import Optional
 
 import requests
 import requests_mock
@@ -164,7 +163,7 @@ def process(
     main_args: list,
     temp_file,
     script_path: str,
-    marker: Optional[str] = None,
+    marker: str | None = None,
     processing_mode: str = "",
 ):
     main_args = cloudnet._parse_args(main_args)

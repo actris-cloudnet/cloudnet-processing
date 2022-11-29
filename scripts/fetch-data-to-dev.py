@@ -3,7 +3,6 @@ import argparse
 import datetime
 import os
 import sys
-from typing import List, Optional
 
 import requests
 
@@ -69,10 +68,10 @@ def main(args: argparse.Namespace):
 def _get_metadata(
     end_point: str,
     site: str,
-    start: Optional[datetime.date],
-    stop: Optional[datetime.date],
-    instruments: List[str] = [],
-    extension: Optional[str] = None,
+    start: datetime.date | None,
+    stop: datetime.date | None,
+    instruments: list[str] = [],
+    extension: str | None = None,
 ) -> list:
     url = f"https://cloudnet.fmi.fi/api/{end_point}"
     payload = {

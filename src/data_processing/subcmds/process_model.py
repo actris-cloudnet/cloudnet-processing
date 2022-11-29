@@ -2,7 +2,6 @@
 """Master script for Cloudnet model processing."""
 import logging
 import warnings
-from typing import Optional, Union
 
 import requests
 from requests.exceptions import HTTPError
@@ -15,7 +14,7 @@ warnings.simplefilter("ignore", UserWarning)
 warnings.simplefilter("ignore", RuntimeWarning)
 
 
-def main(args, storage_session: Optional[requests.Session] = None):
+def main(args, storage_session: requests.Session | None):
     if storage_session is None:
         storage_session = make_session()
     config = utils.read_main_conf()
@@ -59,7 +58,7 @@ class ProcessModel(ProcessBase):
         uuid.product = nc_header_augmenter.harmonize_model_file(data)
         return uuid
 
-    def fetch_volatile_model_uuid(self, row: dict) -> Union[str, None]:
+    def fetch_volatile_model_uuid(self, row: dict) -> str | None:
         payload = self._get_payload(model=row["model"]["id"])
         metadata = self.md_api.get("api/model-files", payload)
         try:

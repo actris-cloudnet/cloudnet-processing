@@ -1,13 +1,13 @@
 from io import SEEK_END
 from os import PathLike
-from typing import BinaryIO, List, Tuple, Union
+from typing import BinaryIO
 
 import numpy as np
 
 from .utils import decode_bits
 
 
-def _read_from_file(file: BinaryIO, fields: List[Tuple[str, str]], count: int = 1) -> dict:
+def _read_from_file(file: BinaryIO, fields: list[tuple[str, str]], count: int = 1) -> dict:
     arr = np.fromfile(file, np.dtype(fields), count)
     if (read := len(arr)) != count:
         raise IOError(f"Read {read} of {count} records from file")
@@ -42,7 +42,7 @@ class HatproHkd:
     header: dict
     data: dict
 
-    def __init__(self, filename: Union[str, bytes, PathLike]):
+    def __init__(self, filename: str | bytes | PathLike):
         with open(filename, "rb") as file:
             self._read_header(file)
             self._read_data(file)
@@ -88,62 +88,58 @@ class HatproHkd:
             fields.append(("Status", "<i4"))
         self.data = _read_from_file(file, fields, self.header["N"])
         self.data["T"] = np.datetime64("2001-01-01") + self.data["T"].astype("timedelta64[s]")
-        self.data.update(
-            decode_bits(
-                self.data["Quality"],
-                [
-                    ("QFLWP1", 2),
-                    ("QFLWP2", 2),
-                    ("QFIWV1", 2),
-                    ("QFIWV2", 2),
-                    ("QFDLY1", 2),
-                    ("QFDLY2", 2),
-                    ("QFHPC1", 2),
-                    ("QFHPC2", 2),
-                    ("QFTPC1", 2),
-                    ("QFTPC2", 2),
-                    ("QFTPB1", 2),
-                    ("QFTPB2", 2),
-                    ("QFSTA1", 2),
-                    ("QFSTA2", 2),
-                    ("QFLPR1", 2),
-                    ("QFLPR2", 2),
-                ],
-            )
+        self.data |= decode_bits(
+            self.data["Quality"],
+            [
+                ("QFLWP1", 2),
+                ("QFLWP2", 2),
+                ("QFIWV1", 2),
+                ("QFIWV2", 2),
+                ("QFDLY1", 2),
+                ("QFDLY2", 2),
+                ("QFHPC1", 2),
+                ("QFHPC2", 2),
+                ("QFTPC1", 2),
+                ("QFTPC2", 2),
+                ("QFTPB1", 2),
+                ("QFTPB2", 2),
+                ("QFSTA1", 2),
+                ("QFSTA2", 2),
+                ("QFLPR1", 2),
+                ("QFLPR2", 2),
+            ],
         )
-        self.data.update(
-            decode_bits(
-                self.data["Status"],
-                [
-                    ("HPCh1", 1),
-                    ("HPCh2", 1),
-                    ("HPCh3", 1),
-                    ("HPCh4", 1),
-                    ("HPCh5", 1),
-                    ("HPCh6", 1),
-                    ("HPCh7", 1),
-                    ("_unused1", 1),
-                    ("TPCh1", 1),
-                    ("TPCh2", 1),
-                    ("TPCh3", 1),
-                    ("TPCh4", 1),
-                    ("TPCh5", 1),
-                    ("TPCh6", 1),
-                    ("TPCh7", 1),
-                    ("_unused2", 1),
-                    ("RF", 1),
-                    ("DB", 1),
-                    ("BLM", 1),
-                    ("SCa", 1),
-                    ("GCa", 1),
-                    ("NCa", 1),
-                    ("ND1", 1),
-                    ("ND2", 1),
-                    ("R1St", 2),
-                    ("R2St", 2),
-                    ("PF", 1),
-                    ("TarSt", 1),
-                    ("NDSt", 1),
-                ],
-            )
+        self.data |= decode_bits(
+            self.data["Status"],
+            [
+                ("HPCh1", 1),
+                ("HPCh2", 1),
+                ("HPCh3", 1),
+                ("HPCh4", 1),
+                ("HPCh5", 1),
+                ("HPCh6", 1),
+                ("HPCh7", 1),
+                ("_unused1", 1),
+                ("TPCh1", 1),
+                ("TPCh2", 1),
+                ("TPCh3", 1),
+                ("TPCh4", 1),
+                ("TPCh5", 1),
+                ("TPCh6", 1),
+                ("TPCh7", 1),
+                ("_unused2", 1),
+                ("RF", 1),
+                ("DB", 1),
+                ("BLM", 1),
+                ("SCa", 1),
+                ("GCa", 1),
+                ("NCa", 1),
+                ("ND1", 1),
+                ("ND2", 1),
+                ("R1St", 2),
+                ("R2St", 2),
+                ("PF", 1),
+                ("TarSt", 1),
+                ("NDSt", 1),
+            ],
         )

@@ -1,5 +1,3 @@
-from typing import Tuple
-
 import netCDF4
 import requests
 from requests import HTTPError
@@ -15,7 +13,7 @@ class PidUtils:
         is_test_env = config["PID_SERVICE_TEST_ENV"].lower() == "true"
         return not is_test_env
 
-    def add_pid_to_file(self, filepath: str) -> Tuple[str, str]:
+    def add_pid_to_file(self, filepath: str) -> tuple[str, str]:
         """Queries PID service and adds the PID to NC file metadata."""
         with netCDF4.Dataset(filepath, "r+") as rootgrp:
             uuid = getattr(rootgrp, "file_uuid")
