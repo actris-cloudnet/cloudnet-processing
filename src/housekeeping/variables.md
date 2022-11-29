@@ -17,7 +17,7 @@
 <tr>
 <td>
 
-`alarm`
+`alarm_status`
 
 </td>
 <td></td>
@@ -132,6 +132,19 @@ Some radiometers are using two ambient target temperature sensors for monitoring
 ‘2’ = LWP too high. At high rain rates the scattering on rain drops can mask the water vapour line completely and no humidity profiling or IWV determination is possible. Also the temperature profiling may be affected when the oxygen line channels are all saturated due to droplets.
 
 ‘3’ = free for future use.
+
+</td>
+</tr>
+<tr>
+<td>
+
+`flash_memory_free`
+
+</td>
+<td>kB</td>
+<td>
+
+Remaining flash memory
 
 </td>
 </tr>
@@ -485,26 +498,13 @@ When a bit is set ‘1’, the corresponding channel is ok, otherwise the channe
 <tr>
 <td>
 
-`rain_flag`
+`rain_status`
 
 </td>
 <td></td>
 <td>
 
 ‘1’ means raining, ‘0’ = no rain
-
-</td>
-</tr>
-<tr>
-<td>
-
-`remaining_flash_memory`
-
-</td>
-<td>kB</td>
-<td>
-
-
 
 </td>
 </tr>
@@ -957,19 +957,6 @@ Transmitter temperature of current sample
 <tr>
 <td>
 
-`create_netcdf_error`
-
-</td>
-<td></td>
-<td>
-
-1 = Create new NetCDF file error, 0 = otherwise
-
-</td>
-</tr>
-<tr>
-<td>
-
 `detector_quality`
 
 </td>
@@ -1126,6 +1113,19 @@ Quality of detector signal
 <tr>
 <td>
 
+`laser_operating_time`
+
+</td>
+<td>h</td>
+<td>
+
+
+
+</td>
+</tr>
+<tr>
+<td>
+
 `laser_optical_module_temperature`
 
 </td>
@@ -1178,6 +1178,19 @@ Laser quality index
 <tr>
 <td>
 
+`laser_replace_warning`
+
+</td>
+<td></td>
+<td>
+
+1 = Replace laser – ageing, 0 = otherwise
+
+</td>
+</tr>
+<tr>
+<td>
+
 `laser_trigger_error`
 
 </td>
@@ -1217,19 +1230,6 @@ Laser quality index
 <tr>
 <td>
 
-`life_time`
-
-</td>
-<td>h</td>
-<td>
-
-Laser operating hours
-
-</td>
-</tr>
-<tr>
-<td>
-
 `mainboard_error`
 
 </td>
@@ -1237,6 +1237,32 @@ Laser operating hours
 <td>
 
 1 = Mainboard detection failed (APD bias) or firmware and CPU do not match, 0 = otherwise
+
+</td>
+</tr>
+<tr>
+<td>
+
+`netcdf_create_error`
+
+</td>
+<td></td>
+<td>
+
+1 = Create new NetCDF file error, 0 = otherwise
+
+</td>
+</tr>
+<tr>
+<td>
+
+`netcdf_write_error`
+
+</td>
+<td></td>
+<td>
+
+1 = Write / add to NetCDF error, 0 = otherwise
 
 </td>
 </tr>
@@ -1263,19 +1289,6 @@ Laser operating hours
 <td>
 
 Optical quality index
-
-</td>
-</tr>
-<tr>
-<td>
-
-`replace_laser_warning`
-
-</td>
-<td></td>
-<td>
-
-1 = Replace laser – ageing, 0 = otherwise
 
 </td>
 </tr>
@@ -1419,19 +1432,6 @@ Optical quality index
 <td>
 
 1 = Windows contaminated, 0 = otherwise
-
-</td>
-</tr>
-<tr>
-<td>
-
-`write_netcdf_error`
-
-</td>
-<td></td>
-<td>
-
-1 = Write / add to NetCDF error, 0 = otherwise
 
 </td>
 </tr>
