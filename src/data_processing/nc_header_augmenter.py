@@ -19,9 +19,10 @@ from data_processing.utils import MiscError
 
 def fix_legacy_file(legacy_file_full_path: str, target_full_path: str) -> str:
     """Fixes legacy netCDF file."""
-    with netCDF4.Dataset(legacy_file_full_path, "r") as nc_legacy, netCDF4.Dataset(
-        target_full_path, "w", format="NETCDF4_CLASSIC"
-    ) as nc:
+    with (
+        netCDF4.Dataset(legacy_file_full_path, "r") as nc_legacy,
+        netCDF4.Dataset(target_full_path, "w", format="NETCDF4_CLASSIC") as nc,
+    ):
         legacy = Level1Nc(nc_legacy, nc, {"uuid": None})
         legacy.copy_file_contents()
         uuid = legacy.add_uuid()
@@ -32,9 +33,10 @@ def fix_legacy_file(legacy_file_full_path: str, target_full_path: str) -> str:
 def harmonize_model_file(data: dict) -> str:
     """Harmonizes model netCDF file."""
     temp_file = NamedTemporaryFile()
-    with netCDF4.Dataset(data["full_path"], "r") as nc_raw, netCDF4.Dataset(
-        temp_file.name, "w", format="NETCDF4_CLASSIC"
-    ) as nc:
+    with (
+        netCDF4.Dataset(data["full_path"], "r") as nc_raw,
+        netCDF4.Dataset(temp_file.name, "w", format="NETCDF4_CLASSIC") as nc,
+    ):
         model = ModelNc(nc_raw, nc, data)
         model.copy_file_contents()
         model.harmonize_attribute("units", ("latitude", "longitude", "altitude"))
@@ -50,9 +52,10 @@ def harmonize_model_file(data: dict) -> str:
 def harmonize_hatpro_file(data: dict) -> str:
     """Harmonizes calibrated HATPRO netCDF file."""
     temp_file = NamedTemporaryFile()
-    with netCDF4.Dataset(data["full_path"], "r") as nc_raw, netCDF4.Dataset(
-        temp_file.name, "w", format="NETCDF4_CLASSIC"
-    ) as nc:
+    with (
+        netCDF4.Dataset(data["full_path"], "r") as nc_raw,
+        netCDF4.Dataset(temp_file.name, "w", format="NETCDF4_CLASSIC") as nc,
+    ):
         hatpro = HatproNc(nc_raw, nc, data)
         hatpro.copy_file()
         hatpro.add_lwp()
@@ -73,9 +76,10 @@ def harmonize_hatpro_file(data: dict) -> str:
 def harmonize_halo_file(data: dict) -> str:
     """Harmonizes calibrated HALO Doppler lidar netCDF file."""
     temp_file = NamedTemporaryFile()
-    with netCDF4.Dataset(data["full_path"], "r") as nc_raw, netCDF4.Dataset(
-        temp_file.name, "w", format="NETCDF4_CLASSIC"
-    ) as nc:
+    with (
+        netCDF4.Dataset(data["full_path"], "r") as nc_raw,
+        netCDF4.Dataset(temp_file.name, "w", format="NETCDF4_CLASSIC") as nc,
+    ):
         halo = HaloNc(nc_raw, nc, data)
         valid_ind = halo.get_valid_time_indices()
         halo.copy_file(valid_ind)
