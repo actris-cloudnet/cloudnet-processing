@@ -83,7 +83,12 @@ Additional arguments:
 
 Don't process anything, only create quality control reports for products.
 
-This command takes no additional arguments.
+Additional arguments:
+
+| Short | Long      | Default | Description                                                                                                              |
+|:------|:----------|:--------|:-------------------------------------------------------------------------------------------------------------------------|
+| `-f`  | `--force` | `False` | Force creation of QC reports. Otherwise might be skipped if an report exist and `cloudnetpy-qc` version has not changed. |
+
 
 ### `model`
 

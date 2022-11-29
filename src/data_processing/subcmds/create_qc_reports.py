@@ -30,7 +30,7 @@ def main(args, storage_session: Optional[requests.Session] = None):
         product = row["product"]["id"]
         uuid = row["uuid"]
         qc_info = md_api.get_qc_version(uuid)
-        if qc_info and qc_info["qc_version"] == cloudnetpy_qc.version.__version__:
+        if not args.force and qc_info and qc_info["qc_version"] == cloudnetpy_qc.version.__version__:
             logging.info("Same cloudnetpy-qc version, skipping.")
             continue
         logging.info(
@@ -53,5 +53,12 @@ def main(args, storage_session: Optional[requests.Session] = None):
 
 
 def add_arguments(subparser):
-    subparser.add_parser("qc", help="Create Quality Control reports.")
+    parser = subparser.add_parser("qc", help="Create Quality Control reports.")
+    parser.add_argument(
+        "-f",
+        "--force",
+        action="store_true",
+        help="Force creation of the QC report.",
+        default=False,
+    )
     return subparser
