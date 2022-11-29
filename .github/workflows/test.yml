@@ -17,7 +17,7 @@ jobs:
         run: docker run --env-file test.env test pylint **/*.py --errors-only --ignored-modules=netCDF4
 
       - name: Check type hints
-        run: docker run --env-file test.env test /bin/bash -c "mypy --ignore-missing-imports scripts/ src/"
+        run: docker run --env-file test.env test /bin/bash -c "mypy --ignore-missing-imports --check-untyped-defs scripts/ src/"
 
       - name: Test
         run: docker run --env-file test.env test pytest
