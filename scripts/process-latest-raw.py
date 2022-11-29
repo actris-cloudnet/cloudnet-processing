@@ -11,10 +11,9 @@ sites = default_sites + additional_sites
 wrapper = "scripts/wrapper.py"
 script = "scripts/cloudnet.py"
 subcommand = "process"
-products = "radar,lidar,mwr,disdrometer"
 interpreter = "python3"
 
 for site in sites:
     subprocess.check_call(
-        [interpreter, wrapper, interpreter, script, "-s", site, "--p", products, subcommand]
+        [interpreter, wrapper, interpreter, script, "-s", site, subcommand, "-u=1"]
     )
