@@ -1,45 +1,195 @@
-[global]
-instruments = [
-  "chm15k",
-  "hatpro",
-  "rpg-fmcw-94",
-]
+[format.chm15k_nc]
+vars.temp_int = "internal_temperature"
+vars.temp_ext = "external_temperature"
+vars.temp_det = "detector_temperature"
+vars.temp_lom = "laser_optical_module_temperature"
+vars.life_time = "laser_operating_time"
+vars.state_laser = "laser_quality"
+vars.state_detector = "detector_quality"
+vars.state_optics = "optical_quality"
+vars.signal_quality_error = "signal_quality_error"
+vars.signal_recording_error = "signal_recording_error"
+vars.signal_value_error = "signal_value_error"
+vars.mainboard_error = "mainboard_error"
+vars.netcdf_create_error = "netcdf_create_error"
+vars.netcdf_write_error = "netcdf_write_error"
+vars.rs485_error = "rs485_error"
+vars.sd_card_error = "sd_card_error"
+vars.detector_voltage_error = "detector_voltage_error"
+vars.internal_temperature_warning = "internal_temperature_warning"
+vars.laser_optical_module_temperature_error = "laser_optical_module_temperature_error"
+vars.laser_trigger_error = "laser_trigger_error"
+vars.ntp_note = "ntp_note"
+vars.laser_controller_error = "laser_controller_error"
+vars.laser_head_temperature_error = "laser_head_temperature_error"
+vars.laser_replace_warning = "laser_replace_warning"
+vars.signal_quality_warning = "signal_quality_warning"
+vars.windows_contaminated_warning = "windows_contaminated_warning"
+vars.signal_processing_warning = "signal_processing_warning"
+vars.laser_detector_warning = "laser_detector_warning"
+vars.file_system_warning = "file_system_warning"
+vars.rs485_warning = "rs485_warning"
+vars.afd_warning = "afd_warning"
+vars.configuration_warning = "configuration_warning"
+vars.laser_optical_module_temperature_warning = "laser_optical_module_temperature_warning"
+vars.external_temperature_warning = "external_temperature_warning"
+vars.detector_temperature_warning = "detector_temperature_warning"
+vars.laser_warning = "laser_warning"
+vars.layers_note = "layers_note"
+vars.started_note = "started_note"
+vars.standby_note = "standby_note"
 
-[[configs]]
-id = "chm15k"
-vars = [
-  "temp_int",
-  "temp_ext",
-  "temp_det",
-  "temp_lom",
-]
+[format.hatpro_nc]
+vars.ambient_Target1_temperature = "ambient_target_sensor1_temperature"
+vars.ambient_Target2_temperature = "ambient_target_sensor2_temperature"
+vars.receiver1_temperature = "humidity_profiler_temperature"
+vars.receiver2_temperature = "temperature_profiler_temperature"
 
-[[configs]]
-id = "hatpro"
-vars = [
-  "ambient_Target1_temperature",
-  "ambient_Target2_temperature",
-  "receiver1_temperature",
-  "receiver2_temperature",
-]
+[format.hatpro_hkd]
+vars.Alarm = "alarm_status"
+vars.T0 = "ambient_target_sensor1_temperature"
+vars.T1 = "ambient_target_sensor2_temperature"
+vars.T2 = "humidity_profiler_temperature"
+vars.T3 = "temperature_profiler_temperature"
+vars.Stab0 = "humidity_profiler_stability"
+vars.Stab1 = "temperature_profiler_stability"
+vars.Flash = "flash_memory_free"
+vars.QFLWP1 = "lwp_quality_level"
+vars.QFLWP2 = "lwp_quality_reason"
+vars.QFIWV1 = "iwv_quality_level"
+vars.QFIWV2 = "iwv_quality_reason"
+vars.QFDLY1 = "dly_quality_level"
+vars.QFDLY2 = "dly_quality_reason"
+vars.QFHPC1 = "hpc_quality_level"
+vars.QFHPC2 = "hpc_quality_reason"
+vars.QFTPC1 = "tpc_quality_level"
+vars.QFTPC2 = "tpc_quality_reason"
+vars.QFTPB1 = "tpb_quality_level"
+vars.QFTPB2 = "tpb_quality_reason"
+vars.QFSTA1 = "sta_quality_level"
+vars.QFSTA2 = "sta_quality_reason"
+vars.QFLPR1 = "lpr_quality_level"
+vars.QFLPR2 = "lpr_quality_reason"
+vars.HPCh1 = "humidity_profiler_channel1_status"
+vars.HPCh2 = "humidity_profiler_channel2_status"
+vars.HPCh3 = "humidity_profiler_channel3_status"
+vars.HPCh4 = "humidity_profiler_channel4_status"
+vars.HPCh5 = "humidity_profiler_channel5_status"
+vars.HPCh6 = "humidity_profiler_channel6_status"
+vars.HPCh7 = "humidity_profiler_channel7_status"
+vars.TPCh1 = "temperature_profiler_channel1_status"
+vars.TPCh2 = "temperature_profiler_channel2_status"
+vars.TPCh3 = "temperature_profiler_channel3_status"
+vars.TPCh4 = "temperature_profiler_channel4_status"
+vars.TPCh5 = "temperature_profiler_channel5_status"
+vars.TPCh6 = "temperature_profiler_channel6_status"
+vars.TPCh7 = "temperature_profiler_channel7_status"
+vars.RF = "rain_status"
+vars.DB = "dew_blower_speed_status"
+vars.BLM = "boundary_layer_mode_status"
+vars.SCa = "sky_tipping_calibration_status"
+vars.GCa = "gain_calibration_status"
+vars.NCa = "noise_calibration_status"
+vars.ND1 = "humidity_profiler_noise_diode_status"
+vars.ND2 = "temperature_profiler_noise_diode_status"
+vars.R1St = "humidity_profiler_stability_status"
+vars.R2St = "temperature_profiler_stability_status"
+vars.PF = "power_failure_status"
+vars.TarSt = "ambient_target_stability_status"
+vars.NDSt = "noise_diode_status"
 
-[[configs]]
-id = "hatpro-hkd"
-vars = [
-  "T0",
-  "T1",
-  "T2",
-  "T3",
-]
+[format.rpg-fmcw-94_lv1]
+vars.RecT = "receiver_temperature"
+vars.EnvTemp = "environment_temperature"
+vars.DDVolt = "direct_detection_voltage"
+vars.PCT = "pc_temperature"
+vars.TransPow = "transmitter_power"
+vars.TransT = "transmitter_temperature"
+vars.heater = "heater_status"
+vars.blower = "blower_status"
+vars.hatpro_temperature = "hatpro_temperature_status"
+vars.hatpro_humidity = "hatpro_humidity_status"
 
-[[configs]]
-id = "rpg-fmcw-94"
-vars = [
-  "TransT",
-  "RecT",
-  "EnvTemp",
-  "DDVolt",
-  "PCT",
-  "TransPow",
-  "Status",
-]
+[metadata.hatpro]
+vars.alarm_status.description = "The alarm flag is activated in the following cases:\n\n- interference or failure of a channel that is used in one of the retrievals\n- thermal receiver stability not sufficient for measurement\n- noise diode failure of one of the receivers\n- ambient target thermal sensor not stable"
+vars."*_temperature".unit = "K"
+vars."*_stability".unit = "K"
+vars.flash_memory_free.description = "Remaining flash memory"
+vars.flash_memory_free.unit = "kB"
+vars."*_quality_level".description = "‘0’ = this level 2 product is not evaluated for quality control\n\n‘1’ = highest quality level\n\n‘2’ = reduced quality\n\n‘3’ = low quality. This sample should not be used."
+vars."*_quality_reason".description = "‘0’ = unknown\n\n‘1’ = possible external interference on a receiver channel or failure of a receiver channel that is used in the retrieval of this product.\n\n‘2’ = LWP too high. At high rain rates the scattering on rain drops can mask the water vapour line completely and no humidity profiling or IWV determination is possible. Also the temperature profiling may be affected when the oxygen line channels are all saturated due to droplets.\n\n‘3’ = free for future use."
+vars."*_profiler_channel*_status".description = "When a bit is set ‘1’, the corresponding channel is ok, otherwise the channel has a malfunction."
+vars.rain_status.description = "‘1’ means raining, ‘0’ = no rain"
+vars.dew_blower_speed_status.description = "‘1’ = high speed mode, ‘0’ = low speed mode"
+vars.boundary_layer_mode_status.description = "‘1’ = boundary layer scanning active, ‘0’ = BL-mode not active"
+vars.sky_tipping_calibration_status.description = "‘1’ = sky tipping calibration running, ‘0’ = not active"
+vars.gain_calibration_status.description = "‘1’ = gain calibration running (using internal ambient target), ‘0’ = not active"
+vars.noise_calibration_status.description = "‘1’ = noise calibration running, ‘0’ = not active"
+vars.humidity_profiler_noise_diode_status.description = " ‘1’ = noise diode of humidity profiler ok, ‘0’ = noise diode not working"
+vars.temperature_profiler_noise_diode_status.description = "‘1’ = noise diode of temperature profiler ok, ‘0’ = noise diode not working"
+vars."*_profiler_stability_status".description = "‘0’ = unknown, not enough data samples recorded yet, ‘1’ = stability ok, ‘2’ = not sufficiently stable"
+vars.power_failure_status.description = "‘1’ = a power failure has occurred recently. When a new MDF has been started automatically after a power failure, the ‘1’ flag is kept for 1000 seconds and switching back to ‘0’ afterwards. ‘0’ = no power failure occurred."
+vars.ambient_target_stability_status.description = "Some radiometers are using two ambient target temperature sensors for monitoring the target’s physical temperature. When the temperature readings of these two sensors differ by more than 0.3 K, the flag turns to ‘1’. ‘0’ = sensors ok."
+vars.noise_diode_status.description = "‘0’ = noise diode is turned off for the current sample, ‘1’ = noise diode is turned on for the current sample."
+
+[metadata.rpg-fmcw-94]
+vars.receiver_temperature.description = "Receiver temperature of current sample"
+vars.receiver_temperature.unit = "K"
+vars.environment_temperature.description = "Environment temperature of current sample"
+vars.environment_temperature.unit = "K"
+vars.direct_detection_voltage.description = "Direct detection channel voltage of current sample"
+vars.direct_detection_voltage.unit = "V"
+vars.pc_temperature.description = "PC temperature of current sample"
+vars.pc_temperature.unit = "K"
+vars.transmitter_power.description = "Transmitter power of current sample"
+vars.transmitter_power.unit = "K"
+vars.transmitter_temperature.description = "Transmitter temperature of current sample"
+vars.transmitter_temperature.unit = "K"
+vars.heater_status.description = "1 = heater is on, 0 = otherwise (please note, that no RPG radar has a physical heater)"
+vars.blower_status.description = "1 = blower is on, 0 = otherwise"
+vars.hatpro_temperature_status.description = "1 = temperature profile is from a coupled HATPRO, 0 = otherwise"
+vars.hatpro_humidity_status.description = "1 = humidity profiles are from a coupled HATPRO, 0 = otherwise"
+
+[metadata.chm15k]
+vars.internal_temperature.unit = "K"
+vars.external_temperature.unit = "K"
+vars.detector_temperature.unit = "K"
+vars.laser_optical_module_temperature.unit = "K"
+vars.laser_operating_time.unit = "h"
+vars.laser_quality.description = "Laser quality index"
+vars.laser_quality.unit = "percent"
+vars.detector_quality.description = "Quality of detector signal"
+vars.detector_quality.unit = "percent"
+vars.optical_quality.description = "Optical quality index"
+vars.optical_quality.unit = "percent"
+vars.signal_quality_error.description = "1 = Signal quality error, 0 = otherwise"
+vars.signal_recording_error.description = "1 = Signal recording error, 0 = otherwise"
+vars.signal_value_error.description = "1 = Signal values null or void, 0 = otherwise"
+vars.mainboard_error.description = "1 = Mainboard detection failed (APD bias) or firmware and CPU do not match, 0 = otherwise"
+vars.netcdf_create_error.description = "1 = Create new NetCDF file error, 0 = otherwise"
+vars.netcdf_write_error.description = "1 = Write / add to NetCDF error, 0 = otherwise"
+vars.rs485_error.description = "1 = RS485 telegram cannot be generated and transmitted, 0 = otherwise"
+vars.sd_card_error.description = "1 = SD card absent or defective, 0 = otherwise"
+vars.detector_voltage_error.description = "1 = Detector voltage control failed or cable absent or defective, 0 = otherwise"
+vars.internal_temperature_warning.description = "1 = Inner housing temperature out of range, 0 = otherwise"
+vars.laser_optical_module_temperature_error.description = "1 = Laser optical unit temperature error, 0 = otherwise"
+vars.laser_trigger_error.description = "1 = Laser trigger not detected or laser disabled (safety-related), 0 = otherwise"
+vars.ntp_note.description = "1 = NTP problem, 0 = otherwise (introduced in firmware version 1.070 released in November 2020)"
+vars.laser_controller_error.description = "1 = Laser controller error, 0 = otherwise"
+vars.laser_head_temperature_error.description = "1 = Laser head temperature error, 0 = otherwise"
+vars.laser_replace_warning.description = "1 = Replace laser – ageing, 0 = otherwise"
+vars.signal_quality_warning.description = "1 = Signal quality – high noise level, 0 = otherwise"
+vars.windows_contaminated_warning.description = "1 = Windows contaminated, 0 = otherwise"
+vars.signal_processing_warning.description = "1 = Signal processing warning, 0 = otherwise"
+vars.laser_detector_warning.description = "1 = Laser detector misaligned or receiver window soiled, 0 = otherwise"
+vars.file_system_warning.description = "1 = File system, fsck repaired bad sectors, 0 = otherwise"
+vars.rs485_warning.description = "1 = RS485 baud rate / transfer mode reset, 0 = otherwise"
+vars.afd_warning.description = "1 = AFD problem, 0 = otherwise"
+vars.configuration_warning.description = "1 = Configuration problem, 0 = otherwise"
+vars.laser_optical_module_temperature_warning.description = "1 = Laser optical unit temperature warning, 0 = otherwise"
+vars.external_temperature_warning.description = "1 = External temperature warning, 0 = otherwise"
+vars.detector_temperature_warning.description = "1 = Detector temperature out of range, 0 = otherwise"
+vars.laser_warning.description = "1 = General laser issue, 0 = otherwise"
+vars.layers_note.description = "1 = Number of layers > 3 and telegram selected, 0 = otherwise"
+vars.started_note.description = "1 = Device was started, 0 = otherwise"
+vars.standby_note.description = "1 = Standby mode on, 0 = otherwise"

@@ -13,6 +13,7 @@ setup(
     install_requires=[
         "cloudnetpy_qc>=1.3.0",
         "cloudnetpy>=1.42.1",
+        "rpgpy>=0.13.1",
         "pytest",
         "pylint",
         "mypy",

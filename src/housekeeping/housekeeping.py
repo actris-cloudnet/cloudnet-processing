@@ -1,12 +1,10 @@
-import re
+import logging
 import tempfile
-from datetime import datetime
+from functools import partial
 from os import getenv
 from pathlib import Path
-from typing import Optional, Union
+from typing import Callable, Dict, List, Optional
 
-import cftime
-import netCDF4
 import numpy.typing as npt
 import toml
 from influxdb_client import InfluxDBClient
@@ -14,91 +12,63 @@ from influxdb_client.client.write_api import SYNCHRONOUS
 from netCDF4 import Dataset as Dataset
 from pandas import DataFrame
 from rpgpy import read_rpg
-from rpgpy.utils import rpg_seconds2date
+from rpgpy.utils import decode_rpg_status_flags, rpg_seconds2datetime64
 
-from .exceptions import HousekeepingEmptyWarning
+from .chm15k import read_chm15k
 from .hatpro import HatproHkd
+from .utils import cftime2datetime
 
 
-def hatprohkd2db(src: bytes, metadata: dict):
-    cfg = get_config(cfg_id="hatpro-hkd")
+def _handle_hatpro_hkd(src: bytes, cfg: dict):
     with tempfile.NamedTemporaryFile() as f:
         f.write(src)
         hkd = HatproHkd(f.name)
     time = hkd.data["T"]
-    measurements = {var: hkd.data[var] for var in cfg["vars"] if var in hkd.data}
-    df = DataFrame(measurements, index=time)
-    df2db(df, metadata)
+    return _make_df(time, hkd.data, cfg["vars"])
 
 
-def _rpgtime2datetime(rpg_timestamp: int) -> datetime:
-    year, month, day, hour, minute, sec = [int(t) for t in rpg_seconds2date(rpg_timestamp)]
-    return datetime(year, month, day, hour, minute, sec)
+def _handle_rpg(src: bytes, cfg: dict) -> DataFrame:
+    with tempfile.NamedTemporaryFile() as f:
+        f.write(src)
+        head, data = read_rpg(f.name)
+    time = rpg_seconds2datetime64(data["Time"])
+    data.update(decode_rpg_status_flags(data["Status"])._asdict())
+    return _make_df(time, data, cfg["vars"])
 
 
-def _rpg2df(src: Union[Path, bytes], cfg: dict) -> DataFrame:
-    if isinstance(src, bytes):
-        with tempfile.NamedTemporaryFile() as f:
-            f.write(src)
-            head, data = read_rpg(f.name)
-    elif isinstance(src, Path):
-        head, data = read_rpg(src)
-    else:
-        raise TypeError
-
-    time = [_rpgtime2datetime(t) for t in data["Time"]]
-    measurements = {var: data[var] for var in cfg["vars"] if var in data}
-    return DataFrame(measurements, index=time)
+def _handle_nc(src: bytes, cfg: dict) -> DataFrame:
+    with Dataset("dataset.nc", memory=src) as nc:
+        time = cftime2datetime(nc["time"])
+        measurements = {var: nc[var][:] for var in nc.variables.keys()}
+        return _make_df(time, measurements, cfg["vars"])
 
 
-def rpg2db(src: bytes, metadata: dict) -> None:
-    cfg = get_config(cfg_id=metadata["instrumentId"])
-    df = _rpg2df(src, cfg)
-    df2db(df, metadata)
+def _handle_chm15k_nc(src: bytes, cfg: dict) -> DataFrame:
+    with Dataset("dataset.nc", memory=src) as nc:
+        measurements = read_chm15k(nc)
+        return _make_df(measurements["time"], measurements, cfg["vars"])
 
 
-def nc2db(src: Union[Path, bytes], metadata: dict) -> None:
-    cfg = get_config(cfg_id=metadata["instrumentId"])
-    df = _nc2df(src, cfg)
-    df2db(df, metadata)
+def get_reader(metadata: dict) -> Optional[Callable[[bytes], DataFrame]]:
+    instrument_id = metadata["instrumentId"]
+    filename = metadata["filename"].lower()
+
+    if instrument_id == "hatpro":
+        if filename.endswith(".nc"):
+            return partial(_handle_nc, cfg=get_config("hatpro_nc"))
+        if filename.endswith(".hkd"):
+            return partial(_handle_hatpro_hkd, cfg=get_config("hatpro_hkd"))
+
+    if instrument_id == "rpg-fmcw-94" and filename.endswith(".lv1"):
+        return partial(_handle_rpg, cfg=get_config("rpg-fmcw-94_lv1"))
+
+    if instrument_id == "chm15k" and filename.endswith(".nc"):
+        return partial(_handle_chm15k_nc, cfg=get_config("chm15k_nc"))
+
+    return None
 
 
-def get_config(cfg_id: Optional[str] = None) -> dict:
-    src = Path(__file__).parent.joinpath("config.toml")
-    cfgs = toml.load(src)
-    if cfg_id is None:
-        return cfgs["global"]
-    _cfgs = [c for c in cfgs["configs"] if c["id"] == cfg_id]
-    if len(_cfgs) < 1:
-        raise ValueError(f"Cannot found config for id: {cfg_id}")
-    elif len(_cfgs) > 1:
-        raise ValueError(f"Ambiguous config id: {cfg_id}")
-    else:
-        return _cfgs[0]
-
-
-def _nc2df(nc_src: Union[Path, bytes], cfg: dict) -> DataFrame:
-    if isinstance(nc_src, Path):
-        if not nc_src.is_file():
-            raise FileNotFoundError(f"{nc_src} not found")
-        nc = Dataset(nc_src)
-    elif isinstance(nc_src, bytes):
-        nc = Dataset("dataset.nc", memory=nc_src)
-    else:
-        raise TypeError("nc_src must have type Path or bytes")
-    time = _nctime2datetime(nc["time"])
-    measurements = _collect_nc_vars2dict(nc, cfg["vars"])
-    return DataFrame(measurements, index=time)
-
-
-def _collect_nc_vars2dict(nc: Dataset, variables: dict) -> dict:
-    nc_keys = nc.variables.keys()
-    return {var: nc[var][:] for var in variables if var in nc_keys}
-
-
-def df2db(df: DataFrame, metadata: dict) -> None:
-    if df.empty:
-        raise HousekeepingEmptyWarning()
+def write(df: DataFrame, metadata: dict) -> None:
     df["site_id"] = metadata["siteId"]
     df["instrument_id"] = metadata["instrumentId"]
     df["instrument_pid"] = metadata["instrumentPid"]
@@ -112,26 +82,26 @@ def df2db(df: DataFrame, metadata: dict) -> None:
             )
 
 
-def _nctime2datetime(time: netCDF4.Variable) -> npt.NDArray:
-    units = fix_invalid_cf_time_unit(time.units)
-    return cftime.num2pydate(time[:], units=units)
+def _make_df(
+    time: npt.NDArray, measurements: Dict[str, npt.NDArray], variables: Dict[str, str]
+) -> DataFrame:
+    data = {}
+    for src_name, dest_name in variables.items():
+        if src_name not in measurements:
+            logging.warning(f"Variable '{src_name}' not found (would be mapped to '{dest_name}')")
+            continue
+        data[dest_name] = measurements[src_name]
+    return DataFrame(data, index=time)
 
 
-def fix_invalid_cf_time_unit(unit: str) -> str:
-    match_ = re.match(
-        r"^(\w+) since (\d{1,2})\.(\d{1,2})\.(\d{4}), (\d{1,2}):(\d{1,2}):(\d{1,2})$", unit
-    )
-    if match_:
-        _unit = match_.group(1)
-        day = match_.group(2).zfill(2)
-        month = match_.group(3).zfill(2)
-        year = match_.group(4)
-        hour = match_.group(5).zfill(2)
-        minute = match_.group(6).zfill(2)
-        sec = match_.group(7).zfill(2)
-        new_unit = f"{_unit} since {year}-{month}-{day} {hour}:{minute}:{sec}"
-        return new_unit
-    return unit
+def get_config(format_id: str) -> dict:
+    src = Path(__file__).parent.joinpath("config.toml")
+    return toml.load(src)["format"][format_id]
+
+
+def list_instruments() -> List[str]:
+    src = Path(__file__).parent.joinpath("config.toml")
+    return list(toml.load(src)["metadata"].keys())
 
 
 def get_write_arg() -> dict:

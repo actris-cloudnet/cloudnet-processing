@@ -1,2 +1,2 @@
-class HousekeepingEmptyWarning(Warning):
+class UnsupportedFile(Exception):
     pass
