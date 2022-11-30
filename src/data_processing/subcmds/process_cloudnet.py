@@ -87,7 +87,7 @@ class ProcessCloudnet(ProcessBase):
         updated_at_from = datetime.date.today() - datetime.timedelta(days=self.args.updated_since)
         payload = {"updatedAtFrom": updated_at_from, "status": "uploaded", "site": self.args.site}
         metadata = self.md_api.get("api/raw-files", payload)
-        ignored_extensions = (".lv0",)
+        ignored_extensions = (".lv0", ".hkd")
         metadata = [
             row for row in metadata if not row["filename"].lower().endswith(ignored_extensions)
         ]
@@ -95,8 +95,6 @@ class ProcessCloudnet(ProcessBase):
             {"date": row["measurementDate"], "product": row["instrument"]["type"]}
             for row in metadata
         ]
-        ignored_products = ("disdrometer",)
-        metadata = [row for row in metadata if not row["product"] in ignored_products]
         metadata = utils.remove_duplicate_dicts(metadata)
         return metadata
 
