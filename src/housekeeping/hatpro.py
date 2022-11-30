@@ -2,9 +2,14 @@ from io import SEEK_END
 from os import PathLike
 from typing import BinaryIO
 
+import netCDF4
 import numpy as np
+import numpy.typing as npt
 
-from .utils import decode_bits
+from .utils import cftime2datetime, decode_bits
+
+TIME_REF_LOCAL = 0
+TIME_REF_UTC = 1
 
 
 def _read_from_file(file: BinaryIO, fields: list[tuple[str, str]], count: int = 1) -> dict:
@@ -60,7 +65,7 @@ class HatproHkd:
         )
         if self.header["HKDCode"] != 837854832:
             raise HatproHkdError(f'Unknown file signature: {self.header["HKDCode"]}')
-        if self.header["HKDTimeRef"] != 1:
+        if self.header["HKDTimeRef"] != TIME_REF_UTC:
             raise HatproHkdError("Only UTC time reference is supported")
 
     def _read_data(self, file: BinaryIO):
@@ -88,58 +93,86 @@ class HatproHkd:
             fields.append(("Status", "<i4"))
         self.data = _read_from_file(file, fields, self.header["N"])
         self.data["T"] = np.datetime64("2001-01-01") + self.data["T"].astype("timedelta64[s]")
-        self.data |= decode_bits(
-            self.data["Quality"],
-            [
-                ("QFLWP1", 2),
-                ("QFLWP2", 2),
-                ("QFIWV1", 2),
-                ("QFIWV2", 2),
-                ("QFDLY1", 2),
-                ("QFDLY2", 2),
-                ("QFHPC1", 2),
-                ("QFHPC2", 2),
-                ("QFTPC1", 2),
-                ("QFTPC2", 2),
-                ("QFTPB1", 2),
-                ("QFTPB2", 2),
-                ("QFSTA1", 2),
-                ("QFSTA2", 2),
-                ("QFLPR1", 2),
-                ("QFLPR2", 2),
-            ],
-        )
-        self.data |= decode_bits(
-            self.data["Status"],
-            [
-                ("HPCh1", 1),
-                ("HPCh2", 1),
-                ("HPCh3", 1),
-                ("HPCh4", 1),
-                ("HPCh5", 1),
-                ("HPCh6", 1),
-                ("HPCh7", 1),
-                ("_unused1", 1),
-                ("TPCh1", 1),
-                ("TPCh2", 1),
-                ("TPCh3", 1),
-                ("TPCh4", 1),
-                ("TPCh5", 1),
-                ("TPCh6", 1),
-                ("TPCh7", 1),
-                ("_unused2", 1),
-                ("RF", 1),
-                ("DB", 1),
-                ("BLM", 1),
-                ("SCa", 1),
-                ("GCa", 1),
-                ("NCa", 1),
-                ("ND1", 1),
-                ("ND2", 1),
-                ("R1St", 2),
-                ("R2St", 2),
-                ("PF", 1),
-                ("TarSt", 1),
-                ("NDSt", 1),
-            ],
-        )
+        self.data |= decode_quality_flags(self.data["Quality"])
+        self.data |= decode_status_flags(self.data["Status"])
+
+
+class HatproHkdNc:
+    def __init__(self, filename: str | bytes | PathLike):
+        with netCDF4.Dataset(filename) as nc:
+            time_ref = nc.variables.get("time_reference")
+            if time_ref is None:
+                raise HatproHkdError("Variable 'time_reference' not found")
+            if len(time_ref.shape) != 0:
+                raise HatproHkdError(
+                    f"Variable 'time_reference' has invalid shape: {time_ref.shape}"
+                )
+            if time_ref[0] != TIME_REF_UTC:
+                raise HatproHkdError("Only UTC time reference is supported")
+            self.data = {var: nc[var][:] for var in nc.variables.keys()}
+            self.data["time"] = cftime2datetime(nc.variables["time"])
+            if quality_flags := nc.variables.get("quality_flags"):
+                self.data |= decode_quality_flags(quality_flags[:])
+            if status_flags := nc.variables.get("status_flags"):
+                self.data |= decode_status_flags(status_flags[:])
+
+
+def decode_quality_flags(data: npt.NDArray) -> dict[str, npt.NDArray]:
+    return decode_bits(
+        data,
+        [
+            ("lwp_quality_level", 2),
+            ("lwp_quality_reason", 2),
+            ("iwv_quality_level", 2),
+            ("iwv_quality_reason", 2),
+            ("dly_quality_level", 2),
+            ("dly_quality_reason", 2),
+            ("hpc_quality_level", 2),
+            ("hpc_quality_reason", 2),
+            ("tpc_quality_level", 2),
+            ("tpc_quality_reason", 2),
+            ("tpb_quality_level", 2),
+            ("tpb_quality_reason", 2),
+            ("sta_quality_level", 2),
+            ("sta_quality_reason", 2),
+            ("lpr_quality_level", 2),
+            ("lpr_quality_reason", 2),
+        ],
+    )
+
+
+def decode_status_flags(data: npt.NDArray) -> dict[str, npt.NDArray]:
+    return decode_bits(
+        data,
+        [
+            ("humidity_profiler_channel1_status", 1),
+            ("humidity_profiler_channel2_status", 1),
+            ("humidity_profiler_channel3_status", 1),
+            ("humidity_profiler_channel4_status", 1),
+            ("humidity_profiler_channel5_status", 1),
+            ("humidity_profiler_channel6_status", 1),
+            ("humidity_profiler_channel7_status", 1),
+            ("_unused1", 1),
+            ("temperature_profiler_channel1_status", 1),
+            ("temperature_profiler_channel2_status", 1),
+            ("temperature_profiler_channel3_status", 1),
+            ("temperature_profiler_channel4_status", 1),
+            ("temperature_profiler_channel5_status", 1),
+            ("temperature_profiler_channel6_status", 1),
+            ("temperature_profiler_channel7_status", 1),
+            ("_unused2", 1),
+            ("rain_status", 1),
+            ("dew_blower_speed_status", 1),
+            ("boundary_layer_mode_status", 1),
+            ("sky_tipping_calibration_status", 1),
+            ("gain_calibration_status", 1),
+            ("noise_calibration_status", 1),
+            ("humidity_profiler_noise_diode_status", 1),
+            ("temperature_profiler_noise_diode_status", 1),
+            ("humidity_profiler_stability_status", 2),
+            ("temperature_profiler_stability_status", 2),
+            ("power_failure_status", 1),
+            ("ambient_target_stability_status", 1),
+            ("noise_diode_status", 1),
+        ],
+    )

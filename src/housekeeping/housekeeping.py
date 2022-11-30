@@ -1,6 +1,5 @@
 import logging
 import tempfile
-from functools import partial
 from os import getenv
 from pathlib import Path
 from typing import Callable
@@ -15,38 +14,38 @@ from rpgpy import read_rpg
 from rpgpy.utils import decode_rpg_status_flags, rpg_seconds2datetime64
 
 from .chm15k import read_chm15k
-from .hatpro import HatproHkd
-from .utils import cftime2datetime
+from .exceptions import UnsupportedFile
+from .hatpro import HatproHkd, HatproHkdNc
 
 
-def _handle_hatpro_hkd(src: bytes, cfg: dict):
+def _handle_hatpro_hkd(src: bytes) -> DataFrame:
     with tempfile.NamedTemporaryFile() as f:
         f.write(src)
         hkd = HatproHkd(f.name)
     time = hkd.data["T"]
-    return _make_df(time, hkd.data, cfg["vars"])
+    return _make_df(time, hkd.data, get_config("hatpro_hkd"))
 
 
-def _handle_rpg(src: bytes, cfg: dict) -> DataFrame:
+def _handle_hatpro_nc(src: bytes) -> DataFrame:
+    with tempfile.NamedTemporaryFile() as f:
+        f.write(src)
+        hkd = HatproHkdNc(f.name)
+    return _make_df(hkd.data["time"], hkd.data, get_config("hatpro_nc"))
+
+
+def _handle_rpg_lv1(src: bytes) -> DataFrame:
     with tempfile.NamedTemporaryFile() as f:
         f.write(src)
         head, data = read_rpg(f.name)
     time = rpg_seconds2datetime64(data["Time"])
     data |= decode_rpg_status_flags(data["Status"])._asdict()
-    return _make_df(time, data, cfg["vars"])
+    return _make_df(time, data, get_config("rpg-fmcw-94_lv1"))
 
 
-def _handle_nc(src: bytes, cfg: dict) -> DataFrame:
-    with Dataset("dataset.nc", memory=src) as nc:
-        time = cftime2datetime(nc["time"])
-        measurements = {var: nc[var][:] for var in nc.variables.keys()}
-        return _make_df(time, measurements, cfg["vars"])
-
-
-def _handle_chm15k_nc(src: bytes, cfg: dict) -> DataFrame:
+def _handle_chm15k_nc(src: bytes) -> DataFrame:
     with Dataset("dataset.nc", memory=src) as nc:
         measurements = read_chm15k(nc)
-        return _make_df(measurements["time"], measurements, cfg["vars"])
+        return _make_df(measurements["time"], measurements, get_config("chm15k_nc"))
 
 
 def get_reader(metadata: dict) -> Callable[[bytes], DataFrame] | None:
@@ -55,15 +54,15 @@ def get_reader(metadata: dict) -> Callable[[bytes], DataFrame] | None:
 
     if instrument_id == "hatpro":
         if filename.endswith(".nc"):
-            return partial(_handle_nc, cfg=get_config("hatpro_nc"))
+            return _handle_hatpro_nc
         if filename.endswith(".hkd"):
-            return partial(_handle_hatpro_hkd, cfg=get_config("hatpro_hkd"))
+            return _handle_hatpro_hkd
 
     if instrument_id == "rpg-fmcw-94" and filename.endswith(".lv1"):
-        return partial(_handle_rpg, cfg=get_config("rpg-fmcw-94_lv1"))
+        return _handle_rpg_lv1
 
     if instrument_id == "chm15k" and filename.endswith(".nc"):
-        return partial(_handle_chm15k_nc, cfg=get_config("chm15k_nc"))
+        return _handle_chm15k_nc
 
     return None
 
@@ -85,18 +84,25 @@ def write(df: DataFrame, metadata: dict) -> None:
 def _make_df(
     time: npt.NDArray, measurements: dict[str, npt.NDArray], variables: dict[str, str]
 ) -> DataFrame:
+    if len(time) == 0:
+        raise UnsupportedFile("No housekeeping data found")
     data = {}
+    nonexisting_variables = []
     for src_name, dest_name in variables.items():
         if src_name not in measurements:
-            logging.warning(f"Variable '{src_name}' not found (would be mapped to '{dest_name}')")
+            nonexisting_variables.append((src_name, dest_name))
             continue
         data[dest_name] = measurements[src_name]
+    if not data:
+        raise UnsupportedFile("No housekeeping data found")
+    for src_name, dest_name in nonexisting_variables:
+        logging.warning(f"Variable '{src_name}' not found (would be mapped to '{dest_name}')")
     return DataFrame(data, index=time)
 
 
 def get_config(format_id: str) -> dict:
     src = Path(__file__).parent.joinpath("config.toml")
-    return toml.load(src)["format"][format_id]
+    return toml.load(src)["format"][format_id]["vars"]
 
 
 def list_instruments() -> list[str]:

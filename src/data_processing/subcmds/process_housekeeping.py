@@ -41,9 +41,6 @@ def main(args):
         filebytes = raw_api.get_raw_file(uuid, fname)
         try:
             df = reader(filebytes)
-            if df.empty:
-                logging.warning("Unable to process file: No housekeeping data found")
-                continue
             housekeeping.write(df, record)
         except housekeeping.UnsupportedFile as e:
             logging.warning(f"Unable to process file: {e}")
