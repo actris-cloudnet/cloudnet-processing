@@ -138,5 +138,4 @@ def read_chm15k(nc: netCDF4.Dataset) -> dict:
     else:
         status_bits = decode_bits(nc.variables["error_ext"][:], STATUS_CODES_V3)
 
-    measurements.update(status_bits)
-    return measurements
+    return measurements | status_bits

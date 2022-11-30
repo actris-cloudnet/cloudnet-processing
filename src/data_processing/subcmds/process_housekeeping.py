@@ -19,14 +19,10 @@ def main(args):
         "status": ["uploaded", "processed"],
     }
     if args.date is not None:
-        query_params.update({"date": args.date})
+        query_params["date"] = args.date
     else:
-        query_params.update(
-            {
-                "dateFrom": args.start,
-                "dateTo": args.stop,
-            }
-        )
+        query_params["dateFrom"] = args.start
+        query_params["dateTo"] = args.stop
     metadata = md_api.get(
         "api/raw-files",
         query_params,

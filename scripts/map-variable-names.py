@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Script for printing Cloudnet variable names."""
 import json
-from typing import Dict
 
 import data_processing.utils as process_utils
 
@@ -9,7 +8,7 @@ import data_processing.utils as process_utils
 def main():
     """The main function."""
 
-    all_ids: Dict[str, list] = {}
+    all_ids: dict[str, list] = {}
     file_types = (
         "radar",
         "lidar",

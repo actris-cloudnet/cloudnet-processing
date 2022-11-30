@@ -4,7 +4,6 @@ import gzip
 import logging
 import os
 import shutil
-from typing import List
 
 from cloudnetpy.instruments import (
     basta2nc,
@@ -29,7 +28,7 @@ class ProcessInstrument:
         self.base = base
         self.temp_file = temp_file
         self.uuid = uuid
-        self.instrument_pids: List = []
+        self.instrument_pids: list = []
         self._kwargs = self._get_kwargs()
         self._args = self._get_args()
 

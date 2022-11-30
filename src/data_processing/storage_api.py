@@ -1,6 +1,5 @@
 """Metadata API for Cloudnet files."""
 from os import path
-from typing import Optional, Tuple
 
 import requests
 
@@ -24,7 +23,7 @@ class StorageApi:
         res = self._put(url, full_path, headers).json()
         return {"version": res.get("version", ""), "size": int(res["size"])}
 
-    def download_raw_data(self, metadata: list, dir_name: str) -> Tuple[list, list, list]:
+    def download_raw_data(self, metadata: list, dir_name: str) -> tuple[list, list, list]:
         """Download raw files."""
         urls = [path.join(self._url, row["s3path"][1:]) for row in metadata]
         full_paths = [path.join(dir_name, row["filename"]) for row in metadata]
@@ -56,7 +55,7 @@ class StorageApi:
         headers = self._get_headers(full_path)
         self._put(url, full_path, headers=headers)
 
-    def _put(self, url: str, full_path: str, headers: Optional[dict] = None) -> requests.Response:
+    def _put(self, url: str, full_path: str, headers: dict | None = None) -> requests.Response:
         res = self.session.put(url, data=open(full_path, "rb"), auth=self._auth, headers=headers)
         res.raise_for_status()
         return res

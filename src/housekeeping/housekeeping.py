@@ -3,7 +3,7 @@ import tempfile
 from functools import partial
 from os import getenv
 from pathlib import Path
-from typing import Callable, Dict, List, Optional
+from typing import Callable
 
 import numpy.typing as npt
 import toml
@@ -32,7 +32,7 @@ def _handle_rpg(src: bytes, cfg: dict) -> DataFrame:
         f.write(src)
         head, data = read_rpg(f.name)
     time = rpg_seconds2datetime64(data["Time"])
-    data.update(decode_rpg_status_flags(data["Status"])._asdict())
+    data |= decode_rpg_status_flags(data["Status"])._asdict()
     return _make_df(time, data, cfg["vars"])
 
 
@@ -49,7 +49,7 @@ def _handle_chm15k_nc(src: bytes, cfg: dict) -> DataFrame:
         return _make_df(measurements["time"], measurements, cfg["vars"])
 
 
-def get_reader(metadata: dict) -> Optional[Callable[[bytes], DataFrame]]:
+def get_reader(metadata: dict) -> Callable[[bytes], DataFrame] | None:
     instrument_id = metadata["instrumentId"]
     filename = metadata["filename"].lower()
 
@@ -83,7 +83,7 @@ def write(df: DataFrame, metadata: dict) -> None:
 
 
 def _make_df(
-    time: npt.NDArray, measurements: Dict[str, npt.NDArray], variables: Dict[str, str]
+    time: npt.NDArray, measurements: dict[str, npt.NDArray], variables: dict[str, str]
 ) -> DataFrame:
     data = {}
     for src_name, dest_name in variables.items():
@@ -99,7 +99,7 @@ def get_config(format_id: str) -> dict:
     return toml.load(src)["format"][format_id]
 
 
-def list_instruments() -> List[str]:
+def list_instruments() -> list[str]:
     src = Path(__file__).parent.joinpath("config.toml")
     return list(toml.load(src)["metadata"].keys())
 

@@ -2,7 +2,6 @@ import datetime
 import logging
 import shutil
 from tempfile import NamedTemporaryFile
-from typing import List, Optional
 
 import cloudnetpy.utils
 import netCDF4
@@ -107,7 +106,7 @@ class Level1Nc:
         self.nc = nc
         self.data = data
 
-    def copy_file_contents(self, keys: Optional[tuple] = None, time_ind: Optional[list] = None):
+    def copy_file_contents(self, keys: tuple | None = None, time_ind: list | None = None):
         """Copies all variables and global attributes from one file to another. Optionally copies only
         certain keys and / or uses certain time indices only.
         """
@@ -121,7 +120,7 @@ class Level1Nc:
             self.copy_variable(key, time_ind)
         self._copy_global_attributes()
 
-    def copy_variable(self, key: str, time_ind: Optional[list] = None):
+    def copy_variable(self, key: str, time_ind: list | None = None):
         """Copies one variable from source file to target. Optionally uses certain time indices only."""
         if key not in self.nc_raw.variables.keys():
             logging.warning(f"Key {key} not found from the source file.")
@@ -178,7 +177,7 @@ class Level1Nc:
         """Adds date attributes."""
         self.nc.year, self.nc.month, self.nc.day = self.data["date"].split("-")
 
-    def harmonize_attribute(self, attribute: str, keys: Optional[tuple] = None):
+    def harmonize_attribute(self, attribute: str, keys: tuple | None = None):
         """Harmonizes variable attributes."""
         keys = keys if keys is not None else self.nc.variables.keys()
         for key in keys:
@@ -214,7 +213,7 @@ class Level1Nc:
         return f'hours since {self.data["date"]} 00:00:00 +00:00'
 
     @staticmethod
-    def _screen_data(variable: netCDF4.Variable, time_ind: Optional[list] = None) -> np.ndarray:
+    def _screen_data(variable: netCDF4.Variable, time_ind: list | None = None) -> np.ndarray:
         if variable.ndim > 0 and time_ind is not None and variable.dimensions[0] == "time":
             if variable.ndim == 1:
                 return variable[time_ind]
@@ -287,7 +286,7 @@ class HaloNc(Level1Nc):
     def get_valid_time_indices(self) -> list:
         """Finds valid time indices."""
         time_stamps = self.nc_raw.variables["time"][:]
-        valid_ind: List[int] = []
+        valid_ind: list[int] = []
         for ind, t in enumerate(time_stamps):
             if 0 < t < 24:
                 if len(valid_ind) > 1 and t <= time_stamps[valid_ind[-1]]:
@@ -380,7 +379,7 @@ class HatproNc(Level1Nc):
         _, ind = np.unique(time_stamps[valid_ind], return_index=True)
         return list(np.array(valid_ind)[ind])
 
-    def _copy_hatpro_file_contents(self, time_ind: list, keys: Optional[tuple] = None):
+    def _copy_hatpro_file_contents(self, time_ind: list, keys: tuple | None = None):
         self.nc.createDimension("time", len(time_ind))
         for name, variable in self.nc_raw.variables.items():
             if keys is not None and name not in keys:

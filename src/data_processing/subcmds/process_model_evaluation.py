@@ -3,7 +3,6 @@
 import logging
 import warnings
 from tempfile import NamedTemporaryFile
-from typing import Optional
 
 import requests
 from cloudnetpy.model_evaluation.plotting.plotting import generate_L3_day_plots
@@ -19,7 +18,7 @@ warnings.simplefilter("ignore", UserWarning)
 warnings.simplefilter("ignore", RuntimeWarning)
 
 
-def main(args, storage_session: Optional[requests.Session] = None):
+def main(args, storage_session: requests.Session | None):
     if storage_session is None:
         storage_session = make_session()
     config = utils.read_main_conf()
