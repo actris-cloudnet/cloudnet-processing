@@ -6,6 +6,8 @@ import sys
 
 import requests
 
+DATAPORTAL_URL = os.environ["DATAPORTAL_URL"].rstrip("/")
+
 
 def main(args: argparse.Namespace):
     params = {"site": args.site, "instruments": args.instruments}
@@ -101,7 +103,7 @@ def _download_file(row: dict):
 
 def _submit_to_local_ss(end_point: str, filename, metadata: dict, info: str):
     auth = ("admin", "admin")
-    url = f"http://localhost:3000/{end_point}/"
+    url = f"{DATAPORTAL_URL}/{end_point}/"
     res = requests.post(f"{url}metadata", json=metadata, auth=auth)
     if res.status_code != 200:
         print(f"{info} {res.text}", flush=True)
