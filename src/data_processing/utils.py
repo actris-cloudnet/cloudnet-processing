@@ -167,6 +167,9 @@ def send_slack_alert(
 
     key = "SLACK_API_TOKEN"
     if key not in config or config[key] == "":
+        logging.warning(
+            f"Environement variable '{key}' is not defined, no notification will be send."
+        )
         return
 
     match error_source:
@@ -181,13 +184,16 @@ def send_slack_alert(
         case "img":
             label = ":frame_with_picture: Image creation"
         case unknown_source:
-            raise ValueError(f"Unknown error source: {unknown_source}")
+            label = f":interrobang: Unknown error source ({unknown_source})"
 
     if args is not None:
-        with open(args.log_filename) as file:
-            log = file.readlines()
+        try:
+            with open(args.log_filename) as file:
+                log = file.readlines()
+        except Exception as e:
+            log = [f"Failed to read log file: {e}"]
     else:
-        log = [""]
+        log = ["No log file given"]
 
     padding = " " * 7
     msg = f"*{label}*\n\n"
@@ -208,11 +214,15 @@ def send_slack_alert(
         "initial_comment": msg,
     }
 
-    requests.post(
+    r = requests.post(
         "https://slack.com/api/files.upload",
         data=payload,
         headers={"Authorization": f"Bearer {config[key]}"},
     )
+    r.raise_for_status()
+    body = r.json()
+    if not body["ok"]:
+        logging.fatal(f"Failed to send Slack notification: {body.text}")
 
 
 def read_main_conf() -> dict:
