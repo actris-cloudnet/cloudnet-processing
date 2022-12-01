@@ -14,7 +14,7 @@ warnings.simplefilter("ignore", UserWarning)
 warnings.simplefilter("ignore", RuntimeWarning)
 
 
-def main(args, storage_session: requests.Session | None):
+def main(args, storage_session: requests.Session | None = None):
     if storage_session is None:
         storage_session = make_session()
     config = utils.read_main_conf()

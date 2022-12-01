@@ -16,7 +16,7 @@ from data_processing.storage_api import StorageApi
 from data_processing.utils import make_session, read_main_conf
 
 
-def main(args, storage_session: requests.Session | None):
+def main(args, storage_session: requests.Session | None = None):
     if storage_session is None:
         storage_session = make_session()
 
