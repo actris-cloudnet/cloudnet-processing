@@ -1,7 +1,7 @@
 import netCDF4
 
 from .exceptions import UnsupportedFile
-from .utils import cftime2datetime, decode_bits
+from .utils import cftime2datetime64, decode_bits
 
 STATUS_CODES_V1 = [
     ("signal_quality_error", 1),
@@ -115,7 +115,7 @@ STATUS_CODES_V3 = [
 
 def read_chm15k(nc: netCDF4.Dataset) -> dict:
     measurements = {var: nc[var][:] for var in nc.variables.keys()}
-    measurements["time"] = cftime2datetime(nc["time"])
+    measurements["time"] = cftime2datetime64(nc["time"])
 
     try:
         versions = nc.software_version.split()

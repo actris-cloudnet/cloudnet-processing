@@ -4,12 +4,13 @@ from os import getenv
 from pathlib import Path
 from typing import Callable
 
+import numpy as np
 import numpy.typing as npt
 import toml
-from influxdb_client import InfluxDBClient
+from influxdb_client import InfluxDBClient, Point, WritePrecision
 from influxdb_client.client.write_api import SYNCHRONOUS
 from netCDF4 import Dataset as Dataset
-from pandas import DataFrame
+from numpy import ma
 from rpgpy import read_rpg
 from rpgpy.utils import decode_rpg_status_flags, rpg_seconds2datetime64
 
@@ -18,37 +19,37 @@ from .exceptions import UnsupportedFile
 from .hatpro import HatproHkd, HatproHkdNc
 
 
-def _handle_hatpro_hkd(src: bytes) -> DataFrame:
+def _handle_hatpro_hkd(src: bytes, metadata: dict) -> list[Point]:
     with tempfile.NamedTemporaryFile() as f:
         f.write(src)
         hkd = HatproHkd(f.name)
     time = hkd.data["T"]
-    return _make_df(time, hkd.data, get_config("hatpro_hkd"))
+    return _make_points(time, hkd.data, get_config("hatpro_hkd"), metadata)
 
 
-def _handle_hatpro_nc(src: bytes) -> DataFrame:
+def _handle_hatpro_nc(src: bytes, metadata: dict) -> list[Point]:
     with tempfile.NamedTemporaryFile() as f:
         f.write(src)
         hkd = HatproHkdNc(f.name)
-    return _make_df(hkd.data["time"], hkd.data, get_config("hatpro_nc"))
+    return _make_points(hkd.data["time"], hkd.data, get_config("hatpro_nc"), metadata)
 
 
-def _handle_rpg_lv1(src: bytes) -> DataFrame:
+def _handle_rpg_lv1(src: bytes, metadata: dict) -> list[Point]:
     with tempfile.NamedTemporaryFile() as f:
         f.write(src)
         head, data = read_rpg(f.name)
     time = rpg_seconds2datetime64(data["Time"])
     data |= decode_rpg_status_flags(data["Status"])._asdict()
-    return _make_df(time, data, get_config("rpg-fmcw-94_lv1"))
+    return _make_points(time, data, get_config("rpg-fmcw-94_lv1"), metadata)
 
 
-def _handle_chm15k_nc(src: bytes) -> DataFrame:
+def _handle_chm15k_nc(src: bytes, metadata: dict) -> list[Point]:
     with Dataset("dataset.nc", memory=src) as nc:
         measurements = read_chm15k(nc)
-        return _make_df(measurements["time"], measurements, get_config("chm15k_nc"))
+        return _make_points(measurements["time"], measurements, get_config("chm15k_nc"), metadata)
 
 
-def get_reader(metadata: dict) -> Callable[[bytes], DataFrame] | None:
+def get_reader(metadata: dict) -> Callable[[bytes, dict], list[Point]] | None:
     instrument_id = metadata["instrumentId"]
     filename = metadata["filename"].lower()
 
@@ -67,37 +68,66 @@ def get_reader(metadata: dict) -> Callable[[bytes], DataFrame] | None:
     return None
 
 
-def write(df: DataFrame, metadata: dict) -> None:
-    df["site_id"] = metadata["siteId"]
-    df["instrument_id"] = metadata["instrumentId"]
-    df["instrument_pid"] = metadata["instrumentPid"]
+def write(points: list[Point]) -> None:
+    args = get_write_arg()
     with make_influx_client() as client:
         with client.write_api(write_options=SYNCHRONOUS) as write_client:
-            write_client.write(
-                **get_write_arg(),
-                record=df,
-                data_frame_measurement_name="housekeeping",
-                data_frame_tag_columns=["site_id", "instrument_id", "instrument_pid"],
-            )
+            write_client.write(args["bucket"], args["org"], points)
 
 
-def _make_df(
-    time: npt.NDArray, measurements: dict[str, npt.NDArray], variables: dict[str, str]
-) -> DataFrame:
-    if len(time) == 0:
-        raise UnsupportedFile("No housekeeping data found")
+def _make_points(
+    time: npt.NDArray,
+    measurements: dict[str, npt.NDArray],
+    variables: dict[str, str],
+    metadata: dict,
+) -> list[Point]:
     data = {}
-    nonexisting_variables = []
+    missing_variables = []
     for src_name, dest_name in variables.items():
         if src_name not in measurements:
-            nonexisting_variables.append((src_name, dest_name))
+            missing_variables.append((src_name, dest_name))
             continue
         data[dest_name] = measurements[src_name]
     if not data:
         raise UnsupportedFile("No housekeeping data found")
-    for src_name, dest_name in nonexisting_variables:
-        logging.warning(f"Variable '{src_name}' not found (would be mapped to '{dest_name}')")
-    return DataFrame(data, index=time)
+    for src_name, dest_name in missing_variables:
+        msg = f"Variable '{src_name}' not found"
+        if src_name != dest_name:
+            msg += f" (would be mapped to '{dest_name}')"
+        logging.warning(msg)
+
+    timestamps = time.astype("datetime64[s]")
+    date = np.datetime64(metadata["measurementDate"], "s")
+    pad_hours = 1
+    lower_limit = date - np.timedelta64(pad_hours, "h")
+    upper_limit = date + np.timedelta64(24 + pad_hours, "h")
+    valid_timestamps = (timestamps >= lower_limit) & (timestamps < upper_limit)
+    if np.count_nonzero(valid_timestamps) == 0:
+        raise UnsupportedFile("No housekeeping data found")
+
+    points = []
+    for i in range(len(timestamps)):
+        if not valid_timestamps[i]:
+            continue
+        fields = {key: values[i] for key, values in data.items() if not ma.is_masked(values[i])}
+        if not fields:
+            continue
+        point = Point.from_dict(
+            {
+                "measurement": "housekeeping",
+                "tags": {
+                    "site_id": metadata["siteId"],
+                    "instrument_id": metadata["instrumentId"],
+                    "instrument_pid": metadata["instrumentPid"],
+                },
+                "fields": fields,
+                "time": timestamps[i].astype(int),
+            },
+            WritePrecision.S,
+        )
+        points.append(point)
+
+    return points
 
 
 def get_config(format_id: str) -> dict:

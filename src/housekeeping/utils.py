@@ -28,9 +28,9 @@ def decode_bits(data: np.ndarray, format: list[tuple[str, int]]) -> dict[str, np
     return output
 
 
-def cftime2datetime(time: netCDF4.Variable) -> npt.NDArray:
+def cftime2datetime64(time: netCDF4.Variable) -> npt.NDArray:
     units = _fix_invalid_cftime_units(time.units)
-    return cftime.num2pydate(time[:], units=units)
+    return cftime.num2pydate(time[:], units=units).astype("datetime64")
 
 
 def _fix_invalid_cftime_units(unit: str) -> str:

@@ -6,7 +6,7 @@ import netCDF4
 import numpy as np
 import numpy.typing as npt
 
-from .utils import cftime2datetime, decode_bits
+from .utils import cftime2datetime64, decode_bits
 
 TIME_REF_LOCAL = 0
 TIME_REF_UTC = 1
@@ -104,7 +104,7 @@ class HatproHkdNc:
             if time_ref and time_ref[0] != TIME_REF_UTC:
                 raise HatproHkdError("Only UTC time reference is supported")
             self.data = {var: nc[var][:] for var in nc.variables.keys()}
-            self.data["time"] = cftime2datetime(nc.variables["time"])
+            self.data["time"] = cftime2datetime64(nc.variables["time"])
             if quality_flags := nc.variables.get("quality_flags"):
                 self.data |= decode_quality_flags(quality_flags[:])
             if status_flags := nc.variables.get("status_flags"):

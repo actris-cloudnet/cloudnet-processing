@@ -40,8 +40,8 @@ def main(args):
         logging.info(f"Processing housekeeping data: {fname}")
         filebytes = raw_api.get_raw_file(uuid, fname)
         try:
-            df = reader(filebytes)
-            housekeeping.write(df, record)
+            df = reader(filebytes, record)
+            housekeeping.write(df)
         except housekeeping.UnsupportedFile as e:
             logging.warning(f"Unable to process file: {e}")
 
