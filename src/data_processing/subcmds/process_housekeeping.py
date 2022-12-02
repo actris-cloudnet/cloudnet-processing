@@ -28,22 +28,23 @@ def main(args):
         query_params,
     )
     raw_api = RawApi(cfg_main)
-    for record in metadata:
-        fname = record["filename"]
-        uuid = record["uuid"]
+    with housekeeping.Database() as db:
+        for record in metadata:
+            filename = record["filename"]
+            uuid = record["uuid"]
 
-        reader = housekeeping.get_reader(record)
-        if reader is None:
-            logging.info(f"Skipping: {fname}")
-            continue
+            reader = housekeeping.get_reader(record)
+            if reader is None:
+                logging.info(f"Skipping: {filename}")
+                continue
 
-        logging.info(f"Processing housekeeping data: {fname}")
-        filebytes = raw_api.get_raw_file(uuid, fname)
-        try:
-            df = reader(filebytes, record)
-            housekeeping.write(df)
-        except housekeeping.UnsupportedFile as e:
-            logging.warning(f"Unable to process file: {e}")
+            logging.info(f"Processing housekeeping data: {filename}")
+            filebytes = raw_api.get_raw_file(uuid, filename)
+            try:
+                points = reader(filebytes, record)
+                db.write(points)
+            except housekeeping.UnsupportedFile as e:
+                logging.warning(f"Unable to process file: {e}")
 
 
 class RawApi:

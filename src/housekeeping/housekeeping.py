@@ -1,8 +1,8 @@
 import logging
+import os
 import tempfile
-from os import getenv
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Iterable
 
 import numpy as np
 import numpy.typing as npt
@@ -68,11 +68,25 @@ def get_reader(metadata: dict) -> Callable[[bytes, dict], list[Point]] | None:
     return None
 
 
-def write(points: list[Point]) -> None:
-    args = get_write_arg()
-    with make_influx_client() as client:
-        with client.write_api(write_options=SYNCHRONOUS) as write_client:
-            write_client.write(args["bucket"], args["org"], points)
+class Database:
+    def __init__(self) -> None:
+        self.client = InfluxDBClient(
+            url=os.environ["INFLUXDB_URL"],
+            token=os.environ["INFLUXDB_TOKEN"],
+            org=os.environ["INFLUXDB_ORG"],
+        )
+        self.bucket = os.environ["INFLUXDB_BUCKET"]
+        self.write_api = self.client.write_api(write_options=SYNCHRONOUS)
+
+    def write(self, points: Iterable[Point]):
+        self.write_api.write(self.bucket, points)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.write_api.close()
+        self.client.close()
 
 
 def _make_points(
@@ -138,13 +152,3 @@ def get_config(format_id: str) -> dict:
 def list_instruments() -> list[str]:
     src = Path(__file__).parent.joinpath("config.toml")
     return list(toml.load(src)["metadata"].keys())
-
-
-def get_write_arg() -> dict:
-    return {key: getenv(f"INFLUXDB_{key.upper()}") for key in ["bucket", "org"]}
-
-
-def make_influx_client() -> InfluxDBClient:
-    return InfluxDBClient(
-        **{key: getenv(f"INFLUXDB_{key.upper()}") for key in ["url", "bucket", "token", "org"]}
-    )
