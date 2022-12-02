@@ -101,13 +101,7 @@ class HatproHkdNc:
     def __init__(self, filename: str | bytes | PathLike):
         with netCDF4.Dataset(filename) as nc:
             time_ref = nc.variables.get("time_reference")
-            if time_ref is None:
-                raise HatproHkdError("Variable 'time_reference' not found")
-            if len(time_ref.shape) != 0:
-                raise HatproHkdError(
-                    f"Variable 'time_reference' has invalid shape: {time_ref.shape}"
-                )
-            if time_ref[0] != TIME_REF_UTC:
+            if time_ref and time_ref[0] != TIME_REF_UTC:
                 raise HatproHkdError("Only UTC time reference is supported")
             self.data = {var: nc[var][:] for var in nc.variables.keys()}
             self.data["time"] = cftime2datetime(nc.variables["time"])
