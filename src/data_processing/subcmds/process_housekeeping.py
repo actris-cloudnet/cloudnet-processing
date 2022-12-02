@@ -1,18 +1,19 @@
 import logging
 
 import requests
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
 
 import housekeeping
-from data_processing import metadata_api
-from data_processing.utils import read_main_conf
+from data_processing.metadata_api import MetadataApi
+from data_processing.utils import make_session, read_main_conf
 
 
 def main(args):
     cfg_main = read_main_conf()
+    session = make_session()
+    md_api = MetadataApi(cfg_main, session)
+    raw_api = RawApi(cfg_main, session)
+
     instruments = housekeeping.list_instruments()
-    md_api = metadata_api.MetadataApi(cfg_main, _http_session())
     query_params = {
         "site": args.site,
         "instrument": instruments,
@@ -27,7 +28,6 @@ def main(args):
         "api/raw-files",
         query_params,
     )
-    raw_api = RawApi(cfg_main)
     with housekeeping.Database() as db:
         for record in metadata:
             filename = record["filename"]
@@ -48,22 +48,13 @@ def main(args):
 
 
 class RawApi:
-    def __init__(self, cfg):
+    def __init__(self, cfg: dict, session: requests.Session):
         self.base_url = cfg["DATAPORTAL_URL"]
-        self.session = _http_session()
+        self.session = session
 
     def get_raw_file(self, uuid: str, fname: str) -> bytes:
         url = f"{self.base_url}api/download/raw/{uuid}/{fname}"
         return self.session.get(url).content
-
-
-def _http_session():
-    retries = Retry(total=10, backoff_factor=0.2)
-    adapter = HTTPAdapter(max_retries=retries)
-    session = requests.Session()
-    session.mount("https://", adapter)
-    session.mount("http://", adapter)
-    return session
 
 
 def add_arguments(subparser):
