@@ -79,7 +79,7 @@ class Database:
         self.write_api = self.client.write_api(write_options=SYNCHRONOUS)
 
     def write(self, points: Iterable[Point]):
-        self.write_api.write(self.bucket, points)
+        self.write_api.write(bucket=self.bucket, record=points)
 
     def __enter__(self):
         return self
