@@ -151,12 +151,13 @@ def get_date_from_past(n: int, reference_date: str | None = None) -> str:
 
 
 def send_slack_alert(
-    error_msg,
+    error_msg: Exception,
     error_source: str,
     args: Namespace | None = None,
     date: str | None = None,
     product: str | None = None,
     critical: bool = False,
+    log: str | None = None,
 ) -> None:
     """Sends notification to slack."""
     config = read_main_conf()
@@ -168,7 +169,7 @@ def send_slack_alert(
     key = "SLACK_API_TOKEN"
     if key not in config or config[key] == "":
         logging.warning(
-            f"Environement variable '{key}' is not defined, no notification will be send."
+            f"Environment variable '{key}' is not defined, no notification will be sent."
         )
         return
 
@@ -186,14 +187,12 @@ def send_slack_alert(
         case unknown_source:
             label = f":interrobang: Unknown error source ({unknown_source})"
 
-    if args is not None:
+    if log is None and args is not None:
         try:
             with open(args.log_filename) as file:
-                log = file.readlines()
+                log = file.read()
         except Exception as e:
-            log = [f"Failed to read log file: {e}"]
-    else:
-        log = ["No log file given"]
+            log = f"(failed to read log file: {e})"
 
     padding = " " * 7
     msg = f"*{label}*\n\n"
@@ -208,7 +207,7 @@ def send_slack_alert(
     msg += f"*Error:* {error_msg}"
 
     payload = {
-        "content": "".join(log),
+        "content": log or "(empty log)",
         "channels": "C022YBMQ2KC",
         "title": "Full log",
         "initial_comment": msg,
