@@ -56,8 +56,8 @@ class ProcessCloudnet(ProcessBase):
             match product:
                 case product if product in utils.get_product_types(level="2"):
                     uuid, identifier = self.process_level2(uuid, product)
-                case "categorize":
-                    uuid, identifier = self.process_categorize(uuid)
+                case "categorize" | "categorizeVoodoo":
+                    uuid, identifier = self.process_categorize(uuid, product)
                 case product if product in utils.get_product_types(level="1b"):
                     uuid, identifier, instrument_pids = self.process_instrument(uuid, product)
                     self.add_instrument_pid(instrument_pids)
@@ -118,20 +118,23 @@ class ProcessCloudnet(ProcessBase):
         )
         return process.uuid, instrument, process.instrument_pids
 
-    def process_categorize(self, uuid: Uuid) -> tuple[Uuid, str]:
+    def process_categorize(self, uuid: Uuid, cat_variant: str) -> tuple[Uuid, str]:
         l1_products = utils.get_product_types(level="1b")
         l1_products.remove("disdrometer")  # Not yet used
         meta_records = self._get_level1b_metadata_for_categorize(l1_products)
         missing = self._get_missing_level1b_products(meta_records, l1_products)
         if missing:
             raise MiscError(f'Missing required input files: {", ".join(missing)}')
-        self._check_source_status("categorize", meta_records)
+        self._check_source_status(cat_variant, meta_records)
         input_files = {key: "" for key in l1_products}
         for product, metadata in meta_records.items():
             input_files[product] = self._storage_api.download_product(metadata, self.temp_dir.name)
         if not input_files["mwr"] and "rpg-fmcw-94" in input_files["radar"]:
             input_files["mwr"] = input_files["radar"]
         try:
+            if cat_variant == "categorizeVoodoo":
+                full_paths, _, _ = self.download_instrument("rpg-fmcw-94", include_pattern=".LV0")
+                input_files["lv0_files"] = full_paths
             uuid.product = generate_categorize(input_files, self.temp_file.name, uuid=uuid.volatile)
         except ModelDataError:
             payload = self._get_payload(model="gdas1")
@@ -145,7 +148,7 @@ class ProcessCloudnet(ProcessBase):
                 )
             else:
                 raise MiscError("Bad ecmwf model data and no gdas1")
-        return uuid, "categorize"
+        return uuid, cat_variant
 
     def _get_level1b_metadata_for_categorize(self, source_products: list) -> dict:
         meta_records = {}
@@ -171,7 +174,13 @@ class ProcessCloudnet(ProcessBase):
         return [product for product in required_products if product not in existing_products]
 
     def process_level2(self, uuid: Uuid, product: str) -> tuple[Uuid, str]:
-        payload = self._get_payload(product="categorize")
+        if product == "classificationVoodoo":
+            cat_file = "categorizeVoodoo"
+            module_name = "classification"
+        else:
+            cat_file = "categorize"
+            module_name = product
+        payload = self._get_payload(product=cat_file)
         metadata = self.md_api.get("api/files", payload)
         self._check_response_length(metadata)
         if metadata:
@@ -180,8 +189,8 @@ class ProcessCloudnet(ProcessBase):
         else:
             raise MiscError("Missing input categorize file")
         self._check_source_status(product, meta_record)
-        module = importlib.import_module(f"cloudnetpy.products.{product}")
-        fun = getattr(module, f"generate_{product}")
+        module = importlib.import_module(f"cloudnetpy.products.{module_name}")
+        fun = getattr(module, f"generate_{module_name}")
         uuid.product = fun(categorize_file, self.temp_file.name, uuid=uuid.volatile)
         identifier = utils.get_product_identifier(product)
         return uuid, identifier
