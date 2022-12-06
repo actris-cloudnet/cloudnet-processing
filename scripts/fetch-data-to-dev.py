@@ -86,7 +86,6 @@ def _get_metadata(
     if extension:
         extension = extension.lower()
         metadata = [row for row in metadata if row["filename"].lower().endswith(extension)]
-    metadata = [row for row in metadata if not row["filename"].lower().endswith(".lv0")]
     return metadata
 
 
