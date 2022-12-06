@@ -600,6 +600,11 @@ def _compare_global_attributes(nc1: netCDF4.Dataset, nc2: netCDF4.Dataset):
     for name in l1:
         value1 = getattr(nc1, name)
         value2 = getattr(nc2, name)
+        if name == "source_file_uuids":
+            value1 = value1.split(", ")
+            value2 = value2.split(", ")
+            value1.sort()
+            value2.sort()
         assert value1 == value2, _log("global attributes", name, value1, value2)
 
 
