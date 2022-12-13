@@ -134,7 +134,8 @@ class ProcessCloudnet(ProcessBase):
         try:
             if cat_variant == "categorize-voodoo":
                 full_paths, _, _ = self.download_instrument("rpg-fmcw-94", include_pattern=".LV0")
-                input_files["lv0_files"] = full_paths
+                full_paths_list = [full_paths] if isinstance(full_paths, str) else full_paths
+                input_files["lv0_files"] = full_paths_list  # type: ignore
             uuid.product = generate_categorize(input_files, self.temp_file.name, uuid=uuid.volatile)
         except ModelDataError:
             payload = self._get_payload(model="gdas1")
