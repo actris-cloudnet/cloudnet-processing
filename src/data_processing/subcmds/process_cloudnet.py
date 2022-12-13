@@ -56,7 +56,7 @@ class ProcessCloudnet(ProcessBase):
             match product:
                 case product if product in utils.get_product_types(level="2"):
                     uuid, identifier = self.process_level2(uuid, product)
-                case "categorize" | "categorizeVoodoo":
+                case "categorize" | "categorize-voodoo":
                     uuid, identifier = self.process_categorize(uuid, product)
                 case product if product in utils.get_product_types(level="1b"):
                     uuid, identifier, instrument_pids = self.process_instrument(uuid, product)
@@ -132,7 +132,7 @@ class ProcessCloudnet(ProcessBase):
         if not input_files["mwr"] and "rpg-fmcw-94" in input_files["radar"]:
             input_files["mwr"] = input_files["radar"]
         try:
-            if cat_variant == "categorizeVoodoo":
+            if cat_variant == "categorize-voodoo":
                 full_paths, _, _ = self.download_instrument("rpg-fmcw-94", include_pattern=".LV0")
                 input_files["lv0_files"] = full_paths
             uuid.product = generate_categorize(input_files, self.temp_file.name, uuid=uuid.volatile)
@@ -174,8 +174,8 @@ class ProcessCloudnet(ProcessBase):
         return [product for product in required_products if product not in existing_products]
 
     def process_level2(self, uuid: Uuid, product: str) -> tuple[Uuid, str]:
-        if product == "classificationVoodoo":
-            cat_file = "categorizeVoodoo"
+        if product == "classification-voodoo":
+            cat_file = "categorize-voodoo"
             module_name = "classification"
         else:
             cat_file = "categorize"

@@ -256,7 +256,7 @@ def get_fields_for_plot(cloudnet_file_type: str) -> tuple[list, int]:
     """
     max_alt = 12
     match cloudnet_file_type:
-        case "categorizeVoodoo":
+        case "categorize-voodoo":
             fields = ["v"]
         case "categorize":
             fields = [
@@ -273,7 +273,7 @@ def get_fields_for_plot(cloudnet_file_type: str) -> tuple[list, int]:
             ]
         case "classification":
             fields = ["target_classification", "detection_status"]
-        case "classificationVoodoo":
+        case "classification-voodoo":
             fields = ["target_classification", "detection_status"]
         case "iwc":
             fields = ["iwc", "iwc_error", "iwc_retrieval_status"]
