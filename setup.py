@@ -12,7 +12,7 @@ setup(
     license="MIT License",
     install_requires=[
         "cloudnetpy_qc>=1.4.0",
-        "cloudnetpy>=1.42.1",
+        "cloudnetpy>=1.43.0",
         "rpgpy>=0.13.1",
         "pytest",
         "pylint",
