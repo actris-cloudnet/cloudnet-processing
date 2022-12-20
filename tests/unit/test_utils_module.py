@@ -98,7 +98,7 @@ def test_get_product_bucket():
     [
         ("1b", ["lidar", "model", "mwr", "radar", "disdrometer"]),
         ("1c", ["categorize", "categorize-voodoo"]),
-        ("2", ["classification", "classification-voodoo", "drizzle", "iwc", "lwc"]),
+        ("2", ["classification", "classification-voodoo", "drizzle", "iwc", "lwc", "der", "ier"]),
         (
             None,
             [
@@ -114,6 +114,8 @@ def test_get_product_bucket():
                 "drizzle",
                 "iwc",
                 "lwc",
+                "der",
+                "ier",
                 "l3-cf",
                 "l3-iwc",
                 "l3-lwc",

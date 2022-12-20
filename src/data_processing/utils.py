@@ -280,6 +280,11 @@ def get_fields_for_plot(cloudnet_file_type: str) -> tuple[list, int]:
         case "lwc":
             fields = ["lwc", "lwc_error", "lwc_retrieval_status"]
             max_alt = 6
+        case "ier":
+            fields = ["ier", "ier_error", "ier_retrieval_status"]
+        case "der":
+            fields = ["der", "der_error", "der_retrieval_status"]
+            max_alt = 6
         case "model":
             fields = ["cloud_fraction", "uwind", "vwind", "temperature", "q", "pressure"]
         case "lidar":
