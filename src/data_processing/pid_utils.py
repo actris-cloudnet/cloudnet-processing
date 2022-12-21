@@ -23,13 +23,13 @@ class PidUtils:
                     "uuid": uuid,
                     "url": f"https://cloudnet.fmi.fi/file/{uuid}",
                 }
-                res = requests.post(self._pid_service_url, json=payload)
+                res = requests.post(self._pid_service_url, json=payload, timeout=30)
                 try:
                     res.raise_for_status()
-                except HTTPError:
+                except HTTPError as exc:
                     raise HTTPError(
                         f'PID service failed with status {res.status_code}:\n{res.json()["detail"]}'
-                    )
+                    ) from exc
                 pid = res.json()["pid"]
             else:
                 pid = "https://www.example.pid/"

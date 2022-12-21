@@ -45,7 +45,7 @@ class MetadataApi:
     ) -> requests.Response:
         """PUT file to Cloudnet data portal."""
         url = os.path.join(self._url, end_point, resource)
-        res = requests.put(url, data=open(full_path, "rb"), auth=auth)
+        res = self.session.put(url, data=open(full_path, "rb"), auth=auth)
         res.raise_for_status()
         return res
 

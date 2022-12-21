@@ -186,7 +186,7 @@ class ProcessLidar(ProcessInstrument):
         try:
             if self.base.is_reprocess:
                 raise SkipBlock  # Move to next block and re-create daily file
-            tmp_file, uuid, self.instrument_pids = self.base.download_instrument(
+            tmp_file, _, self.instrument_pids = self.base.download_instrument(
                 model, include_pattern=self.file_id, largest_only=True
             )
             full_paths, raw_uuids, self.instrument_pids = self.base.download_uploaded(
@@ -195,7 +195,7 @@ class ProcessLidar(ProcessInstrument):
             valid_full_paths = concat_wrapper.update_daily_file(full_paths, tmp_file)
             shutil.copy(tmp_file, self.base.daily_file.name)
             msg = "Raw data already processed"
-        except (RawDataMissingError, SkipBlock):
+        except (RawDataMissingError, SkipBlock) as exc:
             msg = ""
             full_paths, raw_uuids, self.instrument_pids = self.base.download_instrument(
                 model, exclude_pattern=self.file_id
@@ -203,7 +203,7 @@ class ProcessLidar(ProcessInstrument):
             if full_paths:
                 logging.info(f"Creating daily file from {len(full_paths)} files")
             else:
-                raise RawDataMissingError
+                raise RawDataMissingError from exc
             variables = ["x_pol", "p_pol", "beta_att", "time"]
             try:
                 valid_full_paths = concat_wrapper.concat_netcdf_files(

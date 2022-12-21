@@ -9,7 +9,7 @@ import numpy.typing as npt
 import toml
 from influxdb_client import InfluxDBClient, Point, WritePrecision
 from influxdb_client.client.write_api import SYNCHRONOUS
-from netCDF4 import Dataset as Dataset
+from netCDF4 import Dataset
 from numpy import ma
 from rpgpy import read_rpg
 from rpgpy.utils import decode_rpg_status_flags, rpg_seconds2datetime64
@@ -37,7 +37,7 @@ def _handle_hatpro_nc(src: bytes, metadata: dict) -> list[Point]:
 def _handle_rpg_lv1(src: bytes, metadata: dict) -> list[Point]:
     with tempfile.NamedTemporaryFile() as f:
         f.write(src)
-        head, data = read_rpg(f.name)
+        _, data = read_rpg(f.name)
     time = rpg_seconds2datetime64(data["Time"])
     data |= decode_rpg_status_flags(data["Status"])._asdict()
     return _make_points(time, data, get_config("rpg-fmcw-94_lv1"), metadata)
@@ -120,7 +120,7 @@ def _make_points(
         raise UnsupportedFile("No housekeeping data found")
 
     points = []
-    for i in range(len(timestamps)):
+    for i, timestamp in enumerate(timestamps):
         if not valid_timestamps[i]:
             continue
         fields = {key: values[i] for key, values in data.items() if not ma.is_masked(values[i])}
@@ -135,7 +135,7 @@ def _make_points(
                     "instrument_pid": metadata["instrumentPid"],
                 },
                 "fields": fields,
-                "time": timestamps[i].astype(int),
+                "time": timestamp.astype(int),
             },
             WritePrecision.S,
         )

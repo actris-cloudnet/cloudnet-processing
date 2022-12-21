@@ -120,8 +120,8 @@ def read_chm15k(nc: netCDF4.Dataset) -> dict:
     try:
         versions = nc.software_version.split()
         firmware_version = versions[2]
-    except (IndexError, AttributeError):
-        raise UnsupportedFile("Unknown firmware version")
+    except (IndexError, AttributeError) as exc:
+        raise UnsupportedFile("Unknown firmware version") from exc
 
     if firmware_version < "0.733":
         status_bits = decode_bits(nc.variables["error_ext"][:], STATUS_CODES_V1)

@@ -6,22 +6,22 @@ import numpy as np
 import numpy.typing as npt
 
 
-def decode_bits(data: np.ndarray, format: list[tuple[str, int]]) -> dict[str, np.ndarray]:
+def decode_bits(data: np.ndarray, form: list[tuple[str, int]]) -> dict[str, np.ndarray]:
     """
     Decode array of bit fields into decimals starting from the least-significant
     bit.
 
     Args:
         data: Array of bit fields.
-        format: tuple with name and bit size for each field. Names prefixed with
-                underscore will be skipped.
+        form: tuple with name and bit size for each field. Names prefixed with
+            underscore will be skipped.
 
     Returns:
         dictionary from name to decoded values.
     """
     bits = data.copy()
     output = {}
-    for name, size in format:
+    for name, size in form:
         if not name.startswith("_"):
             output[name] = bits & (2**size - 1)
         bits >>= size

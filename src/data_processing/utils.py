@@ -13,12 +13,12 @@ from argparse import Namespace
 from pathlib import Path
 
 import netCDF4
-import numpy.ma as ma
 import requests
 from cloudnetpy.plotting.plot_meta import ATTRIBUTES as ATTR
 from cloudnetpy.plotting.plotting import Dimensions
 from cloudnetpy.utils import get_time
 from cloudnetpy_qc import quality
+from numpy import ma
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
@@ -116,7 +116,7 @@ def get_calibration_factor(site: str, date: str, instrument: str) -> float | Non
     data_portal_url = fetch_data_portal_url()
     url = f"{data_portal_url}api/calibration"
     payload = {"site": site, "date": date, "instrument": instrument}
-    res = requests.get(url, payload)
+    res = requests.get(url, payload, timeout=30)
     if not res.ok:
         return None
     return res.json()[0].get("calibrationFactor", None)
@@ -191,7 +191,7 @@ def send_slack_alert(
         try:
             with open(args.log_filename) as file:
                 log = file.read()
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             log = f"(failed to read log file: {e})"
 
     padding = " " * 7
@@ -217,6 +217,7 @@ def send_slack_alert(
         "https://slack.com/api/files.upload",
         data=payload,
         headers={"Authorization": f"Bearer {config[key]}"},
+        timeout=30,
     )
     r.raise_for_status()
     body = r.json()
@@ -474,7 +475,7 @@ def get_from_data_portal_api(end_point: str, payload: dict | None = None) -> lis
     """Reads from data portal API."""
     data_portal_url = fetch_data_portal_url()
     url = f"{data_portal_url}{end_point}"
-    return requests.get(url=url, params=payload).json()
+    return requests.get(url=url, params=payload, timeout=30).json()
 
 
 def fetch_data_portal_url() -> str:

@@ -176,8 +176,7 @@ class ProcessBase:
                 ]
                 models_meta[m_id] = m_metas
             return models_meta
-        else:
-            raise MiscError("No existing model files")
+        raise MiscError("No existing model files")
 
     def _is_create_new_version(self, metadata) -> bool:
         if self._parse_volatile_value(metadata) is False:
@@ -185,8 +184,7 @@ class ProcessBase:
                 raise MiscError("Skip reprocessing of a stable file.")
             if self.is_reprocess is True:
                 return True
-            else:
-                raise MiscError('Existing freezed file and no "reprocess" flag')
+            raise MiscError('Existing freezed file and no "reprocess" flag')
         return False
 
     def _parse_volatile_value(self, metadata: list) -> bool | None:
@@ -195,10 +193,9 @@ class ProcessBase:
             value = str(metadata[0]["volatile"])
             if value == "True":
                 return True
-            elif value == "False":
+            if value == "False":
                 return False
-            else:
-                raise RuntimeError(f"Unexpected value in metadata: {value}")
+            raise RuntimeError(f"Unexpected value in metadata: {value}")
         return None
 
     def _download_raw_files(
@@ -225,7 +222,7 @@ class ProcessBase:
 
     @staticmethod
     def _is_unprocessed_data(metadata: list) -> bool:
-        return any([row["status"] == "uploaded" for row in metadata])
+        return any(row["status"] == "uploaded" for row in metadata)
 
     def _get_payload(
         self,

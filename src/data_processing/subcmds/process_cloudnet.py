@@ -137,7 +137,7 @@ class ProcessCloudnet(ProcessBase):
                 full_paths_list = [full_paths] if isinstance(full_paths, str) else full_paths
                 input_files["lv0_files"] = full_paths_list  # type: ignore
             uuid.product = generate_categorize(input_files, self.temp_file.name, uuid=uuid.volatile)
-        except ModelDataError:
+        except ModelDataError as exc:
             payload = self._get_payload(model="gdas1")
             metadata = self.md_api.get("api/model-files", payload)
             if len(metadata) == 1:
@@ -148,7 +148,7 @@ class ProcessCloudnet(ProcessBase):
                     input_files, self.temp_file.name, uuid=uuid.volatile
                 )
             else:
-                raise MiscError("Bad ecmwf model data and no gdas1")
+                raise MiscError("Bad ecmwf model data and no gdas1") from exc
         return uuid, cat_variant
 
     def _get_level1b_metadata_for_categorize(self, source_products: list) -> dict:

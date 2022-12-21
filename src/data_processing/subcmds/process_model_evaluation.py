@@ -123,7 +123,7 @@ class ProcessModelEvaluation(ProcessBase):
             var_list=fields,
             image_name=temp_file.name,
             fig_type="statistic",
-            stats=["area"],
+            stats=("area",),
             title=False,
         )
         visualizations.append(
@@ -137,14 +137,15 @@ class ProcessModelEvaluation(ProcessBase):
             var_list=fields,
             image_name=temp_file.name,
             fig_type="statistic",
-            stats=["error"],
+            stats=("error",),
             title=False,
         )
         visualizations.append(
             self._upload_img(temp_file.name, product_s3key, uuid, product, "error", None)
         )
         # Single plots
-        for field in fields:
+        # Check this potential error here
+        for field in fields:  # pylint: disable=not-an-iterable
             generate_L3_day_plots(
                 self.temp_file.name,
                 l3_product,
