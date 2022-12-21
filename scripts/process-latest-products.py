@@ -13,7 +13,7 @@ interpreter = "python3"
 script = "scripts/cloudnet.py"
 subcommand = "process"
 wrapper = "scripts/wrapper.py"
-products = "categorize,classification,iwc,lwc,drizzle"
+products = "categorize,classification,iwc,lwc,drizzle,ier,der"
 
 for site in sites:
     date = datetime.now(timezone.utc) - timedelta(3)
