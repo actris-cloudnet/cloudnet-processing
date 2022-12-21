@@ -113,10 +113,11 @@ def get_product_types_excluding_level3() -> list:
 
 def get_calibration_factor(site: str, date: str, instrument: str) -> float | None:
     """Gets calibration factor."""
+    session = make_session()
     data_portal_url = fetch_data_portal_url()
     url = f"{data_portal_url}api/calibration"
     payload = {"site": site, "date": date, "instrument": instrument}
-    res = requests.get(url, payload, timeout=30)
+    res = session.get(url, params=payload)
     if not res.ok:
         return None
     return res.json()[0].get("calibrationFactor", None)
@@ -213,11 +214,11 @@ def send_slack_alert(
         "initial_comment": msg,
     }
 
-    r = requests.post(
+    session = make_session()
+    r = session.post(
         "https://slack.com/api/files.upload",
         data=payload,
         headers={"Authorization": f"Bearer {config[key]}"},
-        timeout=30,
     )
     r.raise_for_status()
     body = r.json()
@@ -473,9 +474,10 @@ def get_all_but_hidden_sites() -> list:
 
 def get_from_data_portal_api(end_point: str, payload: dict | None = None) -> list:
     """Reads from data portal API."""
+    session = make_session()
     data_portal_url = fetch_data_portal_url()
     url = f"{data_portal_url}{end_point}"
-    return requests.get(url=url, params=payload, timeout=30).json()
+    return session.get(url=url, params=payload).json()
 
 
 def fetch_data_portal_url() -> str:

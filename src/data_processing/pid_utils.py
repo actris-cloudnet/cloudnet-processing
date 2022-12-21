@@ -1,6 +1,7 @@
 import netCDF4
-import requests
 from requests import HTTPError
+
+from .utils import make_session
 
 
 class PidUtils:
@@ -15,6 +16,7 @@ class PidUtils:
 
     def add_pid_to_file(self, filepath: str) -> tuple[str, str]:
         """Queries PID service and adds the PID to NC file metadata."""
+        session = make_session()
         with netCDF4.Dataset(filepath, "r+") as rootgrp:
             uuid = getattr(rootgrp, "file_uuid")
             if self._is_production:
@@ -23,7 +25,7 @@ class PidUtils:
                     "uuid": uuid,
                     "url": f"https://cloudnet.fmi.fi/file/{uuid}",
                 }
-                res = requests.post(self._pid_service_url, json=payload, timeout=30)
+                res = session.post(self._pid_service_url, json=payload)
                 try:
                     res.raise_for_status()
                 except HTTPError as exc:
