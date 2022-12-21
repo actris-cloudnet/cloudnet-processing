@@ -2,7 +2,22 @@
 ignored-modules	= numpy, scipy, netCDF4
 
 [MESSAGES CONTROL]
-disable = C0103,C0116,W1203,R0914,C0114,C0115,R0903,R0913,W0511,R0902,R0915,R0801,R0401,R1732,W1514,W0122
+disable =
+  invalid-name,
+  missing-function-docstring,
+  logging-fstring-interpolation,
+  too-many-locals,
+  missing-class-docstring,
+  missing-class-docstring,
+  missing-module-docstring,
+  too-few-public-methods,
+  too-many-arguments,
+  too-many-instance-attributes,
+  consider-using-with,
+  unspecified-encoding,
+  exec-used,
+  fixme,
+  duplicate-code
 
 [format]
 max-line-length = 100
