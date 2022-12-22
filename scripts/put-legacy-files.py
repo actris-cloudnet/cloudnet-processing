@@ -66,7 +66,8 @@ def main():
             logging.info(s3key)
             legacy_file.temp_file = NamedTemporaryFile(suffix=legacy_file.filename)
             uuid = fix_legacy_file(file, legacy_file.temp_file.name)
-            pid_utils.add_pid_to_file(legacy_file.temp_file.name)
+            if ARGS.freeze:
+                pid_utils.add_pid_to_file(legacy_file.temp_file.name)
             utils.add_version_to_global_attributes(legacy_file.temp_file.name)
             upload_info = storage_api.upload_product(legacy_file.temp_file.name, s3key)
             payload = utils.create_product_put_payload(
@@ -81,6 +82,7 @@ def main():
 
             # images
             legacy_file.create_and_upload_images(product, uuid, info["identifier"], legacy=True)
+            legacy_file.upload_quality_report(legacy_file.temp_file.name, uuid)
             legacy_file.temp_file.close()
 
 
@@ -148,6 +150,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--year", "-y", type=int, help="Year to be processed. Default is all years.", default=None
     )
+    parser.add_argument("--freeze", "-f", type=bool, help="Add pid to files.", default=False)
 
     ARGS = parser.parse_args()
     main()
