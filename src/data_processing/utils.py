@@ -77,7 +77,7 @@ def get_file_format(nc: netCDF4.Dataset):
 
 
 def add_version_to_global_attributes(full_path: str):
-    """Add data-processing package version to file attributes."""
+    """Add cloudnet-processing package version to file attributes."""
     version = get_data_processing_version()
     with netCDF4.Dataset(full_path, "r+") as nc:
         nc.cloudnet_processing_version = version

@@ -82,7 +82,7 @@ def _write_version(version: Version):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Bump data-processing version number.")
+    parser = argparse.ArgumentParser(description="Bump cloudnet-processing version number.")
     parser.add_argument(
         "component",
         choices=["major", "minor", "patch"],
