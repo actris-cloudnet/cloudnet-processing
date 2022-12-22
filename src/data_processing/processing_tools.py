@@ -129,6 +129,16 @@ class ProcessBase:
             )
         self.md_api.put_images(visualizations, uuid)
 
+    def compare_file_content(self, product: str):
+        payload = {"site": self.site, "product": product, "date": self.date_str, "showLegacy": True}
+        meta = self.md_api.get("api/files", payload)
+        if not meta:
+            return
+        with TemporaryDirectory() as temp_dir:
+            full_path = self._storage_api.download_product(meta[0], temp_dir)
+            if utils.are_identical_nc_files(full_path, self.temp_file.name) is True:
+                raise MiscError("Abort processing: File has not changed")
+
     def _upload_img(
         self,
         img_path: str,
