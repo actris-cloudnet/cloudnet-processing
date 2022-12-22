@@ -56,7 +56,7 @@ def main():
                     "identifier": utils.get_product_identifier(product),
                     "site": ARGS.site,
                 }
-                _check_if_exists(md_api, info)
+                uuid = _check_if_exists(md_api, info)
             except (MiscError, HTTPError, ValueError) as err:
                 logging.error(err)
                 continue
@@ -65,7 +65,12 @@ def main():
             s3key = _get_s3key(info)
             logging.info(s3key)
             legacy_file.temp_file = NamedTemporaryFile(suffix=legacy_file.filename)
-            uuid = fix_legacy_file(file, legacy_file.temp_file.name)
+            uuid = fix_legacy_file(file, legacy_file.temp_file.name, data={"uuid": uuid})
+            try:
+                legacy_file.compare_file_content(product)
+            except MiscError as err:
+                logging.info(err)
+                continue
             if ARGS.freeze:
                 pid_utils.add_pid_to_file(legacy_file.temp_file.name)
             utils.add_version_to_global_attributes(legacy_file.temp_file.name)
@@ -104,7 +109,7 @@ class LegacyFile(ProcessBase):
         return f"{year}-{month}-{day}"
 
 
-def _check_if_exists(md_api, info: dict):
+def _check_if_exists(md_api, info: dict) -> str | None:
     payload = {
         "site": info["site"],
         "dateFrom": info["date_str"],
@@ -121,13 +126,19 @@ def _check_if_exists(md_api, info: dict):
         raise err
 
     if metadata:
-        if metadata[0]["volatile"]:
+        if len(metadata) == 1 and metadata[0]["volatile"] and not metadata[0]["legacy"]:
             raise MiscError(
                 f'{info["site"]} {info["date_str"]} {info["product"]} Not allowed: '
-                f"volatile file exists"
+                f"volatile non-legacy file exists"
             )
-        if metadata[-1]["legacy"]:
-            raise MiscError(f'{info["site"]} {info["date_str"]} {info["product"]} Already uploaded')
+        if len(metadata) == 1 and metadata[0]["volatile"] and metadata[0]["legacy"]:
+            # Replace volatile legacy file
+            return metadata[0]["uuid"]
+        if metadata[-1]["legacy"] and not metadata[-1]["volatile"]:
+            raise MiscError(
+                f'{info["site"]} {info["date_str"]} {info["product"]} Already uploaded and freezed.'
+            )
+    return None
 
 
 def _get_s3key(info: dict) -> str:
@@ -150,7 +161,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--year", "-y", type=int, help="Year to be processed. Default is all years.", default=None
     )
-    parser.add_argument("--freeze", "-f", type=bool, help="Add pid to files.", default=False)
+    parser.add_argument(
+        "--freeze", "-f", help="Add pid to files.", default=False, action="store_true"
+    )
 
     ARGS = parser.parse_args()
     main()

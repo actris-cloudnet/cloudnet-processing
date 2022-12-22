@@ -16,16 +16,27 @@ from data_processing import utils
 from data_processing.utils import MiscError
 
 
-def fix_legacy_file(legacy_file_full_path: str, target_full_path: str) -> str:
+def fix_legacy_file(legacy_file_full_path: str, target_full_path: str, data: dict) -> str:
     """Fixes legacy netCDF file."""
     with (
         netCDF4.Dataset(legacy_file_full_path, "r") as nc_legacy,
         netCDF4.Dataset(target_full_path, "w", format="NETCDF4_CLASSIC") as nc,
     ):
-        legacy = Level1Nc(nc_legacy, nc, {"uuid": None})
+        legacy = Level1Nc(nc_legacy, nc, data)
         legacy.copy_file_contents()
         uuid = legacy.add_uuid()
         legacy.add_history("")
+
+        if legacy.nc.location == "polarstern":
+            legacy.nc.cloudnetpy_version = f"Custom CloudnetPy ({legacy.nc.cloudnetpy_version})"
+            bad_att_attr_names = ["dependencies", "comment"]
+            if legacy.nc.cloudnet_file_type == "categorize":
+                bad_att_attr_names.append("source_file_uuids")
+            for attr_name in bad_att_attr_names:
+                try:
+                    delattr(legacy.nc, attr_name)
+                except AttributeError:
+                    pass
     return uuid
 
 
