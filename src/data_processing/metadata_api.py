@@ -90,6 +90,7 @@ class MetadataApi:
         files_payload = {
             **common_payload,
             **{"product": products},
+            **{"showLegacy": True},
             **self._get_freeze_payload("FREEZE_AFTER_DAYS", args),
         }
         regular_files = self.get("api/files", files_payload)
