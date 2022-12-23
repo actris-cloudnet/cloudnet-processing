@@ -94,7 +94,7 @@ class TestMetadataApi:
                     "force": False,
                 },
                 {
-                    "files": {"volatile": ["True"], "releasedBefore": True},
+                    "files": {"volatile": ["True"], "showLegacy": ["True"], "releasedBefore": True},
                     "model-files": {
                         "volatile": ["True"],
                         "allModels": ["True"],
@@ -115,6 +115,7 @@ class TestMetadataApi:
                     "files": {
                         "product": ["categorize", "radar"],
                         "volatile": ["True"],
+                        "showLegacy": ["True"],
                         "releasedBefore": True,
                     },
                     "model-files": {
@@ -134,7 +135,11 @@ class TestMetadataApi:
                     "force": True,
                 },
                 {
-                    "files": {"volatile": ["True"], "releasedBefore": False},
+                    "files": {
+                        "volatile": ["True"],
+                        "showLegacy": ["True"],
+                        "releasedBefore": False,
+                    },
                     "model-files": {
                         "volatile": ["True"],
                         "allModels": ["True"],
@@ -156,6 +161,7 @@ class TestMetadataApi:
                         "site": ["bucharest"],
                         "date": ["2021-01-01"],
                         "volatile": ["True"],
+                        "showLegacy": ["True"],
                         "releasedBefore": False,
                     },
                     "model-files": {
@@ -182,6 +188,7 @@ class TestMetadataApi:
                         "dateFrom": ["2021-01-01"],
                         "dateTo": ["2021-07-01"],
                         "volatile": ["True"],
+                        "showLegacy": ["True"],
                         "releasedBefore": True,
                     },
                     "model-files": {
