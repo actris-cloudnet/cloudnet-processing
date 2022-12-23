@@ -173,10 +173,11 @@ Positional arguments:
 
 Optional arguments:
 
-| Short | Long     | Default | Description                     |
-|:------|:---------|:--------|:--------------------------------|
-| `-h`  | `--help` |         | Show help and exit.             |
-| `-y`  | `--year` | all     | Process only some certain year. |
+| Short | Long       | Default | Description                     |
+|:------|:-----------|:--------|:--------------------------------|
+| `-h`  | `--help`   |         | Show help and exit.             |
+| `-y`  | `--year`   | all     | Process only some certain year. |
+| `-f`  | `--freeze` | False   | Add PID to file.                |
 
 Behavior:
 
