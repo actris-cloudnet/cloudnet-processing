@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Script for creating and putting missing images into s3 / database."""
+"""Script for putting non-standard Cloudnet files into s3 / database."""
 import argparse
 import logging
 import os
@@ -8,6 +8,7 @@ from tempfile import NamedTemporaryFile
 
 import cloudnetpy.utils
 import netCDF4
+import requests.exceptions
 from requests import HTTPError
 
 from data_processing import utils
@@ -57,6 +58,8 @@ def main():
                     "site": ARGS.site,
                 }
                 uuid = _check_if_exists(md_api, info)
+                if uuid is None:
+                    uuid = _check_if_file_contains_uuid(file)
             except (MiscError, HTTPError, ValueError) as err:
                 logging.error(err)
                 continue
@@ -83,7 +86,11 @@ def main():
                 site=ARGS.site,
             )
             payload["legacy"] = True
-            md_api.put("files", s3key, payload)
+            try:
+                md_api.put("files", s3key, payload)
+            except requests.exceptions.HTTPError as err:
+                logging.info(err)
+                continue
 
             # images
             legacy_file.create_and_upload_images(product, uuid, info["identifier"], legacy=True)
@@ -148,6 +155,11 @@ def _get_s3key(info: dict) -> str:
 def _get_files(root_path: str, dir_name: str) -> list:
     full_path = os.path.join(root_path, dir_name)
     return [str(filename) for filename in Path(full_path).rglob("*.nc")]
+
+
+def _check_if_file_contains_uuid(file: str) -> str | None:
+    with netCDF4.Dataset(file) as nc:
+        return getattr(nc, "file_uuid", None)
 
 
 if __name__ == "__main__":
