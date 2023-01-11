@@ -32,11 +32,14 @@ def main():
     ARGS.site = PurePath(ARGS.path[0]).name
 
     dir_names = [
+        "calibrated/pollyxt/",
         "processed/categorize/",
         "products/iwc-Z-T-method/",
         "products/lwc-scaled-adiabatic/",
         "products/drizzle/",
         "products/classification/",
+        "products/ier/",
+        "products/der/",
     ]
     if ARGS.year is not None:
         dir_names = [f"{dir_name}{ARGS.year}" for dir_name in dir_names]

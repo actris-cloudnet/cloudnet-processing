@@ -290,7 +290,17 @@ def get_fields_for_plot(cloudnet_file_type: str) -> tuple[list, int]:
         case "model":
             fields = ["cloud_fraction", "uwind", "vwind", "temperature", "q", "pressure"]
         case "lidar":
-            fields = ["beta", "beta_raw", "depolarisation", "depolarisation_raw"]
+            fields = [
+                "beta",
+                "beta_raw",
+                "depolarisation",
+                "depolarisation_raw",
+                "beta_1064",
+                "beta_532",
+                "beta_355",
+                "depolarisation_532",
+                "depolarisation_355",
+            ]
         case "mwr":
             fields = ["lwp", "iwv"]
         case "radar":
@@ -472,7 +482,7 @@ def get_all_but_hidden_sites() -> list:
     return sites
 
 
-def get_from_data_portal_api(end_point: str, payload: dict | None = None) -> list:
+def get_from_data_portal_api(end_point: str, payload: dict | None = None) -> list | dict:
     """Reads from data portal API."""
     session = make_session()
     data_portal_url = fetch_data_portal_url()

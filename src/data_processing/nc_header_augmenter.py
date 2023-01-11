@@ -29,14 +29,18 @@ def fix_legacy_file(legacy_file_full_path: str, target_full_path: str, data: dic
 
         if legacy.nc.location == "polarstern":
             legacy.nc.cloudnetpy_version = f"Custom CloudnetPy ({legacy.nc.cloudnetpy_version})"
-            bad_att_attr_names = ["dependencies", "comment"]
-            if legacy.nc.cloudnet_file_type == "categorize":
-                bad_att_attr_names.append("source_file_uuids")
-            for attr_name in bad_att_attr_names:
-                try:
-                    delattr(legacy.nc, attr_name)
-                except AttributeError:
-                    pass
+
+            if legacy.nc_raw.cloudnet_file_type == "lidar":
+                legacy.nc.instrument_pid = "https://hdl.handle.net/21.12132/3.31c4f71cf1a74e03"
+
+            if hasattr(legacy.nc, "source_file_uuids"):
+                valid_uuids = []
+                for source_uuid in legacy.nc.source_file_uuids.split(", "):
+                    res = utils.get_from_data_portal_api(f"api/files/{source_uuid}")
+                    if isinstance(res, dict) and res.get("status") != 404:
+                        valid_uuids.append(source_uuid)
+                legacy.nc.source_file_uuids = ", ".join(valid_uuids)
+
     return uuid
 
 
