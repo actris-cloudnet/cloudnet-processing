@@ -291,6 +291,11 @@ class ProcessDisdrometer(ProcessInstrument):
         self.uuid.product = disdrometer2nc(self.base.daily_file.name, *self._args, **self._kwargs)
 
 
+class ProcessWeatherStation(ProcessInstrument):
+    def process_weather_station(self):
+        raise NotImplementedError("Weather station not yet implemented")
+
+
 def _get_valid_uuids(uuids: list, full_paths: list, valid_full_paths: list) -> list:
     return [uuid for uuid, full_path in zip(uuids, full_paths) if full_path in valid_full_paths]
 

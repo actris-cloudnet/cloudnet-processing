@@ -101,7 +101,7 @@ def test_get_product_bucket():
 @pytest.mark.parametrize(
     "level, expected",
     [
-        ("1b", ["lidar", "model", "mwr", "radar", "disdrometer"]),
+        ("1b", ["lidar", "model", "mwr", "radar", "disdrometer", "weather-station"]),
         ("1c", ["categorize", "categorize-voodoo"]),
         ("2", ["classification", "classification-voodoo", "drizzle", "iwc", "lwc", "der", "ier"]),
         (
@@ -112,6 +112,7 @@ def test_get_product_bucket():
                 "mwr",
                 "radar",
                 "disdrometer",
+                "weather-station",
                 "categorize",
                 "categorize-voodoo",
                 "classification",

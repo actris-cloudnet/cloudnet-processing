@@ -99,7 +99,10 @@ class ProcessCloudnet(ProcessBase):
 
     def process_instrument(self, uuid: Uuid, instrument_type: str):
         instrument = self._detect_uploaded_instrument(instrument_type)
-        process_class = getattr(instrument_process, f"Process{instrument_type.capitalize()}")
+        instrument_type_camel_case = "".join(
+            [part.capitalize() for part in instrument_type.split("-")]
+        )
+        process_class = getattr(instrument_process, f"Process{instrument_type_camel_case}")
         process = process_class(self, self.temp_file, uuid)
         getattr(process, f'process_{instrument.replace("-", "_")}')()
         instrument = (
