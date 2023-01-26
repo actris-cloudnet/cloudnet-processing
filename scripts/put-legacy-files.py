@@ -112,10 +112,9 @@ class LegacyFile(ProcessBase):
         year = self.filename[:4]
         month = self.filename[4:6]
         day = self.filename[6:8]
-        nc = netCDF4.Dataset(self.full_path)
-        if int(nc.year) != int(year) or int(nc.month) != int(month) or int(nc.day) != int(day):
-            raise utils.MiscError("Not sure which date this is")
-        nc.close()
+        with netCDF4.Dataset(self.full_path) as nc:
+            if int(nc.year) != int(year) or int(nc.month) != int(month) or int(nc.day) != int(day):
+                raise utils.MiscError("Not sure which date this is")
         return f"{year}-{month}-{day}"
 
 
