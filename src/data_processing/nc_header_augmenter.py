@@ -286,7 +286,7 @@ class HaloNc(Level1Nc):
         """Checks zenith angle value."""
         threshold = 15
         if (zenith_angle := self.nc.variables["zenith_angle"][:]) > threshold:
-            raise ValueError(f"Invalid zenith angle {zenith_angle}")
+            raise MiscError(f"Invalid zenith angle {zenith_angle}")
 
     def add_range(self):
         """Converts halo 'range', which is actually height, to true range (towards LOS)."""
