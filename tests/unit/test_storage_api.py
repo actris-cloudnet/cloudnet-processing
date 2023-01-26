@@ -19,7 +19,12 @@ class TestStorageApi:
 
     def test_download_product(self):
         filename = "20201121_bucharest_classification.nc"
-        metadata = {"volatile": True, "filename": filename}
+        metadata = {
+            "volatile": True,
+            "filename": filename,
+            "size": "120931",
+            "checksum": "48e006f769a9352a42bf41beac449eae62aea545f4d3ba46bffd35759d8982ca",
+        }
         file = open(f"tests/data/products/{filename}", "rb")
         url = f"{mock_addr}cloudnet-product-volatile/{filename}"
         adapter.register_uri("GET", url, body=file)
@@ -33,7 +38,13 @@ class TestStorageApi:
         filename = "00100_A202010221205_CHM170137.nc"
         s3path = "/ur/a/nus"
         metadata = [
-            {"uuid": "1234123", "s3path": s3path, "filename": filename},
+            {
+                "uuid": "1234123",
+                "s3path": s3path,
+                "filename": filename,
+                "size": "53764",
+                "checksum": "2c80eae7adce951ab80b3557004388a6",
+            },
         ]
         file = open(f"tests/data/raw/chm15k/{filename}", "rb")
         url = f"{mock_addr}{s3path[1:]}"
