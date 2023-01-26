@@ -302,6 +302,7 @@ class HaloNc(Level1Nc):
     def fix_time_units(self):
         """Fixes time units."""
         self.nc.variables["time"].units = self._get_time_units()
+        self.nc.variables["time"].calendar = "standard"
 
     def get_valid_time_indices(self) -> list:
         """Finds valid time indices."""
