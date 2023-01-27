@@ -232,15 +232,6 @@ Linter:
 
     docker run --env-file test.env test pylint **/*.py --errors-only --ignored-modules=netCDF4
 
-
-
-
-
-### Note about releasing
-
-Do not release new versions manually. New version is automatically released
-during deploy into Cloudnet production servers.
-
 ### Licence
 
 MIT
