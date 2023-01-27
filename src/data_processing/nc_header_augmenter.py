@@ -285,7 +285,7 @@ class HaloNc(Level1Nc):
     def check_zenith_angle(self):
         """Checks zenith angle value."""
         threshold = 15
-        if (zenith_angle := self.nc.variables["zenith_angle"][:]) > threshold:
+        if (zenith_angle := np.median(self.nc.variables["zenith_angle"][:])) > threshold:
             raise MiscError(f"Invalid zenith angle {zenith_angle}")
 
     def add_range(self):
