@@ -574,7 +574,7 @@ class MyAdapter(HTTPAdapter):
 
     def send(self, request, stream=False, timeout=None, verify=True, cert=None, proxies=None):
         if timeout is None:
-            timeout = 30
+            timeout = 120
         return super().send(request, stream, timeout, verify, cert, proxies)
 
 
