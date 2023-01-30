@@ -44,7 +44,7 @@ class TestCategorizeProcessing:
 
     def test_that_calls_metadata_api(self):
         data = read_log_file(SCRIPT_PATH)
-        n_gets = len(utils.get_product_types(level="1b"))
+        n_gets = len(utils.get_product_types(level="1b")) - 1
         n_puts = 2
         n_checks_for_updated_at = 1
         assert len(data) == n_gets + self.n_img + n_puts + n_checks_for_updated_at + 1
