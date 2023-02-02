@@ -4,7 +4,7 @@ import logging
 import warnings
 
 import requests
-from requests.exceptions import HTTPError
+from requests.exceptions import RequestException
 
 from data_processing import nc_header_augmenter, utils
 from data_processing.processing_tools import ProcessBase, Uuid
@@ -34,7 +34,7 @@ def main(args, storage_session: requests.Session | None = None):
             process.print_info()
         except MiscError as err:
             logging.warning(err)
-        except (HTTPError, ConnectionError, RuntimeError) as err:
+        except (RequestException, RuntimeError) as err:
             utils.send_slack_alert(err, "model", args, process.date_str, model_id)
 
 

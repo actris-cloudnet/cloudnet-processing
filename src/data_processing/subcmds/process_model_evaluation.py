@@ -8,7 +8,7 @@ import requests
 from cloudnetpy.model_evaluation.plotting.plotting import generate_L3_day_plots
 from cloudnetpy.model_evaluation.products import product_resampling
 from cloudnetpy.utils import date_range
-from requests.exceptions import HTTPError
+from requests.exceptions import RequestException
 
 from data_processing import processing_tools, utils
 from data_processing.processing_tools import ProcessBase, Uuid
@@ -52,7 +52,7 @@ def main(args, storage_session: requests.Session | None = None):
                         process.print_info()
                     except (RawDataMissingError, MiscError, NotImplementedError) as err:
                         logging.warning(err)
-                    except (HTTPError, ConnectionError, RuntimeError, ValueError) as err:
+                    except (RequestException, RuntimeError, ValueError) as err:
                         utils.send_slack_alert(err, "data", args, date_str, product)
 
 
