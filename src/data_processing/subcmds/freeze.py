@@ -42,7 +42,7 @@ def main(args, storage_session: requests.Session | None = None):
         except HTTPError as err:
             utils.send_slack_alert(err, "pid", args, row["measurementDate"], row["product"]["id"])
             continue
-        s3key = row["filename"]
+        s3key = f"legacy/{row['filename']}" if row["legacy"] else row["filename"]
         try:
             uuid, pid = pid_utils.add_pid_to_file(full_path)
             if UUID(uuid) != UUID(row["uuid"]):
