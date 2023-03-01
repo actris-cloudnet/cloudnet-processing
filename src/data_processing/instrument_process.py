@@ -15,6 +15,7 @@ from cloudnetpy.instruments import (
     pollyxt2nc,
     radiometrics2nc,
     rpg2nc,
+    ws2nc,
 )
 from cloudnetpy.utils import is_timestamp
 
@@ -293,7 +294,10 @@ class ProcessDisdrometer(ProcessInstrument):
 
 class ProcessWeatherStation(ProcessInstrument):
     def process_weather_station(self):
-        raise NotImplementedError("Weather station not yet implemented")
+        full_path, self.uuid.raw, self.instrument_pids = self.base.download_instrument(
+            "weather-station", largest_only=True
+        )
+        self.uuid.product = ws2nc(full_path, *self._args, **self._kwargs)
 
 
 def _get_valid_uuids(uuids: list, full_paths: list, valid_full_paths: list) -> list:
