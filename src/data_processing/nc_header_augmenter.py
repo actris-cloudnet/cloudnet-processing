@@ -421,7 +421,7 @@ class HatproNc(Level1Nc):
         self._copy_global_attributes()
 
 
-def _get_epoch(units: str) -> tuple:
+def _get_epoch(units: str) -> tuple[int, int, int]:
     fallback = (2001, 1, 1)
     try:
         date = units.split()[2]
@@ -438,5 +438,5 @@ def _get_epoch(units: str) -> tuple:
     year, month, day = date_components
     current_year = datetime.datetime.today().year
     if (1900 < year <= current_year) and (0 < month < 13) and (0 < day < 32):
-        return tuple(date_components)
+        return (year, month, day)
     return fallback

@@ -54,7 +54,7 @@ def concat_netcdf_files(
         output_file,
         concat_dimension=concat_dimension,
         variables=variables,
-        ignore=("minimum", "maximum", "number_integrated_samples", "Min_LWP", "Max_LWP"),
+        ignore=["minimum", "maximum", "number_integrated_samples", "Min_LWP", "Max_LWP"],
     )
     return valid_files
 
