@@ -47,9 +47,7 @@ class TestMIRAProcessing:
     def test_that_calls_metadata_api(self):
         data = read_log_file(SCRIPT_PATH)
         n_raw_files = 2
-        n_gets = (
-            5  # instrument checks (2) + product check (1) + mira raw (1) + previous product (1)
-        )
+        n_gets = 5  # instrument checks (2) + product check (1) + mira raw (1) + previous product (1)
         n_puts = 2 + self.n_img
         n_posts = n_raw_files
 
@@ -58,7 +56,10 @@ class TestMIRAProcessing:
         prefix = "?dateFrom=2021-01-27&dateTo=2021-01-27&site=juelich&developer=True&"
 
         # Check product status
-        assert f'"GET /api/files{prefix}product=radar&showLegacy=True HTTP/1.1" 200 -' in data[0]
+        assert (
+            f'"GET /api/files{prefix}product=radar&showLegacy=True HTTP/1.1" 200 -'
+            in data[0]
+        )
 
         # Two instrument API calls...
 

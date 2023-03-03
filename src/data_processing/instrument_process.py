@@ -75,7 +75,9 @@ class ProcessRadar(ProcessInstrument):
         self.uuid.raw = _get_valid_uuids(raw_uuids, full_paths, valid_full_paths)
 
     def process_mira(self):
-        full_paths, self.uuid.raw, self.instrument_pids = self.base.download_instrument("mira")
+        full_paths, self.uuid.raw, self.instrument_pids = self.base.download_instrument(
+            "mira"
+        )
         dir_name = _unzip_gz_files(full_paths)
         self._fix_suffices(dir_name, ".mmclx")
         self.uuid.product = mira2nc(dir_name, *self._args, **self._kwargs)
@@ -118,7 +120,9 @@ class ProcessLidar(ProcessInstrument):
         self._process_chm_lidar("chm15kx")
 
     def _process_chm_lidar(self, model: str):
-        full_paths, raw_uuids, self.instrument_pids = self.base.download_instrument(model)
+        full_paths, raw_uuids, self.instrument_pids = self.base.download_instrument(
+            model
+        )
         valid_full_paths = concat_wrapper.concat_chm15k_files(
             full_paths, self.base.date_str, self.base.daily_file.name
         )
@@ -148,7 +152,9 @@ class ProcessLidar(ProcessInstrument):
         self.uuid.product = nc_header_augmenter.harmonize_halo_file(data)
 
     def process_pollyxt(self):
-        full_paths, self.uuid.raw, self.instrument_pids = self.base.download_instrument("pollyxt")
+        full_paths, self.uuid.raw, self.instrument_pids = self.base.download_instrument(
+            "pollyxt"
+        )
         site_meta = self.base.site_meta
         site_meta["snr_limit"] = 25
         self.uuid.product = pollyxt2nc(
@@ -160,7 +166,9 @@ class ProcessLidar(ProcessInstrument):
         )
 
     def process_cl31(self):
-        full_paths, self.uuid.raw, self.instrument_pids = self.base.download_instrument("cl31")
+        full_paths, self.uuid.raw, self.instrument_pids = self.base.download_instrument(
+            "cl31"
+        )
         full_paths.sort()
         utils.concatenate_text_files(full_paths, self.base.daily_file.name)
         self._call_ceilo2nc("cl31")
@@ -173,7 +181,11 @@ class ProcessLidar(ProcessInstrument):
                 self.instrument_pids,
             ) = self.base.download_adjoining_daily_files("cl51")
         else:
-            full_paths, self.uuid.raw, self.instrument_pids = self.base.download_instrument("cl51")
+            (
+                full_paths,
+                self.uuid.raw,
+                self.instrument_pids,
+            ) = self.base.download_instrument("cl51")
         full_paths.sort()
         utils.concatenate_text_files(full_paths, self.base.daily_file.name)
         date = utils.date_string_to_date(self.base.date_str)
@@ -209,7 +221,10 @@ class ProcessLidar(ProcessInstrument):
             variables = ["x_pol", "p_pol", "beta_att", "time"]
             try:
                 valid_full_paths = concat_wrapper.concat_netcdf_files(
-                    full_paths, self.base.date_str, self.base.daily_file.name, variables=variables
+                    full_paths,
+                    self.base.date_str,
+                    self.base.daily_file.name,
+                    variables=variables,
                 )
             except KeyError:
                 valid_full_paths = concat_wrapper.concat_netcdf_files(
@@ -227,7 +242,9 @@ class ProcessLidar(ProcessInstrument):
             instrument_pid = self.instrument_pids[0]
         except IndexError:
             instrument_pid = None
-        self.base.md_api.upload_instrument_file(self.base, model, filename, instrument_pid)
+        self.base.md_api.upload_instrument_file(
+            self.base, model, filename, instrument_pid
+        )
         self._call_ceilo2nc(model)
         self.uuid.raw = _get_valid_uuids(raw_uuids, full_paths, valid_full_paths)
 
@@ -276,7 +293,9 @@ class ProcessMwr(ProcessInstrument):
         for full_path in full_paths[1:]:
             utils.remove_header_lines(full_path, 1)
         utils.concatenate_text_files(full_paths, self.base.daily_file.name)
-        self.uuid.product = radiometrics2nc(self.base.daily_file.name, *self._args, **self._kwargs)
+        self.uuid.product = radiometrics2nc(
+            self.base.daily_file.name, *self._args, **self._kwargs
+        )
 
 
 class ProcessDisdrometer(ProcessInstrument):
@@ -291,10 +310,14 @@ class ProcessDisdrometer(ProcessInstrument):
             self.uuid.product = nc_header_augmenter.harmonize_parsivel_file(data)
 
     def process_thies_lnm(self):
-        full_paths, self.uuid.raw, self.instrument_pids = self.base.download_instrument("thies-lnm")
+        full_paths, self.uuid.raw, self.instrument_pids = self.base.download_instrument(
+            "thies-lnm"
+        )
         full_paths.sort()
         utils.concatenate_text_files(full_paths, self.base.daily_file.name)
-        self.uuid.product = disdrometer2nc(self.base.daily_file.name, *self._args, **self._kwargs)
+        self.uuid.product = disdrometer2nc(
+            self.base.daily_file.name, *self._args, **self._kwargs
+        )
 
 
 class ProcessWeatherStation(ProcessInstrument):
@@ -306,7 +329,11 @@ class ProcessWeatherStation(ProcessInstrument):
 
 
 def _get_valid_uuids(uuids: list, full_paths: list, valid_full_paths: list) -> list:
-    return [uuid for uuid, full_path in zip(uuids, full_paths) if full_path in valid_full_paths]
+    return [
+        uuid
+        for uuid, full_path in zip(uuids, full_paths)
+        if full_path in valid_full_paths
+    ]
 
 
 def _unzip_gz_files(full_paths: list) -> str:

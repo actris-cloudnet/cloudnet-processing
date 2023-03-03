@@ -97,7 +97,8 @@ def copy_files(source, target):
 def start_server(port, document_root, log_path):
     logfile = open(log_path, "w")
     md_server = subprocess.Popen(
-        ["python3", "-u", "src/test_utils/server.py", document_root, str(port)], stderr=logfile
+        ["python3", "-u", "src/test_utils/server.py", document_root, str(port)],
+        stderr=logfile,
     )
     atexit.register(md_server.terminate)
     wait_for_port(port)
@@ -154,7 +155,9 @@ def _fix_identifier(identifier: str) -> str:
 
 def start_test_servers(instrument: str, script_path: str):
     dir_name = "tests/data/server/"
-    start_server(5000, f"{dir_name}metadata/process_{instrument}", f"{script_path}/md.log")
+    start_server(
+        5000, f"{dir_name}metadata/process_{instrument}", f"{script_path}/md.log"
+    )
     start_server(5001, f"{dir_name}pid", f"{script_path}/pid.log")
 
 
@@ -204,7 +207,9 @@ def read_log_file(script_path: str):
     f = open(f"{script_path}/md.log")
     data = f.readlines()
     data = [
-        line for line in data if "/api/sites" not in line and "/api/products" not in line
+        line
+        for line in data
+        if "/api/sites" not in line and "/api/products" not in line
     ]  # ignore trash lines
     f.close()
     return data

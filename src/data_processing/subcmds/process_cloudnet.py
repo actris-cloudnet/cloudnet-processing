@@ -58,7 +58,9 @@ class ProcessCloudnet(ProcessBase):
                 case "categorize" | "categorize-voodoo":
                     uuid, identifier = self.process_categorize(uuid, product)
                 case product if product in utils.get_product_types(level="1b"):
-                    uuid, identifier, instrument_pids = self.process_instrument(uuid, product)
+                    uuid, identifier, instrument_pids = self.process_instrument(
+                        uuid, product
+                    )
                     self.add_instrument_pid(instrument_pids)
                 case bad_product:
                     raise ValueError(f"Bad product: {bad_product}")
@@ -71,7 +73,11 @@ class ProcessCloudnet(ProcessBase):
             self.print_info()
         except (RawDataMissingError, MiscError, NotImplementedError) as err:
             logging.warning(err)
-        except (InconsistentDataError, DisdrometerDataError, ValidTimeStampError) as err:
+        except (
+            InconsistentDataError,
+            DisdrometerDataError,
+            ValidTimeStampError,
+        ) as err:
             logging.error(err)
         except (RequestException, RuntimeError, ValueError) as err:
             utils.send_slack_alert(err, "data", self.args, self.date_str, product)
@@ -83,12 +89,20 @@ class ProcessCloudnet(ProcessBase):
             self.process_product(row["product"])
 
     def _get_uploaded_raw_metadata(self) -> list:
-        updated_at_from = datetime.date.today() - datetime.timedelta(days=self.args.updated_since)
-        payload = {"updatedAtFrom": updated_at_from, "status": "uploaded", "site": self.args.site}
+        updated_at_from = datetime.date.today() - datetime.timedelta(
+            days=self.args.updated_since
+        )
+        payload = {
+            "updatedAtFrom": updated_at_from,
+            "status": "uploaded",
+            "site": self.args.site,
+        }
         metadata = self.md_api.get("api/raw-files", payload)
         ignored_extensions = (".lv0", ".hkd")
         metadata = [
-            row for row in metadata if not row["filename"].lower().endswith(ignored_extensions)
+            row
+            for row in metadata
+            if not row["filename"].lower().endswith(ignored_extensions)
         ]
         metadata = [
             {"date": row["measurementDate"], "product": row["instrument"]["type"]}
@@ -102,11 +116,15 @@ class ProcessCloudnet(ProcessBase):
         instrument_type_camel_case = "".join(
             [part.capitalize() for part in instrument_type.split("-")]
         )
-        process_class = getattr(instrument_process, f"Process{instrument_type_camel_case}")
+        process_class = getattr(
+            instrument_process, f"Process{instrument_type_camel_case}"
+        )
         process = process_class(self, self.temp_file, uuid)
         getattr(process, f'process_{instrument.replace("-", "_")}')()
         instrument = (
-            "halo-doppler-lidar" if instrument == "halo-doppler-lidar-calibrated" else instrument
+            "halo-doppler-lidar"
+            if instrument == "halo-doppler-lidar-calibrated"
+            else instrument
         )
         return process.uuid, instrument, process.instrument_pids
 
@@ -121,15 +139,23 @@ class ProcessCloudnet(ProcessBase):
         self._check_source_status(cat_variant, meta_records)
         input_files = {key: "" for key in l1_products}
         for product, metadata in meta_records.items():
-            input_files[product] = self._storage_api.download_product(metadata, self.temp_dir.name)
+            input_files[product] = self._storage_api.download_product(
+                metadata, self.temp_dir.name
+            )
         if not input_files["mwr"] and "rpg-fmcw-94" in input_files["radar"]:
             input_files["mwr"] = input_files["radar"]
         try:
             if cat_variant == "categorize-voodoo":
-                full_paths, _, _ = self.download_instrument("rpg-fmcw-94", include_pattern=".LV0")
-                full_paths_list = [full_paths] if isinstance(full_paths, str) else full_paths
+                full_paths, _, _ = self.download_instrument(
+                    "rpg-fmcw-94", include_pattern=".LV0"
+                )
+                full_paths_list = (
+                    [full_paths] if isinstance(full_paths, str) else full_paths
+                )
                 input_files["lv0_files"] = full_paths_list  # type: ignore
-            uuid.product = generate_categorize(input_files, self.temp_file.name, uuid=uuid.volatile)
+            uuid.product = generate_categorize(
+                input_files, self.temp_file.name, uuid=uuid.volatile
+            )
         except ModelDataError as exc:
             payload = self._get_payload(model="gdas1")
             metadata = self.md_api.get("api/model-files", payload)
@@ -159,13 +185,17 @@ class ProcessCloudnet(ProcessBase):
         return meta_records
 
     @staticmethod
-    def _get_missing_level1b_products(meta_records: dict, required_products: list) -> list:
+    def _get_missing_level1b_products(
+        meta_records: dict, required_products: list
+    ) -> list:
         existing_products = list(meta_records.keys())
         if "mwr" not in meta_records and (
             "radar" in meta_records and "rpg-fmcw" in meta_records["radar"]["filename"]
         ):
             existing_products.append("mwr")
-        return [product for product in required_products if product not in existing_products]
+        return [
+            product for product in required_products if product not in existing_products
+        ]
 
     def process_level2(self, uuid: Uuid, product: str) -> tuple[Uuid, str]:
         if product == "classification-voodoo":
@@ -178,7 +208,9 @@ class ProcessCloudnet(ProcessBase):
         metadata = self.md_api.get("api/files", payload)
         self._check_response_length(metadata)
         if metadata:
-            categorize_file = self._storage_api.download_product(metadata[0], self.temp_dir.name)
+            categorize_file = self._storage_api.download_product(
+                metadata[0], self.temp_dir.name
+            )
             meta_record = {"categorize": metadata[0]}
         else:
             raise MiscError("Missing input categorize file")
@@ -228,7 +260,9 @@ class ProcessCloudnet(ProcessBase):
             )
         return self._download_raw_files(upload_metadata)
 
-    def download_adjoining_daily_files(self, instrument: str) -> tuple[list | str, list, list]:
+    def download_adjoining_daily_files(
+        self, instrument: str
+    ) -> tuple[list | str, list, list]:
         next_day = utils.get_date_from_past(-1, self.date_str)
         payload = self._get_payload(instrument=instrument, skip_created=True)
         payload["dateFrom"] = self.date_str
@@ -244,7 +278,9 @@ class ProcessCloudnet(ProcessBase):
         full_paths, _, instrument_pids = self._download_raw_files(upload_metadata)
         # Return all full paths but only current day UUIDs
         uuids_of_current_day = [
-            meta["uuid"] for meta in upload_metadata if meta["measurementDate"] == self.date_str
+            meta["uuid"]
+            for meta in upload_metadata
+            if meta["measurementDate"] == self.date_str
         ]
         return full_paths, uuids_of_current_day, instrument_pids
 
@@ -275,7 +311,8 @@ class ProcessCloudnet(ProcessBase):
                     selected_instrument = instru
                     break
             logging.warning(
-                f"More than one type of {instrument_type} data, " f"using {selected_instrument}"
+                f"More than one type of {instrument_type} data, "
+                f"using {selected_instrument}"
             )
         return selected_instrument
 
@@ -288,7 +325,9 @@ class ProcessCloudnet(ProcessBase):
 
 
 def add_arguments(subparser):
-    parser = subparser.add_parser("process", help="Process Cloudnet Level 1 and 2 data.")
+    parser = subparser.add_parser(
+        "process", help="Process Cloudnet Level 1 and 2 data."
+    )
     parser.add_argument(
         "-r",
         "--reprocess",

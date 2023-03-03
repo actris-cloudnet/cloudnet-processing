@@ -65,7 +65,9 @@ class ProcessModel(ProcessBase):
             uuid = self._read_stable_uuid(metadata)
             if uuid is not None:
                 # We have new submission but stable file -> replace with volatile file
-                logging.warning("Stable model file found. Changing to volatile and reprocess.")
+                logging.warning(
+                    "Stable model file found. Changing to volatile and reprocess."
+                )
                 payload = {"volatile": True, "uuid": uuid}
                 self.md_api.post("files", payload)
             else:

@@ -14,7 +14,11 @@ adapter = requests_mock.Adapter()
 session = requests.Session()
 session.mount("http://", adapter)
 mock_addr = "http://test/"
-config = {"DATAPORTAL_URL": mock_addr, "FREEZE_AFTER_DAYS": 2, "FREEZE_MODEL_AFTER_DAYS": 3}
+config = {
+    "DATAPORTAL_URL": mock_addr,
+    "FREEZE_AFTER_DAYS": 2,
+    "FREEZE_MODEL_AFTER_DAYS": 3,
+}
 
 files_response = """
 [
@@ -94,7 +98,11 @@ class TestMetadataApi:
                     "force": False,
                 },
                 {
-                    "files": {"volatile": ["True"], "showLegacy": ["True"], "releasedBefore": True},
+                    "files": {
+                        "volatile": ["True"],
+                        "showLegacy": ["True"],
+                        "releasedBefore": True,
+                    },
                     "model-files": {
                         "volatile": ["True"],
                         "allModels": ["True"],
@@ -211,7 +219,9 @@ class TestMetadataApi:
         def make_custom_matcher(route: str):
             def custom_matcher(req: requests.Request):
                 params = parse_qs(urlparse(req.url).query)
-                if expected_params[route]["releasedBefore"]:  # We're expecting a releasedBefore
+                if expected_params[route][
+                    "releasedBefore"
+                ]:  # We're expecting a releasedBefore
                     assert "releasedBefore" in params
                     del params["releasedBefore"]
                 del expected_params[route]["releasedBefore"]

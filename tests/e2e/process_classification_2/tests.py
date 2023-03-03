@@ -45,7 +45,8 @@ class TestClassificationProcessing:
         # Check product status
         assert (
             '"GET /api/files?dateFrom=2020-10-22&dateTo=2020-10-22&site=bucharest'
-            '&developer=True&product=classification&showLegacy=True HTTP/1.1" 200 -' in data[0]
+            '&developer=True&product=classification&showLegacy=True HTTP/1.1" 200 -'
+            in data[0]
         )
 
         # GET input file
@@ -55,7 +56,10 @@ class TestClassificationProcessing:
         )
 
         # PUT file
-        assert '"PUT /files/20201022_bucharest_classification.nc HTTP/1.1" 201 -' in data[4]
+        assert (
+            '"PUT /files/20201022_bucharest_classification.nc HTTP/1.1" 201 -'
+            in data[4]
+        )
 
         # PUT images
         img_put = '"PUT /visualizations/20201022_bucharest_classification-'

@@ -35,7 +35,8 @@ def cftime2datetime64(time: netCDF4.Variable) -> npt.NDArray:
 
 def _fix_invalid_cftime_units(unit: str) -> str:
     match_ = re.match(
-        r"^(\w+) since (\d{1,2})\.(\d{1,2})\.(\d{4}), (\d{1,2}):(\d{1,2}):(\d{1,2})$", unit
+        r"^(\w+) since (\d{1,2})\.(\d{1,2})\.(\d{4}), (\d{1,2}):(\d{1,2}):(\d{1,2})$",
+        unit,
     )
     if match_:
         _unit = match_.group(1)

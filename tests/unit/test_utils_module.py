@@ -15,7 +15,10 @@ test_file_path = Path(__file__).parent.absolute()
         ("site", "bucharest"),
         ("measurementDate", "2020-11-21"),
         ("format", "HDF5 (NetCDF4)"),
-        ("checksum", "48e006f769a9352a42bf41beac449eae62aea545f4d3ba46bffd35759d8982ca"),
+        (
+            "checksum",
+            "48e006f769a9352a42bf41beac449eae62aea545f4d3ba46bffd35759d8982ca",
+        ),
         ("volatile", True),
         ("uuid", "2a211fc97e86489c9745e8027f86053a"),
         ("pid", ""),
@@ -103,7 +106,18 @@ def test_get_product_bucket():
     [
         ("1b", ["lidar", "model", "mwr", "radar", "disdrometer", "weather-station"]),
         ("1c", ["categorize", "categorize-voodoo"]),
-        ("2", ["classification", "classification-voodoo", "drizzle", "iwc", "lwc", "der", "ier"]),
+        (
+            "2",
+            [
+                "classification",
+                "classification-voodoo",
+                "drizzle",
+                "iwc",
+                "lwc",
+                "der",
+                "ier",
+            ],
+        ),
         (
             None,
             [
@@ -144,7 +158,10 @@ class TestHash:
 
     def test_sha256sum2(self):
         hash_sum = utils.sha256sum(self.file)
-        assert hash_sum == "48e006f769a9352a42bf41beac449eae62aea545f4d3ba46bffd35759d8982ca"
+        assert (
+            hash_sum
+            == "48e006f769a9352a42bf41beac449eae62aea545f4d3ba46bffd35759d8982ca"
+        )
 
 
 class TestsCreateProductPutPayload:

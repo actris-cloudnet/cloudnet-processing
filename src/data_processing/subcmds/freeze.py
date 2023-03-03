@@ -23,7 +23,9 @@ def main(args, storage_session: requests.Session | None = None):
     if args.site == "all":
         args.site = None
 
-    if args.start == utils.get_date_from_past(5) and args.stop == utils.get_date_from_past(-1):
+    if args.start == utils.get_date_from_past(
+        5
+    ) and args.stop == utils.get_date_from_past(-1):
         args.start = None
         args.stop = None
 
@@ -40,13 +42,17 @@ def main(args, storage_session: requests.Session | None = None):
         try:
             full_path = storage_api.download_product(row, temp_dir.name)
         except HTTPError as err:
-            utils.send_slack_alert(err, "pid", args, row["measurementDate"], row["product"]["id"])
+            utils.send_slack_alert(
+                err, "pid", args, row["measurementDate"], row["product"]["id"]
+            )
             continue
         s3key = f"legacy/{row['filename']}" if row["legacy"] else row["filename"]
         try:
             uuid, pid = pid_utils.add_pid_to_file(full_path)
             if UUID(uuid) != UUID(row["uuid"]):
-                logging.error(f"File {s3key} UUID mismatch (DB: {row['uuid']}, File: {uuid})")
+                logging.error(
+                    f"File {s3key} UUID mismatch (DB: {row['uuid']}, File: {uuid})"
+                )
                 error = True
                 continue
             logging.info(f'Mapping UUID "{uuid}" to PID "{pid}"...')
@@ -61,7 +67,9 @@ def main(args, storage_session: requests.Session | None = None):
             md_api.post("files", payload)
             storage_api.delete_volatile_product(s3key)
         except OSError as err:
-            utils.send_slack_alert(err, "pid", args, row["measurementDate"], row["product"]["id"])
+            utils.send_slack_alert(
+                err, "pid", args, row["measurementDate"], row["product"]["id"]
+            )
         for filename in glob.glob(f"{temp_dir.name}/*"):
             os.remove(filename)
     if error is True:

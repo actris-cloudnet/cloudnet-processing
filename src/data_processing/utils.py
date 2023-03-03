@@ -288,7 +288,14 @@ def get_fields_for_plot(cloudnet_file_type: str) -> tuple[list, int]:
             fields = ["der", "der_error", "der_retrieval_status"]
             max_alt = 6
         case "model":
-            fields = ["cloud_fraction", "uwind", "vwind", "temperature", "q", "pressure"]
+            fields = [
+                "cloud_fraction",
+                "uwind",
+                "vwind",
+                "temperature",
+                "q",
+                "pressure",
+            ]
         case "lidar":
             fields = [
                 "beta",
@@ -304,7 +311,17 @@ def get_fields_for_plot(cloudnet_file_type: str) -> tuple[list, int]:
         case "mwr":
             fields = ["lwp", "iwv"]
         case "radar":
-            fields = ["Zh", "v", "width", "ldr", "sldr", "zdr", "rho_hv", "srho_hv", "rho_cx"]
+            fields = [
+                "Zh",
+                "v",
+                "width",
+                "ldr",
+                "sldr",
+                "zdr",
+                "rho_hv",
+                "srho_hv",
+                "rho_cx",
+            ]
         case "disdrometer":
             fields = ["rainfall_rate", "n_particles"]
         case "drizzle":
@@ -492,7 +509,9 @@ def get_all_but_hidden_sites() -> list:
     return sites
 
 
-def get_from_data_portal_api(end_point: str, payload: dict | None = None) -> list | dict:
+def get_from_data_portal_api(
+    end_point: str, payload: dict | None = None
+) -> list | dict:
     """Reads from data portal API."""
     session = make_session()
     data_portal_url = fetch_data_portal_url()
@@ -526,17 +545,27 @@ def order_metadata(metadata: list) -> list:
 
 def get_valid_uuids(uuids: list, full_paths: list, valid_full_paths: list) -> list:
     """Returns valid uuids."""
-    return [uuid for uuid, full_path in zip(uuids, full_paths) if full_path in valid_full_paths]
+    return [
+        uuid
+        for uuid, full_path in zip(uuids, full_paths)
+        if full_path in valid_full_paths
+    ]
 
 
 def include_records_with_pattern_in_filename(metadata: list, pattern: str) -> list:
     """Includes only records with certain pattern."""
-    return [row for row in metadata if re.search(pattern.lower(), row["filename"].lower())]
+    return [
+        row for row in metadata if re.search(pattern.lower(), row["filename"].lower())
+    ]
 
 
 def exclude_records_with_pattern_in_filename(metadata: list, pattern: str) -> list:
     """Excludes records with certain pattern."""
-    return [row for row in metadata if not re.search(pattern.lower(), row["filename"].lower())]
+    return [
+        row
+        for row in metadata
+        if not re.search(pattern.lower(), row["filename"].lower())
+    ]
 
 
 def get_processing_dates(args) -> tuple[str, str]:
@@ -566,7 +595,9 @@ def dimensions2dict(dimensions: Dimensions) -> dict:
 
 def check_chm_version(filename: str, identifier: str):
     def print_warning(expected: str):
-        logging.warning(f"{expected} data submitted with incorrect identifier {identifier}")
+        logging.warning(
+            f"{expected} data submitted with incorrect identifier {identifier}"
+        )
 
     with netCDF4.Dataset(filename) as nc:
         source = getattr(nc, "source", "")[:3].lower()
@@ -582,7 +613,9 @@ class MyAdapter(HTTPAdapter):
         retry_strategy = Retry(total=10, backoff_factor=0.1)
         super().__init__(max_retries=retry_strategy)
 
-    def send(self, request, stream=False, timeout=None, verify=True, cert=None, proxies=None):
+    def send(
+        self, request, stream=False, timeout=None, verify=True, cert=None, proxies=None
+    ):
         if timeout is None:
             timeout = 120
         return super().send(request, stream, timeout, verify, cert, proxies)
@@ -612,7 +645,9 @@ def are_identical_nc_files(filename1: str, filename2: str) -> bool:
 def _compare_dimensions(nc1: netCDF4.Dataset, nc2: netCDF4.Dataset):
     dims1 = nc1.dimensions.keys()
     dims2 = nc2.dimensions.keys()
-    assert len(set(dims1) ^ set(dims2)) == 0, f"different dimensions: {dims1} vs {dims2}"
+    assert (
+        len(set(dims1) ^ set(dims2)) == 0
+    ), f"different dimensions: {dims1} vs {dims2}"
     for dim in nc1.dimensions:
         value1 = len(nc1.dimensions[dim])
         value2 = len(nc2.dimensions[dim])
@@ -643,12 +678,18 @@ def _compare_global_attributes(nc1: netCDF4.Dataset, nc2: netCDF4.Dataset):
 def _compare_variables(nc1: netCDF4.Dataset, nc2: netCDF4.Dataset):
     vars1 = nc1.variables.keys()
     vars2 = nc2.variables.keys()
-    assert len(set(vars1) ^ set(vars2)) == 0, f"different variables: {vars1} vs. {vars2}"
+    assert (
+        len(set(vars1) ^ set(vars2)) == 0
+    ), f"different variables: {vars1} vs. {vars2}"
     for name in vars1:
         value1 = nc1.variables[name][:]
         value2 = nc2.variables[name][:]
-        assert value1.shape == value2.shape, _log("shapes", name, value1.shape, value2.shape)
-        assert ma.allclose(value1, value2, rtol=1e-4), _log("variable values", name, value1, value2)
+        assert value1.shape == value2.shape, _log(
+            "shapes", name, value1.shape, value2.shape
+        )
+        assert ma.allclose(value1, value2, rtol=1e-4), _log(
+            "variable values", name, value1, value2
+        )
         for attr in ("dtype", "dimensions"):
             value1 = getattr(nc1.variables[name], attr)
             value2 = getattr(nc2.variables[name], attr)

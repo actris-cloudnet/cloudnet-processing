@@ -18,7 +18,10 @@ class StorageApi:
     def __init__(self, config: dict, session: requests.Session):
         self.session = session
         self._url = config["STORAGE_SERVICE_URL"]
-        self._auth = (config["STORAGE_SERVICE_USER"], config["STORAGE_SERVICE_PASSWORD"])
+        self._auth = (
+            config["STORAGE_SERVICE_USER"],
+            config["STORAGE_SERVICE_PASSWORD"],
+        )
 
     def upload_product(self, full_path: str, s3key: str) -> dict:
         """Upload a processed Cloudnet file."""
@@ -29,20 +32,26 @@ class StorageApi:
         res = self._put(url, full_path, headers).json()
         return {"version": res.get("version", ""), "size": int(res["size"])}
 
-    def download_raw_data(self, metadata: list, dir_name: str) -> tuple[list, list, list]:
+    def download_raw_data(
+        self, metadata: list, dir_name: str
+    ) -> tuple[list, list, list]:
         """Download raw files."""
         urls = [path.join(self._url, row["s3path"][1:]) for row in metadata]
         full_paths = [path.join(dir_name, row["filename"]) for row in metadata]
         for row, url, full_path in zip(metadata, urls, full_paths):
             self._get(url, full_path, int(row["size"]), row["checksum"], "md5")
         uuids = [row["uuid"] for row in metadata]
-        instrument_pids = [row["instrumentPid"] for row in metadata if "instrumentPid" in row]
+        instrument_pids = [
+            row["instrumentPid"] for row in metadata if "instrumentPid" in row
+        ]
         return full_paths, uuids, instrument_pids
 
     def download_product(self, metadata: dict, dir_name: str) -> str:
         """Download a product."""
         filename = metadata["filename"]
-        s3key = f"legacy/{filename}" if metadata.get("legacy", False) is True else filename
+        s3key = (
+            f"legacy/{filename}" if metadata.get("legacy", False) is True else filename
+        )
         bucket = utils.get_product_bucket(metadata["volatile"])
         url = path.join(self._url, bucket, s3key)
         full_path = path.join(dir_name, filename)
@@ -61,8 +70,12 @@ class StorageApi:
         headers = self._get_headers(full_path)
         self._put(url, full_path, headers=headers)
 
-    def _put(self, url: str, full_path: str, headers: dict | None = None) -> requests.Response:
-        res = self.session.put(url, data=open(full_path, "rb"), auth=self._auth, headers=headers)
+    def _put(
+        self, url: str, full_path: str, headers: dict | None = None
+    ) -> requests.Response:
+        res = self.session.put(
+            url, data=open(full_path, "rb"), auth=self._auth, headers=headers
+        )
         res.raise_for_status()
         return res
 
@@ -84,7 +97,9 @@ class StorageApi:
                     hash_sum.update(chunk)
                     res_size += len(chunk)
         if res_size != size:
-            raise StorageApiException(f"Invalid size: expected {size} bytes, got {res_size} bytes)")
+            raise StorageApiException(
+                f"Invalid size: expected {size} bytes, got {res_size} bytes)"
+            )
         if (res_checksum := hash_sum.hexdigest()) != checksum:
             raise StorageApiException(
                 f"Invalid checksum: expected {checksum} bytes, got {res_checksum} bytes)"

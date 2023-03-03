@@ -7,7 +7,9 @@ from data_processing import utils
 
 def main(args):
     log = ""
-    with Popen(args, stdout=PIPE, stderr=STDOUT, encoding="utf-8", errors="replace") as proc:
+    with Popen(
+        args, stdout=PIPE, stderr=STDOUT, encoding="utf-8", errors="replace"
+    ) as proc:
         assert proc.stdout is not None
         while proc.poll() is None:
             buf = proc.stdout.readline()

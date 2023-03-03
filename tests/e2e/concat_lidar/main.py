@@ -14,7 +14,9 @@ def main():
         f"{fpath}*nc",
     )
     concat_chm15k_files(chm15k_files, "2020-10-22", temp_file.name)
-    pytest.main(["-v", "tests/e2e/concat_lidar/lidar_tests.py", "--full_path", temp_file.name])
+    pytest.main(
+        ["-v", "tests/e2e/concat_lidar/lidar_tests.py", "--full_path", temp_file.name]
+    )
 
 
 if __name__ == "__main__":

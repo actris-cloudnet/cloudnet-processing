@@ -22,7 +22,9 @@ def main(component: str):
         case "minor":
             new_version = Version(old_version.major, old_version.minor + 1, 0)
         case "patch":
-            new_version = Version(old_version.major, old_version.minor, old_version.patch + 1)
+            new_version = Version(
+                old_version.major, old_version.minor, old_version.patch + 1
+            )
     if not _confirm(f"Updating version {old_version} -> {new_version}. Continue?"):
         return
     _write_version(new_version)
@@ -82,7 +84,9 @@ def _write_version(version: Version):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Bump cloudnet-processing version number.")
+    parser = argparse.ArgumentParser(
+        description="Bump cloudnet-processing version number."
+    )
     parser.add_argument(
         "component",
         choices=["major", "minor", "patch"],

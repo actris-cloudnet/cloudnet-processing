@@ -67,6 +67,10 @@ class Img(ProcessBase):
 def add_arguments(subparser):
     parser = subparser.add_parser("plot", help="Plot Cloudnet images.")
     parser.add_argument(
-        "-m", "--missing", action="store_true", help="Plot missing images only.", default=False
+        "-m",
+        "--missing",
+        action="store_true",
+        help="Plot missing images only.",
+        default=False,
     )
     return subparser

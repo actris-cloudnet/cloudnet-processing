@@ -87,7 +87,9 @@ def halo_file(tmpdir_factory):
     root_grp.createVariable("altitude", "f8")[:] = 10
     root_grp.title = "FMI HALO Doppler lidar"
     root_grp.location = "Hyytiälä"
-    root_grp.history = "28 Jan 2021 05:16:27 - Created by Antti Manninen <antti.manninen@fmi.fi>"
+    root_grp.history = (
+        "28 Jan 2021 05:16:27 - Created by Antti Manninen <antti.manninen@fmi.fi>"
+    )
     root_grp.Conventions = "CF-1.0"
     root_grp.close()
     return file_name

@@ -10,13 +10,41 @@ from housekeeping.utils import decode_bits
 @pytest.mark.parametrize(
     "filename,instrument_id,measurement_date",
     [
-        ("tests/data/raw/chm15k/00100_A202010212350_CHM170137.nc", "chm15k", "2020-10-21"),
-        ("tests/data/raw/chm15k/00100_A202010220835_CHM170137.nc", "chm15k", "2020-10-22"),
-        ("tests/data/raw/chm15k/00100_A202010221205_CHM170137.nc", "chm15k", "2020-10-22"),
-        ("tests/data/raw/chm15k/00100_A202010221900_CHM170137.nc", "chm15k", "2020-10-22"),
-        ("tests/data/raw/rpg-fmcw-94/201022_070003_P06_ZEN.LV1", "rpg-fmcw-94", "2020-10-22"),
-        ("tests/data/raw/rpg-fmcw-94/201022_100001_P06_ZEN.LV1", "rpg-fmcw-94", "2020-10-22"),
-        ("tests/data/raw/rpg-fmcw-94/201023_160000_P06_ZEN.LV1", "rpg-fmcw-94", "2020-10-23"),
+        (
+            "tests/data/raw/chm15k/00100_A202010212350_CHM170137.nc",
+            "chm15k",
+            "2020-10-21",
+        ),
+        (
+            "tests/data/raw/chm15k/00100_A202010220835_CHM170137.nc",
+            "chm15k",
+            "2020-10-22",
+        ),
+        (
+            "tests/data/raw/chm15k/00100_A202010221205_CHM170137.nc",
+            "chm15k",
+            "2020-10-22",
+        ),
+        (
+            "tests/data/raw/chm15k/00100_A202010221900_CHM170137.nc",
+            "chm15k",
+            "2020-10-22",
+        ),
+        (
+            "tests/data/raw/rpg-fmcw-94/201022_070003_P06_ZEN.LV1",
+            "rpg-fmcw-94",
+            "2020-10-22",
+        ),
+        (
+            "tests/data/raw/rpg-fmcw-94/201022_100001_P06_ZEN.LV1",
+            "rpg-fmcw-94",
+            "2020-10-22",
+        ),
+        (
+            "tests/data/raw/rpg-fmcw-94/201023_160000_P06_ZEN.LV1",
+            "rpg-fmcw-94",
+            "2020-10-23",
+        ),
     ],
 )
 def test_something(filename, instrument_id, measurement_date):

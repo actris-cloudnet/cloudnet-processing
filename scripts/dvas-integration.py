@@ -15,7 +15,9 @@ import requests
 
 from data_processing import utils
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
 
 def create_title(file):
@@ -76,7 +78,9 @@ def main():
         product = file["product"]
         site_dvas_id = site["dvasId"]
         file_vars = list(filter(lambda var: var["id"] == product["id"], variables))
-        var_ids = list(map(lambda var: re.sub(r".*-", "", var["id"]), file_vars[0]["variables"]))
+        var_ids = list(
+            map(lambda var: re.sub(r".*-", "", var["id"]), file_vars[0]["variables"])
+        )
         pid = (
             {"id": file["pid"].replace("https://hdl.handle.net/", ""), "type": "Handle"}
             if file["pid"]
@@ -121,7 +125,9 @@ def main():
                         "first_name": "Simo",  # mandatory
                         "last_name": "Tukiainen",  # mandatory
                         "organisation_name": "Finnish Meteorological Institute (FMI)",  # mandatory
-                        "role_code": ["processor"],  # mandatory, see fixed list in example above
+                        "role_code": [
+                            "processor"
+                        ],  # mandatory, see fixed list in example above
                         "country": "Finland",  # mandatory
                         "country_code": "FI",
                     }

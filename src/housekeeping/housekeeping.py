@@ -46,7 +46,9 @@ def _handle_rpg_lv1(src: bytes, metadata: dict) -> list[Point]:
 def _handle_chm15k_nc(src: bytes, metadata: dict) -> list[Point]:
     with Dataset("dataset.nc", memory=src) as nc:
         measurements = read_chm15k(nc)
-        return _make_points(measurements["time"], measurements, get_config("chm15k_nc"), metadata)
+        return _make_points(
+            measurements["time"], measurements, get_config("chm15k_nc"), metadata
+        )
 
 
 def get_reader(metadata: dict) -> Callable[[bytes, dict], list[Point]] | None:
@@ -123,7 +125,11 @@ def _make_points(
     for i, timestamp in enumerate(timestamps):
         if not valid_timestamps[i]:
             continue
-        fields = {key: values[i] for key, values in data.items() if not ma.is_masked(values[i])}
+        fields = {
+            key: values[i]
+            for key, values in data.items()
+            if not ma.is_masked(values[i])
+        }
         if not fields:
             continue
         point = Point.from_dict(

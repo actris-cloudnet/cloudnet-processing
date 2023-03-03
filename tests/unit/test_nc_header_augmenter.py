@@ -77,16 +77,23 @@ class TestMwr:
         nc = netCDF4.Dataset(mwr_file)
         key = "lwp"
         for attr in ("long_name", "units", "standard_name"):
-            assert getattr(nc.variables[key], attr) == getattr(COMMON_ATTRIBUTES[key], attr)
+            assert getattr(nc.variables[key], attr) == getattr(
+                COMMON_ATTRIBUTES[key], attr
+            )
         time = nc.variables["time"][:]
-        assert nc.variables["time"].units == f'hours since {self.data["date"]} 00:00:00 +00:00'
+        assert (
+            nc.variables["time"].units
+            == f'hours since {self.data["date"]} 00:00:00 +00:00'
+        )
         assert nc.variables["time"].dtype == "double"
         assert np.all(np.diff(time) > 0)
         for key in ("altitude", "latitude", "longitude"):
             assert key in nc.variables
             assert nc.variables[key][:] == float(self.data["site_meta"][key]), key
             for attr in ("long_name", "units"):
-                assert getattr(nc.variables[key], attr) == getattr(COMMON_ATTRIBUTES[key], attr)
+                assert getattr(nc.variables[key], attr) == getattr(
+                    COMMON_ATTRIBUTES[key], attr
+                )
         nc.close()
         run_quality_tests(self.data["full_path"])
 
@@ -101,7 +108,10 @@ class TestMwr:
         assert nc.Conventions == "CF-1.8"
         assert nc.variables["lwp"].units == "g m-2"
         time = nc.variables["time"][:]
-        assert nc.variables["time"].units == f'hours since {self.data["date"]} 00:00:00 +00:00'
+        assert (
+            nc.variables["time"].units
+            == f'hours since {self.data["date"]} 00:00:00 +00:00'
+        )
         assert nc.variables["time"].dtype == "double"
         assert np.all(np.diff(time) > 0)
         nc.close()
@@ -203,7 +213,10 @@ class TestModel:
         nc = netCDF4.Dataset(self.data["full_path"])
         assert nc.Conventions == "CF-1.8"
         time = nc.variables["time"][:]
-        assert nc.variables["time"].units == f'hours since {self.data["date"]} 00:00:00 +00:00'
+        assert (
+            nc.variables["time"].units
+            == f'hours since {self.data["date"]} 00:00:00 +00:00'
+        )
         assert nc.variables["time"].dtype == "float32"
         assert np.all(np.diff(time) > 0)
         nc.close()

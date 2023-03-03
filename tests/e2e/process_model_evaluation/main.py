@@ -23,7 +23,9 @@ def main():
         temp_file, source_data, site, date, identifier, True, products
     )
     main_args = [f"-s={site}", f"--date={date}", "-p=l3-cf", "me"]
-    utils.process(session, main_args, temp_file, SCRIPT_PATH, processing_mode="model_evaluation")
+    utils.process(
+        session, main_args, temp_file, SCRIPT_PATH, processing_mode="model_evaluation"
+    )
 
 
 if __name__ == "__main__":

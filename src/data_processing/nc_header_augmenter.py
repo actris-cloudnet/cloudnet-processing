@@ -17,7 +17,9 @@ from data_processing import utils
 from data_processing.utils import MiscError
 
 
-def fix_legacy_file(legacy_file_full_path: str, target_full_path: str, data: dict) -> str:
+def fix_legacy_file(
+    legacy_file_full_path: str, target_full_path: str, data: dict
+) -> str:
     """Fixes legacy netCDF file."""
     with (
         netCDF4.Dataset(legacy_file_full_path, "r") as nc_legacy,
@@ -29,10 +31,14 @@ def fix_legacy_file(legacy_file_full_path: str, target_full_path: str, data: dic
         legacy.add_history("")
 
         if legacy.nc.location == "polarstern":
-            legacy.nc.cloudnetpy_version = f"Custom CloudnetPy ({legacy.nc.cloudnetpy_version})"
+            legacy.nc.cloudnetpy_version = (
+                f"Custom CloudnetPy ({legacy.nc.cloudnetpy_version})"
+            )
 
             if legacy.nc_raw.cloudnet_file_type == "lidar":
-                legacy.nc.instrument_pid = "https://hdl.handle.net/21.12132/3.31c4f71cf1a74e03"
+                legacy.nc.instrument_pid = (
+                    "https://hdl.handle.net/21.12132/3.31c4f71cf1a74e03"
+                )
 
             if hasattr(legacy.nc, "source_file_uuids"):
                 valid_uuids = []
@@ -123,7 +129,9 @@ def harmonize_parsivel_file(data: dict) -> str:
     ) as nc:
         parsivel = ParsivelNc(nc_raw, nc, data)
         valid_ind = parsivel.get_valid_time_indices()
-        parsivel.copy_file_contents(time_ind=valid_ind, skip=("lat", "lon", "zsl", "time_bnds"))
+        parsivel.copy_file_contents(
+            time_ind=valid_ind, skip=("lat", "lon", "zsl", "time_bnds")
+        )
         parsivel.fix_variable_names()
         parsivel.convert_time()
         parsivel.add_date()
@@ -162,7 +170,10 @@ class Level1Nc:
         time.calendar = "standard"
 
     def copy_file_contents(
-        self, keys: tuple | None = None, time_ind: list | None = None, skip: tuple | None = None
+        self,
+        keys: tuple | None = None,
+        time_ind: list | None = None,
+        skip: tuple | None = None,
     ):
         """Copies all variables and global attributes from one file to another.
         Optionally copies only certain keys and / or uses certain time indices only.
@@ -208,7 +219,9 @@ class Level1Nc:
             var[:] = self.data["site_meta"][key]
             self.harmonize_standard_attributes(key)
 
-    def add_global_attributes(self, cloudnet_file_type: str, instrument: instruments.Instrument):
+    def add_global_attributes(
+        self, cloudnet_file_type: str, instrument: instruments.Instrument
+    ):
         """Adds standard global attributes."""
         location = utils.read_site_info(self.data["site_name"])["name"]
         self.nc.Conventions = "CF-1.8"
@@ -280,8 +293,14 @@ class Level1Nc:
             delattr(self.nc, name)
 
     @staticmethod
-    def _screen_data(variable: netCDF4.Variable, time_ind: list | None = None) -> np.ndarray:
-        if variable.ndim > 0 and time_ind is not None and variable.dimensions[0] == "time":
+    def _screen_data(
+        variable: netCDF4.Variable, time_ind: list | None = None
+    ) -> np.ndarray:
+        if (
+            variable.ndim > 0
+            and time_ind is not None
+            and variable.dimensions[0] == "time"
+        ):
             if variable.ndim == 1:
                 return variable[time_ind]
             if variable.ndim == 2:
@@ -332,7 +351,9 @@ class HaloNc(Level1Nc):
     def check_zenith_angle(self):
         """Checks zenith angle value."""
         threshold = 15
-        if (zenith_angle := np.median(self.nc.variables["zenith_angle"][:])) > threshold:
+        if (
+            zenith_angle := np.median(self.nc.variables["zenith_angle"][:])
+        ) > threshold:
             raise MiscError(f"Invalid zenith angle {zenith_angle}")
 
     def add_range(self):
@@ -400,7 +421,9 @@ class HatproNc(Level1Nc):
         lwp = self.nc.variables["lwp"][:]
         positive_lwp_values = lwp[lwp > 0] / 1000
         if (median_value := np.median(positive_lwp_values)) > threshold_kg:
-            raise MiscError(f"Invalid LWP data, median value: {np.round(median_value, 2)} kg")
+            raise MiscError(
+                f"Invalid LWP data, median value: {np.round(median_value, 2)} kg"
+            )
 
     def sort_time(self):
         """Sorts time array."""
@@ -449,7 +472,9 @@ class HatproNc(Level1Nc):
                 fill_value=getattr(variable, "_FillValue", None),
             )
             self._copy_variable_attributes(variable, var_out)
-            var_out[:] = variable[time_ind] if "time" in variable.dimensions else variable[:]
+            var_out[:] = (
+                variable[time_ind] if "time" in variable.dimensions else variable[:]
+            )
         self._copy_global_attributes()
 
 

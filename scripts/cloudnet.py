@@ -51,7 +51,11 @@ def _parse_args(args):
         subparsers = module.add_arguments(subparsers)
     group = parser.add_argument_group(title="General options")
     group.add_argument(
-        "-s", "--site", required=True, help="Site to process data from, e.g. hyytiala", type=str
+        "-s",
+        "--site",
+        required=True,
+        help="Site to process data from, e.g. hyytiala",
+        type=str,
     )
     group.add_argument(
         "-p",
@@ -76,7 +80,11 @@ def _parse_args(args):
         default=utils.get_date_from_past(-1),
     )
     group.add_argument(
-        "-d", "--date", type=str, metavar="YYYY-MM-DD", help="Single date to be processed."
+        "-d",
+        "--date",
+        type=str,
+        metavar="YYYY-MM-DD",
+        help="Single date to be processed.",
     )
     return parser.parse_args(args)
 

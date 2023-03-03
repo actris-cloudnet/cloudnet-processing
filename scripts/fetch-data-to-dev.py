@@ -58,7 +58,9 @@ def main(args: argparse.Namespace):
     for i, row in enumerate(upload_metadata, start=1):
         info = f'{i}/{len(upload_metadata)} {row["filename"]}'
         print(info, end="\r")
-        metadata = {key: row[key] for key in ("filename", "checksum", "measurementDate")}
+        metadata = {
+            key: row[key] for key in ("filename", "checksum", "measurementDate")
+        }
         metadata["site"] = params["site"]
         metadata["model"] = row["model"]["id"]
         filename = _download_file(row)
@@ -85,7 +87,9 @@ def _get_metadata(
     metadata = requests.get(url=url, params=payload).json()
     if extension:
         extension = extension.lower()
-        metadata = [row for row in metadata if row["filename"].lower().endswith(extension)]
+        metadata = [
+            row for row in metadata if row["filename"].lower().endswith(extension)
+        ]
     return metadata
 
 
@@ -135,7 +139,9 @@ if __name__ == "__main__":
         metavar="YYYY-MM-DD",
         help="Stopping date",
     )
-    parser.add_argument("-i", "--instruments", type=lambda s: s.split(","), help="Instrument types")
+    parser.add_argument(
+        "-i", "--instruments", type=lambda s: s.split(","), help="Instrument types"
+    )
     parser.add_argument(
         "-e", "--extension", help="Instrument file extension, e.g., -e=.LV1", type=str
     )

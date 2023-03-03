@@ -12,7 +12,9 @@ TIME_REF_LOCAL = 0
 TIME_REF_UTC = 1
 
 
-def _read_from_file(file: BinaryIO, fields: list[tuple[str, str]], count: int = 1) -> dict:
+def _read_from_file(
+    file: BinaryIO, fields: list[tuple[str, str]], count: int = 1
+) -> dict:
     arr = np.fromfile(file, np.dtype(fields), count)
     if (read := len(arr)) != count:
         raise IOError(f"Read {read} of {count} records from file")
@@ -92,7 +94,9 @@ class HatproHkd:
         if self.header["HKDSelect"] & 0x20:
             fields.append(("Status", "<i4"))
         self.data = _read_from_file(file, fields, self.header["N"])
-        self.data["T"] = np.datetime64("2001-01-01") + self.data["T"].astype("timedelta64[s]")
+        self.data["T"] = np.datetime64("2001-01-01") + self.data["T"].astype(
+            "timedelta64[s]"
+        )
         self.data |= decode_quality_flags(self.data["Quality"])
         self.data |= decode_status_flags(self.data["Status"])
 

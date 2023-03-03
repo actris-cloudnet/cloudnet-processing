@@ -52,17 +52,22 @@ class TestCategorizeProcessing:
         # Check product status
         assert (
             '"GET /api/files?dateFrom=2020-10-22&dateTo=2020-10-22&site=bucharest'
-            '&developer=True&product=categorize&showLegacy=True HTTP/1.1" 200 -' in data[0]
+            '&developer=True&product=categorize&showLegacy=True HTTP/1.1" 200 -'
+            in data[0]
         )
 
         # GET input files
         sub_str = "dateFrom=2020-10-22&dateTo=2020-10-22&site=bucharest&developer=True"
         for prod in ("radar", "lidar", "mwr"):
             assert (
-                count_strings(data, f'"GET /api/files?{sub_str}&product={prod} HTTP/1.1" 200 -')
+                count_strings(
+                    data, f'"GET /api/files?{sub_str}&product={prod} HTTP/1.1" 200 -'
+                )
                 == 1
             )
-        assert count_strings(data, f'"GET /api/model-files?{sub_str} HTTP/1.1" 200 -') == 1
+        assert (
+            count_strings(data, f'"GET /api/model-files?{sub_str} HTTP/1.1" 200 -') == 1
+        )
 
         # PUT file
         assert '"PUT /files/20201022_bucharest_categorize.nc HTTP/1.1" 201 -' in data[7]

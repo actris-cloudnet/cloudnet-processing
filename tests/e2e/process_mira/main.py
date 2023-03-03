@@ -26,7 +26,9 @@ raw_data = [
 
 def main():
     utils.start_test_servers(instrument, SCRIPT_PATH)
-    session = utils.register_storage_urls(temp_file, raw_data, site, date, instrument, True)
+    session = utils.register_storage_urls(
+        temp_file, raw_data, site, date, instrument, True
+    )
     main_args = [f"-s={site}", f"--date={date}", "-p=radar", "process", "-r"]
     utils.process(session, main_args, temp_file, SCRIPT_PATH)
 

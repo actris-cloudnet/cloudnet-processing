@@ -70,16 +70,21 @@ class ProcessBase:
 
     def print_info(self) -> None:
         logging.info(
-            f"Created: " f'{"New version" if self._create_new_version is True else "Volatile file"}'
+            f"Created: "
+            f'{"New version" if self._create_new_version is True else "Volatile file"}'
         )
 
-    def upload_product(self, product: str, uuid: Uuid, model_or_instrument_id: str) -> None:
+    def upload_product(
+        self, product: str, uuid: Uuid, model_or_instrument_id: str
+    ) -> None:
         if product in utils.get_product_types(level="3"):
             s3key = self._get_l3_product_key(product, model_or_instrument_id)
         else:
             s3key = self._get_product_key(model_or_instrument_id)
         file_info = self._storage_api.upload_product(self.temp_file.name, s3key)
-        payload = utils.create_product_put_payload(self.temp_file.name, file_info, site=self.site)
+        payload = utils.create_product_put_payload(
+            self.temp_file.name, file_info, site=self.site
+        )
         if product == "model":
             del payload["cloudnetpyVersion"]
             del payload["instrumentPid"]
@@ -125,12 +130,19 @@ class ProcessBase:
                 continue
 
             visualizations.append(
-                self._upload_img(temp_file.name, product_s3key, uuid, product, field, dimensions)
+                self._upload_img(
+                    temp_file.name, product_s3key, uuid, product, field, dimensions
+                )
             )
         self.md_api.put_images(visualizations, uuid)
 
     def compare_file_content(self, product: str):
-        payload = {"site": self.site, "product": product, "date": self.date_str, "showLegacy": True}
+        payload = {
+            "site": self.site,
+            "product": product,
+            "date": self.date_str,
+            "showLegacy": True,
+        }
         meta = self.md_api.get("api/files", payload)
         if not meta:
             return
@@ -153,10 +165,14 @@ class ProcessBase:
         return {
             "s3key": img_s3key,
             "variable_id": utils.get_var_id(product, field),
-            "dimensions": utils.dimensions2dict(dimensions) if dimensions is not None else None,
+            "dimensions": utils.dimensions2dict(dimensions)
+            if dimensions is not None
+            else None,
         }
 
-    def upload_quality_report(self, full_path: str, uuid: str, product: str | None = None) -> None:
+    def upload_quality_report(
+        self, full_path: str, uuid: str, product: str | None = None
+    ) -> None:
         quality_report = utils.create_quality_report(full_path, product=product)
         self.md_api.put("quality", uuid, quality_report)
 
@@ -182,7 +198,9 @@ class ProcessBase:
             models = [metadata[i]["model"]["id"] for i in range(len(metadata))]
             for m_id in models:
                 m_metas = [
-                    metadata for i in range(len(metadata)) if m_id in metadata[i]["model"]["id"]
+                    metadata
+                    for i in range(len(metadata))
+                    if m_id in metadata[i]["model"]["id"]
                 ]
                 models_meta[m_id] = m_metas
             return models_meta
@@ -227,7 +245,9 @@ class ProcessBase:
         if not metadata:
             raise RawDataMissingError
         is_unprocessed_data = self._is_unprocessed_data(metadata)
-        if not is_unprocessed_data and not (self.is_reprocess or self.is_reprocess_volatile):
+        if not is_unprocessed_data and not (
+            self.is_reprocess or self.is_reprocess_volatile
+        ):
             raise MiscError("Raw data already processed")
 
     @staticmethod
@@ -286,7 +306,11 @@ class ProcessBase:
     def _get_product_timestamp(self, product: str) -> str | None:
         payload = self._get_payload(product=product)
         product_metadata = self.md_api.get("api/files", payload)
-        if product_metadata and self.is_reprocess is False and self.is_reprocess_volatile is False:
+        if (
+            product_metadata
+            and self.is_reprocess is False
+            and self.is_reprocess_volatile is False
+        ):
             return product_metadata[0]["updatedAt"]
         return None
 
@@ -295,7 +319,9 @@ def _read_site_info(args) -> tuple:
     site_info = utils.read_site_info(args.site)
     site_id = site_info["id"]
     site_type = site_info["type"]
-    site_meta = {key: site_info[key] for key in ("latitude", "longitude", "altitude", "name")}
+    site_meta = {
+        key: site_info[key] for key in ("latitude", "longitude", "altitude", "name")
+    }
     return site_meta, site_id, site_type
 
 

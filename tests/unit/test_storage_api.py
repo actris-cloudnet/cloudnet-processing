@@ -50,7 +50,9 @@ class TestStorageApi:
         url = f"{mock_addr}{s3path[1:]}"
         adapter.register_uri("GET", url, body=file)
         storage_api = StorageApi(config, session)
-        full_paths, uuids, _ = storage_api.download_raw_data(metadata, self.temp_dir.name)
+        full_paths, uuids, _ = storage_api.download_raw_data(
+            metadata, self.temp_dir.name
+        )
         assert os.path.isfile(full_paths[0])
         assert full_paths[0] == f"{self.temp_dir.name}/{filename}"
         file.close()

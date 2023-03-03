@@ -66,7 +66,9 @@ class ProcessModelEvaluation(ProcessBase):
         payload = self._get_payload(product=l2_product)
         metadata = self.md_api.get("api/files", payload)
         if metadata:
-            l2_file = self._storage_api.download_product(metadata[0], self.temp_dir.name)
+            l2_file = self._storage_api.download_product(
+                metadata[0], self.temp_dir.name
+            )
             self._check_response_length(metadata)
             metadict = {l2_product: metadata[0], "model": model_meta[0][0]}
             self._check_source_status(full_product, metadict)
@@ -141,7 +143,9 @@ class ProcessModelEvaluation(ProcessBase):
             title=False,
         )
         visualizations.append(
-            self._upload_img(temp_file.name, product_s3key, uuid, product, "error", None)
+            self._upload_img(
+                temp_file.name, product_s3key, uuid, product, "error", None
+            )
         )
         # Single plots
         # Check this potential error here
@@ -156,7 +160,9 @@ class ProcessModelEvaluation(ProcessBase):
                 title=False,
             )
             visualizations.append(
-                self._upload_img(temp_file.name, product_s3key, uuid, product, field, None)
+                self._upload_img(
+                    temp_file.name, product_s3key, uuid, product, field, None
+                )
             )
         self.md_api.put_images(visualizations, uuid)
 
@@ -172,7 +178,9 @@ class ProcessModelEvaluation(ProcessBase):
 
 
 def add_arguments(subparser):
-    parser = subparser.add_parser("me", help="Process Cloudnet model evaluation (Level 3) data.")
+    parser = subparser.add_parser(
+        "me", help="Process Cloudnet model evaluation (Level 3) data."
+    )
     parser.add_argument(
         "-r",
         "--reprocess",

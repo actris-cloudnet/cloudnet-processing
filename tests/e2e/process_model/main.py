@@ -27,7 +27,13 @@ source_data = [
 def main():
     utils.start_test_servers(instrument, SCRIPT_PATH)
     session = utils.register_storage_urls(
-        temp_file, source_data, site, date, instrument, True, products=["ecmwf", "gdas1"]
+        temp_file,
+        source_data,
+        site,
+        date,
+        instrument,
+        True,
+        products=["ecmwf", "gdas1"],
     )
 
     main_args = [f"-s={site}", f"--date={date}", "-p=radar", "model"]

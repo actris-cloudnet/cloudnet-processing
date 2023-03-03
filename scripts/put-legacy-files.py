@@ -71,7 +71,9 @@ def main():
             s3key = _get_s3key(info)
             logging.info(s3key)
             legacy_file.temp_file = NamedTemporaryFile(suffix=legacy_file.filename)
-            uuid = fix_legacy_file(file, legacy_file.temp_file.name, data={"uuid": uuid})
+            uuid = fix_legacy_file(
+                file, legacy_file.temp_file.name, data={"uuid": uuid}
+            )
             try:
                 legacy_file.compare_file_content(product)
             except MiscError as err:
@@ -97,7 +99,9 @@ def main():
 
             # images
             assert isinstance(info["identifier"], str)
-            legacy_file.create_and_upload_images(product, uuid, info["identifier"], legacy=True)
+            legacy_file.create_and_upload_images(
+                product, uuid, info["identifier"], legacy=True
+            )
             legacy_file.upload_quality_report(legacy_file.temp_file.name, uuid)
             legacy_file.temp_file.close()
 
@@ -114,7 +118,11 @@ class LegacyFile(ProcessBase):
         month = self.filename[4:6]
         day = self.filename[6:8]
         with netCDF4.Dataset(self.full_path) as nc:
-            if int(nc.year) != int(year) or int(nc.month) != int(month) or int(nc.day) != int(day):
+            if (
+                int(nc.year) != int(year)
+                or int(nc.month) != int(month)
+                or int(nc.day) != int(day)
+            ):
                 raise utils.MiscError("Not sure which date this is")
         return f"{year}-{month}-{day}"
 
@@ -174,7 +182,11 @@ if __name__ == "__main__":
         "in the subdirectories, e.g., /temp/data/davos",
     )
     parser.add_argument(
-        "--year", "-y", type=int, help="Year to be processed. Default is all years.", default=None
+        "--year",
+        "-y",
+        type=int,
+        help="Year to be processed. Default is all years.",
+        default=None,
     )
     parser.add_argument(
         "--freeze", "-f", help="Add pid to files.", default=False, action="store_true"

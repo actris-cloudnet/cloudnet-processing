@@ -54,7 +54,13 @@ def concat_netcdf_files(
         output_file,
         concat_dimension=concat_dimension,
         variables=variables,
-        ignore=["minimum", "maximum", "number_integrated_samples", "Min_LWP", "Max_LWP"],
+        ignore=[
+            "minimum",
+            "maximum",
+            "number_integrated_samples",
+            "Min_LWP",
+            "Max_LWP",
+        ],
     )
     return valid_files
 
@@ -79,7 +85,10 @@ def concat_chm15k_files(files: list, date: str, output_file: str) -> list:
         raise ValueError
     variables = ["time", "beta_raw", "stddev", "nn1", "nn2", "nn3", "beta_att"]
     clib.concatenate_files(
-        valid_files, output_file, variables=variables, new_attributes={"Conventions": "CF-1.8"}
+        valid_files,
+        output_file,
+        variables=variables,
+        new_attributes={"Conventions": "CF-1.8"},
     )
     return valid_files
 
