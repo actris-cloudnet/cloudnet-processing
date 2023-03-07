@@ -307,7 +307,10 @@ class ProcessDisdrometer(ProcessInstrument):
             self.uuid.product = disdrometer2nc(full_path, *self._args, **self._kwargs)
         except DisdrometerDataError:
             data = self._get_payload_for_nc_file_augmenter(self.temp_file.name)
-            self.uuid.product = nc_header_augmenter.harmonize_parsivel_file(data)
+            try:
+                self.uuid.product = nc_header_augmenter.harmonize_parsivel_file(data)
+            except OSError:
+                raise DisdrometerDataError("Unable to process")
 
     def process_thies_lnm(self):
         full_paths, self.uuid.raw, self.instrument_pids = self.base.download_instrument(
