@@ -305,6 +305,8 @@ class Level1Nc:
                 return variable[time_ind]
             if variable.ndim == 2:
                 return variable[time_ind, :]
+            if variable.ndim == 3:
+                return variable[time_ind, :, :]
         return variable[:]
 
     @staticmethod
@@ -541,7 +543,7 @@ class ParsivelNc(Level1Nc):
         return valid_ind
 
     def copy_variable(self, key: str, time_ind: list | None = None):
-        """Copies one variable from source file to target.
+        """Copies one variable from Parsivel source file to target.
         Optionally uses certain time indices only.
         """
         if key not in self.nc_raw.variables.keys():
