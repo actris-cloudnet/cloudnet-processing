@@ -11,6 +11,7 @@ from cloudnetpy.instruments import (
     ceilo2nc,
     copernicus2nc,
     disdrometer2nc,
+    galileo2nc,
     hatpro2nc,
     mira2nc,
     pollyxt2nc,
@@ -97,7 +98,12 @@ class ProcessRadar(ProcessInstrument):
         )
 
     def process_galileo(self):
-        raise NotImplementedError("Galileo cloud radar not yet implemented!")
+        full_paths, self.uuid.raw, self.instrument_pids = self.base.download_instrument(
+            "galileo"
+        )
+        self.uuid.product = galileo2nc(
+            os.path.dirname(full_paths[0]), *self._args, **self._kwargs
+        )
 
     @staticmethod
     def _fix_suffices(dir_name: str, suffix: str) -> None:
