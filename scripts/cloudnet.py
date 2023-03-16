@@ -3,6 +3,7 @@
 import argparse
 import sys
 import warnings
+from collections import OrderedDict
 from tempfile import NamedTemporaryFile
 
 from data_processing import utils
@@ -86,7 +87,25 @@ def _parse_args(args):
         metavar="YYYY-MM-DD",
         help="Single date to be processed.",
     )
-    return parser.parse_args(args)
+
+    args_parsed = parser.parse_args(args)
+    valid_products = validate_products(args_parsed.products)
+    if len(valid_products) == 0:
+        raise ValueError("No valid products were given.")
+    args_parsed.products = valid_products
+    return args_parsed
+
+
+def validate_products(products: list) -> list:
+    """Returns a list of products to be processed."""
+    valid_products = utils.get_product_types_excluding_level3()
+    accepted_products = []
+    for prod in products:
+        if prod in valid_products:
+            accepted_products.append(prod)
+        if prod in ("l1b", "l1c", "l2"):
+            accepted_products.extend(utils.get_product_types(prod[1:]))
+    return list(OrderedDict.fromkeys(accepted_products))  # unique values
 
 
 if __name__ == "__main__":
