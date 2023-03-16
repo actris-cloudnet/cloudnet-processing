@@ -1,7 +1,11 @@
 import datetime
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 
+import netCDF4
+import numpy as np
 import pytest
+from numpy import ma
 
 import data_processing.utils as utils
 
@@ -149,7 +153,6 @@ def test_get_product_types(level, expected):
 
 
 class TestHash:
-
     file = "tests/data/products/20201121_bucharest_classification.nc"
 
     def test_md5sum(self):
@@ -165,7 +168,6 @@ class TestHash:
 
 
 class TestsCreateProductPutPayload:
-
     storage_response = {"size": 66, "version": "abc"}
 
     def test_with_legacy_file(self):
@@ -214,3 +216,42 @@ def test_are_identical_nc_files():
     fname3 = "tests/data/misc/20180703_granada_classification_reprocessed.nc"
     assert utils.are_identical_nc_files(fname1, fname2) is False
     assert utils.are_identical_nc_files(fname2, fname3) is True
+
+
+@pytest.mark.parametrize(
+    "array1, array2, expected",
+    [
+        ([1, 2, 3], [1, 2, 3], True),
+        ([1, 2, 3], [1, 2, 4], False),
+        (np.array([1, 2, 3]), np.array([1, 2, 3]), True),
+        (np.array([1, 2, 3]), np.array([1, 2, 4]), False),
+        (ma.array([1, 2, 3]), ma.array([1, 2, 3]), True),
+        (ma.array([1, 2, 3]), ma.array([1, 2, 4]), False),
+        (
+            ma.array([1.0, 2.0, 3.0], mask=[0, 0, 0]),
+            ma.array([1.0, 2.0, 3.0], mask=[0, 0, 0]),
+            True,
+        ),
+        (
+            ma.array([1.0, 2.0, 3.0], mask=[0, 0, 0]),
+            ma.array([1.0, 2.0, 3.0], mask=[0, 0, 1]),
+            False,
+        ),
+    ],
+)
+def test_compare_variables(array1, array2, expected: bool):
+    with (
+        netCDF4.Dataset(NamedTemporaryFile(), "w", format="NETCDF4_CLASSIC") as nc1,
+        netCDF4.Dataset(NamedTemporaryFile(), "w", format="NETCDF4_CLASSIC") as nc2,
+    ):
+        nc1.createDimension("time", 3)
+        nc2.createDimension("time", 3)
+        var1 = nc1.createVariable("time", "f8", ("time",))
+        var2 = nc2.createVariable("time", "f8", ("time",))
+        var1[:] = array1
+        var2[:] = array2
+        if expected:
+            utils._compare_variables(nc1, nc2)
+        else:
+            with pytest.raises(Exception):
+                utils._compare_variables(nc1, nc2)

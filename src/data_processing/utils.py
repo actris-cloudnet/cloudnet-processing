@@ -690,6 +690,11 @@ def _compare_variables(nc1: netCDF4.Dataset, nc2: netCDF4.Dataset):
         assert ma.allclose(value1, value2, rtol=1e-4), _log(
             "variable values", name, value1, value2
         )
+        if isinstance(value1, ma.MaskedArray) and isinstance(value2, ma.MaskedArray):
+            assert ma.allclose(
+                value1.mask,
+                value2.mask,
+            ), _log("variable masks", name, value1.mask, value2.mask)
         for attr in ("dtype", "dimensions"):
             value1 = getattr(nc1.variables[name], attr)
             value2 = getattr(nc2.variables[name], attr)
