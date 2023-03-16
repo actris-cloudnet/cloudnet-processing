@@ -98,7 +98,7 @@ def _parse_args(args):
 
 def validate_products(products: list) -> list:
     """Returns a list of products to be processed."""
-    valid_products = utils.get_product_types_excluding_level3()
+    valid_products = utils.get_product_types()
     accepted_products = []
     for prod in products:
         if prod in valid_products:
