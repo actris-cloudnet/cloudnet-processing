@@ -407,8 +407,10 @@ class HatproNc(Level1Nc):
         for invalid_name in self.bad_lwp_keys:
             if invalid_name in self.nc.variables:
                 self.nc.renameVariable(invalid_name, key)
-        assert key in self.nc.variables
-        lwp = self.nc.variables[key]
+        try:
+            lwp = self.nc.variables[key]
+        except KeyError:
+            raise MiscError(f"Missing mandatory variable {key} - abort processing")
         if "kg" in lwp.units:
             lwp[:] *= 1000
         self.harmonize_standard_attributes(key)
