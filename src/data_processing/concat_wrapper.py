@@ -89,6 +89,7 @@ def concat_chm15k_files(files: list, date: str, output_file: str) -> list:
         output_file,
         variables=variables,
         new_attributes={"Conventions": "CF-1.8"},
+        allow_difference=["latitude", "longitude"],
     )
     return valid_files
 
