@@ -107,7 +107,6 @@ class ProcessModelEvaluation(ProcessBase):
         model_or_instrument_id: str,
         legacy: bool = False,
     ) -> None:
-
         if "hidden" in self._site_type:
             logging.info("Skipping plotting for hidden site")
             return

@@ -9,7 +9,6 @@ SCRIPT_PATH = path.dirname(path.realpath(__file__))
 
 
 class TestChm15kProcessing:
-
     product = "lidar"
     instrument = "chm15k"
 

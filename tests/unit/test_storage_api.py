@@ -14,7 +14,6 @@ config = {
 
 
 class TestStorageApi:
-
     temp_dir = TemporaryDirectory()
 
     def test_download_product(self):

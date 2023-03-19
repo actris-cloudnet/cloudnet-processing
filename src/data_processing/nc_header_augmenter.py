@@ -389,7 +389,6 @@ class HaloNc(Level1Nc):
 
 
 class HatproNc(Level1Nc):
-
     bad_lwp_keys = ("LWP", "LWP_data", "clwvi", "atmosphere_liquid_water_content")
 
     def copy_file(self, all_keys: bool = False):

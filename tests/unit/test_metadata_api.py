@@ -57,7 +57,6 @@ files_response = """
 
 
 class TestMetadataApi:
-
     payload = {
         "product": "model",
         "site": "bucharest",

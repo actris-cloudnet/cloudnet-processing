@@ -10,7 +10,6 @@ SCRIPT_PATH = path.dirname(path.realpath(__file__))
 
 
 class TestClassificationProcessing:
-
     product = "classification"
     n_img = len(utils.get_fields_for_plot(product)[0])
 

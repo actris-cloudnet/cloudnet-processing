@@ -9,7 +9,6 @@ SCRIPT_PATH = path.dirname(path.realpath(__file__))
 
 
 class TestRPGFMCW94Processing:
-
     product = "radar"
     instrument = "rpg-fmcw-94"
 

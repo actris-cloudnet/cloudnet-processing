@@ -9,7 +9,6 @@ SCRIPT_PATH = path.dirname(path.realpath(__file__))
 
 
 class TestModelEvaluationProcessing:
-
     n_img = 4
 
     @pytest.fixture(autouse=True)

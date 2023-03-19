@@ -10,7 +10,6 @@ SCRIPT_PATH = path.dirname(path.realpath(__file__))
 
 
 class TestModelProcessing:
-
     product = "model"
     images = utils.get_fields_for_plot(product)[0]
 

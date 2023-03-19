@@ -25,7 +25,6 @@ subcommand_freeze = "freeze"
 if not sites:
     logging.info("No unprocessed model data")
 else:
-
     for site in sites:
         subprocess.check_call(
             [interpreter, wrapper, interpreter, script, "-s", site, subcommand]

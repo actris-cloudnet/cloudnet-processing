@@ -37,7 +37,6 @@ def register_storage_urls():
 
 
 def main():
-
     utils.start_server(
         5000, "tests/data/server/metadata/freeze", f"{SCRIPT_PATH}/md.log"
     )

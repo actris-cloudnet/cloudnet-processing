@@ -13,7 +13,6 @@ class Server(BaseHTTPRequestHandler):
         self._set_headers(200)
 
     def do_POST(self, code=200, separate_product_responses=False):
-
         root = argv[1]
 
         folder = self._get_product_folder(separate_product_responses)

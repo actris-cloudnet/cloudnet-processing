@@ -9,7 +9,6 @@ SCRIPT_PATH = path.dirname(path.realpath(__file__))
 
 
 class TestMIRAProcessing:
-
     product = "radar"
     instrument = "mira"
     n_img = 4
