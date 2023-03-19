@@ -126,7 +126,7 @@ class ProcessBase:
                     dpi=120,
                 )
             except (IndexError, ValueError, TypeError) as err:
-                logging.info(f"Skipping plotting {field}: {err}")
+                logging.debug(f"Skipping plotting {field}: {err}")
                 continue
 
             visualizations.append(
