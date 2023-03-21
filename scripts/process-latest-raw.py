@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
 import subprocess
-from sys import argv
 
 from data_processing import utils
 
-default_sites = utils.get_cloudnet_sites()
-additional_sites = argv[1:]
-sites = default_sites + additional_sites
+sites = utils.get_all_but_hidden_sites()
 
 wrapper = "scripts/wrapper.py"
 script = "scripts/cloudnet.py"
