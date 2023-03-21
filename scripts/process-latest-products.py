@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
 import subprocess
 from datetime import datetime, timedelta, timezone
-from sys import argv
 
 from data_processing import utils
 
-default_sites = utils.get_cloudnet_sites()
-additional_sites = argv[1:]
-sites = default_sites + additional_sites
+sites = utils.get_all_but_hidden_sites()
+sites = [site for site in sites if not site.startswith("arm-")]
 
 interpreter = "python3"
 script = "scripts/cloudnet.py"
