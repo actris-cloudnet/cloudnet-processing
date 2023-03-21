@@ -33,17 +33,13 @@ def main(args: argparse.Namespace):
         info = f'{i}/{len(upload_metadata)} {row["filename"]}'
         print(info, end="\r")
         metadata = {
-            key: row[key]
-            for key in (
-                "filename",
-                "checksum",
-                "instrument",
-                "instrumentPid",
-                "measurementDate",
-            )
+            "filename": row["filename"],
+            "checksum": row["checksum"],
+            "instrument": row["instrument"]["id"],
+            "instrumentPid": row["instrumentPid"],
+            "site": params["site"],
+            "measurementDate": row["measurementDate"],
         }
-        metadata["instrument"]["auxiliary"] = False
-        metadata["site"] = params["site"]
         filename = _download_file(row)
         _submit_to_local_ss("upload", filename, metadata, info)
         if not args.save:
@@ -59,10 +55,12 @@ def main(args: argparse.Namespace):
         info = f'{i}/{len(upload_metadata)} {row["filename"]}'
         print(info, end="\r")
         metadata = {
-            key: row[key] for key in ("filename", "checksum", "measurementDate")
+            "filename": row["filename"],
+            "checksum": row["checksum"],
+            "model": row["model"]["id"],
+            "measurementDate": row["measurementDate"],
+            "site": params["site"],
         }
-        metadata["site"] = params["site"]
-        metadata["model"] = row["model"]["id"]
         filename = _download_file(row)
         _submit_to_local_ss("model-upload", filename, metadata, info)
         if not args.save:
