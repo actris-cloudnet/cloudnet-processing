@@ -157,7 +157,26 @@ Process missing model files for Munich:
 
 ## Other scripts
 
-Code that is not involved in the cloudnet data processing chain can be found in other scripts under the `scripts` directory.
+Code that is not involved in the Cloudnet data processing chain can be found in other scripts under the `scripts` directory.
+
+### `fetch-data-to-dev.py`
+
+Fetch data from production to development environment.
+
+    usage: fetch-data-to-dev.py [-h] [-d YYYY-MM-DD] [--start YYYY-MM-DD] [--stop YYYY-MM-DD] [-i INSTRUMENTS] [-e EXTENSION] [-s] site
+
+Optional arguments:
+
+| Short | Long            | Description                                                                         |
+|:------|:----------------|:------------------------------------------------------------------------------------|
+| `-h`  | `--help`        | Show help and exit.                                                                 |
+| `-s`  | `--site`        | Site to download data from, e.g, `hyytiala`.                                        |
+| `-d`  | `--date`        | Single date to be downloaded. Alternatively, `--start` and `--stop` can be defined. |
+|       | `--start`       | Starting date.                                                                      |
+|       | `--stop`        | Stopping date.                                                                      |
+| `-i`  | `--instruments` | Instruments to be downloaded, e.g, `cl51,hatpro`.                                   |
+| `-e`  | `--extension`   | File extension to be downloaded, e.g, `.LV1`.                                       |
+| `-s`  | `--save`        | Store downloaded files in `download` directory.                                     |
 
 ### `put-legacy-files.py`
 
