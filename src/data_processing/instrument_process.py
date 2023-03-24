@@ -162,7 +162,8 @@ class ProcessLidar(ProcessInstrument):
             "pollyxt"
         )
         site_meta = self.base.site_meta
-        site_meta["snr_limit"] = 25
+        # Take this later from calibration DB
+        site_meta["snr_limit"] = 125 if self.base.site == "neumayer" else 25
         self.uuid.product = pollyxt2nc(
             os.path.dirname(full_paths[0]),
             self.temp_file.name,
