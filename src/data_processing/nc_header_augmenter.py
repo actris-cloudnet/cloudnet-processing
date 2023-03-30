@@ -112,6 +112,33 @@ def harmonize_halo_file(data: dict) -> str:
         halo.add_zenith_angle()
         halo.check_zenith_angle()
         halo.add_range()
+        halo.clean_variable_attributes()
+        halo.fix_time_units()
+        for attribute in ("units", "long_name", "standard_name"):
+            halo.harmonize_attribute(attribute)
+        halo.add_history("lidar")
+        shutil.copy(temp_file.name, data["full_path"])
+    return uuid
+
+
+def harmonize_halo_calibrated_file(data: dict) -> str:
+    """Harmonizes calibrated HALO Doppler lidar netCDF file."""
+    temp_file = NamedTemporaryFile()
+    with (
+        netCDF4.Dataset(data["full_path"], "r") as nc_raw,
+        netCDF4.Dataset(temp_file.name, "w", format="NETCDF4_CLASSIC") as nc,
+    ):
+        halo = HaloNcCalibrated(nc_raw, nc, data)
+        valid_ind = halo.get_valid_time_indices()
+        halo.copy_file(valid_ind)
+        halo.clean_global_attributes()
+        halo.add_geolocation()
+        halo.add_date()
+        halo.add_global_attributes("lidar", instruments.HALO)
+        uuid = halo.add_uuid()
+        halo.add_zenith_angle()
+        halo.check_zenith_angle()
+        halo.add_range()
         halo.add_wavelength()
         halo.clean_variable_attributes()
         halo.fix_time_units()
@@ -176,7 +203,9 @@ class Level1Nc:
         skip: tuple | None = None,
     ):
         """Copies all variables and global attributes from one file to another.
-        Optionally copies only certain keys and / or uses certain time indices only.
+
+        Optionally copies only certain keys and / or uses certain time
+        indices only.
         """
         for key, dimension in self.nc_raw.dimensions.items():
             if key == "time" and time_ind is not None:
@@ -190,8 +219,9 @@ class Level1Nc:
         self._copy_global_attributes()
 
     def copy_variable(self, key: str, time_ind: list | None = None):
-        """Copies one variable from source file to target. Optionally uses certain
-        time indices only.
+        """Copies one variable from source file to target.
+
+        Optionally uses certain time indices only.
         """
         if key not in self.nc_raw.variables.keys():
             logging.warning(f"Key {key} not found from the source file.")
@@ -340,6 +370,70 @@ class ModelNc(Level1Nc):
 
 
 class HaloNc(Level1Nc):
+    def clean_global_attributes(self):
+        for attr in self.nc.ncattrs():
+            if attr in {"filename"}:
+                delattr(self.nc, attr)
+
+    def copy_file(self, valid_ind: list):
+        """Copies useful variables only."""
+        keys = (
+            "beta",
+            "beta_raw",
+            "v",
+            "time",
+            "wavelength",
+            "elevation",
+            "range",
+        )
+        self.copy_file_contents(keys, valid_ind)
+
+    def add_zenith_angle(self):
+        """Converts elevation to zenith angle."""
+        self.nc.renameVariable("elevation", "zenith_angle")
+        self.nc.variables["zenith_angle"][:] = 90 - self.nc.variables["zenith_angle"][:]
+
+    def check_zenith_angle(self):
+        """Checks zenith angle value."""
+        threshold = 15
+        if (
+            zenith_angle := np.median(self.nc.variables["zenith_angle"][:])
+        ) > threshold:
+            raise MiscError(f"Invalid zenith angle {zenith_angle}")
+
+    def add_range(self):
+        """Converts halo 'range', which is actually height, to true range
+        (towards LOS)."""
+        self.nc.renameVariable("range", "height")
+        self.copy_variable("range")
+        zenith_angle = np.median(self.nc.variables["zenith_angle"][:])
+        self.nc.variables["range"][:] /= np.cos(np.radians(zenith_angle))
+        self.nc.variables["height"][:] += self.nc.variables["altitude"][:]
+
+    def add_wavelength(self):
+        """Converts wavelength m to nm."""
+        self.nc.variables["wavelength"][:] *= 1e9
+
+    def fix_time_units(self):
+        """Fixes time units."""
+        self.nc.variables["time"].units = self._get_time_units()
+        self.nc.variables["time"].calendar = "standard"
+
+    def get_valid_time_indices(self) -> list:
+        """Finds valid time indices."""
+        time_stamps = self.nc_raw.variables["time"][:]
+        valid_ind: list[int] = []
+        for ind, t in enumerate(time_stamps):
+            if 0 < t < 24:
+                if len(valid_ind) > 1 and t <= time_stamps[valid_ind[-1]]:
+                    continue
+                valid_ind.append(ind)
+        if not valid_ind:
+            raise ValidTimeStampError
+        return valid_ind
+
+
+class HaloNcCalibrated(Level1Nc):
     def copy_file(self, valid_ind: list):
         """Copies useful variables only."""
         keys = ("beta", "beta_raw", "time", "wavelength", "elevation", "range")
@@ -545,6 +639,7 @@ class ParsivelNc(Level1Nc):
 
     def copy_variable(self, key: str, time_ind: list | None = None):
         """Copies one variable from Parsivel source file to target.
+
         Optionally uses certain time indices only.
         """
         if key not in self.nc_raw.variables.keys():

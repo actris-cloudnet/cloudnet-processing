@@ -231,9 +231,16 @@ class ProcessCloudnet(ProcessBase):
         include_pattern: str | None = None,
         largest_only: bool = False,
         exclude_pattern: str | None = None,
+        date_from: str | None = None,
+        date_to: str | None = None,
     ) -> tuple[list | str, list, list]:
         """Download raw files for given instrument."""
-        payload = self._get_payload(instrument=instrument, skip_created=True)
+        payload = self._get_payload(
+            instrument=instrument,
+            skip_created=True,
+            date_from=date_from,
+            date_to=date_to,
+        )
         upload_metadata = self.md_api.get("upload-metadata", payload)
         if include_pattern is not None:
             upload_metadata = utils.include_records_with_pattern_in_filename(
@@ -291,7 +298,12 @@ class ProcessCloudnet(ProcessBase):
         }
         payload = self._get_payload()
         upload_metadata = self.md_api.get("upload-metadata", payload)
-        uploaded_instruments = {x["instrument"]["id"] for x in upload_metadata}
+        upload_metadata_halo = self.md_api.get(
+            "upload-metadata", self._get_payload(instrument="halo-doppler-lidar")
+        )
+        uploaded_instruments = {
+            x["instrument"]["id"] for x in upload_metadata + upload_metadata_halo
+        }
         instrument = list(possible_instruments & uploaded_instruments)
         if len(instrument) == 0:
             raise RawDataMissingError

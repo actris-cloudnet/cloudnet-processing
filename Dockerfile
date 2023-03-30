@@ -8,6 +8,7 @@ WORKDIR /app
 
 COPY . /app
 
+RUN pip3 install --upgrade pip
 RUN pip3 install torch --extra-index-url https://download.pytorch.org/whl/cpu \
   && pip3 install --no-cache-dir -e .
 

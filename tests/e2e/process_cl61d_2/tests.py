@@ -30,31 +30,35 @@ class Test:
         fix = f"dateFrom={self.date}&dateTo={self.date}&site={self.site}&developer=True"
         instru = f"&instrument={self.instrument}"
 
-        assert f"GET /api/files?{fix}&product={self.product}&showLegacy=True" in data[0]
+        assert (
+            f"GET /api/files?{fix}&product={self.product}&showLegacy=True"
+            in "\n".join(data)
+        )
 
         # Detect uploaded instruments
-        assert "GET /api/instruments" in data[1]
-        assert f"GET /upload-metadata?{fix}" in data[2]
+        assert "GET /api/instruments" in "\n".join(data)
+        assert f"GET /upload-metadata?{fix}" in "\n".join(data)
 
         # Try to find daily raw file
         assert (
             f"GET /upload-metadata?{fix}{instru}&status%5B%5D=uploaded&status%5B%5D=processed"
-            in data[3]
+            in "\n".join(data)
         )
 
         # It exists, get uploaded raw files and append
-        assert f"GET /upload-metadata?{fix}{instru}&status=uploaded" in data[4]
+        assert f"GET /upload-metadata?{fix}{instru}&status=uploaded" in "\n".join(data)
 
         # Submit updated daily raw file
-        assert "POST /upload/metadata" in data[5]
-        assert "PUT /upload/data" in data[6]
+        assert "POST /upload/metadata" in "\n".join(data)
+        assert "PUT /upload/data" in "\n".join(data)
 
         # GET calibration
-        assert "GET /api/calibration" in data[7]
+        assert "GET /api/calibration" in "\n".join(data)
 
         # PUT product file
         assert (
-            f"PUT /files/{self.date_short}_{self.site}_{self.instrument}.nc" in data[9]
+            f"PUT /files/{self.date_short}_{self.site}_{self.instrument}.nc"
+            in "\n".join(data)
         )
 
         # Update status of raw files

@@ -160,7 +160,7 @@ def test_halo_fix(filename):
         "site_meta": {"altitude": 10, "latitude": 25, "longitude": 52.5},
         "full_path": temp_file.name,
     }
-    nca.harmonize_halo_file(data)
+    nca.harmonize_halo_calibrated_file(data)
     run_quality_tests(data["full_path"])
     nc = netCDF4.Dataset(data["full_path"])
     wavelength = nc.variables["wavelength"][:]
