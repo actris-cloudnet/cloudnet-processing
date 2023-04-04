@@ -111,16 +111,14 @@ def get_product_types_excluding_level3() -> list:
     return l1b + l1c + l2
 
 
-def get_calibration_factor(site: str, date: str, instrument: str) -> float | None:
+def fetch_calibration(instrument_pid: str, date: str) -> dict | None:
     """Gets calibration factor."""
     session = make_session()
     data_portal_url = fetch_data_portal_url()
     url = f"{data_portal_url}api/calibration"
-    payload = {"site": site, "date": date, "instrument": instrument}
+    payload = {"instrumentPid": instrument_pid, "date": date}
     res = session.get(url, params=payload)
-    if not res.ok:
-        return None
-    return res.json()[0].get("calibrationFactor", None)
+    return res.json() if res.ok else None
 
 
 def get_model_types() -> list:

@@ -23,7 +23,7 @@ from cloudnetpy.utils import is_timestamp
 
 from data_processing import concat_wrapper, nc_header_augmenter, utils
 from data_processing.processing_tools import Uuid
-from data_processing.utils import RawDataMissingError, SkipBlock
+from data_processing.utils import RawDataMissingError, SkipBlock, fetch_calibration
 
 
 class ProcessInstrument:
@@ -40,20 +40,6 @@ class ProcessInstrument:
 
     def _get_kwargs(self) -> dict:
         return {"uuid": self.uuid.volatile, "date": self.base.date_str}
-
-    def _fetch_calibration_factor(self, instrument: str) -> dict:
-        meta = self.base.site_meta.copy()
-        meta["calibration_factor"] = utils.get_calibration_factor(
-            self.base.site, self.base.date_str, instrument
-        )
-        return meta
-
-    def _fetch_range_corrected(self, site_meta_in: dict) -> dict:
-        meta = site_meta_in.copy()
-        date = utils.date_string_to_date(self.base.date_str)
-        if self.base.site == "norunda" and date > datetime.date(2020, 9, 6):
-            meta["range_corrected"] = False
-        return meta
 
     def _get_payload_for_nc_file_augmenter(self, full_path: str) -> dict:
         return {
@@ -134,14 +120,14 @@ class ProcessLidar(ProcessInstrument):
         )
         self.uuid.raw = _get_valid_uuids(raw_uuids, full_paths, valid_full_paths)
         utils.check_chm_version(self.base.daily_file.name, model)
-        self._call_ceilo2nc(model)
+        self._call_ceilo2nc()
 
     def process_ct25k(self):
         full_path, self.uuid.raw, self.instrument_pids = self.base.download_instrument(
             "ct25k", largest_only=True
         )
         shutil.move(full_path, self.base.daily_file.name)
-        self._call_ceilo2nc("ct25k")
+        self._call_ceilo2nc()
 
     def process_halo_doppler_lidar_calibrated(self):
         self._process_halo_lidar("-calibrated")
@@ -161,9 +147,8 @@ class ProcessLidar(ProcessInstrument):
         full_paths, self.uuid.raw, self.instrument_pids = self.base.download_instrument(
             "pollyxt"
         )
-        site_meta = self.base.site_meta
-        # Take this later from calibration DB
-        site_meta["snr_limit"] = 125 if self.base.site == "neumayer" else 25
+        calibration = self._fetch_pollyxt_calibration()
+        site_meta = self.base.site_meta | calibration
         self.uuid.product = pollyxt2nc(
             os.path.dirname(full_paths[0]),
             self.temp_file.name,
@@ -178,7 +163,7 @@ class ProcessLidar(ProcessInstrument):
         )
         full_paths.sort()
         utils.concatenate_text_files(full_paths, self.base.daily_file.name)
-        self._call_ceilo2nc("cl31")
+        self._call_ceilo2nc()
 
     def process_cl51(self):
         if self.base.site == "norunda":
@@ -200,7 +185,7 @@ class ProcessLidar(ProcessInstrument):
             logging.info("Shifting timestamps to UTC")
             offset_in_hours = -1
             _fix_cl51_timestamps(self.base.daily_file.name, offset_in_hours)
-        self._call_ceilo2nc("cl51")
+        self._call_ceilo2nc()
 
     def process_cl61d(self):
         model = "cl61d"
@@ -252,16 +237,16 @@ class ProcessLidar(ProcessInstrument):
         self.base.md_api.upload_instrument_file(
             self.base, model, filename, instrument_pid
         )
-        self._call_ceilo2nc(model)
+        self._call_ceilo2nc()
         self.uuid.raw = _get_valid_uuids(raw_uuids, full_paths, valid_full_paths)
 
     def _create_daily_file_name(self, model: str) -> str:
         date = self.base.date_str.replace("-", "")
         return f"{date}_{self.base.site}_{model}_{self.file_id}.nc"
 
-    def _call_ceilo2nc(self, instrument: str):
-        site_meta = self._fetch_calibration_factor(instrument)
-        site_meta = self._fetch_range_corrected(site_meta)
+    def _call_ceilo2nc(self):
+        calibration = self._fetch_ceilo_calibration()
+        site_meta = self.base.site_meta | calibration
         self.uuid.product = ceilo2nc(
             self.base.daily_file.name,
             self.temp_file.name,
@@ -269,6 +254,29 @@ class ProcessLidar(ProcessInstrument):
             uuid=self.uuid.volatile,
             date=self.base.date_str,
         )
+
+    def _fetch_ceilo_calibration(self) -> dict:
+        if not self.instrument_pids:
+            return {}
+        instrument_pid = self.instrument_pids[0]
+        calibration = fetch_calibration(instrument_pid, self.base.date_str)
+        if not calibration:
+            return {}
+        output = {}
+        if "calibration_factor" in calibration["data"]:
+            output["calibration_factor"] = calibration["data"]["calibration_factor"]
+        if "range_corrected" in calibration["data"]:
+            output["range_corrected"] = calibration["data"]["range_corrected"]
+        return output
+
+    def _fetch_pollyxt_calibration(self) -> dict:
+        if not self.instrument_pids:
+            return {}
+        instrument_pid = self.instrument_pids[0]
+        calibration = fetch_calibration(instrument_pid, self.base.date_str)
+        if not calibration:
+            return {}
+        return {"snr_limit": calibration["data"].get("snr_limit", 25)}
 
 
 class ProcessMwr(ProcessInstrument):
