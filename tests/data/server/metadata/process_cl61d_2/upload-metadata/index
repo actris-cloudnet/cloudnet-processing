@@ -21,6 +21,7 @@
       "auxiliary": false,
       "humanReadableName": "Vaisala CL61d ceilometer"
     },
+    "instrumentPid": "http://pid.test/cl61d",
     "size": "744783",
     "createdAt": "2021-09-14T14:49:16.783Z",
     "updatedAt": "2021-09-14T14:49:17.138Z",
@@ -49,6 +50,7 @@
       "auxiliary": false,
       "humanReadableName": "Vaisala CL61d ceilometer"
     },
+    "instrumentPid": "http://pid.test/cl61d",
     "size": "744783",
     "createdAt": "2021-09-14T14:49:17.149Z",
     "updatedAt": "2021-09-14T14:49:17.697Z",
@@ -77,6 +79,7 @@
       "auxiliary": false,
       "humanReadableName": "Vaisala CL61d ceilometer"
     },
+    "instrumentPid": "http://pid.test/cl61d",
     "size": "744783",
     "createdAt": "2021-09-14T14:49:17.708Z",
     "updatedAt": "2021-09-14T14:49:18.259Z",
@@ -105,6 +108,7 @@
       "auxiliary": false,
       "humanReadableName": "Vaisala CL61d ceilometer"
     },
+    "instrumentPid": "http://pid.test/cl61d",
     "size": "744783",
     "createdAt": "2021-09-14T14:49:18.308Z",
     "updatedAt": "2021-09-14T14:49:18.813Z",
@@ -133,6 +137,7 @@
       "auxiliary": false,
       "humanReadableName": "Vaisala CL61d ceilometer"
     },
+    "instrumentPid": "http://pid.test/cl61d",
     "size": "1254338",
     "createdAt": "2021-09-15T12:07:52.832Z",
     "updatedAt": "2021-09-15T12:07:53.443Z",

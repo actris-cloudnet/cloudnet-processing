@@ -85,7 +85,7 @@ class TestChm15kProcessing:
 
         # GET calibration
         assert (
-            '"GET /api/calibration?site=bucharest&date=2020-10-22&instrument=chm15k HTTP/1.1" 200 -'
+            '"GET /api/calibration?instrumentPid=http%3A%2F%2Fpid.test%2Fchm15k&date=2020-10-22 HTTP/1.1" 200 -'
             in data[4]
         )
 

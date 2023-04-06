@@ -1,1 +1,5 @@
-[{ "createdAt": "2021-03-18T11:08:40.223Z", "calibrationFactor": 5e-12 }]
+{
+  "createdAt": "2021-03-18T11:08:40.223Z",
+  "updatedAt": "2021-03-18T11:08:40.223Z",
+  "data": { "calibrationFactor": 5e-12 }
+}
