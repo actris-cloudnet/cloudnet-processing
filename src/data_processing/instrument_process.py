@@ -256,7 +256,7 @@ class ProcessLidar(ProcessInstrument):
         )
 
     def _fetch_ceilo_calibration(self) -> dict:
-        output = {}
+        output: dict = {}
         if not self.instrument_pids:
             return output
         instrument_pid = self.instrument_pids[0]
