@@ -82,7 +82,9 @@ def _get_metadata(
         "dateTo": stop.isoformat() if stop else None,
         "instrument": instruments,
     }
-    metadata = requests.get(url=url, params=payload).json()
+    res = requests.get(url=url, params=payload)
+    res.raise_for_status()
+    metadata = res.json()
     if extension:
         extension = extension.lower()
         metadata = [
@@ -96,6 +98,7 @@ def _download_file(row: dict):
     if not os.path.isdir(dir_name):
         os.mkdir(dir_name)
     res = requests.get(row["downloadUrl"])
+    res.raise_for_status()
     filename = f'{dir_name}{row["filename"]}'
     with open(filename, "wb") as f:
         f.write(res.content)
