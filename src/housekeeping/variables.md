@@ -41,8 +41,6 @@ The alarm flag is activated in the following cases:
 <td>K</td>
 <td>
 
-
-
 </td>
 </tr>
 <tr>
@@ -53,8 +51,6 @@ The alarm flag is activated in the following cases:
 </td>
 <td>K</td>
 <td>
-
-
 
 </td>
 </tr>
@@ -299,7 +295,7 @@ When a bit is set ‘1’, the corresponding channel is ok, otherwise the channe
 <td></td>
 <td>
 
- ‘1’ = noise diode of humidity profiler ok, ‘0’ = noise diode not working
+‘1’ = noise diode of humidity profiler ok, ‘0’ = noise diode not working
 
 </td>
 </tr>
@@ -311,8 +307,6 @@ When a bit is set ‘1’, the corresponding channel is ok, otherwise the channe
 </td>
 <td>K</td>
 <td>
-
-
 
 </td>
 </tr>
@@ -337,8 +331,6 @@ When a bit is set ‘1’, the corresponding channel is ok, otherwise the channe
 </td>
 <td>K</td>
 <td>
-
-
 
 </td>
 </tr>
@@ -672,8 +664,6 @@ When a bit is set ‘1’, the corresponding channel is ok, otherwise the channe
 <td>K</td>
 <td>
 
-
-
 </td>
 </tr>
 <tr>
@@ -697,8 +687,6 @@ When a bit is set ‘1’, the corresponding channel is ok, otherwise the channe
 </td>
 <td>K</td>
 <td>
-
-
 
 </td>
 </tr>
@@ -976,8 +964,6 @@ Quality of detector signal
 <td>K</td>
 <td>
 
-
-
 </td>
 </tr>
 <tr>
@@ -1015,8 +1001,6 @@ Quality of detector signal
 <td>K</td>
 <td>
 
-
-
 </td>
 </tr>
 <tr>
@@ -1053,8 +1037,6 @@ Quality of detector signal
 </td>
 <td>K</td>
 <td>
-
-
 
 </td>
 </tr>
@@ -1119,8 +1101,6 @@ Quality of detector signal
 <td>h</td>
 <td>
 
-
-
 </td>
 </tr>
 <tr>
@@ -1131,8 +1111,6 @@ Quality of detector signal
 </td>
 <td>K</td>
 <td>
-
-
 
 </td>
 </tr>

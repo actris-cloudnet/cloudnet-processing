@@ -1,1 +1,29 @@
-[{"uuid":"0d4fbbd9-85c3-451c-989b-4f26e044c0ed","version":"tx7.PKGJshdC8lwOcmilyiCIzx3MtJF","volatile":true,"measurementDate":"2020-10-22","cloudnetpyVersion":"","checksum":"ce141a626d64555095436921ec130800b47125ec4dc87768e5e94a0856ee6a98","size":501524,"format":"NetCDF3","sourceFileIds":null,"createdAt":"2020-12-01T09:25:58.723Z","updatedAt":"2020-12-01T09:25:58.723Z","site":{"id":"bucharest","humanReadableName":"Bucharest","latitude":44.348,"longitude":26.029,"altitude":93,"gaw":"Unknown","country":"Romania","isTestSite":false,"isModelOnlySite":false},"product":{"id":"model","humanReadableName":"Model","level":"1"},"downloadUrl":"https://cloudnet.fmi.fi/api/download/product/0d4fbbd9-85c3-451c-989b-4f26e044c0ed/20201022_bucharest_ecmwf.nc","filename":"20201022_bucharest_ecmwf.nc"}]
+[
+  {
+    "uuid": "0d4fbbd9-85c3-451c-989b-4f26e044c0ed",
+    "version": "tx7.PKGJshdC8lwOcmilyiCIzx3MtJF",
+    "volatile": true,
+    "measurementDate": "2020-10-22",
+    "cloudnetpyVersion": "",
+    "checksum": "ce141a626d64555095436921ec130800b47125ec4dc87768e5e94a0856ee6a98",
+    "size": 501524,
+    "format": "NetCDF3",
+    "sourceFileIds": null,
+    "createdAt": "2020-12-01T09:25:58.723Z",
+    "updatedAt": "2020-12-01T09:25:58.723Z",
+    "site": {
+      "id": "bucharest",
+      "humanReadableName": "Bucharest",
+      "latitude": 44.348,
+      "longitude": 26.029,
+      "altitude": 93,
+      "gaw": "Unknown",
+      "country": "Romania",
+      "isTestSite": false,
+      "isModelOnlySite": false
+    },
+    "product": { "id": "model", "humanReadableName": "Model", "level": "1" },
+    "downloadUrl": "https://cloudnet.fmi.fi/api/download/product/0d4fbbd9-85c3-451c-989b-4f26e044c0ed/20201022_bucharest_ecmwf.nc",
+    "filename": "20201022_bucharest_ecmwf.nc"
+  }
+]

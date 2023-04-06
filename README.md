@@ -23,20 +23,19 @@ The following scripts are provided:
 
 The main wrapper for running all the processing steps.
 
-
     usage: cloudnet.py [-h] -s SITE [-d YYYY-MM-DD] [--start YYYY-MM-DD]
                            [--stop YYYY-MM-DD] [-p ...] COMMAND ...
 
 Positional arguments:
 
 | Name      | Description                                                                                                                      |
-|:----------|:---------------------------------------------------------------------------------------------------------------------------------|
+| :-------- | :------------------------------------------------------------------------------------------------------------------------------- |
 | `command` | Command to execute. Must be one of `freeze`, `process`, `model`, `me`, `plot`, or `qc`. Commands are detailed [here](#commands). |
 
 General arguments. These arguments are available for most commands. The arguments must be issued before the command argument.
 
 | Short | Long         | Default           | Description                                                                        |
-|:------|:-------------|:------------------|:-----------------------------------------------------------------------------------|
+| :---- | :----------- | :---------------- | :--------------------------------------------------------------------------------- |
 | `-h`  | `--help`     |                   | Show help and exit.                                                                |
 | `-s`  | `--site`     |                   | Site to process data from, e.g, `hyytiala`. Required.                              |
 | `-d`  | `--date`     |                   | Single date to be processed. Alternatively, `--start` and `--stop` can be defined. |
@@ -53,21 +52,21 @@ The `process` command processes standard Cloudnet products, such as `radar`, `li
 In addition to the general arguments, it accepts the following special arguments.
 
 | Short | Long                   | Default | Description                                                                                                                                    |
-|:------|:-----------------------|:--------|:-----------------------------------------------------------------------------------------------------------------------------------------------|
+| :---- | :--------------------- | :------ | :--------------------------------------------------------------------------------------------------------------------------------------------- |
 | `-r`  | `--reprocess`          | `False` | See below.                                                                                                                                     |
 |       | `--reprocess_volatile` | `False` | Reprocess volatile files only (and create new volatile file from unprocessed).                                                                 |
 | `-u`  | `--updated_since`      |         | Process all raw files submitted within `--updated_since` in days. Ignores other arguments than `--site`. Note: Creates only Level 1b products. |
 
 Behavior of the `--reprocess` flag:
 
-| Existing file                   | `--reprocess`   | Action                                                               |
-|:--------------------------------|:----------------|:---------------------------------------------------------------------|
-| -                               | `False`         | Create volatile file.                                                |
-| -                               | `True`          | Create volatile file.                                                |
-| `volatile`                      | `False`         | Reprocess the volatile file (Level 1 products only if new raw data). |
-| `volatile`                      | `True`          | Reprocess the volatile file.                                         |
-| `stable` (legacy or not)        | `False`         | -                                                                    |
-| `stable`                        | `True`          | Create new stable file version.                                      |
+| Existing file            | `--reprocess` | Action                                                               |
+| :----------------------- | :------------ | :------------------------------------------------------------------- |
+| -                        | `False`       | Create volatile file.                                                |
+| -                        | `True`        | Create volatile file.                                                |
+| `volatile`               | `False`       | Reprocess the volatile file (Level 1 products only if new raw data). |
+| `volatile`               | `True`        | Reprocess the volatile file.                                         |
+| `stable` (legacy or not) | `False`       | -                                                                    |
+| `stable`                 | `True`        | Create new stable file version.                                      |
 
 ### `plot`
 
@@ -76,7 +75,7 @@ Don't process anything, only plot images for products.
 Additional arguments:
 
 | Short | Long        | Default | Description                                                              |
-|:------|:------------|:--------|:-------------------------------------------------------------------------|
+| :---- | :---------- | :------ | :----------------------------------------------------------------------- |
 | `-m`  | `--missing` | `False` | Only plot images for files that do not have any previous images plotted. |
 
 ### `qc`
@@ -86,9 +85,8 @@ Don't process anything, only create quality control reports for products.
 Additional arguments:
 
 | Short | Long      | Default | Description                                                                                                              |
-|:------|:----------|:--------|:-------------------------------------------------------------------------------------------------------------------------|
+| :---- | :-------- | :------ | :----------------------------------------------------------------------------------------------------------------------- |
 | `-f`  | `--force` | `False` | Force creation of QC reports. Otherwise might be skipped if an report exist and `cloudnetpy-qc` version has not changed. |
-
 
 ### `model`
 
@@ -106,7 +104,7 @@ Create Cloudnet level 3 model evaluation products (experimental).
 Additional arguments:
 
 | Short | Long          | Default | Description                                                           |
-|:------|:--------------|:--------|:----------------------------------------------------------------------|
+| :---- | :------------ | :------ | :-------------------------------------------------------------------- |
 | `-r`  | `--reprocess` | `False` | Process new version of the stable files and reprocess volatile files. |
 
 ### `freeze`
@@ -118,7 +116,7 @@ Note: With this script, all sites can be selected using `--site all` argument.
 Additional arguments:
 
 | Short | Long      | Default | Description                                                                                                             |
-|:------|:----------|:--------|:------------------------------------------------------------------------------------------------------------------------|
+| :---- | :-------- | :------ | :---------------------------------------------------------------------------------------------------------------------- |
 | `-f`  | `--force` | False   | Ignore environment variables `FREEZE_AFTER_DAYS` and `FREEZE_MODEL_AFTER_DAYS`. Allows freezing recently changed files. |
 
 ### `housekeeping`
@@ -126,6 +124,7 @@ Additional arguments:
 Processes housekeeping data based on [config file](src/housekeeping/config.toml).
 
 Example usage:
+
 ```bash
 ./scripts/cloudnet.py -s palaiseau housekeeping
 ./scripts/cloudnet.py -s palaiseau -d 2022-11-01 housekeeping
@@ -168,7 +167,7 @@ Fetch data from production to development environment.
 Optional arguments:
 
 | Short | Long            | Description                                                                         |
-|:------|:----------------|:------------------------------------------------------------------------------------|
+| :---- | :-------------- | :---------------------------------------------------------------------------------- |
 | `-h`  | `--help`        | Show help and exit.                                                                 |
 | `-s`  | `--site`        | Site to download data from, e.g, `hyytiala`.                                        |
 | `-d`  | `--date`        | Single date to be downloaded. Alternatively, `--start` and `--stop` can be defined. |
@@ -187,13 +186,13 @@ Upload Matlab processed legacy products (`categorize`, and level 2 products) to 
 Positional arguments:
 
 | Name   | Description                                                            |
-|:-------|:-----------------------------------------------------------------------|
+| :----- | :--------------------------------------------------------------------- |
 | `path` | Root path of the site containing legacy data, e.g, `/foo/bar/munich/`. |
 
 Optional arguments:
 
 | Short | Long       | Default | Description                     |
-|:------|:-----------|:--------|:--------------------------------|
+| :---- | :--------- | :------ | :------------------------------ |
 | `-h`  | `--help`   |         | Show help and exit.             |
 | `-y`  | `--year`   | all     | Process only some certain year. |
 | `-f`  | `--freeze` | False   | Add PID to file.                |
@@ -201,7 +200,7 @@ Optional arguments:
 Behavior:
 
 | Existing file         | Action                                    |
-|:----------------------|:------------------------------------------|
+| :-------------------- | :---------------------------------------- |
 | -                     | Add stable legacy file.                   |
 | `volatile`            | -                                         |
 | `stable` (legacy)     | -                                         |

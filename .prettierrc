@@ -1,0 +1,8 @@
+{
+  "overrides": [
+    {
+      "files": "tests/data/server/**/*",
+      "options": { "parser": "json" }
+    }
+  ]
+}
