@@ -256,27 +256,32 @@ class ProcessLidar(ProcessInstrument):
         )
 
     def _fetch_ceilo_calibration(self) -> dict:
+        output = {}
         if not self.instrument_pids:
-            return {}
+            return output
         instrument_pid = self.instrument_pids[0]
         calibration = fetch_calibration(instrument_pid, self.base.date_str)
         if not calibration:
-            return {}
-        output = {}
+            return output
         if "calibration_factor" in calibration["data"]:
-            output["calibration_factor"] = calibration["data"]["calibration_factor"]
+            output["calibration_factor"] = float(
+                calibration["data"]["calibration_factor"]
+            )
         if "range_corrected" in calibration["data"]:
             output["range_corrected"] = calibration["data"]["range_corrected"]
         return output
 
     def _fetch_pollyxt_calibration(self) -> dict:
+        output = {"snr_limit": 25.0}
         if not self.instrument_pids:
-            return {}
+            return output
         instrument_pid = self.instrument_pids[0]
         calibration = fetch_calibration(instrument_pid, self.base.date_str)
         if not calibration:
-            return {}
-        return {"snr_limit": calibration["data"].get("snr_limit", 25)}
+            return output
+        if "snr_limit" in calibration["data"]:
+            output["snr_limit"] = float(calibration["data"]["snr_limit"])
+        return output
 
 
 class ProcessMwr(ProcessInstrument):
