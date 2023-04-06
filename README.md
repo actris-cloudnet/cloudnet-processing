@@ -175,7 +175,7 @@ Optional arguments:
 |       | `--stop`        | Stopping date.                                                                      |
 | `-i`  | `--instruments` | Instruments to be downloaded, e.g, `cl51,hatpro`.                                   |
 | `-e`  | `--extension`   | File extension to be downloaded, e.g, `.LV1`.                                       |
-| `-s`  | `--save`        | Store downloaded files in `download` directory.                                     |
+|       | `--save`        | Store downloaded files in `download` directory.                                     |
 
 ### `put-legacy-files.py`
 

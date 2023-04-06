@@ -120,7 +120,13 @@ def _submit_to_local_ss(end_point: str, filename, metadata: dict, info: str):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("site", type=str)
+    parser.add_argument(
+        "-s",
+        "--site",
+        required=True,
+        help="Site to process data from, e.g. hyytiala",
+        type=str,
+    )
     parser.add_argument(
         "-d",
         "--date",
@@ -141,13 +147,15 @@ if __name__ == "__main__":
         help="Stopping date",
     )
     parser.add_argument(
-        "-i", "--instruments", type=lambda s: s.split(","), help="Instrument types"
+        "-i",
+        "--instruments",
+        type=lambda s: s.split(","),
+        help="Instrument types, e.g. cl51,hatpro",
     )
     parser.add_argument(
         "-e", "--extension", help="Instrument file extension, e.g., -e=.LV1", type=str
     )
     parser.add_argument(
-        "-s",
         "--save",
         action="store_true",
         default=False,
