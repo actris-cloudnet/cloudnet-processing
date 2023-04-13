@@ -307,7 +307,7 @@ class ProcessMwr(ProcessInstrument):
 
     def process_radiometrics(self):
         full_paths, self.uuid.raw, self.instrument_pids = self.base.download_instrument(
-            "radiometrics"
+            "radiometrics", exclude_pattern=r".gz$"
         )
         full_paths.sort()
         for full_path in full_paths[1:]:
