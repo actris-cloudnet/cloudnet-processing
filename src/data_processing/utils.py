@@ -462,15 +462,6 @@ def concatenate_text_files(filenames: list, output_filename: str) -> None:
                 shutil.copyfileobj(source, target)
 
 
-def remove_header_lines(filename: str, n_lines: int):
-    """Removes first lines of text file."""
-    with open(filename, "r+") as file:
-        lines = file.readlines()
-        file.seek(0)
-        file.truncate()
-        file.writelines(lines[n_lines:])
-
-
 def init_logger(args, log_filename: str):
     """Initializes logger."""
     logger = logging.getLogger()

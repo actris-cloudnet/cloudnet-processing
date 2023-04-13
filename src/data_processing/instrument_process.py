@@ -68,9 +68,11 @@ class ProcessRadar(ProcessInstrument):
         full_paths, self.uuid.raw, self.instrument_pids = self.base.download_instrument(
             "mira"
         )
-        dir_name = _unzip_gz_files(full_paths)
-        self._fix_suffices(dir_name, ".mmclx")
-        self.uuid.product = mira2nc(dir_name, *self._args, **self._kwargs)
+        _unzip_gz_files(full_paths)
+        self._fix_suffices(self.base.temp_dir.name, ".mmclx")
+        self.uuid.product = mira2nc(
+            self.base.temp_dir.name, *self._args, **self._kwargs
+        )
 
     def process_basta(self):
         full_path, self.uuid.raw, self.instrument_pids = self.base.download_instrument(
@@ -348,14 +350,11 @@ class ProcessMwr(ProcessInstrument):
 
     def process_radiometrics(self):
         full_paths, self.uuid.raw, self.instrument_pids = self.base.download_instrument(
-            "radiometrics", exclude_pattern=r".gz$"
+            "radiometrics"
         )
-        full_paths.sort()
-        for full_path in full_paths[1:]:
-            utils.remove_header_lines(full_path, 1)
-        utils.concatenate_text_files(full_paths, self.base.daily_file.name)
+        _unzip_gz_files(full_paths)
         self.uuid.product = radiometrics2nc(
-            self.base.daily_file.name, *self._args, **self._kwargs
+            self.base.temp_dir.name, *self._args, **self._kwargs
         )
 
 
@@ -400,14 +399,16 @@ def _get_valid_uuids(uuids: list, full_paths: list, valid_full_paths: list) -> l
     ]
 
 
-def _unzip_gz_files(full_paths: list) -> str:
-    for full_path in full_paths:
-        if full_path.endswith(".gz"):
-            filename = full_path.replace(".gz", "")
-            with gzip.open(full_path, "rb") as file_in:
-                with open(filename, "wb") as file_out:
-                    shutil.copyfileobj(file_in, file_out)
-    return os.path.dirname(full_paths[0])
+def _unzip_gz_files(full_paths: list):
+    for path_in in full_paths:
+        if not path_in.endswith(".gz"):
+            continue
+        logging.info(f"Decompressing {path_in}")
+        path_out = path_in.removesuffix(".gz")
+        with gzip.open(path_in, "rb") as file_in:
+            with open(path_out, "wb") as file_out:
+                shutil.copyfileobj(file_in, file_out)
+        os.remove(path_in)
 
 
 def _fix_cl51_timestamps(filename: str, hours: int) -> None:
