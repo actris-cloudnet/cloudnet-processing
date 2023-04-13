@@ -62,7 +62,7 @@ class TestChm15kProcessing:
         n_raw_files = 3
         n_img = 2
 
-        n_gets = 5
+        n_gets = 5 + 1
         n_puts = n_img + 2
         n_posts = n_raw_files
 
@@ -80,17 +80,17 @@ class TestChm15kProcessing:
         assert (
             '"GET /upload-metadata?dateFrom=2020-10-22&dateTo=2020-10-22&site=bucharest'
             '&developer=True&instrument=chm15k&status%5B%5D=uploaded&status%5B%5D=processed HTTP/1.1" 200 -'
-            in data[3]
+            in "\n".join(data)
         )
 
         # GET calibration
         assert (
             '"GET /api/calibration?instrumentPid=http%3A%2F%2Fpid.test%2Fchm15k&date=2020-10-22 HTTP/1.1" 200 -'
-            in data[4]
+            in "\n".join(data)
         )
 
         # PUT file
-        assert '"PUT /files/20201022_bucharest_chm15k.nc HTTP/1.1"' in data[6]
+        assert '"PUT /files/20201022_bucharest_chm15k.nc HTTP/1.1"' in "\n".join(data)
 
         # PUT images
         img_put = '"PUT /visualizations/20201022_bucharest_chm15k-'

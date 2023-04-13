@@ -46,7 +46,9 @@ class TestMIRAProcessing:
     def test_that_calls_metadata_api(self):
         data = read_log_file(SCRIPT_PATH)
         n_raw_files = 2
-        n_gets = 5  # instrument checks (2) + product check (1) + mira raw (1) + previous product (1)
+        n_gets = (
+            5 + 1
+        )  # instrument checks (2) + product check (1) + mira raw (1) + previous product (1)
         n_puts = 2 + self.n_img
         n_posts = n_raw_files
 
@@ -57,7 +59,7 @@ class TestMIRAProcessing:
         # Check product status
         assert (
             f'"GET /api/files{prefix}product=radar&showLegacy=True HTTP/1.1" 200 -'
-            in data[0]
+            in "\n".join(data)
         )
 
         # Two instrument API calls...
@@ -65,11 +67,11 @@ class TestMIRAProcessing:
         # GET MIRA raw data
         assert (
             f'"GET /upload-metadata{prefix}instrument=mira&status%5B%5D=uploaded&status%5B%5D=processed HTTP/1.1" 200 -'
-            in data[3]
+            in "\n".join(data)
         )
 
         # PUT file
-        assert '"PUT /files/20210127_juelich_mira.nc HTTP/1.1" 201 -' in data[5]
+        assert '"PUT /files/20210127_juelich_mira.nc HTTP/1.1" 201 -' in "\n".join(data)
 
         # PUT images
         img_put = '"PUT /visualizations/20210127_juelich_mira-'

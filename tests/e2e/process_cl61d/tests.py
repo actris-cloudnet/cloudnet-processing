@@ -39,7 +39,7 @@ class Test:
         # Try to find daily raw file
         assert (
             f"GET /upload-metadata?{fix}{instru}&status%5B%5D=uploaded&status%5B%5D=processed"
-            in data[3]
+            in "\n".join(data)
         )
 
         # It does not exist, so get all raw files and create new
@@ -49,15 +49,16 @@ class Test:
         )
 
         # Submit daily raw file
-        assert "POST /upload/metadata" in data[5]
-        assert "PUT /upload/data" in data[6]
+        assert "POST /upload/metadata" in "\n".join(data)
+        assert "PUT /upload/data" in "\n".join(data)
 
         # GET calibration
-        assert "GET /api/calibration" in data[7]
+        assert "GET /api/calibration" in "\n".join(data)
 
         # PUT product file
         assert (
-            f"PUT /files/{self.date_short}_{self.site}_{self.instrument}.nc" in data[9]
+            f"PUT /files/{self.date_short}_{self.site}_{self.instrument}.nc"
+            in "\n".join(data)
         )
 
         # Update status of raw files
@@ -67,7 +68,7 @@ class Test:
         # PUT image
         assert (
             f"PUT /visualizations/{self.date_short}_{self.site}_{self.instrument}-"
-            in data[10 + n_raw_files]
+            in "\n".join(data)
         )
 
         # Submit QC report

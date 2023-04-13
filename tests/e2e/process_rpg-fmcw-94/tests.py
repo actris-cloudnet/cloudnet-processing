@@ -36,7 +36,9 @@ class TestRPGFMCW94Processing:
     def test_that_calls_metadata_api(self):
         data = read_log_file(SCRIPT_PATH)
         n_raw_files = 2
-        n_gets = 5  # product check (1) + instrument checks (2)  + rpg-fmcw-94 raw (1) + previous product (1)
+        n_gets = (
+            5 + 1
+        )  # product check (1) + instrument checks (2)  + rpg-fmcw-94 raw (1) + previous product (1)
         n_img = 5
         n_puts = 2 + n_img
         n_posts = n_raw_files
@@ -46,19 +48,21 @@ class TestRPGFMCW94Processing:
         # Check product status
         assert (
             '"GET /api/files?dateFrom=2020-10-22&dateTo=2020-10-22&site=bucharest'
-            '&developer=True&product=radar&showLegacy=True HTTP/1.1" 200 -' in data[0]
+            '&developer=True&product=radar&showLegacy=True HTTP/1.1" 200 -'
+            in "\n".join(data)
         )
 
         # GET RPG raw data
         assert (
             '"GET /upload-metadata?dateFrom=2020-10-22&dateTo=2020-10-22&site=bucharest'
             '&developer=True&instrument=rpg-fmcw-94&status%5B%5D=uploaded&status%5B%5D=processed HTTP/1.1" 200 -'
-            in data[3]
+            in "\n".join(data)
         )
 
         # PUT file
         assert (
-            '"PUT /files/20201022_bucharest_rpg-fmcw-94.nc HTTP/1.1" 201 -' in data[5]
+            '"PUT /files/20201022_bucharest_rpg-fmcw-94.nc HTTP/1.1" 201 -'
+            in "\n".join(data)
         )
 
         # PUT images

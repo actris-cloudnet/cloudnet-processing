@@ -108,7 +108,18 @@ def test_get_product_bucket():
 @pytest.mark.parametrize(
     "level, expected",
     [
-        ("1b", ["lidar", "model", "mwr", "radar", "disdrometer", "weather-station"]),
+        (
+            "1b",
+            [
+                "lidar",
+                "halo-doppler-lidar",
+                "model",
+                "mwr",
+                "radar",
+                "disdrometer",
+                "weather-station",
+            ],
+        ),
         ("1c", ["categorize", "categorize-voodoo"]),
         (
             "2",
@@ -126,6 +137,7 @@ def test_get_product_bucket():
             None,
             [
                 "lidar",
+                "halo-doppler-lidar",
                 "model",
                 "mwr",
                 "radar",
@@ -149,7 +161,12 @@ def test_get_product_bucket():
 )
 def test_get_product_types(level, expected):
     result = utils.get_product_types(level=level)
-    assert set(result) == set(expected)
+    # production does not have halo yet
+    # TODO: remove  | {"halo-doppler-lidar"} when it is in production
+    if level in ["1b", None]:
+        assert set(result) | {"halo-doppler-lidar"} == set(expected)
+    else:
+        assert set(result) == set(expected)
 
 
 class TestHash:

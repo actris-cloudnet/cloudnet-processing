@@ -3,6 +3,7 @@ import glob
 import gzip
 import logging
 import os
+import pathlib
 import shutil
 
 from cloudnetpy.exceptions import DisdrometerDataError
@@ -20,6 +21,8 @@ from cloudnetpy.instruments import (
     ws2nc,
 )
 from cloudnetpy.utils import is_timestamp
+from haloreader.read import read as read_halo
+from haloreader.read import read_bg as read_halobg
 
 from data_processing import concat_wrapper, nc_header_augmenter, utils
 from data_processing.processing_tools import Uuid
@@ -99,6 +102,48 @@ class ProcessRadar(ProcessInstrument):
                 os.rename(filename, filename + suffix)
 
 
+class ProcessHaloDopplerLidar(ProcessInstrument):
+    def process_halo_doppler_lidar(self):
+        full_paths, self.uuid.raw, self.instrument_pids = self.base.download_instrument(
+            "halo-doppler-lidar", include_pattern=r"Stare.*\.hpl"
+        )
+        full_paths_bg, _, _ = self.base.download_instrument(
+            "halo-doppler-lidar",
+            include_pattern=r"Background.*\.txt",
+            date_from=str(
+                datetime.date.fromisoformat(self.base.date_str)
+                - datetime.timedelta(days=30)
+            ),
+        )
+        full_paths_ = [pathlib.Path(path) for path in full_paths]
+        full_paths_bg_ = [pathlib.Path(path) for path in full_paths_bg]
+        halo = read_halo(full_paths_)
+        halobg = read_halobg(full_paths_bg_)
+        if halo is None:
+            raise RawDataMissingError
+        if halobg is None:
+            raise RawDataMissingError
+        halo.correct_background(halobg)
+        halo.compute_beta()
+        screen = halo.compute_noise_screen()
+        halo.compute_beta_screened(screen)
+        halo.compute_doppler_velocity_screened(screen)
+        halo.convert_time_unit2cloudnet_time()
+        nc_buf = halo.to_nc(
+            nc_map={
+                "variables": {
+                    "beta": "beta_raw",
+                    "beta_screened": "beta",
+                    "doppler_velocity_screened": "v",
+                }
+            },
+            nc_exclude={"variables": {"beta_raw"}},
+        )
+        self.temp_file.write(nc_buf)
+        data = self._get_payload_for_nc_file_augmenter(self.temp_file.name)
+        self.uuid.product = nc_header_augmenter.harmonize_halo_file(data)
+
+
 class ProcessLidar(ProcessInstrument):
     file_id = "clu-generated-daily"
 
@@ -130,18 +175,14 @@ class ProcessLidar(ProcessInstrument):
         self._call_ceilo2nc()
 
     def process_halo_doppler_lidar_calibrated(self):
-        self._process_halo_lidar("-calibrated")
+        self._process_halo_lidar_calibrated()
 
-    def process_halo_doppler_lidar(self):
-        """This can be removed at some point."""
-        self._process_halo_lidar()
-
-    def _process_halo_lidar(self, suffix: str = ""):
+    def _process_halo_lidar_calibrated(self):
         full_path, self.uuid.raw, self.instrument_pids = self.base.download_instrument(
-            f"halo-doppler-lidar{suffix}", largest_only=True
+            "halo-doppler-lidar-calibrated", largest_only=True
         )
         data = self._get_payload_for_nc_file_augmenter(full_path)
-        self.uuid.product = nc_header_augmenter.harmonize_halo_file(data)
+        self.uuid.product = nc_header_augmenter.harmonize_halo_calibrated_file(data)
 
     def process_pollyxt(self):
         full_paths, self.uuid.raw, self.instrument_pids = self.base.download_instrument(

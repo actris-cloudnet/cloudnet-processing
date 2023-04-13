@@ -6,6 +6,8 @@ import sys
 
 import requests
 
+from data_processing import utils
+
 DATAPORTAL_URL = os.environ["DATAPORTAL_URL"].rstrip("/")
 
 
@@ -27,6 +29,11 @@ def main(args: argparse.Namespace):
         params["extension"] = args.extension
 
     upload_metadata = _get_metadata("raw-files", **params)
+    if args.include_pattern is not None:
+        upload_metadata = utils.include_records_with_pattern_in_filename(
+            upload_metadata, args.include_pattern
+        )
+
     if upload_metadata:
         print("\nMeasurement files:\n")
     for i, row in enumerate(upload_metadata, start=1):
@@ -154,6 +161,9 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "-e", "--extension", help="Instrument file extension, e.g., -e=.LV1", type=str
+    )
+    parser.add_argument(
+        "--include-pattern", help="Instrument file regex include pattern", type=str
     )
     parser.add_argument(
         "--save",

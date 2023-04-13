@@ -192,7 +192,10 @@ class ProcessBase:
 
     @staticmethod
     def _sort_model_meta2dict(metadata: list) -> dict:
-        """Sort models and cycles to same dict key. Removes Gdas"""
+        """Sort models and cycles to same dict key.
+
+        Removes Gdas
+        """
         if metadata:
             models_meta = {}
             models = [metadata[i]["model"]["id"] for i in range(len(metadata))]
@@ -260,10 +263,12 @@ class ProcessBase:
         product: str | None = None,
         model: str | None = None,
         skip_created: bool = False,
+        date_from: str | None = None,
+        date_to: str | None = None,
     ) -> dict:
         payload = {
-            "dateFrom": self.date_str,
-            "dateTo": self.date_str,
+            "dateFrom": date_from if date_from is not None else self.date_str,
+            "dateTo": date_to if date_to is not None else self.date_str,
             "site": self.site,
             "developer": True,
         }
