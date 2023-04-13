@@ -21,7 +21,6 @@ from cloudnetpy.instruments import (
     ws2nc,
 )
 from cloudnetpy.utils import is_timestamp
-from haloreader.halo import Halo, HaloBg
 from haloreader.read import read as read_halo
 from haloreader.read import read_bg as read_halobg
 
@@ -104,18 +103,12 @@ class ProcessRadar(ProcessInstrument):
 
 
 class ProcessHaloDopplerLidar(ProcessInstrument):
-    def process_halo_doppler_lidar(
-        self,
-    ):
-        """This can be removed at some point."""
-        self._process_halo_lidar()
-
-    def _process_halo_lidar(self, suffix: str = ""):
+    def process_halo_doppler_lidar(self):
         full_paths, self.uuid.raw, self.instrument_pids = self.base.download_instrument(
-            f"halo-doppler-lidar{suffix}", include_pattern=r"Stare.*\.hpl"
+            "halo-doppler-lidar", include_pattern=r"Stare.*\.hpl"
         )
         full_paths_bg, _, _ = self.base.download_instrument(
-            f"halo-doppler-lidar{suffix}",
+            "halo-doppler-lidar",
             include_pattern=r"Background.*\.txt",
             date_from=str(
                 datetime.date.fromisoformat(self.base.date_str)
@@ -126,8 +119,10 @@ class ProcessHaloDopplerLidar(ProcessInstrument):
         full_paths_bg_ = [pathlib.Path(path) for path in full_paths_bg]
         halo = read_halo(full_paths_)
         halobg = read_halobg(full_paths_bg_)
-        if not isinstance(halo, Halo) or not isinstance(halobg, HaloBg):
-            raise TypeError
+        if halo is None:
+            raise RawDataMissingError
+        if halobg is None:
+            raise RawDataMissingError
         halo.correct_background(halobg)
         halo.compute_beta()
         screen = halo.compute_noise_screen()

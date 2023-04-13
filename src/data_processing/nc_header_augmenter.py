@@ -95,7 +95,7 @@ def harmonize_hatpro_file(data: dict) -> str:
 
 
 def harmonize_halo_file(data: dict) -> str:
-    """Harmonizes calibrated HALO Doppler lidar netCDF file."""
+    """Harmonizes HALO Doppler lidar netCDF file."""
     temp_file = NamedTemporaryFile()
     with (
         netCDF4.Dataset(data["full_path"], "r") as nc_raw,
