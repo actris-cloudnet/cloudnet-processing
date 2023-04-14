@@ -102,7 +102,7 @@ class ProcessRadar(ProcessInstrument):
                 os.rename(filename, filename + suffix)
 
 
-class ProcessHaloDopplerLidar(ProcessInstrument):
+class ProcessDopplerLidar(ProcessInstrument):
     def process_halo_doppler_lidar(self):
         full_paths, self.uuid.raw, self.instrument_pids = self.base.download_instrument(
             "halo-doppler-lidar", include_pattern=r"Stare.*\.hpl"
