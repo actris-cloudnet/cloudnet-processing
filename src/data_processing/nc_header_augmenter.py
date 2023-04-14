@@ -107,7 +107,7 @@ def harmonize_halo_file(data: dict) -> str:
         halo.clean_global_attributes()
         halo.add_geolocation()
         halo.add_date()
-        halo.add_global_attributes("lidar", instruments.HALO)
+        halo.add_global_attributes("doppler-lidar", instruments.HALO)
         uuid = halo.add_uuid()
         halo.add_zenith_angle()
         halo.check_zenith_angle()

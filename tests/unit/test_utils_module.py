@@ -161,12 +161,7 @@ def test_get_product_bucket():
 )
 def test_get_product_types(level, expected):
     result = utils.get_product_types(level=level)
-    # production does not have halo yet
-    # TODO: remove  | {"halo-doppler-lidar"} when it is in production
-    if level in ["1b", None]:
-        assert set(result) | {"halo-doppler-lidar"} == set(expected)
-    else:
-        assert set(result) == set(expected)
+    assert set(result) == set(expected)
 
 
 class TestHash:
