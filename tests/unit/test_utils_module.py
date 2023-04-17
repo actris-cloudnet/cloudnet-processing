@@ -112,7 +112,7 @@ def test_get_product_bucket():
             "1b",
             [
                 "lidar",
-                "halo-doppler-lidar",
+                "doppler-lidar",
                 "model",
                 "mwr",
                 "radar",
@@ -137,7 +137,7 @@ def test_get_product_bucket():
             None,
             [
                 "lidar",
-                "halo-doppler-lidar",
+                "doppler-lidar",
                 "model",
                 "mwr",
                 "radar",
