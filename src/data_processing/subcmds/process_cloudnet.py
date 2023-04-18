@@ -129,10 +129,7 @@ class ProcessCloudnet(ProcessBase):
         return process.uuid, instrument, process.instrument_pids
 
     def process_categorize(self, uuid: Uuid, cat_variant: str) -> tuple[Uuid, str]:
-        l1_products = utils.get_product_types(level="1b")
-        l1_products.remove("disdrometer")  # Not yet used
-        l1_products.remove("weather-station")  # Not yet used
-        l1_products.remove("doppler-lidar")  # Not yet used
+        l1_products = ["lidar", "model", "mwr", "radar"]
         meta_records = self._get_level1b_metadata_for_categorize(l1_products)
         missing = self._get_missing_level1b_products(meta_records, l1_products)
         if missing:
