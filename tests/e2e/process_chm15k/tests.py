@@ -62,7 +62,7 @@ class TestChm15kProcessing:
         n_raw_files = 3
         n_img = 2
 
-        n_gets = 5 + 1
+        n_gets = 5
         n_puts = n_img + 2
         n_posts = n_raw_files
 

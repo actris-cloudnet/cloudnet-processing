@@ -36,9 +36,7 @@ class TestRPGFMCW94Processing:
     def test_that_calls_metadata_api(self):
         data = read_log_file(SCRIPT_PATH)
         n_raw_files = 2
-        n_gets = (
-            5 + 1
-        )  # product check (1) + instrument checks (2)  + rpg-fmcw-94 raw (1) + previous product (1)
+        n_gets = 5  # product check (1) + instrument checks (2)  + rpg-fmcw-94 raw (1) + previous product (1)
         n_img = 5
         n_puts = 2 + n_img
         n_posts = n_raw_files

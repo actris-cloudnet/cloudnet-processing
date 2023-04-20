@@ -292,16 +292,13 @@ class ProcessCloudnet(ProcessBase):
     def _detect_uploaded_instrument(self, instrument_type: str) -> str:
         instrument_metadata = self.md_api.get("api/instruments")
         possible_instruments = {
-            x["id"] for x in instrument_metadata if x["type"] == instrument_type
+            item["id"]
+            for item in instrument_metadata
+            if item["type"] == instrument_type
         }
         payload = self._get_payload()
         upload_metadata = self.md_api.get("upload-metadata", payload)
-        upload_metadata_halo = self.md_api.get(
-            "upload-metadata", self._get_payload(instrument="halo-doppler-lidar")
-        )
-        uploaded_instruments = {
-            x["instrument"]["id"] for x in upload_metadata + upload_metadata_halo
-        }
+        uploaded_instruments = {item["instrument"]["id"] for item in upload_metadata}
         instrument = list(possible_instruments & uploaded_instruments)
         if len(instrument) == 0:
             raise RawDataMissingError
