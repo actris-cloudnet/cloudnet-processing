@@ -14,7 +14,7 @@ setup(
         "cloudnetpy_qc>=1.8.1",
         "cloudnetpy[extras]>=1.46.4",
         "rpgpy>=0.13.1",
-        "halo-reader==0.0.9",
+        "halo-reader>=0.1.0",
         "pytest",
         "pylint",
         "mypy",
