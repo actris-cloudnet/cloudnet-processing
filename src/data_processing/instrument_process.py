@@ -107,11 +107,14 @@ class ProcessRadar(ProcessInstrument):
 class ProcessDopplerLidar(ProcessInstrument):
     def process_halo_doppler_lidar(self):
         full_paths, self.uuid.raw, self.instrument_pids = self.base.download_instrument(
-            "halo-doppler-lidar", include_pattern=r"Stare.*\.hpl"
+            "halo-doppler-lidar",
+            include_pattern=r"Stare.*\.hpl",
+            exclude_tag_subset={"cross"},
         )
         full_paths_bg, _, _ = self.base.download_instrument(
             "halo-doppler-lidar",
             include_pattern=r"Background.*\.txt",
+            exclude_tag_subset={"cross"},
             date_from=str(
                 datetime.date.fromisoformat(self.base.date_str)
                 - datetime.timedelta(days=30)

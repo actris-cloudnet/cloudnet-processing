@@ -114,6 +114,7 @@ def harmonize_halo_file(data: dict) -> str:
         halo.add_range()
         halo.clean_variable_attributes()
         halo.fix_time_units()
+        halo.add_wavelength()
         for attribute in ("units", "long_name", "standard_name"):
             halo.harmonize_attribute(attribute)
         halo.add_history("lidar")
