@@ -231,6 +231,8 @@ class ProcessCloudnet(ProcessBase):
         exclude_pattern: str | None = None,
         date_from: str | None = None,
         date_to: str | None = None,
+        include_tag_subset: set[str] | None = None,
+        exclude_tag_subset: set[str] | None = None,
     ) -> tuple[list | str, list, list]:
         """Download raw files for given instrument."""
         payload = self._get_payload(
@@ -248,6 +250,18 @@ class ProcessCloudnet(ProcessBase):
             upload_metadata = utils.exclude_records_with_pattern_in_filename(
                 upload_metadata, exclude_pattern
             )
+        if include_tag_subset is not None:
+            upload_metadata = [
+                record
+                for record in upload_metadata
+                if include_tag_subset.issubset(set(record["tags"]))
+            ]
+        if exclude_tag_subset is not None:
+            upload_metadata = [
+                record
+                for record in upload_metadata
+                if not exclude_tag_subset.issubset(set(record["tags"]))
+            ]
         arg = self.temp_file if largest_only else None
         self._check_raw_data_status(upload_metadata)
         return self._download_raw_files(upload_metadata, arg)
