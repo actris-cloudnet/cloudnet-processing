@@ -204,9 +204,7 @@ class Level1Nc:
         skip: tuple | None = None,
     ):
         """Copies all variables and global attributes from one file to another.
-
-        Optionally copies only certain keys and / or uses certain time
-        indices only.
+        Optionally copies only certain keys and / or uses certain time indices only.
         """
         for key, dimension in self.nc_raw.dimensions.items():
             if key == "time" and time_ind is not None:
@@ -220,9 +218,8 @@ class Level1Nc:
         self._copy_global_attributes()
 
     def copy_variable(self, key: str, time_ind: list | None = None):
-        """Copies one variable from source file to target.
-
-        Optionally uses certain time indices only.
+        """Copies one variable from source file to target. Optionally uses certain
+        time indices only.
         """
         if key not in self.nc_raw.variables.keys():
             logging.warning(f"Key {key} not found from the source file.")
@@ -627,7 +624,7 @@ class ParsivelNc(Level1Nc):
     def get_valid_time_indices(self) -> list:
         """Finds valid time indices."""
         time_stamps = self.nc_raw.variables["time"][:]
-        time_stamps = cloudnetpy.utils.seconds2hours(time_stamps)
+        time_stamps = np.array(cloudnetpy.utils.seconds2hours(time_stamps))
         valid_ind: list[int] = []
         for ind, t in enumerate(time_stamps):
             if 0 < t < 24:
@@ -640,7 +637,6 @@ class ParsivelNc(Level1Nc):
 
     def copy_variable(self, key: str, time_ind: list | None = None):
         """Copies one variable from Parsivel source file to target.
-
         Optionally uses certain time indices only.
         """
         if key not in self.nc_raw.variables.keys():

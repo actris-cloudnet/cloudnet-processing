@@ -12,6 +12,7 @@ from cloudnetpy.instruments import (
     ceilo2nc,
     copernicus2nc,
     galileo2nc,
+    hatpro2l1c,
     hatpro2nc,
     mira2nc,
     parsivel2nc,
@@ -181,9 +182,6 @@ class ProcessLidar(ProcessInstrument):
         self._call_ceilo2nc()
 
     def process_halo_doppler_lidar_calibrated(self):
-        self._process_halo_lidar_calibrated()
-
-    def _process_halo_lidar_calibrated(self):
         full_path, self.uuid.raw, self.instrument_pids = self.base.download_instrument(
             "halo-doppler-lidar-calibrated", largest_only=True
         )
@@ -329,6 +327,18 @@ class ProcessLidar(ProcessInstrument):
         if "snr_limit" in calibration["data"]:
             output["snr_limit"] = float(calibration["data"]["snr_limit"])
         return output
+
+
+class ProcessMwrL1c(ProcessInstrument):
+    def process_hatpro(self):
+        full_paths, self.uuid.raw, self.instrument_pids = self.base.download_instrument(
+            "hatpro", include_pattern=r"\.(brt|hkd|met|irt|blb|bls)$"
+        )
+        output_filename, site_meta = self._args
+        site_meta["coeffs_dir"] = "hyytiala"
+        self.uuid.product = hatpro2l1c(
+            self.base.temp_dir.name, output_filename, site_meta, **self._kwargs
+        )
 
 
 class ProcessMwr(ProcessInstrument):

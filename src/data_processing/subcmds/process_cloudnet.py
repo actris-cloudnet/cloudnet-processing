@@ -57,13 +57,17 @@ class ProcessCloudnet(ProcessBase):
                     uuid, identifier = self.process_level2(uuid, product)
                 case "categorize" | "categorize-voodoo":
                     uuid, identifier = self.process_categorize(uuid, product)
-                case product if product in utils.get_product_types(level="1b"):
+                case product if product in utils.get_product_types(
+                    level="1b"
+                ) or product == "mwr-l1c":
                     uuid, identifier, instrument_pids = self.process_instrument(
                         uuid, product
                     )
                     self.add_instrument_pid(instrument_pids)
                 case bad_product:
                     raise ValueError(f"Bad product: {bad_product}")
+            if product == "mwr-l1c":
+                identifier = "hatpro-l1c"
             self.compare_file_content(product)
             self.add_pid()
             utils.add_version_to_global_attributes(self.temp_file.name)
@@ -196,7 +200,13 @@ class ProcessCloudnet(ProcessBase):
         ]
 
     def process_level2(self, uuid: Uuid, product: str) -> tuple[Uuid, str]:
-        if product == "classification-voodoo":
+        if product == "mwr-single":
+            cat_file = "mwr-l1c"
+            module_name = "mwr_single"
+        elif product == "mwr-multi":
+            cat_file = "mwr-l1c"
+            module_name = "mwr_multi"
+        elif product == "classification-voodoo":
             cat_file = "categorize-voodoo"
             module_name = "classification"
         else:
@@ -305,6 +315,8 @@ class ProcessCloudnet(ProcessBase):
 
     def _detect_uploaded_instrument(self, instrument_type: str) -> str:
         instrument_metadata = self.md_api.get("api/instruments")
+        if instrument_type == "mwr-l1c":
+            instrument_type = "mwr"
         possible_instruments = {
             item["id"]
             for item in instrument_metadata
