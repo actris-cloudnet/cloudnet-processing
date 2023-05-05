@@ -11,13 +11,14 @@ from cloudnetpy.instruments import (
     basta2nc,
     ceilo2nc,
     copernicus2nc,
-    disdrometer2nc,
     galileo2nc,
     hatpro2nc,
     mira2nc,
+    parsivel2nc,
     pollyxt2nc,
     radiometrics2nc,
     rpg2nc,
+    thies2nc,
     ws2nc,
 )
 from cloudnetpy.utils import is_timestamp
@@ -366,14 +367,40 @@ class ProcessDisdrometer(ProcessInstrument):
         full_path, self.uuid.raw, self.instrument_pids = self.base.download_instrument(
             "parsivel", largest_only=True
         )
-        try:
-            self.uuid.product = disdrometer2nc(full_path, *self._args, **self._kwargs)
-        except DisdrometerDataError:
+        telegram = None
+        if self.base.site in ["norunda", "ny-alesund", "juelich"]:
+            telegram = [
+                1,
+                2,
+                3,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12,
+                13,
+                14,
+                16,
+                17,
+                18,
+                22,
+                24,
+                25,
+                90,
+                91,
+                93,
+            ]
+        if full_path.endswith(".nc"):
             data = self._get_payload_for_nc_file_augmenter(self.temp_file.name)
             try:
                 self.uuid.product = nc_header_augmenter.harmonize_parsivel_file(data)
             except OSError:
                 raise DisdrometerDataError("Unable to process")
+        else:
+            kwargs = self._kwargs.copy()
+            kwargs["telegram"] = telegram
+            self.uuid.product = parsivel2nc(full_path, *self._args, **kwargs)
 
     def process_thies_lnm(self):
         full_paths, self.uuid.raw, self.instrument_pids = self.base.download_instrument(
@@ -381,7 +408,7 @@ class ProcessDisdrometer(ProcessInstrument):
         )
         full_paths.sort()
         utils.concatenate_text_files(full_paths, self.base.daily_file.name)
-        self.uuid.product = disdrometer2nc(
+        self.uuid.product = thies2nc(
             self.base.daily_file.name, *self._args, **self._kwargs
         )
 
