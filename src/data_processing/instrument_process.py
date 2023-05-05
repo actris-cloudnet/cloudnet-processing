@@ -6,7 +6,6 @@ import os
 import pathlib
 import shutil
 
-from cloudnetpy.exceptions import DisdrometerDataError
 from cloudnetpy.instruments import (
     basta2nc,
     ceilo2nc,
@@ -391,13 +390,10 @@ class ProcessDisdrometer(ProcessInstrument):
                 91,
                 93,
             ]
-        if full_path.endswith(".nc"):
+        try:
             data = self._get_payload_for_nc_file_augmenter(self.temp_file.name)
-            try:
-                self.uuid.product = nc_header_augmenter.harmonize_parsivel_file(data)
-            except OSError:
-                raise DisdrometerDataError("Unable to process")
-        else:
+            self.uuid.product = nc_header_augmenter.harmonize_parsivel_file(data)
+        except OSError:
             kwargs = self._kwargs.copy()
             kwargs["telegram"] = telegram
             self.uuid.product = parsivel2nc(full_path, *self._args, **kwargs)
