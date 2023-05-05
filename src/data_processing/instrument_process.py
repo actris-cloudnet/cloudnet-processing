@@ -5,6 +5,7 @@ import logging
 import os
 import pathlib
 import shutil
+from collections.abc import Sequence
 
 from cloudnetpy.instruments import (
     basta2nc,
@@ -366,30 +367,14 @@ class ProcessDisdrometer(ProcessInstrument):
         full_path, self.uuid.raw, self.instrument_pids = self.base.download_instrument(
             "parsivel", largest_only=True
         )
-        telegram = None
+        telegram: Sequence[int | None] | None = None
+        # fmt: off
         if self.base.site in ["norunda", "ny-alesund", "juelich"]:
-            telegram = [
-                1,
-                2,
-                3,
-                7,
-                8,
-                9,
-                10,
-                11,
-                12,
-                13,
-                14,
-                16,
-                17,
-                18,
-                22,
-                24,
-                25,
-                90,
-                91,
-                93,
-            ]
+            telegram = [19, 1, 2, 3, 7, 8, 9, 10, 11, 12, 13,
+                        14, 16, 17, 18, 22, 24, 25, 90, 91, 93]
+        elif self.base.site == "warsaw":
+            telegram = [21, 20, 1] + [None] * 13 + [93]
+        # fmt: on
         try:
             data = self._get_payload_for_nc_file_augmenter(self.temp_file.name)
             self.uuid.product = nc_header_augmenter.harmonize_parsivel_file(data)
