@@ -25,13 +25,15 @@ def main(args: argparse.Namespace):
     else:
         print("Please specify --date, --start or --stop", file=sys.stderr)
         sys.exit(1)
-    if args.extension:
-        params["extension"] = args.extension
 
     upload_metadata = _get_metadata("raw-files", **params)
-    if args.include_pattern is not None:
+    if args.include is not None:
         upload_metadata = utils.include_records_with_pattern_in_filename(
-            upload_metadata, args.include_pattern
+            upload_metadata, args.include
+        )
+    if args.exclude is not None:
+        upload_metadata = utils.exclude_records_with_pattern_in_filename(
+            upload_metadata, args.exclude
         )
 
     if upload_metadata:
@@ -80,7 +82,6 @@ def _get_metadata(
     start: datetime.date | None,
     stop: datetime.date | None,
     instruments: list[str] = [],
-    extension: str | None = None,
 ) -> list:
     url = f"https://cloudnet.fmi.fi/api/{end_point}"
     payload = {
@@ -92,11 +93,6 @@ def _get_metadata(
     res = requests.get(url=url, params=payload)
     res.raise_for_status()
     metadata = res.json()
-    if extension:
-        extension = extension.lower()
-        metadata = [
-            row for row in metadata if row["filename"].lower().endswith(extension)
-        ]
     return metadata
 
 
@@ -160,10 +156,13 @@ if __name__ == "__main__":
         help="Instrument types, e.g. cl51,hatpro",
     )
     parser.add_argument(
-        "-e", "--extension", help="Instrument file extension, e.g., -e=.LV1", type=str
+        "--include", help="Instrument file regex include pattern", type=str
     )
     parser.add_argument(
-        "--include-pattern", help="Instrument file regex include pattern", type=str
+        "--exclude",
+        help="Instrument file regex exclude pattern",
+        type=str,
+        default=".lv0$",
     )
     parser.add_argument(
         "--save",
