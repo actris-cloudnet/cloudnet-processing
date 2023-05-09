@@ -373,7 +373,11 @@ class ProcessDisdrometer(ProcessInstrument):
             telegram = [19, 1, 2, 3, 7, 8, 9, 10, 11, 12, 13,
                         14, 16, 17, 18, 22, 24, 25, 90, 91, 93]
         elif self.base.site == "warsaw":
-            telegram = [21, 20, 1] + [None] * 13 + [93]
+            # 5 and 6 not supported for now
+            # telegram = [21, 20, 1, 2, 3, 5, 6, 7, 8, 10,
+            #             11, 12, 16, 17, None, None, 93]
+            telegram = [21, 20, 1, 2, 3, None, None, 7, 8, 10,
+                        11, 12, 16, 17, None, None, 93]
         # fmt: on
         try:
             data = self._get_payload_for_nc_file_augmenter(self.temp_file.name)
