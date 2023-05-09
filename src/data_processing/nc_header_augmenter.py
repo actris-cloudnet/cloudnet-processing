@@ -505,8 +505,8 @@ class HatproNc(Level1Nc):
             lwp = self.nc.variables[key]
         except KeyError:
             raise MiscError(f"Missing mandatory variable {key} - abort processing")
-        if "kg" in lwp.units:
-            lwp[:] *= 1000
+        if "kg" not in lwp.units:
+            lwp[:] /= 1000
         self.harmonize_standard_attributes(key)
         attributes_to_be_removed = ("comment", "missing_value")
         for attr in attributes_to_be_removed:
@@ -517,7 +517,7 @@ class HatproNc(Level1Nc):
         """Sanity checks LWP data."""
         threshold_kg = 10
         lwp = self.nc.variables["lwp"][:]
-        positive_lwp_values = lwp[lwp > 0] / 1000
+        positive_lwp_values = lwp[lwp > 0]
         if (median_value := np.median(positive_lwp_values)) > threshold_kg:
             raise MiscError(
                 f"Invalid LWP data, median value: {np.round(median_value, 2)} kg"
