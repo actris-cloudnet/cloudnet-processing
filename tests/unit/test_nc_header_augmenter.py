@@ -106,7 +106,7 @@ class TestMwr:
         nca.harmonize_hatpro_file(self.data)
         nc = netCDF4.Dataset(self.data["full_path"])
         assert nc.Conventions == "CF-1.8"
-        assert nc.variables["lwp"].units == "g m-2"
+        assert nc.variables["lwp"].units == "kg m-2"
         time = nc.variables["time"][:]
         assert (
             nc.variables["time"].units
