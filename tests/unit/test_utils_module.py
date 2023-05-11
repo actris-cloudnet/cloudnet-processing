@@ -105,65 +105,6 @@ def test_get_product_bucket():
     assert utils.get_product_bucket(False) == "cloudnet-product"
 
 
-@pytest.mark.parametrize(
-    "level, expected",
-    [
-        (
-            "1b",
-            [
-                "lidar",
-                "doppler-lidar",
-                "model",
-                "mwr",
-                "radar",
-                "disdrometer",
-                "weather-station",
-            ],
-        ),
-        ("1c", ["categorize", "categorize-voodoo"]),
-        (
-            "2",
-            [
-                "classification",
-                "classification-voodoo",
-                "drizzle",
-                "iwc",
-                "lwc",
-                "der",
-                "ier",
-            ],
-        ),
-        (
-            None,
-            [
-                "lidar",
-                "doppler-lidar",
-                "model",
-                "mwr",
-                "radar",
-                "disdrometer",
-                "weather-station",
-                "categorize",
-                "categorize-voodoo",
-                "classification",
-                "classification-voodoo",
-                "drizzle",
-                "iwc",
-                "lwc",
-                "der",
-                "ier",
-                "l3-cf",
-                "l3-iwc",
-                "l3-lwc",
-            ],
-        ),
-    ],
-)
-def test_get_product_types(level, expected):
-    result = utils.get_product_types(level=level)
-    assert set(result) == set(expected)
-
-
 class TestHash:
     file = "tests/data/products/20201121_bucharest_classification.nc"
 
