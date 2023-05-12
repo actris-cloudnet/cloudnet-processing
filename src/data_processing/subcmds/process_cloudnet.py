@@ -221,7 +221,7 @@ class ProcessCloudnet(ProcessBase):
             )
             meta_record = {"categorize": metadata[0]}
         else:
-            raise MiscError("Missing input categorize file")
+            raise MiscError(f"Missing required input file: {cat_file}")
         self._check_source_status(product, meta_record)
         module = importlib.import_module(f"cloudnetpy.products.{module_name}")
         fun = getattr(module, f"generate_{module_name}")
