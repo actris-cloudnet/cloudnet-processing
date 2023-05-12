@@ -333,6 +333,8 @@ def get_fields_for_plot(cloudnet_file_type: str) -> tuple[list, int]:
             ]
         case "mwr-single":
             fields = ["lwp", "iwv", "temperature", "absolute_humidity"]
+        case "mwr-multi":
+            fields = ["temperature", "potential_temperature"]
         case "radar":
             fields = [
                 "Zh",
