@@ -335,7 +335,7 @@ class ProcessMwrL1c(ProcessInstrument):
             "hatpro", include_pattern=r"\.(brt|hkd|met|irt|blb|bls)$"
         )
         output_filename, site_meta = self._args
-        site_meta["coeffs_dir"] = "hyytiala"
+        site_meta["coeffs_dir"] = self.base.site
         self.uuid.product = hatpro2l1c(
             self.base.temp_dir.name, output_filename, site_meta, **self._kwargs
         )
