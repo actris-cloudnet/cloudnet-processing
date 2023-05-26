@@ -379,7 +379,7 @@ class ProcessDisdrometer(ProcessInstrument):
         )
         telegram: Sequence[int | None] | None = None
         # fmt: off
-        if self.base.site in ["norunda", "ny-alesund", "juelich"]:
+        if self.base.site in ["norunda", "ny-alesund", "juelich", "lindenberg"]:
             telegram = [19, 1, 2, 3, 7, 8, 9, 10, 11, 12, 13,
                         14, 16, 17, 18, 22, 24, 25, 90, 91, 93]
         elif self.base.site == "warsaw":
