@@ -48,6 +48,9 @@ class ProcessCloudnet(ProcessBase):
         self.init_temp_files()
         if product == "model":
             return
+        # Will be processed as part of weather station.
+        if product == "rain-gauge":
+            return
         logging.info(f"Processing {product} product, {self.site} {self.date_str}")
         uuid = Uuid()
         try:
