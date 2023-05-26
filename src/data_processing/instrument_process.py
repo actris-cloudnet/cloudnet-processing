@@ -407,6 +407,10 @@ class ProcessDisdrometer(ProcessInstrument):
 
 class ProcessWeatherStation(ProcessInstrument):
     def process_weather_station(self):
+        if self.base.site != "palaiseau":
+            raise NotImplementedError(
+                "Weather station only implemented for Palaiseau data format"
+            )
         full_path, self.uuid.raw, self.instrument_pids = self.base.download_instrument(
             "weather-station", largest_only=True
         )
