@@ -154,6 +154,9 @@ class ProcessDopplerLidar(ProcessInstrument):
 class ProcessLidar(ProcessInstrument):
     file_id = "clu-generated-daily"
 
+    def process_cs135(self):
+        raise NotImplementedError
+
     def process_chm15k(self):
         self._process_chm_lidar("chm15k")
 
