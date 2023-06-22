@@ -5,6 +5,7 @@ import logging
 import os
 import pathlib
 import shutil
+import tempfile
 from collections.abc import Sequence
 
 from cloudnetpy.instruments import (
@@ -25,10 +26,16 @@ from cloudnetpy.instruments import (
 from cloudnetpy.utils import is_timestamp
 from haloreader.read import read as read_halo
 from haloreader.read import read_bg as read_halobg
+from requests.exceptions import HTTPError
 
 from data_processing import concat_wrapper, nc_header_augmenter, utils
 from data_processing.processing_tools import Uuid
-from data_processing.utils import RawDataMissingError, SkipBlock, fetch_calibration
+from data_processing.utils import (
+    MiscError,
+    RawDataMissingError,
+    SkipBlock,
+    fetch_calibration,
+)
 
 
 class ProcessInstrument:
@@ -345,10 +352,33 @@ class ProcessMwrL1c(ProcessInstrument):
             "hatpro", include_pattern=r"\.(brt|hkd|met|irt|blb|bls)$"
         )
         output_filename, site_meta = self._args
-        site_meta["coeffs_dir"] = self.base.site
-        self.uuid.product = hatpro2l1c(
-            self.base.temp_dir.name, output_filename, site_meta, **self._kwargs
-        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            coeff_paths = []
+            payload = {
+                "date": self.base.date_str,
+                "instrumentPid": self.instrument_pids[0],
+            }
+            try:
+                data = self.base.md_api.get("api/calibration", payload)
+            except HTTPError:
+                raise MiscError("Skipping due to missing mwrpy coefficients")
+
+            site_meta = {**site_meta, **data["data"]}
+
+            for link in data["data"]["coefficientLinks"]:
+                filename = link.split("/")[-1]
+                full_path = os.path.join(temp_dir, filename)
+                with open(full_path, "wb") as f:
+                    res = self.base.md_api.session.get(link)
+                    res.raise_for_status()
+                    f.write(res.content)
+                coeff_paths.append(full_path)
+            site_meta["coefficientFiles"] = coeff_paths
+
+            self.uuid.product = hatpro2l1c(
+                self.base.temp_dir.name, output_filename, site_meta, **self._kwargs
+            )
 
 
 class ProcessMwr(ProcessInstrument):

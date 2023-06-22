@@ -11,7 +11,7 @@ setup(
     author="Finnish Meteorological Institute",
     license="MIT License",
     install_requires=[
-        "cloudnetpy_qc>=1.10.7",
+        "cloudnetpy_qc>=1.10.8",
         "cloudnetpy[extras]>=1.50.0",
         "rpgpy>=0.14.2",
         "halo-reader>=0.1.0",
