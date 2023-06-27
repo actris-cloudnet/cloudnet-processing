@@ -285,16 +285,18 @@ class ProcessLidar(ProcessInstrument):
         self.base.md_api.upload_instrument_file(
             self.base, model, filename, instrument_pid
         )
-        self._call_ceilo2nc()
+        self._call_ceilo2nc(model=model)
         self.uuid.raw = _get_valid_uuids(raw_uuids, full_paths, valid_full_paths)
 
     def _create_daily_file_name(self, model: str) -> str:
         date = self.base.date_str.replace("-", "")
         return f"{date}_{self.base.site}_{model}_{self.file_id}.nc"
 
-    def _call_ceilo2nc(self):
+    def _call_ceilo2nc(self, model: str | None = None):
         calibration = self._fetch_ceilo_calibration()
         site_meta = self.base.site_meta | calibration
+        if model is not None:
+            site_meta["model"] = model
         self.uuid.product = ceilo2nc(
             self.base.daily_file.name,
             self.temp_file.name,
