@@ -155,7 +155,12 @@ class ProcessLidar(ProcessInstrument):
     file_id = "clu-generated-daily"
 
     def process_cs135(self):
-        raise NotImplementedError
+        full_paths, self.uuid.raw, self.instrument_pids = self.base.download_instrument(
+            "cs135"
+        )
+        full_paths.sort()
+        utils.concatenate_text_files(full_paths, self.base.daily_file.name)
+        self._call_ceilo2nc(model="cs135")
 
     def process_chm15k(self):
         self._process_chm_lidar("chm15k")
