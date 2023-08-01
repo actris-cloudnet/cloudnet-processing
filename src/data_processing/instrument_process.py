@@ -263,7 +263,7 @@ class ProcessLidar(ProcessInstrument):
                 logging.info(f"Creating daily file from {len(full_paths)} files")
             else:
                 raise RawDataMissingError from exc
-            variables = ["x_pol", "p_pol", "beta_att", "time"]
+            variables = ["x_pol", "p_pol", "beta_att", "time", "tilt_angle"]
             try:
                 valid_full_paths = concat_wrapper.concat_netcdf_files(
                     full_paths,
