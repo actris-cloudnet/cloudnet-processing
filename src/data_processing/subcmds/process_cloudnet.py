@@ -11,6 +11,7 @@ from cloudnetpy.categorize import generate_categorize
 from cloudnetpy.exceptions import (
     DisdrometerDataError,
     InconsistentDataError,
+    MissingInputFileError,
     ModelDataError,
     ValidTimeStampError,
 )
@@ -81,6 +82,7 @@ class ProcessCloudnet(ProcessBase):
         except (RawDataMissingError, MiscError, NotImplementedError) as err:
             logging.warning(err)
         except (
+            MissingInputFileError,
             InconsistentDataError,
             DisdrometerDataError,
             ValidTimeStampError,
