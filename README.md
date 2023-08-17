@@ -123,9 +123,10 @@ Note: With this script, all sites can be selected using `--site all` argument.
 
 Additional arguments:
 
-| Short | Long      | Default | Description                                                                                                             |
-| :---- | :-------- | :------ | :---------------------------------------------------------------------------------------------------------------------- |
-| `-f`  | `--force` | False   | Ignore environment variables `FREEZE_AFTER_DAYS` and `FREEZE_MODEL_AFTER_DAYS`. Allows freezing recently changed files. |
+| Short | Long             | Default | Description                                                                                                             |
+| :---- | :--------------- | :------ | :---------------------------------------------------------------------------------------------------------------------- |
+| `-f`  | `--force`        | `False` | Ignore environment variables `FREEZE_AFTER_DAYS` and `FREEZE_MODEL_AFTER_DAYS`. Allows freezing recently changed files. |
+| `-e`  | `--experimental` | `False` | Also freeze experimental products.                                                                                      |
 
 ### `housekeeping`
 

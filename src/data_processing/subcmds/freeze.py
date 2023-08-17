@@ -86,4 +86,11 @@ def add_arguments(subparser):
                                Allows freezing recently changed files.",
         default=False,
     )
+    freeze_parser.add_argument(
+        "-e",
+        "--experimental",
+        action="store_true",
+        help="Include experimental products.",
+        default=False,
+    )
     return subparser

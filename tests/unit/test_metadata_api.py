@@ -47,7 +47,8 @@ files_response = """
     "product": {
       "id": "radar",
       "humanReadableName": "Radar",
-      "level": "1"
+      "level": "1",
+      "experimental": false
     },
     "volatile": true,
     "url": "https://altocumulus.fmi.fi/download/20200513_granada_rpg-fmcw-94.nc"
@@ -95,6 +96,7 @@ class TestMetadataApi:
                     "start": None,
                     "stop": None,
                     "force": False,
+                    "experimental": False,
                 },
                 {
                     "files": {
@@ -117,6 +119,7 @@ class TestMetadataApi:
                     "start": None,
                     "stop": None,
                     "force": False,
+                    "experimental": False,
                 },
                 {
                     "files": {
@@ -140,6 +143,7 @@ class TestMetadataApi:
                     "start": None,
                     "stop": None,
                     "force": True,
+                    "experimental": False,
                 },
                 {
                     "files": {
@@ -162,6 +166,7 @@ class TestMetadataApi:
                     "start": None,
                     "stop": None,
                     "force": True,
+                    "experimental": False,
                 },
                 {
                     "files": {
@@ -188,6 +193,7 @@ class TestMetadataApi:
                     "start": "2021-01-01",
                     "stop": "2021-07-01",
                     "force": False,
+                    "experimental": False,
                 },
                 {
                     "files": {

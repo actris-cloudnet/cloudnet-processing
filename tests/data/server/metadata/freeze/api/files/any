@@ -28,7 +28,8 @@
     "product": {
       "id": "categorize",
       "humanReadableName": "Categorize",
-      "level": "1"
+      "level": "1",
+      "experimental": false
     },
     "downloadUrl": "https://cloudnet.fmi.fi/api/download/product/d740d61b-09d5-46d1-abf1-f3c898a86d08/20201022_bucharest_categorize.nc",
     "filename": "20201022_bucharest_categorize.nc",

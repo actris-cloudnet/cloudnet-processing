@@ -105,7 +105,12 @@ class MetadataApi:
             }
             model_files = self.get("api/model-files", models_payload)
 
-        return regular_files + model_files
+        all_files = regular_files + model_files
+
+        if args.experimental is False:
+            all_files = [f for f in all_files if f["product"]["experimental"] is False]
+
+        return all_files
 
     def _get_freeze_payload(self, key: str, args: Namespace) -> dict:
         freeze_after_days = int(self.config[key])
