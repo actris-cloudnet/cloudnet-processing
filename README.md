@@ -43,6 +43,14 @@ General arguments. These arguments are available for most commands. The argument
 |       | `--stop`     | `current day `    | Stopping date.                                                                     |
 | `-p`  | `--products` | all               | Processed products, e.g, `radar,lidar,categorize,classification`.                  |
 
+Shortcut for the `--products` argument:
+
+| Shortcut | Meaning                                                                             |
+| :------- | :---------------------------------------------------------------------------------- |
+| `lb1`    | `disdrometer,doppler-lidar,lidar,mwr,radar,weather-station`                         |
+| `l1c`    | `categorize,categorize-voodoo,mwr-l1c`                                              |
+| `l2`     | `classification,iwc,lwc,drizzle,ier,der,mwr-single,mwr-multi,classification-voodoo` |
+
 ### Commands
 
 ### `process`
