@@ -370,7 +370,10 @@ class ModelNc(Level1Nc):
 class HaloNc(Level1Nc):
     def clean_global_attributes(self):
         for attr in self.nc.ncattrs():
-            if attr in {"filename"}:
+            if attr == "filename":
+                delattr(self.nc, attr)
+            elif attr == "system_id":
+                self.nc.serial_number = getattr(self.nc, attr)
                 delattr(self.nc, attr)
 
     def copy_file(self, valid_ind: list):
