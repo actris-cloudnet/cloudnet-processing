@@ -273,6 +273,7 @@ def get_fields_for_plot(cloudnet_file_type: str) -> tuple[list, int]:
                 "v",
                 "width",
                 "ldr",
+                "sldr",
                 "v_sigma",
                 "beta",
                 "lwp",
