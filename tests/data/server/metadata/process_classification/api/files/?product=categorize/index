@@ -5,7 +5,12 @@
     "pid": "https://hdl.handle.net/21.12132/1.d740d61b09d546d1",
     "volatile": false,
     "measurementDate": "2020-10-22",
-    "cloudnetpyVersion": "1.3.2",
+    "software": [
+      {
+        "title": "CloudnetPy 1.3.2",
+        "url": null
+      }
+    ],
     "checksum": "c9a631253e49b021edb79d4ec0d0559c1f138ba5b23292c27339fa27068bbcb7",
     "size": "6423062",
     "format": "HDF5 (NetCDF4)",

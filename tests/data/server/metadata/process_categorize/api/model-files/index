@@ -5,7 +5,7 @@
     "pid": "https://hdl.handle.net/21.12132/1.0d4fbbd985c3451c",
     "volatile": false,
     "measurementDate": "2020-10-22",
-    "cloudnetpyVersion": "",
+    "software": [],
     "checksum": "ce141a626d64555095436921ec130800b47125ec4dc87768e5e94a0856ee6a98",
     "size": 501524,
     "format": "NetCDF3",

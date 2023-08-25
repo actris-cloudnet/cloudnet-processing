@@ -26,7 +26,13 @@ test_file_path = Path(__file__).parent.absolute()
         ("volatile", True),
         ("uuid", "2a211fc97e86489c9745e8027f86053a"),
         ("pid", ""),
-        ("cloudnetpyVersion", "1.3.2"),
+        (
+            "software",
+            {
+                "cloudnetpy": "1.3.2",
+                "cloudnet-processing": utils.get_data_processing_version(),
+            },
+        ),
         ("version", "abc"),
         ("size", 120931),
     ],
@@ -135,7 +141,9 @@ class TestsCreateProductPutPayload:
         assert payload["measurementDate"] == "2020-07-06"
         assert payload["format"] == "NetCDF3"
         assert payload["pid"] == ""
-        assert len(payload["cloudnetpyVersion"]) == 0
+        assert payload["software"] == {
+            "cloudnet-processing": utils.get_data_processing_version()
+        }
         assert payload["volatile"] is True
         assert payload["site"] == "schneefernerhaus"
         assert payload["product"] == "classification"
@@ -148,7 +156,10 @@ class TestsCreateProductPutPayload:
         assert payload["volatile"] is True
         assert payload["site"] == "bucharest"
         assert payload["product"] == "categorize"
-        assert len(payload["cloudnetpyVersion"]) == 5
+        assert payload["software"] == {
+            "cloudnetpy": "1.4.0",
+            "cloudnet-processing": utils.get_data_processing_version(),
+        }
 
 
 @pytest.mark.parametrize(

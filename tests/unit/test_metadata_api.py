@@ -28,7 +28,12 @@ files_response = """
     "measurementDate": "2020-05-13",
     "history": "2020-05-15 05:00:26 - radar file created",
     "publicity": "public",
-    "cloudnetpyVersion": "1.0.9",
+    "software": [
+      {
+        "title": "CloudnetPy 1.0.9",
+        "url": null
+      }
+    ],
     "releasedAt": "2020-05-15T05:00:27.538Z",
     "filename": "20200513_granada_rpg-fmcw-94.nc",
     "checksum": "33727ffe97e96baef0e4c6708a14ceb3b18fbe32ebeef28efe8703434fcceaaa",
@@ -68,7 +73,7 @@ class TestMetadataApi:
         "uuid": "b09174d204e04ffbb6d284c150bb7271",
         "pid": "",
         "history": "Some arbitrary history",
-        "cloudnetpyVersion": "",
+        "software": [],
         "version": "",
         "size": 501524,
     }

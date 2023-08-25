@@ -11,7 +11,7 @@ SCRIPT_PATH = path.dirname(path.realpath(__file__))
 
 class TestCategorizeProcessing:
     product = "categorize"
-    n_img = len(utils.get_fields_for_plot(product)[0])
+    n_img = len(utils.get_fields_for_plot(product)[0]) - 1  # no sldr
 
     @pytest.fixture(autouse=True)
     def _fetch_params(self, params):

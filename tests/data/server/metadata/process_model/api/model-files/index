@@ -4,7 +4,7 @@
     "version": "tx7.PKGJshdC8lwOcmilyiCIzx3MtJF",
     "volatile": true,
     "measurementDate": "2020-10-22",
-    "cloudnetpyVersion": "",
+    "software": [],
     "checksum": "ce141a626d64555095436921ec130800b47125ec4dc87768e5e94a0856ee6a98",
     "size": 501524,
     "format": "NetCDF3",
