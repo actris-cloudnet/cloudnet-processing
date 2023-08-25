@@ -47,14 +47,23 @@ def create_product_put_payload(
             "volatile": not hasattr(nc, "pid"),
             "uuid": getattr(nc, "file_uuid", ""),
             "pid": getattr(nc, "pid", ""),
-            "processingVersion": get_data_processing_version(),
-            "instrumentPid": getattr(nc, "instrument_pid", None),
+            "software": {"cloudnet-processing": get_data_processing_version()},
             **storage_service_response,
         }
-        source_uuids = getattr(nc, "source_file_uuids", None)
-        if source_uuids:
-            payload["sourceFileIds"] = source_uuids.replace(" ", "").split(",")
-        payload["cloudnetpyVersion"] = getattr(nc, "cloudnetpy_version", "")
+        if instrument_pid := getattr(nc, "instrument_pid", None):
+            payload["instrumentPid"] = instrument_pid
+        if source_uuids := getattr(nc, "source_file_uuids", None):
+            payload["sourceFileIds"] = [
+                uuid.strip() for uuid in source_uuids.split(",")
+            ]
+        if version := getattr(nc, "cloudnetpy_version", None):
+            payload["software"]["cloudnetpy"] = version
+        if version := getattr(nc, "mwrpy_version", None):
+            payload["software"]["mwrpy"] = version
+        if version := getattr(nc, "haloreader_version", None):
+            payload["software"]["halo-reader"] = version
+        if version := getattr(nc, "voodoonet_version", None):
+            payload["software"]["voodoonet"] = version
     return payload
 
 
