@@ -50,9 +50,9 @@ def main(args, storage_session: requests.Session | None = None):
             utils.send_slack_alert(err, "img", args, img.date_str, product)
             continue
         try:
-            identifier = row["downloadUrl"].split("_")[-1][:-3]
+            filename = row["filename"]
             img.create_and_upload_images(
-                product, row["uuid"], identifier, legacy=row.get("legacy", False)
+                product, row["uuid"], filename, legacy=row.get("legacy", False)
             )
         except OSError as err:
             utils.send_slack_alert(err, "img", args, img.date_str, product)

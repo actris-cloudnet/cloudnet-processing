@@ -43,7 +43,8 @@ def main(args):
 
 def _parse_args(args):
     parser = argparse.ArgumentParser(
-        description="Cloudnet processing main wrapper.", epilog="Enjoy the program! :)"
+        description="Cloudnet processing main wrapper.",
+        epilog="Enjoy the program! :)",
     )
     subparsers = parser.add_subparsers(
         title="Command", help="Command to execute.", required=True, dest="cmd"

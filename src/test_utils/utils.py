@@ -122,6 +122,7 @@ def register_storage_urls(
     identifier: str,
     is_volatile: bool,
     products=None,
+    instrument_pid: str = "_abcabcab",
 ):
     def save_file(request):
         with open(temp_file.name, mode="wb") as file:
@@ -139,7 +140,7 @@ def register_storage_urls(
     if products is None:
         products = (_fix_identifier(identifier),)
     for product in products:
-        url = f"{mock_addr}cloudnet-product{bucket_suffix}/{date_stripped}_{site}_{product}.nc"
+        url = f"{mock_addr}cloudnet-product{bucket_suffix}/{date_stripped}_{site}_{product}{instrument_pid}.nc"
         adapter.register_uri(
             "PUT", url, additional_matcher=save_file, json={"size": 65, "version": ""}
         )

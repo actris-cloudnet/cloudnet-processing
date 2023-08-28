@@ -34,6 +34,7 @@ def main():
         instrument,
         True,
         products=["ecmwf", "gdas1"],
+        instrument_pid="",
     )
 
     main_args = [f"-s={site}", f"--date={date}", "-p=radar", "model"]

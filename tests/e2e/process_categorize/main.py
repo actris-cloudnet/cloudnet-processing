@@ -21,7 +21,7 @@ source_data = [
 def main():
     utils.start_test_servers(product, SCRIPT_PATH)
     session = utils.register_storage_urls(
-        temp_file, source_data, site, date, product, False
+        temp_file, source_data, site, date, product, False, instrument_pid=""
     )
     main_args = [f"-s={site}", f"--date={date}", f"-p={product}", "process", "-r"]
     utils.process(session, main_args, temp_file, SCRIPT_PATH)

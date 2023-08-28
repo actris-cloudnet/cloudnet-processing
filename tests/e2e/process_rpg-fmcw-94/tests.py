@@ -45,26 +45,24 @@ class TestRPGFMCW94Processing:
 
         # Check product status
         assert (
-            '"GET /api/files?dateFrom=2020-10-22&dateTo=2020-10-22&site=bucharest'
-            '&developer=True&product=radar&showLegacy=True HTTP/1.1" 200 -'
+            '"GET /api/files?dateFrom=2020-10-22&dateTo=2020-10-22&site=bucharest&developer=True&instrumentPid=http%3A%2F%2Fpid.test%2F3.abcabcabcrpg&product=radar&showLegacy=True HTTP/1.1" 200 -'
             in "\n".join(data)
         )
 
         # GET RPG raw data
         assert (
-            '"GET /upload-metadata?dateFrom=2020-10-22&dateTo=2020-10-22&site=bucharest'
-            '&developer=True&instrument=rpg-fmcw-94&status%5B%5D=uploaded&status%5B%5D=processed HTTP/1.1" 200 -'
+            '"GET /upload-metadata?dateFrom=2020-10-22&dateTo=2020-10-22&site=bucharest&developer=True&instrumentPid=http%3A%2F%2Fpid.test%2F3.abcabcabcrpg&status%5B%5D=uploaded&status%5B%5D=processed HTTP/1.1" 200 -'
             in "\n".join(data)
         )
 
         # PUT file
         assert (
-            '"PUT /files/20201022_bucharest_rpg-fmcw-94.nc HTTP/1.1" 201 -'
+            '"PUT /files/20201022_bucharest_rpg-fmcw-94_abcabcab.nc HTTP/1.1" 201 -'
             in "\n".join(data)
         )
 
         # PUT images
-        img_put = '"PUT /visualizations/20201022_bucharest_rpg-fmcw-94-'
+        img_put = '"PUT /visualizations/20201022_bucharest_rpg-fmcw-94_abcabcab-'
         assert count_strings(data, img_put) == n_img
 
         # POST metadata

@@ -204,18 +204,19 @@ def test_are_identical_nc_files():
     ],
 )
 def test_compare_variables(array1, array2, expected: bool):
-    with (
-        netCDF4.Dataset(NamedTemporaryFile(), "w", format="NETCDF4_CLASSIC") as nc1,
-        netCDF4.Dataset(NamedTemporaryFile(), "w", format="NETCDF4_CLASSIC") as nc2,
-    ):
-        nc1.createDimension("time", 3)
-        nc2.createDimension("time", 3)
-        var1 = nc1.createVariable("time", "f8", ("time",))
-        var2 = nc2.createVariable("time", "f8", ("time",))
-        var1[:] = array1
-        var2[:] = array2
-        if expected:
-            utils._compare_variables(nc1, nc2)
-        else:
-            with pytest.raises(Exception):
+    with NamedTemporaryFile() as temp1, NamedTemporaryFile() as temp2:
+        with (
+            netCDF4.Dataset(temp1, "w", format="NETCDF4_CLASSIC") as nc1,
+            netCDF4.Dataset(temp2, "w", format="NETCDF4_CLASSIC") as nc2,
+        ):
+            nc1.createDimension("time", 3)
+            nc2.createDimension("time", 3)
+            var1 = nc1.createVariable("time", "f8", ("time",))
+            var2 = nc2.createVariable("time", "f8", ("time",))
+            var1[:] = array1
+            var2[:] = array2
+            if expected:
                 utils._compare_variables(nc1, nc2)
+            else:
+                with pytest.raises(Exception):
+                    utils._compare_variables(nc1, nc2)

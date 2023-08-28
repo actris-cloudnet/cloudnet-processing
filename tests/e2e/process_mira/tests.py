@@ -56,23 +56,25 @@ class TestMIRAProcessing:
 
         # Check product status
         assert (
-            f'"GET /api/files{prefix}product=radar&showLegacy=True HTTP/1.1" 200 -'
-            in "\n".join(data)
-        )
+            f'"GET /api/files{prefix}instrumentPid=http%3A%2F%2Fpid.test%2F3.abcabcabcmira&product=radar&showLegacy=True HTTP/1.1" 200 -'
+        ) in "\n".join(data)
 
         # Two instrument API calls...
 
         # GET MIRA raw data
         assert (
-            f'"GET /upload-metadata{prefix}instrument=mira&status%5B%5D=uploaded&status%5B%5D=processed HTTP/1.1" 200 -'
+            f'"GET /upload-metadata{prefix}instrumentPid=http%3A%2F%2Fpid.test%2F3.abcabcabcmira&status%5B%5D=uploaded&status%5B%5D=processed HTTP/1.1" 200'
             in "\n".join(data)
         )
 
         # PUT file
-        assert '"PUT /files/20210127_juelich_mira.nc HTTP/1.1" 201 -' in "\n".join(data)
+        assert (
+            '"PUT /files/20210127_juelich_mira_abcabcab.nc HTTP/1.1" 201 -'
+            in "\n".join(data)
+        )
 
         # PUT images
-        img_put = '"PUT /visualizations/20210127_juelich_mira-'
+        img_put = '"PUT /visualizations/20210127_juelich_mira_abcabcab-'
         assert count_strings(data, img_put) == self.n_img
 
         # POST metadata

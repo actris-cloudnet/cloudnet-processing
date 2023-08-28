@@ -44,9 +44,9 @@ class TestCategorizeProcessing:
     def test_that_calls_metadata_api(self):
         data = read_log_file(SCRIPT_PATH)
         n_gets = len(utils.get_product_types(level="1b")) - 1
-        n_puts = 2
+        n_puts = 3
         n_checks_for_updated_at = 1
-        assert len(data) == n_gets + self.n_img + n_puts + n_checks_for_updated_at + 1
+        assert len(data) == n_gets + self.n_img + n_puts + n_checks_for_updated_at
 
         # Check product status
         assert (
@@ -69,7 +69,10 @@ class TestCategorizeProcessing:
         )
 
         # PUT file
-        assert '"PUT /files/20201022_bucharest_categorize.nc HTTP/1.1" 201 -' in data[7]
+        assert (
+            '"PUT /files/20201022_bucharest_categorize.nc HTTP/1.1" 201 -'
+            in "\n".join(data)
+        )
 
         # PUT images
         img_put = '"PUT /visualizations/20201022_bucharest_categorize-'

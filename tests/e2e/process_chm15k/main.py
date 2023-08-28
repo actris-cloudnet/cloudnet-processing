@@ -38,7 +38,13 @@ source_data = [
 def main():
     utils.start_test_servers(instrument, SCRIPT_PATH)
     session = utils.register_storage_urls(
-        temp_file, source_data, site, date, instrument, False
+        temp_file,
+        source_data,
+        site,
+        date,
+        instrument,
+        False,
+        instrument_pid="",
     )
     main_args = [f"-s={site}", f"--date={date}", "-p=lidar", "process"]
     utils.process(

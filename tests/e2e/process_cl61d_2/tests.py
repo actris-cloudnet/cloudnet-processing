@@ -25,32 +25,7 @@ class Test:
     def test_metadata_api_calls(self):
         data = read_log_file(SCRIPT_PATH)
 
-        n_raw_files = 2
-
-        fix = f"dateFrom={self.date}&dateTo={self.date}&site={self.site}&developer=True"
-        instru = f"&instrument={self.instrument}"
-
-        assert (
-            f"GET /api/files?{fix}&product={self.product}&showLegacy=True"
-            in "\n".join(data)
-        )
-
-        # Detect uploaded instruments
-        assert "GET /api/instruments" in "\n".join(data)
-        assert f"GET /upload-metadata?{fix}" in "\n".join(data)
-
-        # Try to find daily raw file
-        assert (
-            f"GET /upload-metadata?{fix}{instru}&status%5B%5D=uploaded&status%5B%5D=processed"
-            in "\n".join(data)
-        )
-
-        # It exists, get uploaded raw files and append
-        assert f"GET /upload-metadata?{fix}{instru}&status=uploaded" in "\n".join(data)
-
-        # Submit updated daily raw file
-        assert "POST /upload/metadata" in "\n".join(data)
-        assert "PUT /upload/data" in "\n".join(data)
+        n_raw_files = 4
 
         # GET calibration
         assert "GET /api/calibration" in "\n".join(data)

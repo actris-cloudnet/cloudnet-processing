@@ -60,13 +60,16 @@ class ProcessBase:
         self.temp_file = NamedTemporaryFile(dir=self._temp_dir_root, suffix=".nc")
         self.daily_file = NamedTemporaryFile(dir=self._temp_dir_root, suffix=".nc")
 
-    def fetch_volatile_uuid(self, product: str) -> str | None:
-        payload = self._get_payload(product=product)
+    def fetch_volatile_uuid(
+        self, product: str, instrument_pid: str | None = None
+    ) -> tuple[str | None, str | None]:
+        payload = self._get_payload(product=product, instrument_pid=instrument_pid)
         payload["showLegacy"] = True
         metadata = self.md_api.get("api/files", payload)
+        filename = metadata[0]["filename"] if metadata else None
         uuid = self._read_volatile_uuid(metadata)
         self._create_new_version = self._is_create_new_version(metadata)
-        return uuid
+        return uuid, filename
 
     def print_info(self) -> None:
         logging.info(
@@ -75,18 +78,25 @@ class ProcessBase:
         )
 
     def upload_product(
-        self, product: str, uuid: Uuid, model_or_instrument_id: str
+        self,
+        product: str,
+        uuid: Uuid,
+        model_or_instrument_id: str,
+        s3key: str,
     ) -> None:
-        if product in utils.get_product_types(level="3"):
-            s3key = self._get_l3_product_key(product, model_or_instrument_id)
-        else:
-            s3key = self._get_product_key(model_or_instrument_id)
         file_info = self._storage_api.upload_product(self.temp_file.name, s3key)
         payload = utils.create_product_put_payload(
             self.temp_file.name, file_info, site=self.site
         )
         if product == "model":
             payload["model"] = model_or_instrument_id
+        elif product == "mwr-l1c":
+            payload["instrument"] = "hatpro"
+        elif product in utils.get_product_types(level="1b"):
+            payload["instrument"] = model_or_instrument_id
+        else:
+            payload["instrument"] = None
+
         payload["product"] = product  # L3 files use different products in NC vars
         self.md_api.put("files", s3key, payload)
         if product in utils.get_product_types(level="1b") or product == "mwr-l1c":
@@ -96,7 +106,7 @@ class ProcessBase:
         self,
         product: str,
         uuid: str,
-        model_or_instrument_id: str,
+        product_s3key: str,
         legacy: bool = False,
     ) -> None:
         if "hidden" in self._site_type:
@@ -104,7 +114,6 @@ class ProcessBase:
             return
         temp_file = NamedTemporaryFile(suffix=".png")
         visualizations = []
-        product_s3key = self._get_product_key(model_or_instrument_id)
         product_s3key = f"legacy/{product_s3key}" if legacy is True else product_s3key
         try:
             fields, max_alt = utils.get_fields_for_plot(product)
@@ -229,18 +238,18 @@ class ProcessBase:
 
     def _download_raw_files(
         self, upload_metadata: list, temp_file=None
-    ) -> tuple[list | str, list, list]:
+    ) -> tuple[list | str, list]:
         if temp_file is not None:
             if len(upload_metadata) > 1:
                 logging.warning("Several daily raw files")
             upload_metadata = [upload_metadata[0]]
-        full_paths, uuids, instrument_pids = self._storage_api.download_raw_data(
+        full_paths, uuids = self._storage_api.download_raw_data(
             upload_metadata, self.temp_dir.name
         )
         if temp_file is not None:
             shutil.move(full_paths[0], temp_file.name)
             full_paths = temp_file.name
-        return full_paths, uuids, instrument_pids
+        return full_paths, uuids
 
     def _check_raw_data_status(self, metadata: list) -> None:
         if not metadata:
@@ -263,6 +272,7 @@ class ProcessBase:
         skip_created: bool = False,
         date_from: str | None = None,
         date_to: str | None = None,
+        instrument_pid: str | None = None,
     ) -> dict:
         payload = {
             "dateFrom": date_from if date_from is not None else self.date_str,
@@ -272,6 +282,8 @@ class ProcessBase:
         }
         if instrument is not None:
             payload["instrument"] = instrument
+        if instrument_pid is not None:
+            payload["instrumentPid"] = instrument_pid
         if product is not None:
             payload["product"] = product
         if model is not None:
@@ -285,18 +297,18 @@ class ProcessBase:
             payload = {"uuid": uuid, "status": status}
             self.md_api.post("upload-metadata", payload)
 
-    def _get_product_key(self, identifier: str) -> str:
+    def _get_product_key(self, identifier: str, instrument_pid: str | None) -> str:
         assert isinstance(self.date_str, str)
-        return f"{self.date_str.replace('-', '')}_{self.site}_{identifier}.nc"
-
-    def _get_l3_product_key(self, product: str, model: str) -> str:
-        assert isinstance(self.date_str, str)
-        return f"{self.date_str.replace('-', '')}_{self.site}_{product}_downsampled_{model}.nc"
+        if instrument_pid is not None:
+            suffix = f"_{instrument_pid.split('.')[-1][:8]}"
+        else:
+            suffix = ""
+        return f"{self.date_str.replace('-', '')}_{self.site}_{identifier}{suffix}.nc"
 
     @staticmethod
     def _check_response_length(metadata) -> None:
         if isinstance(metadata, list) and len(metadata) > 1:
-            logging.warning("API responded with several files")
+            logging.info("API responded with several files")
 
     def _check_source_status(self, product: str, meta_records: dict) -> None:
         product_timestamp = self._get_product_timestamp(product)

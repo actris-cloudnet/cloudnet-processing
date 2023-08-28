@@ -98,9 +98,8 @@ def main():
                 continue
 
             # images
-            assert isinstance(info["identifier"], str)
             legacy_file.create_and_upload_images(
-                product, uuid, info["identifier"], legacy=True
+                product, uuid, legacy_file.filename, legacy=True
             )
             legacy_file.upload_quality_report(legacy_file.temp_file.name, uuid)
             legacy_file.temp_file.close()
