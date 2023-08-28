@@ -30,20 +30,15 @@ from requests.exceptions import HTTPError
 
 from data_processing import concat_wrapper, nc_header_augmenter, utils
 from data_processing.processing_tools import Uuid
-from data_processing.utils import (
-    MiscError,
-    RawDataMissingError,
-    SkipBlock,
-    fetch_calibration,
-)
+from data_processing.utils import MiscError, RawDataMissingError, fetch_calibration
 
 
 class ProcessInstrument:
-    def __init__(self, base, temp_file, uuid: Uuid):
+    def __init__(self, base, temp_file, uuid: Uuid, instrument_pid: str):
         self.base = base
         self.temp_file = temp_file
         self.uuid = uuid
-        self.instrument_pids: list = []
+        self.instrument_pid = instrument_pid
         self._kwargs = self._get_kwargs()
         self._args = self._get_args()
 
@@ -65,8 +60,8 @@ class ProcessInstrument:
 
 class ProcessRadar(ProcessInstrument):
     def process_rpg_fmcw_94(self):
-        full_paths, raw_uuids, self.instrument_pids = self.base.download_instrument(
-            "rpg-fmcw-94", ".lv1$"
+        full_paths, raw_uuids = self.base.download_instrument(
+            self.instrument_pid, include_pattern=".lv1$"
         )
         self.uuid.product, valid_full_paths = rpg2nc(
             self.base.temp_dir.name, *self._args, **self._kwargs
@@ -74,9 +69,7 @@ class ProcessRadar(ProcessInstrument):
         self.uuid.raw = _get_valid_uuids(raw_uuids, full_paths, valid_full_paths)
 
     def process_mira(self):
-        full_paths, self.uuid.raw, self.instrument_pids = self.base.download_instrument(
-            "mira"
-        )
+        full_paths, self.uuid.raw = self.base.download_instrument(self.instrument_pid)
         _unzip_gz_files(full_paths)
         self._fix_suffices(self.base.temp_dir.name, ".mmclx")
         self.uuid.product = mira2nc(
@@ -84,23 +77,19 @@ class ProcessRadar(ProcessInstrument):
         )
 
     def process_basta(self):
-        full_path, self.uuid.raw, self.instrument_pids = self.base.download_instrument(
-            "basta", largest_only=True
+        full_path, self.uuid.raw = self.base.download_instrument(
+            self.instrument_pid, largest_only=True
         )
         self.uuid.product = basta2nc(full_path, *self._args, **self._kwargs)
 
     def process_copernicus(self):
-        full_paths, self.uuid.raw, self.instrument_pids = self.base.download_instrument(
-            "copernicus"
-        )
+        full_paths, self.uuid.raw = self.base.download_instrument(self.instrument_pid)
         self.uuid.product = copernicus2nc(
             os.path.dirname(full_paths[0]), *self._args, **self._kwargs
         )
 
     def process_galileo(self):
-        full_paths, self.uuid.raw, self.instrument_pids = self.base.download_instrument(
-            "galileo"
-        )
+        full_paths, self.uuid.raw = self.base.download_instrument(self.instrument_pid)
         self.uuid.product = galileo2nc(
             os.path.dirname(full_paths[0]), *self._args, **self._kwargs
         )
@@ -115,13 +104,13 @@ class ProcessRadar(ProcessInstrument):
 
 class ProcessDopplerLidar(ProcessInstrument):
     def process_halo_doppler_lidar(self):
-        full_paths, self.uuid.raw, self.instrument_pids = self.base.download_instrument(
-            "halo-doppler-lidar",
+        full_paths, self.uuid.raw = self.base.download_instrument(
+            self.instrument_pid,
             include_pattern=r"Stare.*\.hpl",
             exclude_tag_subset={"cross"},
         )
-        full_paths_bg, _, _ = self.base.download_instrument(
-            "halo-doppler-lidar",
+        full_paths_bg, _ = self.base.download_instrument(
+            self.instrument_pid,
             include_pattern=r"Background.*\.txt",
             exclude_tag_subset={"cross"},
             date_from=str(
@@ -159,15 +148,11 @@ class ProcessDopplerLidar(ProcessInstrument):
 
 
 class ProcessLidar(ProcessInstrument):
-    file_id = "clu-generated-daily"
-
     def process_cs135(self):
-        full_paths, self.uuid.raw, self.instrument_pids = self.base.download_instrument(
-            "cs135"
-        )
+        full_paths, self.uuid.raw = self.base.download_instrument(self.instrument_pid)
         full_paths.sort()
         utils.concatenate_text_files(full_paths, self.base.daily_file.name)
-        self._call_ceilo2nc(model="cs135")
+        self._call_ceilo2nc("cs135")
 
     def process_chm15k(self):
         self._process_chm_lidar("chm15k")
@@ -179,34 +164,30 @@ class ProcessLidar(ProcessInstrument):
         self._process_chm_lidar("chm15kx")
 
     def _process_chm_lidar(self, model: str):
-        full_paths, raw_uuids, self.instrument_pids = self.base.download_instrument(
-            model
-        )
+        full_paths, raw_uuids = self.base.download_instrument(self.instrument_pid)
         valid_full_paths = concat_wrapper.concat_chm15k_files(
             full_paths, self.base.date_str, self.base.daily_file.name
         )
         self.uuid.raw = _get_valid_uuids(raw_uuids, full_paths, valid_full_paths)
         utils.check_chm_version(self.base.daily_file.name, model)
-        self._call_ceilo2nc()
+        self._call_ceilo2nc("chm15k")
 
     def process_ct25k(self):
-        full_path, self.uuid.raw, self.instrument_pids = self.base.download_instrument(
-            "ct25k", largest_only=True
+        full_path, self.uuid.raw = self.base.download_instrument(
+            self.instrument_pid, largest_only=True
         )
         shutil.move(full_path, self.base.daily_file.name)
-        self._call_ceilo2nc()
+        self._call_ceilo2nc("ct25k")
 
     def process_halo_doppler_lidar_calibrated(self):
-        full_path, self.uuid.raw, self.instrument_pids = self.base.download_instrument(
-            "halo-doppler-lidar-calibrated", largest_only=True
+        full_path, self.uuid.raw = self.base.download_instrument(
+            self.instrument_pid, largest_only=True
         )
         data = self._get_payload_for_nc_file_augmenter(full_path)
         self.uuid.product = nc_header_augmenter.harmonize_halo_calibrated_file(data)
 
     def process_pollyxt(self):
-        full_paths, self.uuid.raw, self.instrument_pids = self.base.download_instrument(
-            "pollyxt"
-        )
+        full_paths, self.uuid.raw = self.base.download_instrument(self.instrument_pid)
         calibration = self._fetch_pollyxt_calibration()
         site_meta = self.base.site_meta | calibration
         self.uuid.product = pollyxt2nc(
@@ -218,26 +199,22 @@ class ProcessLidar(ProcessInstrument):
         )
 
     def process_cl31(self):
-        full_paths, self.uuid.raw, self.instrument_pids = self.base.download_instrument(
-            "cl31"
-        )
+        full_paths, self.uuid.raw = self.base.download_instrument(self.instrument_pid)
         full_paths.sort()
         utils.concatenate_text_files(full_paths, self.base.daily_file.name)
-        self._call_ceilo2nc()
+        self._call_ceilo2nc("cl31")
 
     def process_cl51(self):
         if self.base.site == "norunda":
             (
                 full_paths,
                 self.uuid.raw,
-                self.instrument_pids,
-            ) = self.base.download_adjoining_daily_files("cl51")
+            ) = self.base.download_adjoining_daily_files(self.instrument_pid)
         else:
             (
                 full_paths,
                 self.uuid.raw,
-                self.instrument_pids,
-            ) = self.base.download_instrument("cl51")
+            ) = self.base.download_instrument(self.instrument_pid)
         full_paths.sort()
         utils.concatenate_text_files(full_paths, self.base.daily_file.name)
         date = utils.date_string_to_date(self.base.date_str)
@@ -245,70 +222,37 @@ class ProcessLidar(ProcessInstrument):
             logging.info("Shifting timestamps to UTC")
             offset_in_hours = -1
             _fix_cl51_timestamps(self.base.daily_file.name, offset_in_hours)
-        self._call_ceilo2nc()
+        self._call_ceilo2nc("cl51")
 
     def process_cl61d(self):
-        model = "cl61d"
-        try:
-            if self.base.is_reprocess:
-                raise SkipBlock  # Move to next block and re-create daily file
-            tmp_file, _, self.instrument_pids = self.base.download_instrument(
-                model, include_pattern=self.file_id, largest_only=True
-            )
-            full_paths, raw_uuids, self.instrument_pids = self.base.download_uploaded(
-                model, exclude_pattern=self.file_id
-            )
-            valid_full_paths = concat_wrapper.update_daily_file(full_paths, tmp_file)
-            shutil.copy(tmp_file, self.base.daily_file.name)
-            msg = "Raw data already processed"
-        except (RawDataMissingError, SkipBlock) as exc:
-            msg = ""
-            full_paths, raw_uuids, self.instrument_pids = self.base.download_instrument(
-                model, exclude_pattern=self.file_id
-            )
-            if full_paths:
-                logging.info(f"Creating daily file from {len(full_paths)} files")
-            else:
-                raise RawDataMissingError from exc
-            variables = ["x_pol", "p_pol", "beta_att", "time", "tilt_angle"]
-            try:
-                valid_full_paths = concat_wrapper.concat_netcdf_files(
-                    full_paths,
-                    self.base.date_str,
-                    self.base.daily_file.name,
-                    variables=variables,
-                )
-            except KeyError:
-                valid_full_paths = concat_wrapper.concat_netcdf_files(
-                    full_paths,
-                    self.base.date_str,
-                    self.base.daily_file.name,
-                    concat_dimension="profile",
-                    variables=variables,
-                )
-
-        if not valid_full_paths:
-            raise RawDataMissingError(msg)
-        filename = self._create_daily_file_name(model)
-        try:
-            instrument_pid = self.instrument_pids[0]
-        except IndexError:
-            instrument_pid = None
-        self.base.md_api.upload_instrument_file(
-            self.base, model, filename, instrument_pid
+        full_paths, raw_uuids = self.base.download_instrument(
+            self.instrument_pid, exclude_pattern="clu-generated"
         )
-        self._call_ceilo2nc(model=model)
+        variables = ["x_pol", "p_pol", "beta_att", "time", "tilt_angle"]
+        try:
+            valid_full_paths = concat_wrapper.concat_netcdf_files(
+                full_paths,
+                self.base.date_str,
+                self.base.daily_file.name,
+                variables=variables,
+            )
+        except KeyError:
+            valid_full_paths = concat_wrapper.concat_netcdf_files(
+                full_paths,
+                self.base.date_str,
+                self.base.daily_file.name,
+                concat_dimension="profile",
+                variables=variables,
+            )
+        if not valid_full_paths:
+            raise RawDataMissingError()
+        self._call_ceilo2nc("cl61d")
         self.uuid.raw = _get_valid_uuids(raw_uuids, full_paths, valid_full_paths)
 
-    def _create_daily_file_name(self, model: str) -> str:
-        date = self.base.date_str.replace("-", "")
-        return f"{date}_{self.base.site}_{model}_{self.file_id}.nc"
-
-    def _call_ceilo2nc(self, model: str | None = None):
+    def _call_ceilo2nc(self, model: str):
         calibration = self._fetch_ceilo_calibration()
         site_meta = self.base.site_meta | calibration
-        if model is not None:
-            site_meta["model"] = model
+        site_meta["model"] = model
         self.uuid.product = ceilo2nc(
             self.base.daily_file.name,
             self.temp_file.name,
@@ -319,10 +263,7 @@ class ProcessLidar(ProcessInstrument):
 
     def _fetch_ceilo_calibration(self) -> dict:
         output: dict = {}
-        if not self.instrument_pids:
-            return output
-        instrument_pid = self.instrument_pids[0]
-        calibration = fetch_calibration(instrument_pid, self.base.date_str)
+        calibration = fetch_calibration(self.instrument_pid, self.base.date_str)
         if not calibration:
             return output
         if "calibration_factor" in calibration["data"]:
@@ -335,10 +276,7 @@ class ProcessLidar(ProcessInstrument):
 
     def _fetch_pollyxt_calibration(self) -> dict:
         output = {"snr_limit": 25.0}
-        if not self.instrument_pids:
-            return output
-        instrument_pid = self.instrument_pids[0]
-        calibration = fetch_calibration(instrument_pid, self.base.date_str)
+        calibration = fetch_calibration(self.instrument_pid, self.base.date_str)
         if not calibration:
             return output
         if "snr_limit" in calibration["data"]:
@@ -348,8 +286,9 @@ class ProcessLidar(ProcessInstrument):
 
 class ProcessMwrL1c(ProcessInstrument):
     def process_hatpro(self):
-        full_paths, self.uuid.raw, self.instrument_pids = self.base.download_instrument(
-            "hatpro", include_pattern=r"\.(brt|hkd|met|irt|blb|bls)$"
+        full_paths, self.uuid.raw = self.base.download_instrument(
+            self.instrument_pid,
+            include_pattern=r"\.(brt|hkd|met|irt|blb|bls)$",
         )
         output_filename, site_meta = self._args
 
@@ -357,7 +296,7 @@ class ProcessMwrL1c(ProcessInstrument):
             coeff_paths = []
             payload = {
                 "date": self.base.date_str,
-                "instrumentPid": self.instrument_pids[0],
+                "instrumentPid": self.instrument_pid,
             }
             try:
                 data = self.base.md_api.get("api/calibration", payload)
@@ -384,16 +323,18 @@ class ProcessMwrL1c(ProcessInstrument):
 class ProcessMwr(ProcessInstrument):
     def process_hatpro(self):
         try:
-            full_paths, raw_uuids, self.instrument_pids = self.base.download_instrument(
-                "hatpro", r"^(?!.*scan).*\.lwp$|^(?!.*scan).*\.iwv$"
+            full_paths, raw_uuids = self.base.download_instrument(
+                self.instrument_pid,
+                include_pattern=r"^(?!.*scan).*\.lwp$|^(?!.*scan).*\.iwv$",
             )
             self.uuid.product, valid_full_paths = hatpro2nc(
                 self.base.temp_dir.name, *self._args, **self._kwargs
             )
+
         except RawDataMissingError:
             pattern = "(ufs_l2a.nc$|clwvi.*.nc$|.lwp.*.nc$)"
-            full_paths, raw_uuids, self.instrument_pids = self.base.download_instrument(
-                "hatpro", pattern
+            full_paths, raw_uuids = self.base.download_instrument(
+                self.instrument_pid, include_pattern=pattern
             )
             valid_full_paths = concat_wrapper.concat_netcdf_files(
                 full_paths, self.base.date_str, self.temp_file.name
@@ -403,9 +344,7 @@ class ProcessMwr(ProcessInstrument):
         self.uuid.raw = _get_valid_uuids(raw_uuids, full_paths, valid_full_paths)
 
     def process_radiometrics(self):
-        full_paths, self.uuid.raw, self.instrument_pids = self.base.download_instrument(
-            "radiometrics"
-        )
+        full_paths, self.uuid.raw = self.base.download_instrument(self.instrument_pid)
         _unzip_gz_files(full_paths)
         self.uuid.product = radiometrics2nc(
             self.base.temp_dir.name, *self._args, **self._kwargs
@@ -414,8 +353,8 @@ class ProcessMwr(ProcessInstrument):
 
 class ProcessDisdrometer(ProcessInstrument):
     def process_parsivel(self):
-        full_path, self.uuid.raw, self.instrument_pids = self.base.download_instrument(
-            "parsivel", largest_only=True
+        full_path, self.uuid.raw = self.base.download_instrument(
+            self.instrument_pid, largest_only=True
         )
         telegram: Sequence[int | None] | None = None
         # fmt: off
@@ -435,9 +374,7 @@ class ProcessDisdrometer(ProcessInstrument):
             self.uuid.product = parsivel2nc(full_path, *self._args, **kwargs)
 
     def process_thies_lnm(self):
-        full_paths, self.uuid.raw, self.instrument_pids = self.base.download_instrument(
-            "thies-lnm"
-        )
+        full_paths, self.uuid.raw = self.base.download_instrument(self.instrument_pid)
         full_paths.sort()
         utils.concatenate_text_files(full_paths, self.base.daily_file.name)
         self.uuid.product = thies2nc(
@@ -451,8 +388,8 @@ class ProcessWeatherStation(ProcessInstrument):
             raise NotImplementedError(
                 "Weather station only implemented for Palaiseau data format"
             )
-        full_path, self.uuid.raw, self.instrument_pids = self.base.download_instrument(
-            "weather-station", largest_only=True
+        full_path, self.uuid.raw = self.base.download_instrument(
+            self.instrument_pid, largest_only=True
         )
         self.uuid.product = ws2nc(full_path, *self._args, **self._kwargs)
 

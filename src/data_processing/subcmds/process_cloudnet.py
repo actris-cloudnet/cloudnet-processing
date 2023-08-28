@@ -45,6 +45,7 @@ def main(args, storage_session: requests.Session | None = None):
 
 class ProcessCloudnet(ProcessBase):
     def process_product(self, product: str):
+        instrument_pid = None
         processing_tools.clean_dir(self.temp_dir.name)
         self.init_temp_files()
         if product == "model":
@@ -55,28 +56,38 @@ class ProcessCloudnet(ProcessBase):
         logging.info(f"Processing {product} product, {self.site} {self.date_str}")
         uuid = Uuid()
         try:
-            uuid.volatile = self.fetch_volatile_uuid(product)
             match product:
                 case product if product in utils.get_product_types(level="2"):
+                    uuid.volatile, filename = self.fetch_volatile_uuid(product)
                     uuid, identifier = self.process_level2(uuid, product)
                 case "categorize" | "categorize-voodoo":
+                    uuid.volatile, filename = self.fetch_volatile_uuid(product)
                     uuid, identifier = self.process_categorize(uuid, product)
                 case product if product in utils.get_product_types(
                     level="1b"
                 ) or product == "mwr-l1c":
-                    uuid, identifier, instrument_pids = self.process_instrument(
-                        uuid, product
+                    instrument_id, instrument_pid = self._fetch_instrument_to_process(
+                        product
                     )
-                    self.add_instrument_pid(instrument_pids)
+                    uuid.volatile, filename = self.fetch_volatile_uuid(
+                        product, instrument_pid=instrument_pid
+                    )
+                    uuid, identifier = self.process_instrument(
+                        uuid, product, instrument_id, instrument_pid
+                    )
+                    self.add_instrument_pid(instrument_pid)
                 case bad_product:
                     raise ValueError(f"Bad product: {bad_product}")
             if product == "mwr-l1c":
                 identifier = "hatpro-l1c"
-            self.compare_file_content(product)
+            if not self.args.force:
+                self.compare_file_content(product)
             self.add_pid()
             utils.add_version_to_global_attributes(self.temp_file.name)
-            self.upload_product(product, uuid, identifier)
-            self.create_and_upload_images(product, uuid.product, identifier)
+            if filename is None:
+                filename = self._get_product_key(identifier, instrument_pid)
+            self.upload_product(product, uuid, identifier, filename)
+            self.create_and_upload_images(product, uuid.product, filename)
             self.upload_quality_report(self.temp_file.name, uuid.product)
             self.print_info()
         except (RawDataMissingError, MiscError, NotImplementedError) as err:
@@ -120,22 +131,19 @@ class ProcessCloudnet(ProcessBase):
         metadata = utils.remove_duplicate_dicts(metadata)
         return metadata
 
-    def process_instrument(self, uuid: Uuid, instrument_type: str):
-        instrument = self._detect_uploaded_instrument(instrument_type)
-        instrument_type_camel_case = "".join(
-            [part.capitalize() for part in instrument_type.split("-")]
-        )
-        process_class = getattr(
-            instrument_process, f"Process{instrument_type_camel_case}"
-        )
-        process = process_class(self, self.temp_file, uuid)
+    def process_instrument(
+        self, uuid: Uuid, product: str, instrument: str, instrument_pid: str
+    ):
+        product_camel_case = "".join([part.capitalize() for part in product.split("-")])
+        process_class = getattr(instrument_process, f"Process{product_camel_case}")
+        process = process_class(self, self.temp_file, uuid, instrument_pid)
         getattr(process, f'process_{instrument.replace("-", "_")}')()
         instrument = (
             "halo-doppler-lidar"
             if instrument == "halo-doppler-lidar-calibrated"
             else instrument
         )
-        return process.uuid, instrument, process.instrument_pids
+        return process.uuid, instrument
 
     def process_categorize(self, uuid: Uuid, cat_variant: str) -> tuple[Uuid, str]:
         l1_products = ["lidar", "model", "mwr", "radar"]
@@ -151,15 +159,23 @@ class ProcessCloudnet(ProcessBase):
             )
         if not input_files["mwr"] and "rpg-fmcw-94" in input_files["radar"]:
             input_files["mwr"] = input_files["radar"]
+        if cat_variant == "categorize-voodoo":
+            payload = self._get_payload(instrument="rpg-fmcw-94")
+            metadata = self.md_api.get("upload-metadata", payload)
+            unique_pids = list(set(row["instrumentPid"] for row in metadata))
+            if unique_pids:
+                instrument_pid = unique_pids[0]
+            else:
+                raise RawDataMissingError("No rpg-fmcw-94 cloud radar found")
+            (
+                full_paths,
+                _,
+            ) = self.download_instrument(instrument_pid, include_pattern=".LV0")
+            full_paths_list = (
+                [full_paths] if isinstance(full_paths, str) else full_paths
+            )
+            input_files["lv0_files"] = full_paths_list  # type: ignore
         try:
-            if cat_variant == "categorize-voodoo":
-                full_paths, _, _ = self.download_instrument(
-                    "rpg-fmcw-94", include_pattern=".LV0"
-                )
-                full_paths_list = (
-                    [full_paths] if isinstance(full_paths, str) else full_paths
-                )
-                input_files["lv0_files"] = full_paths_list  # type: ignore
             uuid.product = generate_categorize(
                 input_files, self.temp_file.name, uuid=uuid.volatile
             )
@@ -186,9 +202,26 @@ class ProcessCloudnet(ProcessBase):
             else:
                 payload = self._get_payload(product=product)
                 metadata = self.md_api.get("api/files", payload)
-            self._check_response_length(metadata)
-            if metadata:
-                meta_records[product] = metadata[0]
+            if not metadata:
+                continue
+            meta_records[product] = metadata[0]
+            if len(metadata) > 1:
+                preferred = (
+                    "mira",
+                    "rpg-fmcw-94",
+                    "galileo",
+                    "chm15k",
+                    "chm15kx",
+                    "chm15x",
+                )
+                for row in metadata:
+                    for preferred_instrument in preferred:
+                        if row["instrument"]["id"] == preferred_instrument:
+                            meta_records[product] = row
+                        break
+                logging.info(
+                    f"Several options for {product}, using {meta_records[product]['instrumentPid']}"
+                )
         return meta_records
 
     @staticmethod
@@ -240,7 +273,7 @@ class ProcessCloudnet(ProcessBase):
 
     def download_instrument(
         self,
-        instrument: str,
+        instrument_pid: str,
         include_pattern: str | None = None,
         largest_only: bool = False,
         exclude_pattern: str | None = None,
@@ -248,13 +281,13 @@ class ProcessCloudnet(ProcessBase):
         date_to: str | None = None,
         include_tag_subset: set[str] | None = None,
         exclude_tag_subset: set[str] | None = None,
-    ) -> tuple[list | str, list, list]:
-        """Download raw files for given instrument."""
+    ) -> tuple[list | str, list]:
+        """Download raw files for given instrument PID."""
         payload = self._get_payload(
-            instrument=instrument,
             skip_created=True,
             date_from=date_from,
             date_to=date_to,
+            instrument_pid=instrument_pid,
         )
         upload_metadata = self.md_api.get("upload-metadata", payload)
         if include_pattern is not None:
@@ -281,24 +314,11 @@ class ProcessCloudnet(ProcessBase):
         self._check_raw_data_status(upload_metadata)
         return self._download_raw_files(upload_metadata, arg)
 
-    def download_uploaded(
-        self, instrument: str, exclude_pattern: str | None
-    ) -> tuple[list | str, list, list]:
-        """Download self-generated daily files (e.g. CL61-D)."""
-        payload = self._get_payload(instrument=instrument)
-        payload["status"] = "uploaded"
-        upload_metadata = self.md_api.get("upload-metadata", payload)
-        if exclude_pattern is not None:
-            upload_metadata = utils.exclude_records_with_pattern_in_filename(
-                upload_metadata, exclude_pattern
-            )
-        return self._download_raw_files(upload_metadata)
-
     def download_adjoining_daily_files(
-        self, instrument: str
-    ) -> tuple[list | str, list, list]:
+        self, instrument_pid: str
+    ) -> tuple[list | str, list]:
         next_day = utils.get_date_from_past(-1, self.date_str)
-        payload = self._get_payload(instrument=instrument, skip_created=True)
+        payload = self._get_payload(skip_created=True, instrument_pid=instrument_pid)
         payload["dateFrom"] = self.date_str
         payload["dateTo"] = next_day
         upload_metadata = self.md_api.get("upload-metadata", payload)
@@ -309,64 +329,60 @@ class ProcessCloudnet(ProcessBase):
             self.is_reprocess or self.is_reprocess_volatile
         ):
             raise MiscError("Raw data already processed")
-        full_paths, _, instrument_pids = self._download_raw_files(upload_metadata)
+        full_paths, _ = self._download_raw_files(upload_metadata)
         # Return all full paths but only current day UUIDs
         uuids_of_current_day = [
             meta["uuid"]
             for meta in upload_metadata
             if meta["measurementDate"] == self.date_str
         ]
-        return full_paths, uuids_of_current_day, instrument_pids
+        return full_paths, uuids_of_current_day
 
-    def _detect_uploaded_instrument(self, instrument_type: str) -> str:
-        instrument_metadata = self.md_api.get("api/instruments")
-        if instrument_type == "mwr-l1c":
-            instrument_type = "mwr"
-        possible_instruments = {
-            item["id"]
-            for item in instrument_metadata
-            if item["type"] == instrument_type
-        }
-        payload = self._get_payload()
-        upload_metadata = self.md_api.get("upload-metadata", payload)
-        uploaded_instruments = {item["instrument"]["id"] for item in upload_metadata}
-        instrument = list(possible_instruments & uploaded_instruments)
-        if len(instrument) == 0:
+    def add_instrument_pid(self, instrument_pid: str):
+        with netCDF4.Dataset(self.temp_file.name, "r+") as nc:
+            nc.instrument_pid = instrument_pid
+
+    def _fetch_instrument_to_process(self, product: str) -> tuple[str, str]:
+        possible_instruments = self._get_possible_instruments(product)
+        upload_metadata = self._get_upload_metadata(possible_instruments)
+        if len(upload_metadata) == 0:
             raise RawDataMissingError
-        selected_instrument = instrument[0]
-        if len(instrument) > 1:
-            # First choose the preferred instrument
-            preferred = (
-                "rpg-fmcw-94",
-                "mira",
-                "galileo",
-                "chm15k",
-                "chm15kx",
-                "chm15x",
-            )
-            for instru in instrument:
-                if instru in preferred:
-                    selected_instrument = instru
-                    break
-            # If something already processed we must use it
-            payload = self._get_payload(product=instrument_type)
-            product_metadata = self.md_api.get("api/files", payload)
-            for instru in instrument:
-                if product_metadata and instru in product_metadata[0]["filename"]:
-                    selected_instrument = instru
-                    break
-            logging.warning(
-                f"More than one type of {instrument_type} data, "
-                f"using {selected_instrument}"
-            )
-        return selected_instrument
+        if self.args.pid is not None:
+            for item in upload_metadata:
+                if item["instrumentPid"] == self.args.pid:
+                    return item["instrument"]["id"], item["instrumentPid"]
+            raise RawDataMissingError(f"{product} data from {self.args.pid} not found")
+        instrument_id, instrument_pid = decide_instrument_to_process(upload_metadata)
+        logging.info(f"Using {instrument_id} with PID {instrument_pid}")
+        return instrument_id, instrument_pid
 
-    def add_instrument_pid(self, instrument_pids: list) -> None:
-        if len(set(instrument_pids)) > 1:
-            logging.error("Several instrument PIDs found")
-        if instrument_pids and (instrument_pid := instrument_pids[0]) is not None:
-            with netCDF4.Dataset(self.temp_file.name, "r+") as nc:
-                nc.instrument_pid = instrument_pid
+    def _get_possible_instruments(self, product: str) -> list:
+        """Get all possible instruments for given product."""
+        instrument_metadata = self.md_api.get("api/instruments")
+        if product == "mwr-l1c":
+            product = "mwr"
+        return [item["id"] for item in instrument_metadata if item["type"] == product]
+
+    def _get_upload_metadata(self, instruments: list[str]):
+        """Get all upload metadata for given instruments."""
+        payload = self._get_payload(skip_created=True)
+        upload_metadata = self.md_api.get("upload-metadata", payload)
+        return [
+            item for item in upload_metadata if item["instrument"]["id"] in instruments
+        ]
+
+
+def decide_instrument_to_process(metadata: list) -> tuple[str, str]:
+    uploaded_data = [row for row in metadata if row["status"] == "uploaded"]
+    if uploaded_data:
+        return uploaded_data[0]["instrument"]["id"], uploaded_data[0]["instrumentPid"]
+    else:
+        unique_pids = list(set(row["instrumentPid"] for row in metadata))
+        if len(unique_pids) == 1:
+            return metadata[0]["instrument"]["id"], metadata[0]["instrumentPid"]
+        raise MiscError(
+            f"Several instrument PIDs with processed data found {unique_pids}. Please use --pid argument."
+        )
 
 
 def add_arguments(subparser):
@@ -393,5 +409,18 @@ def add_arguments(subparser):
         type=int,
         help="Process all raw files submitted within `--updated_since` in days. Ignores other "
         "arguments than `--site`",
+    )
+    parser.add_argument(
+        "--pid",
+        type=str,
+        help="Specific Level 1b instrument PID to process. "
+        "See https://instrumentdb.out.ocp.fmi.fi/.",
+    )
+    parser.add_argument(
+        "-f",
+        "--force",
+        action="store_true",
+        help="Skip checking of file contents compared to data portal.",
+        default=False,
     )
     return subparser

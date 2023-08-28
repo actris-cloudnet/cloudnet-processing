@@ -15,6 +15,7 @@
       "country": "Germany"
     },
     "status": "uploaded",
+    "instrumentPid": "http://pid.test/3.abcabcabcthies",
     "instrument": {
       "id": "thies-lnm",
       "type": "disdrometer",
@@ -32,6 +33,7 @@
     "checksum": "f025449d1af2ce151e11f320c38e000d",
     "filename": "2021091510.txt",
     "measurementDate": "2021-09-15",
+    "instrumentPid": "http://pid.test/3.abcabcabcthies",
     "site": {
       "id": "lindenberg",
       "humanReadableName": "Lindenberg",

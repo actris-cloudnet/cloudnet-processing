@@ -20,6 +20,7 @@
     "size": "5788814",
     "createdAt": "2020-12-06T04:41:10.438Z",
     "updatedAt": "2020-12-06T04:41:10.546Z",
+    "instrumentPid": "http://pid.test/3.abcabcabcrpg",
     "instrument": {
       "id": "rpg-fmcw-94",
       "type": "radar",
@@ -78,6 +79,7 @@
     "size": "5570928",
     "createdAt": "2020-12-06T04:41:07.329Z",
     "updatedAt": "2020-12-06T04:41:07.423Z",
+    "instrumentPid": "http://pid.test/3.abcabcabcrpg",
     "instrument": {
       "id": "rpg-fmcw-94",
       "type": "radar",

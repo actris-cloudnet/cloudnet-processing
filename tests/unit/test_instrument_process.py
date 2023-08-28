@@ -26,7 +26,9 @@ class Foo:
 def test_process_radar(suffix, result):
     temp_dir = tempfile.TemporaryDirectory()
     _create_file(temp_dir.name, suffix)
-    obj = instrument_process.ProcessRadar(Foo(), tempfile.NamedTemporaryFile(), Uuid())
+    obj = instrument_process.ProcessRadar(
+        Foo(), tempfile.NamedTemporaryFile(), Uuid(), "some_instrument_pid"
+    )
     obj._fix_suffices(temp_dir.name, ".mmclx")
     files = glob.glob(f"{temp_dir.name}/*")
     assert len(files) == 1

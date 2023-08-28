@@ -27,37 +27,17 @@ class Test:
 
         n_raw_files = 4
 
-        fix = f"dateFrom={self.date}&dateTo={self.date}&site={self.site}&developer=True"
-        instru = f"&instrument={self.instrument}"
-
-        assert f"GET /api/files?{fix}&product={self.product}&showLegacy=True" in data[0]
-
-        # Detect uploaded instruments
-        assert "GET /api/instruments" in data[1]
-        assert f"GET /upload-metadata?{fix}" in data[2]
-
-        # Try to find daily raw file
         assert (
-            f"GET /upload-metadata?{fix}{instru}&status%5B%5D=uploaded&status%5B%5D=processed"
+            '"GET /upload-metadata?dateFrom=2021-09-11&dateTo=2021-09-11&site=hyytiala&developer=True&instrumentPid=http%3A%2F%2Fpid.test%2F3.abcabcabccl61d&status%5B%5D=uploaded&status%5B%5D=processed HTTP/1.1" 200 -'
             in "\n".join(data)
         )
-
-        # It does not exist, so get all raw files and create new
-        assert (
-            f"GET /upload-metadata?{fix}{instru}&status%5B%5D=uploaded&status%5B%5D=processed"
-            in data[4]
-        )
-
-        # Submit daily raw file
-        assert "POST /upload/metadata" in "\n".join(data)
-        assert "PUT /upload/data" in "\n".join(data)
 
         # GET calibration
         assert "GET /api/calibration" in "\n".join(data)
 
         # PUT product file
         assert (
-            f"PUT /files/{self.date_short}_{self.site}_{self.instrument}.nc"
+            f"PUT /files/{self.date_short}_{self.site}_{self.instrument}_abcabcab.nc"
             in "\n".join(data)
         )
 
@@ -67,7 +47,7 @@ class Test:
 
         # PUT image
         assert (
-            f"PUT /visualizations/{self.date_short}_{self.site}_{self.instrument}-"
+            f"PUT /visualizations/{self.date_short}_{self.site}_{self.instrument}_abcabcab-"
             in "\n".join(data)
         )
 

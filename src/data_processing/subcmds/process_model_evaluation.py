@@ -37,7 +37,7 @@ def main(args, storage_session: requests.Session | None = None):
             processing_tools.clean_dir(process.temp_dir.name)
             logging.info(f"Processing {product} product, {args.site} {date_str}")
             uuid = Uuid()
-            uuid.volatile = process.fetch_volatile_uuid(product)
+            uuid.volatile, filename = process.fetch_volatile_uuid(product)
             try:
                 models_metadata = process.fetch_model_params()
             except MiscError as err:
@@ -47,7 +47,11 @@ def main(args, storage_session: requests.Session | None = None):
                 if product in utils.get_product_types(level="3"):
                     try:
                         uuid = process.process_level3_day(uuid, product, model, m_meta)
-                        process.upload_product(product, uuid, model)
+
+                        if filename is None:
+                            filename = process.get_l3_product_key(product, model)
+
+                        process.upload_product(product, uuid, model, filename)
                         process.create_and_upload_images(product, uuid.product, model)
                         process.print_info()
                     except (RawDataMissingError, MiscError, NotImplementedError) as err:
@@ -57,6 +61,10 @@ def main(args, storage_session: requests.Session | None = None):
 
 
 class ProcessModelEvaluation(ProcessBase):
+    def get_l3_product_key(self, product: str, model: str) -> str:
+        assert isinstance(self.date_str, str)
+        return f"{self.date_str.replace('-', '')}_{self.site}_{product}_downsampled_{model}.nc"
+
     def process_level3_day(
         self, uuid: Uuid, full_product: str, model: str, model_meta: list
     ) -> Uuid:
@@ -106,13 +114,14 @@ class ProcessModelEvaluation(ProcessBase):
         uuid: str,
         model_or_instrument_id: str,
         legacy: bool = False,
+        instrument_pid: str | None = None,
     ) -> None:
         if "hidden" in self._site_type:
             logging.info("Skipping plotting for hidden site")
             return
         temp_file = NamedTemporaryFile(suffix=".png")
         visualizations = []
-        product_s3key = self._get_l3_product_key(product, model_or_instrument_id)
+        product_s3key = self.get_l3_product_key(product, model_or_instrument_id)
         fields = utils.get_fields_for_l3_plot(product, model_or_instrument_id)
         l3_product = utils.full_product_to_l3_product(product)
 

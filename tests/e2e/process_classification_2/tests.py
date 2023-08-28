@@ -37,27 +37,24 @@ class TestClassificationProcessing:
     @pytest.mark.reprocess
     def test_that_calls_metadata_api(self):
         data = read_log_file(SCRIPT_PATH)
-        n_gets = 3
-        n_puts = 2
-        assert len(data) == n_gets + n_puts + self.n_img + 1
 
         # Check product status
         assert (
             '"GET /api/files?dateFrom=2020-10-22&dateTo=2020-10-22&site=bucharest'
             '&developer=True&product=classification&showLegacy=True HTTP/1.1" 200 -'
-            in data[0]
+            in "\n".join(data)
         )
 
         # GET input file
         assert (
             '"GET /api/files?dateFrom=2020-10-22&dateTo=2020-10-22&site=bucharest'
-            '&developer=True&product=categorize HTTP/1.1" 200 -' in data[1]
+            '&developer=True&product=categorize HTTP/1.1" 200 -' in "\n".join(data)
         )
 
         # PUT file
         assert (
             '"PUT /files/20201022_bucharest_classification.nc HTTP/1.1" 201 -'
-            in data[4]
+            in "\n".join(data)
         )
 
         # PUT images

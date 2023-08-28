@@ -25,10 +25,15 @@ def main(args, storage_session: requests.Session | None = None):
         logging.info(f"{process.site}, {process.date_str}, {model_id}")
         uuid = Uuid()
         try:
-            uuid.volatile = process.fetch_volatile_model_uuid(row)
+            uuid.volatile, filename = process.fetch_volatile_model_uuid(row)
             uuid = process.process_model(uuid, row)
-            process.upload_product("model", uuid, model_id)
-            process.create_and_upload_images("model", uuid.product, model_id)
+
+            if filename is None:
+                filename = process._get_product_key(model_id, instrument_pid=None)
+
+            process.upload_product("model", uuid, model_id, filename)
+            process.create_and_upload_images("model", uuid.product, filename)
+
             logging.info("Creating QC report")
             process.upload_quality_report(process.temp_file.name, uuid.product)
             process.print_info()
@@ -46,7 +51,7 @@ class ProcessModel(ProcessBase):
         return [row for row in metadata if int(row["size"]) > minimum_size]
 
     def process_model(self, uuid: Uuid, metadata: dict) -> Uuid:
-        full_path, uuid.raw, _ = self._download_raw_files([metadata], self.temp_file)
+        full_path, uuid.raw = self._download_raw_files([metadata], self.temp_file)
         data = {
             "site_name": self.site,
             "date": self.date_str,
@@ -58,9 +63,13 @@ class ProcessModel(ProcessBase):
         uuid.product = nc_header_augmenter.harmonize_model_file(data)
         return uuid
 
-    def fetch_volatile_model_uuid(self, row: dict) -> str | None:
+    def fetch_volatile_model_uuid(self, row: dict) -> tuple[str | None, str | None]:
         payload = self._get_payload(model=row["model"]["id"])
         metadata = self.md_api.get("api/model-files", payload)
+        if metadata:
+            filename = metadata[0]["filename"]
+        else:
+            filename = None
         try:
             uuid = self._read_stable_uuid(metadata)
             if uuid is not None:
@@ -77,7 +86,7 @@ class ProcessModel(ProcessBase):
             self.update_statuses([row["uuid"]], status="invalid")
             msg = f'{err.message}: Setting status of {metadata[0]["filename"]} to "invalid"'
             raise MiscError(msg) from None
-        return uuid
+        return uuid, filename
 
 
 def add_arguments(subparser):

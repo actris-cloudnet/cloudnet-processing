@@ -20,7 +20,14 @@ def main():
     utils.start_test_servers(identifier, SCRIPT_PATH)
     temp_file = NamedTemporaryFile()
     session = utils.register_storage_urls(
-        temp_file, source_data, site, date, identifier, True, products
+        temp_file,
+        source_data,
+        site,
+        date,
+        identifier,
+        True,
+        products,
+        instrument_pid="",
     )
     main_args = [f"-s={site}", f"--date={date}", "-p=l3-cf", "me"]
     utils.process(
