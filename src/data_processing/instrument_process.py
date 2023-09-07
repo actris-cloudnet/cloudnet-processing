@@ -457,6 +457,11 @@ class ProcessWeatherStation(ProcessInstrument):
         self.uuid.product = ws2nc(full_path, *self._args, **self._kwargs)
 
 
+class ProcessRainRadar(ProcessInstrument):
+    def process_mrr_pro(self):
+        raise NotImplementedError()
+
+
 def _get_valid_uuids(uuids: list, full_paths: list, valid_full_paths: list) -> list:
     return [
         uuid
