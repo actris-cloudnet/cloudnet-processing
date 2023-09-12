@@ -16,6 +16,7 @@ from cloudnetpy.instruments import (
     hatpro2l1c,
     hatpro2nc,
     mira2nc,
+    mrr2nc,
     parsivel2nc,
     pollyxt2nc,
     radiometrics2nc,
@@ -396,7 +397,8 @@ class ProcessWeatherStation(ProcessInstrument):
 
 class ProcessRainRadar(ProcessInstrument):
     def process_mrr_pro(self):
-        raise NotImplementedError()
+        full_paths, self.uuid.raw = self.base.download_instrument(self.instrument_pid)
+        self.uuid.product = mrr2nc(full_paths, *self._args, **self._kwargs)
 
 
 def _get_valid_uuids(uuids: list, full_paths: list, valid_full_paths: list) -> list:

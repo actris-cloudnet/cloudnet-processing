@@ -372,6 +372,16 @@ def get_fields_for_plot(cloudnet_file_type: str) -> tuple[list, int]:
                 "rainfall_rate",
                 "rainfall_amount",
             ]
+        case "rain-radar":
+            fields = [
+                "Zh",
+                "lwc",
+                "pia",
+                "rainfall_rate",
+                "v",
+                "width",
+            ]
+            max_alt = 3
         case _:
             raise NotImplementedError(cloudnet_file_type)
     return fields, max_alt
