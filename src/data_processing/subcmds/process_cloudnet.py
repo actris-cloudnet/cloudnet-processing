@@ -212,7 +212,9 @@ class ProcessCloudnet(ProcessBase):
                     "galileo",
                     "chm15k",
                     "chm15kx",
-                    "chm15x",
+                    "cl61d",
+                    "cl51",
+                    "cl31",
                 )
                 for row in metadata:
                     for preferred_instrument in preferred:
