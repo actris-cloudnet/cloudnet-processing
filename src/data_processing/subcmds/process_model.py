@@ -36,7 +36,7 @@ def main(args, storage_session: requests.Session | None = None):
 
             logging.info("Creating QC report")
             process.upload_quality_report(process.temp_file.name, uuid.product)
-            process.print_info()
+            process.print_info(uuid)
         except MiscError as err:
             logging.warning(err)
         except (RequestException, RuntimeError) as err:

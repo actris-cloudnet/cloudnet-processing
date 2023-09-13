@@ -12,7 +12,12 @@ from data_processing import utils
 from data_processing.metadata_api import MetadataApi
 from data_processing.pid_utils import PidUtils
 from data_processing.storage_api import StorageApi
-from data_processing.utils import MiscError, RawDataMissingError, make_session
+from data_processing.utils import (
+    MiscError,
+    RawDataMissingError,
+    build_file_landing_page_url,
+    make_session,
+)
 
 
 class Uuid:
@@ -71,11 +76,10 @@ class ProcessBase:
         self._create_new_version = self._is_create_new_version(metadata)
         return uuid, filename
 
-    def print_info(self) -> None:
-        logging.info(
-            f"Created: "
-            f'{"New version" if self._create_new_version is True else "Volatile file"}'
-        )
+    def print_info(self, uuid: Uuid) -> None:
+        kind = "new version" if self._create_new_version else "volatile file"
+        link = build_file_landing_page_url(uuid.product)
+        logging.info(f"Created {kind}: {link}")
 
     def upload_product(
         self,

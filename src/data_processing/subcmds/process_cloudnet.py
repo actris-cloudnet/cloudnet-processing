@@ -89,7 +89,7 @@ class ProcessCloudnet(ProcessBase):
             self.upload_product(product, uuid, identifier, filename)
             self.create_and_upload_images(product, uuid.product, filename)
             self.upload_quality_report(self.temp_file.name, uuid.product)
-            self.print_info()
+            self.print_info(uuid)
         except (RawDataMissingError, MiscError, NotImplementedError) as err:
             logging.warning(err)
         except (
