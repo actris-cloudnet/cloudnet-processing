@@ -222,7 +222,7 @@ class ProcessCloudnet(ProcessBase):
                             meta_records[product] = row
                         break
                 logging.info(
-                    f"Several options for {product}, using {meta_records[product]['instrumentPid']}"
+                    f"Several options for {product}, using {meta_records[product]['instrument']['id']} with PID {meta_records[product]['instrumentPid']}"
                 )
         return meta_records
 
