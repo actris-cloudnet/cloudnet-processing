@@ -177,7 +177,7 @@ class ProcessLidar(ProcessInstrument):
         full_path, self.uuid.raw = self.base.download_instrument(
             self.instrument_pid, largest_only=True
         )
-        shutil.move(full_path, self.base.daily_file.name)
+        _unzip_gz_file(full_path, path_out=self.base.daily_file.name, force=True)
         self._call_ceilo2nc("ct25k")
 
     def process_halo_doppler_lidar_calibrated(self):
@@ -409,16 +409,24 @@ def _get_valid_uuids(uuids: list, full_paths: list, valid_full_paths: list) -> l
     ]
 
 
+def _unzip_gz_file(
+    path_in: str, path_out: str | None = None, force: bool = True
+) -> str:
+    if not path_in.endswith(".gz") and not force:
+        return path_in
+    if path_out is None:
+        path_out = path_in.removesuffix(".gz")
+    logging.debug(f"Decompressing {path_in} to {path_out}")
+    with gzip.open(path_in, "rb") as file_in:
+        with open(path_out, "wb") as file_out:
+            shutil.copyfileobj(file_in, file_out)
+    os.remove(path_in)
+    return path_out
+
+
 def _unzip_gz_files(full_paths: list):
     for path_in in full_paths:
-        if not path_in.endswith(".gz"):
-            continue
-        logging.info(f"Decompressing {path_in}")
-        path_out = path_in.removesuffix(".gz")
-        with gzip.open(path_in, "rb") as file_in:
-            with open(path_out, "wb") as file_out:
-                shutil.copyfileobj(file_in, file_out)
-        os.remove(path_in)
+        _unzip_gz_file(path_in)
 
 
 def _fix_cl51_timestamps(filename: str, hours: int) -> None:
