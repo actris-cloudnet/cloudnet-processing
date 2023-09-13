@@ -1,7 +1,7 @@
 import netCDF4
 from requests import HTTPError
 
-from .utils import make_session
+from .utils import build_file_landing_page_url, make_session
 
 
 class PidUtils:
@@ -23,7 +23,7 @@ class PidUtils:
                 payload = {
                     "type": "file",
                     "uuid": uuid,
-                    "url": f"https://cloudnet.fmi.fi/file/{uuid}",
+                    "url": build_file_landing_page_url(uuid),
                 }
                 res = session.post(self._pid_service_url, json=payload)
                 try:

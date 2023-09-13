@@ -561,6 +561,13 @@ def fetch_data_portal_url() -> str:
     return config["DATAPORTAL_URL"]
 
 
+def build_file_landing_page_url(uuid: str) -> str:
+    """Returns file landing page url."""
+    config = read_main_conf()
+    base = config["DATAPORTAL_PUBLIC_URL"].rstrip("/")
+    return f"{base}/file/{uuid}"
+
+
 def random_string(n: int = 10) -> str:
     """Creates random string."""
     return "".join(random.choices(string.ascii_lowercase, k=n))
