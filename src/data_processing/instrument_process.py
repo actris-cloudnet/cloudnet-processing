@@ -1,5 +1,4 @@
 import datetime
-import glob
 import gzip
 import logging
 import os
@@ -71,11 +70,9 @@ class ProcessRadar(ProcessInstrument):
 
     def process_mira(self):
         full_paths, self.uuid.raw = self.base.download_instrument(self.instrument_pid)
-        _unzip_gz_files(full_paths)
-        self._fix_suffices(self.base.temp_dir.name, ".mmclx")
-        self.uuid.product = mira2nc(
-            self.base.temp_dir.name, *self._args, **self._kwargs
-        )
+        full_paths = _unzip_gz_files(full_paths)
+        full_paths = self._fix_suffices(full_paths, ".mmclx")
+        self.uuid.product = mira2nc(full_paths, *self._args, **self._kwargs)
 
     def process_basta(self):
         full_path, self.uuid.raw = self.base.download_instrument(
@@ -96,11 +93,17 @@ class ProcessRadar(ProcessInstrument):
         )
 
     @staticmethod
-    def _fix_suffices(dir_name: str, suffix: str) -> None:
+    def _fix_suffices(full_paths: list[str], suffix: str) -> list[str]:
         """Fixes filenames that have incorrect suffix."""
-        for filename in glob.glob(f"{dir_name}/*"):
+        out_paths = []
+        for filename in full_paths:
             if not filename.lower().endswith((".gz", suffix)):
-                os.rename(filename, filename + suffix)
+                new_filename = filename + suffix
+                os.rename(filename, new_filename)
+                out_paths.append(new_filename)
+            else:
+                out_paths.append(filename)
+        return out_paths
 
 
 class ProcessDopplerLidar(ProcessInstrument):
@@ -409,13 +412,10 @@ def _get_valid_uuids(uuids: list, full_paths: list, valid_full_paths: list) -> l
     ]
 
 
-def _unzip_gz_file(
-    path_in: str, path_out: str | None = None, force: bool = True
-) -> str:
-    if not path_in.endswith(".gz") and not force:
+def _unzip_gz_file(path_in: str) -> str:
+    if not path_in.endswith(".gz"):
         return path_in
-    if path_out is None:
-        path_out = path_in.removesuffix(".gz")
+    path_out = path_in.removesuffix(".gz")
     logging.debug(f"Decompressing {path_in} to {path_out}")
     with gzip.open(path_in, "rb") as file_in:
         with open(path_out, "wb") as file_out:
