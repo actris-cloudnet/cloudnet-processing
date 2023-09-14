@@ -316,10 +316,6 @@ class Level1Nc:
     def _get_time_units(self) -> str:
         return f'hours since {self.data["date"]} 00:00:00 +00:00'
 
-    def delete_global_attribute(self, name: str):
-        if hasattr(self.nc, name):
-            delattr(self.nc, name)
-
     @staticmethod
     def _screen_data(
         variable: netCDF4.Variable, time_ind: list | None = None
@@ -599,9 +595,14 @@ def _get_epoch(units: str) -> tuple[int, int, int]:
 
 class ParsivelNc(Level1Nc):
     def fix_variable_names(self):
-        keymap = {"V_sensor": "V_power_supply", "E_kin": "kinetic_energy"}
+        keymap = {
+            "V_sensor": "V_power_supply",
+            "E_kin": "kinetic_energy",
+            "Synop_WaWa": "synop_WaWa",
+        }
         for old_name, new_name in keymap.items():
-            self.nc.renameVariable(old_name, new_name)
+            if old_name in self.nc.variables:
+                self.nc.renameVariable(old_name, new_name)
 
     def clean_global_attributes(self):
         keys = (
@@ -620,9 +621,14 @@ class ParsivelNc(Level1Nc):
             "Source",
             "Institution",
             "History",
+            "Station_Latitude",
+            "Station_longitude",
+            "Station_altitude",
+            "Contact",
         )
         for key in keys:
-            self.delete_global_attribute(key)
+            if hasattr(self.nc, key):
+                delattr(self.nc, key)
 
     def get_valid_time_indices(self) -> list:
         """Finds valid time indices."""
@@ -648,8 +654,15 @@ class ParsivelNc(Level1Nc):
         variable = self.nc_raw.variables[key]
         dtype = variable.dtype
         dtype = "f4" if dtype == "f8" else dtype
-        if key == "time":
-            dtype = "f8"
+        keymap = {
+            "time": "f8",
+            "T_sensor": "f4",
+            "data_raw": "int16",
+            "diameter_bnds": "f4",
+        }
+        if key in keymap:
+            dtype = keymap[key]
+
         var_out = self.nc.createVariable(
             key,
             dtype,
@@ -659,6 +672,13 @@ class ParsivelNc(Level1Nc):
         )
         self._copy_variable_attributes(variable, var_out)
         screened_data = self._screen_data(variable, time_ind)
+
+        if key == "T_sensor":
+            screened_data = temperature_to_k(screened_data)
+
+        if key == "rainfall_rate":
+            screened_data = rainfall_rate_to_ms1(screened_data, variable.units)
+
         var_out[:] = screened_data
 
     def fix_long_names(self):
@@ -671,6 +691,13 @@ class ParsivelNc(Level1Nc):
             "sig_laser": "Signal amplitude of the laser strip",
             "rainfall_rate": "Rainfall rate",
             "V_power_supply": "Power supply voltage",
+            "velocity_spread": "Width of velocity interval",
+            "diameter_spread": "Width of diameter interval",
+            "data_raw": "Raw data as a function of particle diameter and velocity",
+            "radar_reflectivity": "Equivalent radar reflectivity factor",
+            "kinetic_energy": "Kinetic energy of the hydrometeors",
+            "state_sensor": "State of the sensor",
+            "I_heating": "Heating current",
         }
         for key, long_name in keymap.items():
             if key in self.nc.variables:
@@ -688,12 +715,36 @@ class ParsivelNc(Level1Nc):
             "velocity_bnds": "m s-1",
             "number_concentration": "m-3 mm-1",
             "kinetic_energy": "J m-2 h-1",
+            "data_raw": "1",
+            "n_particles": "1",
+            "radar_reflectivity": "dBZ",
+            "sig_laser": "1",
+            "state_sensor": "1",
+            "synop_WaWa": "1",
+            "rainfall_rate": "m s-1",
         }
         for key, units in keymap.items():
-            self.nc.variables[key].units = units
+            if key in self.nc.variables:
+                self.nc.variables[key].units = units
 
     def fix_standard_names(self):
-        self.nc.variables["visibility"].standard_name = "visibility_in_air"
+        for key in self.nc.variables:
+            if key not in (
+                "time",
+                "rainfall_rate",
+                "altitude",
+                "latitude",
+                "longitude",
+            ):
+                if hasattr(self.nc.variables[key], "standard_name"):
+                    delattr(self.nc.variables[key], "standard_name")
+        keymap = {
+            "visibility": "visibility_in_air",
+            "radar_reflectivity": "equivalent_reflectivity_factor",
+        }
+        for key, standard_name in keymap.items():
+            if key in self.nc.variables:
+                self.nc.variables[key].standard_name = standard_name
 
     def fix_comments(self):
         for key, item in ATTRIBUTES.items():
@@ -704,3 +755,20 @@ class ParsivelNc(Level1Nc):
             else:
                 if hasattr(self.nc.variables[key], "comment"):
                     delattr(self.nc.variables[key], "comment")
+
+
+def rainfall_rate_to_ms1(data: np.ndarray, units: str) -> np.ndarray:
+    if units.lower() in ("mm h", "mm h-1", "mm / h"):
+        logging.info('Converting rainfall rate from "mm h-1" to "m s-1".')
+        data /= 1000 * 3600
+    return data
+
+
+def temperature_to_k(data: np.ndarray) -> np.ndarray:
+    data = np.array(data, dtype="float32")
+    temperature_limit = 100
+    ind = np.where(data < temperature_limit)
+    if len(ind[0]) > 0:
+        logging.info('Converting temperature from "C" to "K".')
+        data[ind] += 273.15
+    return data
