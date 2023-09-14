@@ -1,5 +1,5 @@
 import glob
-import tempfile
+from tempfile import NamedTemporaryFile, TemporaryDirectory
 
 import pytest
 
@@ -24,18 +24,22 @@ class Foo:
     ],
 )
 def test_process_radar(suffix, result):
-    temp_dir = tempfile.TemporaryDirectory()
-    _create_file(temp_dir.name, suffix)
-    obj = instrument_process.ProcessRadar(
-        Foo(), tempfile.NamedTemporaryFile(), Uuid(), "some_instrument_pid"
-    )
-    obj._fix_suffices(temp_dir.name, ".mmclx")
-    files = glob.glob(f"{temp_dir.name}/*")
-    assert len(files) == 1
-    assert files[0].endswith(result)
+    with TemporaryDirectory() as temp_dir, NamedTemporaryFile() as out_file:
+        in_files = [_create_file(temp_dir, suffix)]
+        obj = instrument_process.ProcessRadar(
+            Foo(), out_file, Uuid(), "some_instrument_pid"
+        )
+        out_files = obj._fix_suffices(in_files, ".mmclx")
+        assert len(out_files) == 1
+        assert out_files[0].endswith(result)
+
+        out_files = glob.glob(f"{temp_dir}/*")
+        assert len(out_files) == 1
+        assert out_files[0].endswith(result)
 
 
 def _create_file(dir_name: str, suffix: str) -> None:
-    filename = f"foo{suffix}"
-    f = open(f"{dir_name}/{filename}", "w")
+    filename = f"{dir_name}/foo{suffix}"
+    f = open(filename, "w")
     f.close()
+    return filename
