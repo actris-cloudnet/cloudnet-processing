@@ -174,10 +174,10 @@ class ProcessLidar(ProcessInstrument):
         self._call_ceilo2nc("chm15k")
 
     def process_ct25k(self):
-        full_path, self.uuid.raw = self.base.download_instrument(
-            self.instrument_pid, largest_only=True
-        )
-        _unzip_gz_file(full_path, path_out=self.base.daily_file.name, force=True)
+        full_paths, self.uuid.raw = self.base.download_instrument(self.instrument_pid)
+        full_paths.sort()
+        full_paths = _unzip_gz_files(full_paths)
+        utils.concatenate_text_files(full_paths, self.base.daily_file.name)
         self._call_ceilo2nc("ct25k")
 
     def process_halo_doppler_lidar_calibrated(self):
@@ -425,8 +425,10 @@ def _unzip_gz_file(
 
 
 def _unzip_gz_files(full_paths: list):
+    paths_out = []
     for path_in in full_paths:
-        _unzip_gz_file(path_in)
+        paths_out.append(_unzip_gz_file(path_in))
+    return paths_out
 
 
 def _fix_cl51_timestamps(filename: str, hours: int) -> None:
