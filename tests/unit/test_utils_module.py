@@ -182,6 +182,16 @@ def test_are_identical_nc_files():
     assert utils.are_identical_nc_files(fname2, fname3) is True
 
 
+def test_are_identical_nc_files_software_versions(tmp_path):
+    fname1 = tmp_path / "old.nc"
+    fname2 = tmp_path / "new.nc"
+    with netCDF4.Dataset(fname1, "w") as nc:
+        nc.hilavitkutin_version = "3.1"
+    with netCDF4.Dataset(fname2, "w") as nc:
+        nc.hilavitkutin_version = "3.14"
+    assert utils.are_identical_nc_files(fname1, fname2) is True
+
+
 @pytest.mark.parametrize(
     "array1, array2, expected",
     [

@@ -697,15 +697,13 @@ def _compare_dimensions(nc1: netCDF4.Dataset, nc2: netCDF4.Dataset):
         assert value1 == value2, _log("dimensions", dim, value1, value2)
 
 
+def _skip_compare_global_attribute(name: str) -> bool:
+    return name in ("history", "file_uuid") or name.endswith("_version")
+
+
 def _compare_global_attributes(nc1: netCDF4.Dataset, nc2: netCDF4.Dataset):
-    attribute_skips = (
-        "history",
-        "cloudnetpy_version",
-        "cloudnet_processing_version",
-        "file_uuid",
-    )
-    l1 = [a for a in nc1.ncattrs() if a not in attribute_skips]
-    l2 = [a for a in nc2.ncattrs() if a not in attribute_skips]
+    l1 = [a for a in nc1.ncattrs() if not _skip_compare_global_attribute(a)]
+    l2 = [a for a in nc2.ncattrs() if not _skip_compare_global_attribute(a)]
     assert len(set(l1) ^ set(l2)) == 0, f"different global attributes: {l1} vs. {l2}"
     for name in l1:
         value1 = getattr(nc1, name)
