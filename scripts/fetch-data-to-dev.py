@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
 import argparse
+import concurrent.futures
 import datetime
 import os
 import sys
+from pathlib import Path
 
 import requests
 
 from data_processing import utils
 
 DATAPORTAL_URL = os.environ["DATAPORTAL_URL"].rstrip("/")
+DOWNLOAD_DIR = Path("download")
 
 
 def main(args: argparse.Namespace):
@@ -26,6 +29,8 @@ def main(args: argparse.Namespace):
         print("Please specify --date, --start or --stop", file=sys.stderr)
         sys.exit(1)
 
+    DOWNLOAD_DIR.mkdir(exist_ok=True)
+
     upload_metadata = _get_metadata("raw-files", **params)
     if args.include is not None:
         upload_metadata = utils.include_records_with_pattern_in_filename(
@@ -38,21 +43,7 @@ def main(args: argparse.Namespace):
 
     if upload_metadata:
         print("\nMeasurement files:\n")
-    for i, row in enumerate(upload_metadata, start=1):
-        info = f'{i}/{len(upload_metadata)} {row["filename"]}'
-        print(info, end="\r")
-        metadata = {
-            "filename": row["filename"],
-            "checksum": row["checksum"],
-            "instrument": row["instrument"]["id"],
-            "instrumentPid": row["instrumentPid"],
-            "site": params["site"],
-            "measurementDate": row["measurementDate"],
-        }
-        filename = _download_file(row)
-        _submit_to_local_ss("upload", filename, metadata, info)
-        if not args.save:
-            os.remove(filename)
+    _process_metadata(upload_metadata)
 
     if params["instruments"] is not None and "model" not in params["instruments"]:
         return
@@ -60,20 +51,7 @@ def main(args: argparse.Namespace):
     upload_metadata = _get_metadata("raw-model-files", **params)
     if upload_metadata:
         print("\nModel files:\n")
-    for i, row in enumerate(upload_metadata, start=1):
-        info = f'{i}/{len(upload_metadata)} {row["filename"]}'
-        print(info, end="\r")
-        metadata = {
-            "filename": row["filename"],
-            "checksum": row["checksum"],
-            "model": row["model"]["id"],
-            "measurementDate": row["measurementDate"],
-            "site": params["site"],
-        }
-        filename = _download_file(row)
-        _submit_to_local_ss("model-upload", filename, metadata, info)
-        if not args.save:
-            os.remove(filename)
+    _process_metadata(upload_metadata)
 
 
 def _get_metadata(
@@ -96,29 +74,64 @@ def _get_metadata(
     return metadata
 
 
-def _download_file(row: dict):
-    dir_name = "download/"
-    if not os.path.isdir(dir_name):
-        os.mkdir(dir_name)
+def _process_metadata(upload_metadata):
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        future_to_filename = {
+            executor.submit(_process_row, row): row["filename"]
+            for row in upload_metadata
+        }
+        completed = 0
+        for future in concurrent.futures.as_completed(future_to_filename):
+            completed += 1
+            filename = future_to_filename[future]
+            info = f"{completed}/{len(upload_metadata)} {filename}"
+            try:
+                response = future.result()
+                print(f"{info} {response}")
+            except Exception as exc:
+                print(f"{info} {exc}")
+
+
+def _process_row(row):
+    filename = _download_file(row)
+    response = _submit_to_local_ss(filename, row)
+    if not args.save:
+        filename.unlink()
+    return response
+
+
+def _download_file(row: dict) -> Path:
     res = requests.get(row["downloadUrl"])
     res.raise_for_status()
-    filename = f'{dir_name}{row["filename"]}'
-    with open(filename, "wb") as f:
-        f.write(res.content)
+    filename = DOWNLOAD_DIR / row["filename"]
+    filename.write_bytes(res.content)
     return filename
 
 
-def _submit_to_local_ss(end_point: str, filename, metadata: dict, info: str):
+def _submit_to_local_ss(filename: Path, row: dict):
+    metadata = {
+        "filename": row["filename"],
+        "checksum": row["checksum"],
+        "site": row["site"]["id"],
+        "measurementDate": row["measurementDate"],
+    }
+    if "instrument" in row:
+        metadata["instrument"] = row["instrument"]["id"]
+        metadata["instrumentPid"] = row["instrumentPid"]
+        end_point = "upload"
+    elif "model" in row:
+        metadata["model"] = row["model"]["id"]
+        end_point = "model-upload"
     auth = ("admin", "admin")
     url = f"{DATAPORTAL_URL}/{end_point}/"
     res = requests.post(f"{url}metadata", json=metadata, auth=auth)
-    if res.status_code != 200:
-        print(f"{info} {res.text}", flush=True)
-    else:
-        res = requests.put(
-            f'{url}data/{metadata["checksum"]}', data=open(filename, "rb"), auth=auth
-        )
-        print(f"{info} {res.text}", flush=True)
+    if res.status_code == 200:
+        with filename.open("rb") as f:
+            res = requests.put(f'{url}data/{metadata["checksum"]}', data=f, auth=auth)
+            res.raise_for_status()
+    elif res.status_code != 409:
+        res.raise_for_status()
+    return res.text
 
 
 if __name__ == "__main__":
