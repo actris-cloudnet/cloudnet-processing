@@ -5,7 +5,6 @@ import os
 import pathlib
 import shutil
 import tempfile
-from collections.abc import Sequence
 
 from cloudnetpy.instruments import (
     basta2nc,
@@ -360,21 +359,14 @@ class ProcessDisdrometer(ProcessInstrument):
         full_path, self.uuid.raw = self.base.download_instrument(
             self.instrument_pid, largest_only=True
         )
-        telegram: Sequence[int | None] | None = None
-        # fmt: off
-        if self.base.site in ["norunda", "ny-alesund", "juelich", "lindenberg"]:
-            telegram = [19, 1, 2, 3, 7, 8, 9, 10, 11, 12, 13,
-                        14, 16, 17, 18, 22, 24, 25, 90, 91, 93]
-        elif self.base.site == "warsaw":
-            telegram = [21, 20, 1, 2, 3, 5, 6, 7, 8, 10,
-                        11, 12, 16, 17, 34, 18, 93]
-        # fmt: on
         try:
             data = self._get_payload_for_nc_file_augmenter(self.temp_file.name)
             self.uuid.product = nc_header_augmenter.harmonize_parsivel_file(data)
         except OSError:
+            calibration = self._fetch_parsivel_calibration()
             kwargs = self._kwargs.copy()
-            kwargs["telegram"] = telegram
+            kwargs["telegram"] = calibration["telegram"]
+            kwargs["missing_timestamps"] = calibration["missing_timestamps"]
             self.uuid.product = parsivel2nc(full_path, *self._args, **kwargs)
 
     def process_thies_lnm(self):
@@ -384,6 +376,15 @@ class ProcessDisdrometer(ProcessInstrument):
         self.uuid.product = thies2nc(
             self.base.daily_file.name, *self._args, **self._kwargs
         )
+
+    def _fetch_parsivel_calibration(self) -> dict:
+        output: dict = {"telegram": None, "missing_timestamps": False}
+        calibration = fetch_calibration(self.instrument_pid, self.base.date_str)
+        if calibration is not None:
+            data = calibration["data"]
+            output["telegram"] = data.get("telegram", None)
+            output["missing_timestamps"] = data.get("missing_timestamps", False)
+        return output
 
 
 class ProcessWeatherStation(ProcessInstrument):
