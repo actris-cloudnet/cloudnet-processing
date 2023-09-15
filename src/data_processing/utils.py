@@ -13,6 +13,7 @@ from argparse import Namespace
 from pathlib import Path
 
 import netCDF4
+import numpy as np
 import requests
 from cloudnetpy.plotting.plot_meta import ATTRIBUTES as ATTR
 from cloudnetpy.plotting.plotting import Dimensions
@@ -763,3 +764,39 @@ def _log(text: str, var_name: str, value1, value2) -> str:
 
 def remove_duplicate_dicts(list_of_dicts: list) -> list:
     return [dict(t) for t in {tuple(d.items()) for d in list_of_dicts}]
+
+
+def deduce_parsivel_timestamps(
+    filenames: list[str],
+) -> tuple[list[str], list[datetime.datetime]]:
+    ind = np.argsort(filenames)
+    filenames = [filenames[idx] for idx in ind]
+    time_stamps, valid_files = [], []
+    min_measurements_per_hour = 57
+    for file_ind, filename in enumerate(filenames):
+        date = _parse_datetime_from_filename(filename)
+        n_lines = _count_lines(filename)
+        if not date or n_lines < min_measurements_per_hour:
+            continue
+        start_datetime = datetime.datetime(date[0], date[1], date[2], date[3])
+        time_interval = datetime.timedelta(minutes=60 / n_lines)
+        datetime_stamps = [start_datetime + time_interval * i for i in range(n_lines)]
+        time_stamps.extend(datetime_stamps)
+        valid_files.append(filename)
+    return valid_files, time_stamps
+
+
+def _parse_datetime_from_filename(filename: str) -> list[int] | None:
+    pattern = r"(20\d{2})(\d{2})(\d{2})(\d{2})"
+    match = re.search(pattern, filename)
+    if not match:
+        return None
+    return [int(x) for x in match.groups()]
+
+
+def _count_lines(filename: str) -> int:
+    with open(filename, "r") as file:
+        n_lines = 0
+        for _ in file:
+            n_lines += 1
+    return n_lines
