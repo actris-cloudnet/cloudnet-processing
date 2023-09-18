@@ -174,7 +174,7 @@ def test_get_model_identifier(filename, identifier):
     assert utils.get_model_identifier(filename) == identifier
 
 
-def test_are_identical_nc_files():
+def test_are_identical_nc_files_real_data():
     fname1 = "tests/data/misc/20180703_granada_classification_old.nc"
     fname2 = "tests/data/misc/20180703_granada_classification.nc"
     fname3 = "tests/data/misc/20180703_granada_classification_reprocessed.nc"
@@ -182,14 +182,150 @@ def test_are_identical_nc_files():
     assert utils.are_identical_nc_files(fname2, fname3) is True
 
 
-def test_are_identical_nc_files_software_versions(tmp_path):
+@pytest.mark.parametrize(
+    "data1, kwargs1, ncattrs1, data2, kwargs2, ncattrs2, expected",
+    [
+        (np.array([1, 2, 3]), {}, {}, np.array([1, 2, 3]), {}, {}, True),
+        (np.array([1, 2, 3]), {}, {}, np.array([1, 2, 4]), {}, {}, False),
+        (ma.masked_array([1, 2, 3]), {}, {}, ma.masked_array([1, 2, 3]), {}, {}, True),
+        (ma.masked_array([1, 2, 3]), {}, {}, ma.masked_array([1, 2, 4]), {}, {}, False),
+        (np.array([1.0]), {}, {}, np.array([1.1]), {}, {}, False),
+        (np.array([1.0]), {}, {}, np.array([1.0000001]), {}, {}, True),
+        (np.array([1]), {}, {}, np.array([1, 2]), {}, {}, False),
+        (
+            np.array([1, 99]),
+            {"fill_value": 99},
+            {},
+            np.array([1, 99]),
+            {"fill_value": 99},
+            {},
+            True,
+        ),
+        (
+            np.array([1, 99]),
+            {"fill_value": 99},
+            {},
+            np.array([2, 99]),
+            {"fill_value": 99},
+            {},
+            False,
+        ),
+        (
+            np.array([1, np.nan]),
+            {"fill_value": np.nan},
+            {},
+            np.array([1, np.nan]),
+            {"fill_value": np.nan},
+            {},
+            True,
+        ),
+        (
+            ma.masked_array([1, 2], mask=[0, 1]),
+            {"fill_value": 99},
+            {},
+            ma.masked_array([1, 3], mask=[0, 1]),
+            {"fill_value": 999},
+            {},
+            True,
+        ),
+        (np.array([1]), {}, {}, np.array([1.0]), {}, {}, False),
+        (
+            ma.masked_array([1.0, 2.0, 3.0], mask=[0, 0, 0]),
+            {},
+            {},
+            ma.masked_array([1.0, 2.0, 3.0], mask=[0, 0, 0]),
+            {},
+            {},
+            True,
+        ),
+        (
+            ma.masked_array([1.0, 2.0, 3.0], mask=[0, 0, 1]),
+            {},
+            {},
+            ma.masked_array([1.0, 2.0, 4.0], mask=[0, 0, 1]),
+            {},
+            {},
+            True,
+        ),
+        (
+            ma.masked_array([1.0, 2.0, 3.0], mask=[0, 0, 0]),
+            {},
+            {},
+            ma.masked_array([1.0, 2.0, 3.0], mask=[0, 0, 1]),
+            {},
+            {},
+            False,
+        ),
+        (
+            ma.masked_array([1.0, 2.0, 3.0], mask=[0, 1, 0]),
+            {},
+            {},
+            ma.masked_array([1.0, 2.0, 3.0], mask=[0, 0, 1]),
+            {},
+            {},
+            False,
+        ),
+        (np.array([1], dtype="i2"), {}, {}, np.array([1], dtype="i4"), {}, {}, False),
+        (
+            np.array([1.0]),
+            {},
+            {"units": "m"},
+            np.array([1.0]),
+            {},
+            {"units": "cm"},
+            False,
+        ),
+        (np.array([np.nan]), {}, {}, np.array([np.nan]), {}, {}, True),
+    ],
+)
+def test_are_identical_nc_files_generated_data(
+    data1, kwargs1, ncattrs1, data2, kwargs2, ncattrs2, expected, tmp_path
+):
     fname1 = tmp_path / "old.nc"
     fname2 = tmp_path / "new.nc"
-    with netCDF4.Dataset(fname1, "w") as nc:
-        nc.hilavitkutin_version = "3.1"
-    with netCDF4.Dataset(fname2, "w") as nc:
-        nc.hilavitkutin_version = "3.14"
-    assert utils.are_identical_nc_files(fname1, fname2) is True
+    for fname, data, kwargs, ncattrs in zip(
+        (fname1, fname2), (data1, data2), (kwargs1, kwargs2), (ncattrs1, ncattrs2)
+    ):
+        with netCDF4.Dataset(fname, "w") as nc:
+            nc.createDimension("time")
+            time = nc.createVariable("time", data.dtype, ("time",), **kwargs)
+            for attr, value in ncattrs.items():
+                setattr(time, attr, value)
+            time[:] = data
+        if "fill_value" in kwargs:
+            with netCDF4.Dataset(fname, "r") as nc:
+                fv1 = nc["time"]._FillValue
+                fv2 = kwargs["fill_value"]
+                assert fv1 == fv2 or (np.isnan(fv1) and np.isnan(fv2))
+    assert utils.are_identical_nc_files(fname1, fname2) == expected
+
+
+@pytest.mark.parametrize(
+    "attrs1, attrs2, expected",
+    [
+        ({"file_uuid": "kissa"}, {"file_uuid": "koira"}, True),
+        (
+            {"source_file_uuids": "kissa, hiiri"},
+            {"source_file_uuids": "hiiri, kissa"},
+            True,
+        ),
+        (
+            {"source_file_uuids": "kissa, hiiri"},
+            {"source_file_uuids": "kissa, koira"},
+            False,
+        ),
+        ({"history": "processed yesterday"}, {"history": "processed today"}, True),
+        ({"hilavitkutin_version": "3.1"}, {"hilavitkutin_version": "3.14"}, True),
+    ],
+)
+def test_are_identical_nc_files_global_attributes(tmp_path, attrs1, attrs2, expected):
+    fname1 = tmp_path / "old.nc"
+    fname2 = tmp_path / "new.nc"
+    for fname, attrs in zip((fname1, fname2), (attrs1, attrs2)):
+        with netCDF4.Dataset(fname, "w") as nc:
+            for attr, value in attrs.items():
+                setattr(nc, attr, value)
+    assert utils.are_identical_nc_files(fname1, fname2) == expected
 
 
 @pytest.mark.parametrize(
@@ -199,16 +335,16 @@ def test_are_identical_nc_files_software_versions(tmp_path):
         ([1, 2, 3], [1, 2, 4], False),
         (np.array([1, 2, 3]), np.array([1, 2, 3]), True),
         (np.array([1, 2, 3]), np.array([1, 2, 4]), False),
-        (ma.array([1, 2, 3]), ma.array([1, 2, 3]), True),
-        (ma.array([1, 2, 3]), ma.array([1, 2, 4]), False),
+        (ma.masked_array([1, 2, 3]), ma.masked_array([1, 2, 3]), True),
+        (ma.masked_array([1, 2, 3]), ma.masked_array([1, 2, 4]), False),
         (
-            ma.array([1.0, 2.0, 3.0], mask=[0, 0, 0]),
-            ma.array([1.0, 2.0, 3.0], mask=[0, 0, 0]),
+            ma.masked_array([1.0, 2.0, 3.0], mask=[0, 0, 0]),
+            ma.masked_array([1.0, 2.0, 3.0], mask=[0, 0, 0]),
             True,
         ),
         (
-            ma.array([1.0, 2.0, 3.0], mask=[0, 0, 0]),
-            ma.array([1.0, 2.0, 3.0], mask=[0, 0, 1]),
+            ma.masked_array([1.0, 2.0, 3.0], mask=[0, 0, 0]),
+            ma.masked_array([1.0, 2.0, 3.0], mask=[0, 0, 1]),
             False,
         ),
     ],

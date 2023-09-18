@@ -729,11 +729,11 @@ def _compare_variables(nc1: netCDF4.Dataset, nc2: netCDF4.Dataset):
         assert value1.shape == value2.shape, _log(
             "shapes", name, value1.shape, value2.shape
         )
-        assert ma.allclose(value1, value2, rtol=1e-4), _log(
+        assert np.allclose(value1, value2, rtol=1e-4, equal_nan=True), _log(
             "variable values", name, value1, value2
         )
         if isinstance(value1, ma.MaskedArray) and isinstance(value2, ma.MaskedArray):
-            assert ma.allclose(
+            assert np.array_equal(
                 value1.mask,
                 value2.mask,
             ), _log("variable masks", name, value1.mask, value2.mask)
@@ -745,9 +745,9 @@ def _compare_variables(nc1: netCDF4.Dataset, nc2: netCDF4.Dataset):
 
 def _compare_variable_attributes(nc1: netCDF4.Dataset, nc2: netCDF4.Dataset):
     for name in nc1.variables:
-        attrs1 = nc1.variables[name].ncattrs()
-        attrs2 = nc2.variables[name].ncattrs()
-        assert len(set(attrs1) ^ set(attrs2)) == 0, _log(
+        attrs1 = set(nc1.variables[name].ncattrs()) - {"_FillValue"}
+        attrs2 = set(nc2.variables[name].ncattrs()) - {"_FillValue"}
+        assert len(attrs1 ^ attrs2) == 0, _log(
             "variable attributes", name, attrs1, attrs2
         )
         for attr in attrs1:
