@@ -167,6 +167,7 @@ def harmonize_parsivel_file(data: dict) -> str:
         uuid = parsivel.add_uuid()
         parsivel.add_global_attributes("disdrometer", instruments.PARSIVEL2)
         parsivel.add_history("disdrometer", source="History")
+        parsivel.fix_global_attributes()
         parsivel.clean_global_attributes()
         parsivel.fix_long_names()
         parsivel.fix_units()
@@ -603,6 +604,9 @@ class ParsivelNc(Level1Nc):
         for old_name, new_name in keymap.items():
             if old_name in self.nc.variables:
                 self.nc.renameVariable(old_name, new_name)
+
+    def fix_global_attributes(self):
+        self.nc.serial_number = self.nc.Sensor_ID
 
     def clean_global_attributes(self):
         keys = (

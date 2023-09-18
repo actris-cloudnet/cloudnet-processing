@@ -170,6 +170,27 @@ def test_halo_fix(filename):
     nc.close()
 
 
+@pytest.mark.parametrize(
+    "filename, site, serial_number",
+    [("20230418_disdrometer.nc", "leipzig", "291937")],
+)
+def test_production_parsivel_files(filename, site, serial_number):
+    test_file = f"{TEST_FILE_PATH}/../data/raw/parsivel/{filename}"
+    temp_file = NamedTemporaryFile(suffix=".nc")
+    shutil.copy(test_file, temp_file.name)
+    data = {
+        "site_name": site,
+        "date": "2023-04-18",
+        "uuid": None,
+        "site_meta": {"altitude": 10, "latitude": 25, "longitude": 52.5},
+        "full_path": temp_file.name,
+    }
+    nca.harmonize_parsivel_file(data)
+    run_quality_tests(data["full_path"])
+    with netCDF4.Dataset(temp_file.name) as nc:
+        assert nc.serial_number == serial_number
+
+
 class TestModel:
     @pytest.fixture(autouse=True)
     def _before_and_after(self):
