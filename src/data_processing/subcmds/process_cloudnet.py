@@ -209,7 +209,7 @@ class ProcessCloudnet(ProcessBase):
                 preferred = (
                     "mira",
                     "rpg-fmcw-94",
-                    "galileo",
+                    "copernicus",
                     "chm15k",
                     "chm15kx",
                     "cl61d",
