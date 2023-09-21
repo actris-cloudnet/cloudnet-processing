@@ -10,7 +10,7 @@ import requests
 from requests.exceptions import HTTPError
 
 from data_processing import metadata_api, utils
-from data_processing.processing_tools import ProcessBase
+from data_processing.processing_tools import ProcessBase, build_file_landing_page_url
 from data_processing.storage_api import StorageApi
 from data_processing.utils import make_session, read_main_conf
 
@@ -36,9 +36,6 @@ def main(args, storage_session: requests.Session | None = None):
         ):
             logging.info("Same cloudnetpy-qc version, skipping.")
             continue
-        logging.info(
-            f'Creating QC report: {row["site"]["id"]} - {row["measurementDate"]} - {product}'
-        )
         try:
             full_path = storage_api.download_product(row, temp_dir.name)
         except HTTPError as err:
@@ -46,9 +43,15 @@ def main(args, storage_session: requests.Session | None = None):
             continue
         try:
             if row["legacy"]:
-                qc.upload_quality_report(full_path, uuid, product)
+                result = qc.upload_quality_report(full_path, uuid, product)
             else:
-                qc.upload_quality_report(full_path, uuid)
+                result = qc.upload_quality_report(full_path, uuid)
+            url = build_file_landing_page_url(uuid)
+            url = f"{url}/quality"
+            logging.info(
+                f'Creating QC report for {row["site"]["id"]} {row["measurementDate"]} {product}: {result.upper()} {url}'
+            )
+
         except OSError as err:
             logging.error(err)
         for filename in glob.glob(f"{temp_dir.name}/*"):

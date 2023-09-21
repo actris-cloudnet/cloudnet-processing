@@ -7,6 +7,7 @@ from tempfile import NamedTemporaryFile, TemporaryDirectory
 import numpy as np
 import requests
 from cloudnetpy.plotting import generate_figure
+from cloudnetpy_qc.quality import ErrorLevel
 
 from data_processing import utils
 from data_processing.metadata_api import MetadataApi
@@ -183,9 +184,20 @@ class ProcessBase:
 
     def upload_quality_report(
         self, full_path: str, uuid: str, product: str | None = None
-    ) -> None:
+    ) -> str:
         quality_report = utils.create_quality_report(full_path, product=product)
+        exception_results = [
+            exception["result"]
+            for test in quality_report.get("tests", [])
+            for exception in test.get("exceptions", [])
+        ]
+        result: ErrorLevel | str = "OK"
+        for error_level in [ErrorLevel.ERROR, ErrorLevel.WARNING, ErrorLevel.INFO]:
+            if error_level in exception_results:
+                result = error_level.value
+                break
         self.md_api.put("quality", uuid, quality_report)
+        return result
 
     def _read_volatile_uuid(self, metadata: list) -> str | None:
         if self._parse_volatile_value(metadata) is True:

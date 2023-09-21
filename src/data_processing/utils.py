@@ -523,7 +523,9 @@ def init_logger(args, log_filename: str):
 
 def create_quality_report(filename: str, product: str | None = None) -> dict:
     """Creates quality report for data portal."""
-    report = quality.run_tests(Path(filename), cloudnet_file_type=product)
+    report = quality.run_tests(
+        Path(filename), cloudnet_file_type=product, ignore_tests=["TestInstrumentPid"]
+    )
     return report
 
 
