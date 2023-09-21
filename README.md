@@ -64,6 +64,8 @@ In addition to the general arguments, it accepts the following special arguments
 | `-r`  | `--reprocess`          | `False` | See below.                                                                                                                                     |
 |       | `--reprocess_volatile` | `False` | Reprocess volatile files only (and create new volatile file from unprocessed).                                                                 |
 | `-u`  | `--updated_since`      |         | Process all raw files submitted within `--updated_since` in days. Ignores other arguments than `--site`. Note: Creates only Level 1b products. |
+| `-f`  | `--force`              | `False` | Force upload of the processed file to the data portal.                                                                                         |
+|       | `--pid`                |         | Process Level 1b data only from some specific instrument.                                                                                      |
 
 Behavior of the `--reprocess` flag:
 
