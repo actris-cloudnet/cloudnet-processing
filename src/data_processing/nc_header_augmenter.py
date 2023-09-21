@@ -353,7 +353,7 @@ class ModelNc(Level1Nc):
         raise MiscError("Incomplete model file.")
 
     def add_date(self):
-        """Adds data in correct format."""
+        """Adds date in correct format."""
         date_string = self.nc.variables["time"].units
         date = date_string.split()[2]
         self.nc.year, self.nc.month, self.nc.day = date.split("-")
