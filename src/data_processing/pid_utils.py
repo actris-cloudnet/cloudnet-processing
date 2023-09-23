@@ -1,6 +1,8 @@
 import netCDF4
 from requests import HTTPError
 
+from data_processing.utils import MiscError
+
 from .utils import build_file_landing_page_url, make_session
 
 
@@ -29,7 +31,7 @@ class PidUtils:
                 try:
                     res.raise_for_status()
                 except HTTPError as exc:
-                    raise HTTPError(
+                    raise MiscError(
                         f'PID service failed with status {res.status_code}:\n{res.json()["detail"]}'
                     ) from exc
                 pid = res.json()["pid"]

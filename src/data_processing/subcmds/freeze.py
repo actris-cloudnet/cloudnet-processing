@@ -13,7 +13,7 @@ from requests.exceptions import HTTPError
 from data_processing import metadata_api, utils
 from data_processing.pid_utils import PidUtils
 from data_processing.storage_api import StorageApi
-from data_processing.utils import make_session, read_main_conf
+from data_processing.utils import MiscError, make_session, read_main_conf
 
 
 def main(args, storage_session: requests.Session | None = None):
@@ -66,7 +66,7 @@ def main(args, storage_session: requests.Session | None = None):
             }
             md_api.post("files", payload)
             storage_api.delete_volatile_product(s3key)
-        except OSError as err:
+        except (OSError, MiscError) as err:
             utils.send_slack_alert(
                 err, "pid", args, row["measurementDate"], row["product"]["id"]
             )
