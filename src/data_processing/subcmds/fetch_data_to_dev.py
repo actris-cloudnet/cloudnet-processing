@@ -16,9 +16,6 @@ DOWNLOAD_DIR = Path("download")
 
 def main(args: argparse.Namespace):
     params = {"site": args.site, "instruments": args.instruments}
-    if args.date and (args.start or args.stop):
-        print("Using --date with --start or --stop is not allowed", file=sys.stderr)
-        sys.exit(1)
     if args.date:
         params["start"] = args.date
         params["stop"] = args.date
@@ -28,6 +25,8 @@ def main(args: argparse.Namespace):
     else:
         print("Please specify --date, --start or --stop", file=sys.stderr)
         sys.exit(1)
+    params["start"] = datetime.date.fromisoformat(params["start"])
+    params["stop"] = datetime.date.fromisoformat(params["stop"])
 
     DOWNLOAD_DIR.mkdir(exist_ok=True)
 
@@ -43,7 +42,7 @@ def main(args: argparse.Namespace):
 
     if upload_metadata:
         print("\nMeasurement files:\n")
-    _process_metadata(upload_metadata)
+    _process_metadata(upload_metadata, args)
 
     if params["instruments"] is not None and "model" not in params["instruments"]:
         return
@@ -51,7 +50,7 @@ def main(args: argparse.Namespace):
     upload_metadata = _get_metadata("raw-model-files", **params)
     if upload_metadata:
         print("\nModel files:\n")
-    _process_metadata(upload_metadata)
+    _process_metadata(upload_metadata, args)
 
 
 def _get_metadata(
@@ -59,7 +58,7 @@ def _get_metadata(
     site: str,
     start: datetime.date | None,
     stop: datetime.date | None,
-    instruments: list[str] = [],
+    instruments: list[str] | None = None,
 ) -> list:
     url = f"https://cloudnet.fmi.fi/api/{end_point}"
     payload = {
@@ -74,10 +73,10 @@ def _get_metadata(
     return metadata
 
 
-def _process_metadata(upload_metadata):
+def _process_metadata(upload_metadata: list, args: argparse.Namespace):
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
         future_to_filename = {
-            executor.submit(_process_row, row): row["filename"]
+            executor.submit(_process_row, row, args): row["filename"]
             for row in upload_metadata
         }
         completed = 0
@@ -92,7 +91,7 @@ def _process_metadata(upload_metadata):
                 print(f"{info} {exc}")
 
 
-def _process_row(row):
+def _process_row(row: dict, args: argparse.Namespace):
     filename = _download_file(row)
     response = _submit_to_local_ss(filename, row)
     if not args.save:
@@ -122,6 +121,8 @@ def _submit_to_local_ss(filename: Path, row: dict):
     elif "model" in row:
         metadata["model"] = row["model"]["id"]
         end_point = "model-upload"
+    else:
+        raise ValueError("Row does not contain instrument or model.")
     auth = ("admin", "admin")
     url = f"{DATAPORTAL_URL}/{end_point}/"
     res = requests.post(f"{url}metadata", json=metadata, auth=auth)
@@ -134,54 +135,27 @@ def _submit_to_local_ss(filename: Path, row: dict):
     return res.text
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "-s",
-        "--site",
-        required=True,
-        help="Site to process data from, e.g. hyytiala",
-        type=str,
-    )
-    parser.add_argument(
-        "-d",
-        "--date",
-        type=datetime.date.fromisoformat,
-        metavar="YYYY-MM-DD",
-        help="Single date",
-    )
-    parser.add_argument(
-        "--start",
-        type=datetime.date.fromisoformat,
-        metavar="YYYY-MM-DD",
-        help="Starting date",
-    )
-    parser.add_argument(
-        "--stop",
-        type=datetime.date.fromisoformat,
-        metavar="YYYY-MM-DD",
-        help="Stopping date",
-    )
-    parser.add_argument(
+def add_arguments(subparser):
+    fetch_parser = subparser.add_parser("fetch", help="Fetch raw data to dev.")
+    fetch_parser.add_argument(
         "-i",
         "--instruments",
         type=lambda s: s.split(","),
         help="Instrument types, e.g. cl51,hatpro",
     )
-    parser.add_argument(
+    fetch_parser.add_argument(
         "--include", help="Instrument file regex include pattern", type=str
     )
-    parser.add_argument(
+    fetch_parser.add_argument(
         "--exclude",
         help="Instrument file regex exclude pattern",
         type=str,
         default=".lv0$",
     )
-    parser.add_argument(
+    fetch_parser.add_argument(
         "--save",
         action="store_true",
         default=False,
         help="Also save instrument files to download/",
     )
-    args = parser.parse_args()
-    main(args)
+    return subparser

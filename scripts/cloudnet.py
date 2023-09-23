@@ -10,6 +10,7 @@ from data_processing import utils
 from data_processing.subcmds import (
     create_images,
     create_qc_reports,
+    fetch_data_to_dev,
     freeze,
     process_cloudnet,
     process_housekeeping,
@@ -29,6 +30,7 @@ modules = {
     "plot": create_images,
     "qc": create_qc_reports,
     "housekeeping": process_housekeeping,
+    "fetch": fetch_data_to_dev,
 }
 
 
