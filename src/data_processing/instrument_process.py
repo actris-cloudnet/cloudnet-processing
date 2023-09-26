@@ -60,7 +60,7 @@ class ProcessInstrument:
 class ProcessRadar(ProcessInstrument):
     def process_rpg_fmcw_94(self):
         full_paths, raw_uuids = self.base.download_instrument(
-            self.instrument_pid, include_pattern=".lv1$"
+            self.instrument_pid, include_pattern=r"zen.*\.lv1$"
         )
         self.uuid.product, valid_full_paths = rpg2nc(
             self.base.temp_dir.name, *self._args, **self._kwargs
