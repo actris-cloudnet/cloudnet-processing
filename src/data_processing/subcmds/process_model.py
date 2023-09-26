@@ -33,10 +33,8 @@ def main(args, storage_session: requests.Session | None = None):
 
             process.upload_product("model", uuid, model_id, filename)
             process.create_and_upload_images("model", uuid.product, filename)
-
-            logging.info("Creating QC report")
-            process.upload_quality_report(process.temp_file.name, uuid.product)
-            process.print_info(uuid)
+            result = process.upload_quality_report(process.temp_file.name, uuid.product)
+            process.print_info(uuid, result)
         except MiscError as err:
             logging.warning(err)
         except (RequestException, RuntimeError) as err:

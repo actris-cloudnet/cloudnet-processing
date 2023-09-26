@@ -77,10 +77,11 @@ class ProcessBase:
         self._create_new_version = self._is_create_new_version(metadata)
         return uuid, filename
 
-    def print_info(self, uuid: Uuid) -> None:
+    def print_info(self, uuid: Uuid, result: str | None = None) -> None:
         kind = "new version" if self._create_new_version else "volatile file"
         link = build_file_landing_page_url(uuid.product)
-        logging.info(f"Created {kind}: {link}")
+        qc_str = f" QC: {result.upper()}" if result is not None else ""
+        logging.info(f"Created {kind}: {link}{qc_str}")
 
     def upload_product(
         self,
