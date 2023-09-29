@@ -81,6 +81,7 @@ class ProcessRadar(ProcessInstrument):
 
     def process_copernicus(self):
         full_paths, self.uuid.raw = self.base.download_instrument(self.instrument_pid)
+        self._add_calibration("range_offset", 0)
         self.uuid.product = copernicus2nc(
             os.path.dirname(full_paths[0]), *self._args, **self._kwargs
         )
@@ -103,6 +104,14 @@ class ProcessRadar(ProcessInstrument):
             else:
                 out_paths.append(filename)
         return out_paths
+
+    def _add_calibration(
+        self, key: str, default_value: float, api_key: str | None = None
+    ) -> None:
+        calibration = fetch_calibration(self.instrument_pid, self.base.date_str)
+        if calibration is not None:
+            data = calibration["data"]
+            self.base.site_meta[key] = data.get(api_key or key, default_value)
 
 
 class ProcessDopplerLidar(ProcessInstrument):
