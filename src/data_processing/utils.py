@@ -726,6 +726,14 @@ def _compare_variables(nc1: netCDF4.Dataset, nc2: netCDF4.Dataset):
     for name in vars1:
         value1 = nc1.variables[name][:]
         value2 = nc2.variables[name][:]
+        # np.allclose does not seem to work if all values are masked
+        if (
+            isinstance(value1, ma.MaskedArray)
+            and isinstance(value2, ma.MaskedArray)
+            and value1.mask.all()
+            and value2.mask.all()
+        ):
+            return
         assert value1.shape == value2.shape, _log(
             "shapes", name, value1.shape, value2.shape
         )
