@@ -3,6 +3,7 @@ import logging
 import os
 import shutil
 from tempfile import NamedTemporaryFile, TemporaryDirectory
+from typing import Final
 
 import numpy as np
 import requests
@@ -33,6 +34,9 @@ class Uuid:
 def clean_dir(dir_name: str) -> None:
     for filename in glob.glob(f"{dir_name}/*"):
         os.remove(filename)
+
+
+ALLOWED_SITE_META_KEYS: Final = ("latitude", "longitude", "altitude", "name")
 
 
 class ProcessBase:
@@ -351,9 +355,7 @@ def _read_site_info(args) -> tuple:
     site_info = utils.read_site_info(args.site)
     site_id = site_info["id"]
     site_type = site_info["type"]
-    site_meta = {
-        key: site_info[key] for key in ("latitude", "longitude", "altitude", "name")
-    }
+    site_meta = {key: site_info[key] for key in ALLOWED_SITE_META_KEYS}
     return site_meta, site_id, site_type
 
 

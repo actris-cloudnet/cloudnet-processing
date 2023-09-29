@@ -28,7 +28,7 @@ from haloreader.read import read_bg as read_halobg
 from requests.exceptions import HTTPError
 
 from data_processing import concat_wrapper, nc_header_augmenter, utils
-from data_processing.processing_tools import Uuid
+from data_processing.processing_tools import ALLOWED_SITE_META_KEYS, Uuid
 from data_processing.utils import MiscError, RawDataMissingError, fetch_calibration
 
 
@@ -38,8 +38,17 @@ class ProcessInstrument:
         self.temp_file = temp_file
         self.uuid = uuid
         self.instrument_pid = instrument_pid
+        self._clean_up_site_meta()
+        self._calibration = fetch_calibration(instrument_pid, self.base.date_str)
         self._kwargs = self._get_kwargs()
         self._args = self._get_args()
+
+    def _clean_up_site_meta(self):
+        self.base.site_meta = {
+            key: self.base.site_meta[key]
+            for key in ALLOWED_SITE_META_KEYS
+            if key in self.base.site_meta
+        }
 
     def _get_args(self) -> tuple:
         return self.temp_file.name, self.base.site_meta
@@ -55,6 +64,18 @@ class ProcessInstrument:
             "full_path": full_path,
             "uuid": self.uuid.volatile,
         }
+
+    def _add_calibration(
+        self,
+        key: str,
+        default_value: float | None,
+        leave_empty_if_missing: bool = False,
+    ) -> None:
+        if self._calibration is not None and "data" in self._calibration:
+            data = self._calibration["data"]
+            self.base.site_meta[key] = data.get(key, default_value)
+        elif not leave_empty_if_missing:
+            self.base.site_meta[key] = default_value
 
 
 class ProcessRadar(ProcessInstrument):
@@ -104,14 +125,6 @@ class ProcessRadar(ProcessInstrument):
             else:
                 out_paths.append(filename)
         return out_paths
-
-    def _add_calibration(
-        self, key: str, default_value: float, api_key: str | None = None
-    ) -> None:
-        calibration = fetch_calibration(self.instrument_pid, self.base.date_str)
-        if calibration is not None:
-            data = calibration["data"]
-            self.base.site_meta[key] = data.get(api_key or key, default_value)
 
 
 class ProcessDopplerLidar(ProcessInstrument):
@@ -200,14 +213,11 @@ class ProcessLidar(ProcessInstrument):
 
     def process_pollyxt(self):
         full_paths, self.uuid.raw = self.base.download_instrument(self.instrument_pid)
-        calibration = self._fetch_pollyxt_calibration()
-        site_meta = self.base.site_meta | calibration
+        self._add_calibration("snr_limit", 25.0)
         self.uuid.product = pollyxt2nc(
             os.path.dirname(full_paths[0]),
-            self.temp_file.name,
-            site_meta=site_meta,
-            uuid=self.uuid.volatile,
-            date=self.base.date_str,
+            *self._args,
+            **self._kwargs,
         )
 
     def process_cl31(self):
@@ -262,38 +272,14 @@ class ProcessLidar(ProcessInstrument):
         self.uuid.raw = _get_valid_uuids(raw_uuids, full_paths, valid_full_paths)
 
     def _call_ceilo2nc(self, model: str):
-        calibration = self._fetch_ceilo_calibration()
-        site_meta = self.base.site_meta | calibration
-        site_meta["model"] = model
+        for key in ("calibration_factor", "range_corrected"):
+            self._add_calibration(key, None, leave_empty_if_missing=True)
+        self.base.site_meta["model"] = model
         self.uuid.product = ceilo2nc(
             self.base.daily_file.name,
-            self.temp_file.name,
-            site_meta=site_meta,
-            uuid=self.uuid.volatile,
-            date=self.base.date_str,
+            *self._args,
+            **self._kwargs,
         )
-
-    def _fetch_ceilo_calibration(self) -> dict:
-        output: dict = {}
-        calibration = fetch_calibration(self.instrument_pid, self.base.date_str)
-        if not calibration:
-            return output
-        if "calibration_factor" in calibration["data"]:
-            output["calibration_factor"] = float(
-                calibration["data"]["calibration_factor"]
-            )
-        if "range_corrected" in calibration["data"]:
-            output["range_corrected"] = calibration["data"]["range_corrected"]
-        return output
-
-    def _fetch_pollyxt_calibration(self) -> dict:
-        output = {"snr_limit": 25.0}
-        calibration = fetch_calibration(self.instrument_pid, self.base.date_str)
-        if not calibration:
-            return output
-        if "snr_limit" in calibration["data"]:
-            output["snr_limit"] = float(calibration["data"]["snr_limit"])
-        return output
 
 
 class ProcessMwrL1c(ProcessInstrument):
@@ -375,15 +361,18 @@ class ProcessDisdrometer(ProcessInstrument):
             full_paths, self.uuid.raw = self.base.download_instrument(
                 self.instrument_pid
             )
-            calibration = self._fetch_parsivel_calibration()
-            kwargs = self._kwargs.copy()
-            kwargs["telegram"] = calibration["telegram"]
-            if calibration["missing_timestamps"] is True:
+
+            self._add_calibration("missing_timestamps", False)
+            self._add_calibration("telegram", None)
+
+            if self.base.site_meta["missing_timestamps"] is True:
                 full_paths, timestamps = utils.deduce_parsivel_timestamps(full_paths)
-                kwargs["timestamps"] = timestamps
+                self.base.site_meta["timestamps"] = timestamps
+                del self.base.site_meta["missing_timestamps"]
+
             utils.concatenate_text_files(full_paths, self.base.daily_file.name)
             self.uuid.product = parsivel2nc(
-                self.base.daily_file.name, *self._args, **kwargs
+                self.base.daily_file.name, *self._args, **self._kwargs
             )
 
     def process_thies_lnm(self):
@@ -393,15 +382,6 @@ class ProcessDisdrometer(ProcessInstrument):
         self.uuid.product = thies2nc(
             self.base.daily_file.name, *self._args, **self._kwargs
         )
-
-    def _fetch_parsivel_calibration(self) -> dict:
-        output: dict = {"telegram": None, "missing_timestamps": False}
-        calibration = fetch_calibration(self.instrument_pid, self.base.date_str)
-        if calibration is not None:
-            data = calibration["data"]
-            output["telegram"] = data.get("telegram", None)
-            output["missing_timestamps"] = data.get("missing_timestamps", False)
-        return output
 
 
 class ProcessWeatherStation(ProcessInstrument):
