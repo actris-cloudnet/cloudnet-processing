@@ -49,7 +49,7 @@ def main(args, storage_session: requests.Session | None = None):
             url = build_file_landing_page_url(uuid)
             url = f"{url}/quality"
             logging.info(
-                f'Creating QC report for {row["site"]["id"]} {row["measurementDate"]} {product}: {result.upper()} {url}'
+                f'Creating QC report for {row["site"]["id"]} {row["measurementDate"]} {product}: {url} {result.upper()}'
             )
 
         except OSError as err:
