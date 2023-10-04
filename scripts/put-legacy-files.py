@@ -20,9 +20,8 @@ from data_processing.storage_api import StorageApi
 from data_processing.utils import MiscError, make_session
 
 
-def main():
+def main(ARGS: argparse.Namespace):
     """The main function."""
-
     logging.basicConfig(level="INFO")
 
     config = utils.read_main_conf()
@@ -191,5 +190,5 @@ if __name__ == "__main__":
         "--freeze", "-f", help="Add pid to files.", default=False, action="store_true"
     )
 
-    ARGS = parser.parse_args()
-    main()
+    args = parser.parse_args()
+    main(args)
