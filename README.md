@@ -28,9 +28,9 @@ The main wrapper for running all the processing steps.
 
 Positional arguments:
 
-| Name      | Description                                                                                                                      |
-| :-------- | :------------------------------------------------------------------------------------------------------------------------------- |
-| `command` | Command to execute. Must be one of `freeze`, `process`, `model`, `me`, `plot`, or `qc`. Commands are detailed [here](#commands). |
+| Name      | Description                                                                                                                               |
+| :-------- | :---------------------------------------------------------------------------------------------------------------------------------------- |
+| `command` | Command to execute. Must be one of `freeze`, `process`, `model`, `me`, `plot`, `fetch`, or `qc`. Commands are detailed [here](#commands). |
 
 General arguments. These arguments are available for most commands. The arguments must be issued before the command argument.
 
@@ -118,6 +118,20 @@ Additional arguments:
 | :---- | :------------ | :------ | :-------------------------------------------------------------------- |
 | `-r`  | `--reprocess` | `False` | Process new version of the stable files and reprocess volatile files. |
 
+### `fetch`
+
+Download raw data from S3 and add to locally running data portal.
+
+Additional arguments:
+
+| Short | Long            | Default | Description                                        |
+| :---- | :-------------- | :------ | :------------------------------------------------- |
+| `-i`  | `--instruments` |         | Download only data from some specific instruments. |
+| `-e`  | `--extension`   |         | File extension to be downloaded, e.g, `.LV1`.      |
+|       | `--save`        |         | Store downloaded files in `download` directory.    |
+|       | `--include`     |         | Include only files that match the given pattern.   |
+|       | `--exclude`     | `*.LV0` | Exclude files that match the given pattern.        |
+
 ### `freeze`
 
 Freeze selected files by adding a PID to the files and setting their state to `stable`, preventing further changes to the data.
@@ -160,7 +174,7 @@ Freeze all files whose measurement date is 2021-01-01 or later:
 
 Reprocess all level 2 files between 2021-01-01 and 2021-01-31 for Norunda:
 
-    scripts/cloudnet.py -s norunda --start 2021-01-01 --stop 2021-01-31 -p classification,drizzle,iwc,lwc process -r
+    scripts/cloudnet.py -s norunda --start 2021-01-01 --stop 2021-01-31 -p l2 process -r
 
 Process missing model files for Munich:
 
@@ -169,25 +183,6 @@ Process missing model files for Munich:
 ## Other scripts
 
 Code that is not involved in the Cloudnet data processing chain can be found in other scripts under the `scripts` directory.
-
-### `fetch-data-to-dev.py`
-
-Fetch data from production to development environment.
-
-    usage: fetch-data-to-dev.py [-h] [-d YYYY-MM-DD] [--start YYYY-MM-DD] [--stop YYYY-MM-DD] [-i INSTRUMENTS] [-e EXTENSION] [-s] site
-
-Optional arguments:
-
-| Short | Long            | Description                                                                         |
-| :---- | :-------------- | :---------------------------------------------------------------------------------- |
-| `-h`  | `--help`        | Show help and exit.                                                                 |
-| `-s`  | `--site`        | Site to download data from, e.g, `hyytiala`.                                        |
-| `-d`  | `--date`        | Single date to be downloaded. Alternatively, `--start` and `--stop` can be defined. |
-|       | `--start`       | Starting date.                                                                      |
-|       | `--stop`        | Stopping date.                                                                      |
-| `-i`  | `--instruments` | Instruments to be downloaded, e.g, `cl51,hatpro`.                                   |
-| `-e`  | `--extension`   | File extension to be downloaded, e.g, `.LV1`.                                       |
-|       | `--save`        | Store downloaded files in `download` directory.                                     |
 
 ### `put-legacy-files.py`
 
@@ -228,7 +223,7 @@ Print list of Cloudnet variables.
 
 For development, you may open a bash session inside the container with:
 
-    docker compose -f ../dev-toolkit/docker-compose.yml run --entrypoint bash cloudnet-processing
+    ./run-bash
 
 The changes made to the source files on the host computer will be reflected in the container.
 
