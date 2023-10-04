@@ -347,6 +347,7 @@ class ProcessCloudnet(ProcessBase):
     def _fetch_instrument_to_process(self, product: str) -> tuple[str, str]:
         possible_instruments = self._get_possible_instruments(product)
         upload_metadata = self._get_upload_metadata(possible_instruments)
+        upload_metadata = screen_upload_metadata(upload_metadata)
         if len(upload_metadata) == 0:
             raise RawDataMissingError
         if self.args.pid is not None:
@@ -372,6 +373,18 @@ class ProcessCloudnet(ProcessBase):
         return [
             item for item in upload_metadata if item["instrument"]["id"] in instruments
         ]
+
+
+def screen_upload_metadata(metadata: list) -> list:
+    filtered_metadata = [
+        row
+        for row in metadata
+        if not (
+            row["instrument"]["id"] == "rpg-fmcw-94"
+            and row["filename"].lower().endswith(".lv0")
+        )
+    ]
+    return filtered_metadata
 
 
 def decide_instrument_to_process(metadata: list) -> tuple[str, str]:
