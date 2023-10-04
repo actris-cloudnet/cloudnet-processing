@@ -45,11 +45,12 @@ General arguments. These arguments are available for most commands. The argument
 
 Shortcut for the `--products` argument:
 
-| Shortcut | Meaning                                                                             |
-| :------- | :---------------------------------------------------------------------------------- |
-| `lb1`    | `disdrometer,doppler-lidar,lidar,mwr,radar,weather-station`                         |
-| `l1c`    | `categorize,categorize-voodoo,mwr-l1c`                                              |
-| `l2`     | `classification,iwc,lwc,drizzle,ier,der,mwr-single,mwr-multi,classification-voodoo` |
+| Shortcut   | Meaning                                                                             |
+| :--------- | :---------------------------------------------------------------------------------- |
+| `lb1`      | `disdrometer,doppler-lidar,lidar,mwr,radar,weather-station`                         |
+| `l1c`      | `categorize,categorize-voodoo,mwr-l1c`                                              |
+| `l2`       | `classification,iwc,lwc,drizzle,ier,der,mwr-single,mwr-multi,classification-voodoo` |
+| `standard` | All products except experimental and Level 3.                                       |
 
 ### Commands
 
