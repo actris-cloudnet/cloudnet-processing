@@ -107,7 +107,13 @@ def validate_products(products: list) -> list:
         if prod in valid_products:
             accepted_products.append(prod)
         if prod in ("l1b", "l1c", "l2"):
-            accepted_products.extend(utils.get_product_types(prod[1:]))
+            product_types = utils.get_product_types(prod[1:])
+            accepted_products.extend(product_types)
+        if prod == "standard":
+            product_types = utils.get_product_types_excluding_level3(
+                ignore_experimental=True
+            )
+            accepted_products.extend(product_types)
     return list(OrderedDict.fromkeys(accepted_products))  # unique values
 
 

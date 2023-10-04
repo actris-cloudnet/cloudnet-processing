@@ -112,9 +112,11 @@ def get_product_types(level: str | None = None) -> list:
     return [product["id"] for product in products]
 
 
-def get_product_types_excluding_level3() -> list:
+def get_product_types_excluding_level3(ignore_experimental: bool = False) -> list:
     """Returns Cloudnet processing types (other than level 3)."""
     products = get_from_data_portal_api("api/products")
+    if ignore_experimental:
+        products = [product for product in products if not product["experimental"]]
     l1b = [product["id"] for product in products if product["level"] == "1b"]
     l1c = [product["id"] for product in products if product["level"] == "1c"]
     l2 = [product["id"] for product in products if product["level"] == "2"]
