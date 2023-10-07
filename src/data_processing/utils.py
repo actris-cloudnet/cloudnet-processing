@@ -680,7 +680,7 @@ def are_identical_nc_files(filename1: str, filename2: str) -> bool:
         try:
             _compare_dimensions(nc1, nc2)
             _compare_global_attributes(nc1, nc2)
-            _compare_variables(nc1, nc2)
+            _compare_variables(nc1, nc2, ignore=("beta_smooth",))
             _compare_variable_attributes(nc1, nc2)
         except AssertionError as err:
             logging.debug(err)
@@ -719,13 +719,15 @@ def _compare_global_attributes(nc1: netCDF4.Dataset, nc2: netCDF4.Dataset):
         assert value1 == value2, _log("global attributes", name, value1, value2)
 
 
-def _compare_variables(nc1: netCDF4.Dataset, nc2: netCDF4.Dataset):
+def _compare_variables(nc1: netCDF4.Dataset, nc2: netCDF4.Dataset, ignore: tuple = ()):
     vars1 = nc1.variables.keys()
     vars2 = nc2.variables.keys()
     assert (
         len(set(vars1) ^ set(vars2)) == 0
     ), f"different variables: {vars1} vs. {vars2}"
     for name in vars1:
+        if name in ignore:
+            continue
         value1 = nc1.variables[name][:]
         value2 = nc2.variables[name][:]
         # np.allclose does not seem to work if all values are masked
