@@ -11,6 +11,7 @@ import requests
 from requests.exceptions import HTTPError
 
 from data_processing import metadata_api, utils
+from data_processing.dvas import Dvas
 from data_processing.pid_utils import PidUtils
 from data_processing.storage_api import StorageApi
 from data_processing.utils import MiscError, make_session, read_main_conf
@@ -36,6 +37,7 @@ def main(args, storage_session: requests.Session | None = None):
     metadata = md_api.find_files_to_freeze(args)
     logging.info(f"Found {len(metadata)} files to freeze.")
     temp_dir = TemporaryDirectory()
+    dvas = Dvas()
     error = False
     for row in metadata:
         args.site = row["site"]["id"]  # Needed for slack alerts
@@ -55,7 +57,8 @@ def main(args, storage_session: requests.Session | None = None):
                 )
                 error = True
                 continue
-            logging.info(f'Mapping UUID "{uuid}" to PID "{pid}"...')
+            url = utils.build_file_landing_page_url(uuid)
+            logging.info(f'Minting "{url}" to PID "{pid}')
             response_data = storage_api.upload_product(full_path, s3key)
             payload = {
                 "uuid": uuid,
@@ -66,6 +69,11 @@ def main(args, storage_session: requests.Session | None = None):
             }
             md_api.post("files", payload)
             storage_api.delete_volatile_product(s3key)
+            if args.dvas and (
+                row["product"]["level"] == "2" or row["product"]["id"] == "model"
+            ):
+                row = md_api.get(f"api/files/{row['uuid']}")
+                dvas.upload(md_api, row)
         except (OSError, MiscError) as err:
             utils.send_slack_alert(
                 err, "pid", args, row["measurementDate"], row["product"]["id"]
@@ -91,6 +99,12 @@ def add_arguments(subparser):
         "--experimental",
         action="store_true",
         help="Include experimental products.",
+        default=False,
+    )
+    freeze_parser.add_argument(
+        "--dvas",
+        action="store_true",
+        help="Upload metadata to DVAS.",
         default=False,
     )
     return subparser

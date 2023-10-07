@@ -1,7 +1,7 @@
 import netCDF4
 from requests import HTTPError
 
-from data_processing.utils import MiscError
+from data_processing.utils import MiscError, random_string
 
 from .utils import build_file_landing_page_url, make_session
 
@@ -36,7 +36,7 @@ class PidUtils:
                     ) from exc
                 pid = res.json()["pid"]
             else:
-                pid = "https://www.example.pid/"
+                pid = f"https://www.example.pid/{random_string(5)}"
             rootgrp.pid = pid
 
         return uuid, pid
