@@ -9,7 +9,7 @@ import requests
 from requests.exceptions import HTTPError
 
 from data_processing import metadata_api, utils
-from data_processing.processing_tools import ProcessBase
+from data_processing.processing_tools import ProcessBase, build_file_landing_page_url
 from data_processing.storage_api import StorageApi
 from data_processing.utils import make_session, read_main_conf
 
@@ -43,7 +43,9 @@ def main(args, storage_session: requests.Session | None = None):
         assert img.site == args.site == row["site"]["id"]
         img.date_str = row["measurementDate"]
         product = row["product"]["id"]
-        logging.info(f"Plotting images for: {img.site} - {img.date_str} - {product}")
+        url = build_file_landing_page_url(row["uuid"])
+        url = f"{url}/visualizations"
+        logging.info(f"Plotting images for {img.site} {product} {img.date_str}: {url}")
         try:
             img.temp_file.name = storage_api.download_product(row, temp_dir.name)
         except HTTPError as err:
