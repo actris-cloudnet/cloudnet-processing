@@ -1,17 +1,13 @@
-import logging
-
-import requests
-
 import housekeeping
 from data_processing.metadata_api import MetadataApi
-from data_processing.utils import make_session, read_main_conf
+from data_processing.utils import RawApi, make_session, read_main_conf
 
 
 def main(args):
     cfg_main = read_main_conf()
     session = make_session()
     md_api = MetadataApi(cfg_main, session)
-    raw_api = RawApi(cfg_main, session)
+    raw_api = RawApi(session=session)
 
     instruments = housekeeping.list_instruments()
     query_params = {
@@ -30,31 +26,7 @@ def main(args):
     )
     with housekeeping.Database() as db:
         for record in metadata:
-            filename = record["filename"]
-            uuid = record["uuid"]
-
-            reader = housekeeping.get_reader(record)
-            if reader is None:
-                logging.info(f"Skipping: {filename}")
-                continue
-
-            logging.info(f"Processing housekeeping data: {filename}")
-            filebytes = raw_api.get_raw_file(uuid, filename)
-            try:
-                points = reader(filebytes, record)
-                db.write(points)
-            except housekeeping.UnsupportedFile as e:
-                logging.warning(f"Unable to process file: {e}")
-
-
-class RawApi:
-    def __init__(self, cfg: dict, session: requests.Session):
-        self.base_url = cfg["DATAPORTAL_URL"]
-        self.session = session
-
-    def get_raw_file(self, uuid: str, fname: str) -> bytes:
-        url = f"{self.base_url}api/download/raw/{uuid}/{fname}"
-        return self.session.get(url).content
+            housekeeping.process_record(record, raw_api, db)
 
 
 def add_arguments(subparser):
