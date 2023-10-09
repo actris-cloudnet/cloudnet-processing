@@ -813,3 +813,19 @@ def _count_lines(filename: str) -> int:
         for _ in file:
             n_lines += 1
     return n_lines
+
+
+class RawApi:
+    def __init__(
+        self, cfg: dict | None = None, session: requests.Session | None = None
+    ):
+        if cfg is None:
+            cfg = read_main_conf()
+        if session is None:
+            session = make_session()
+        self.base_url = cfg["DATAPORTAL_URL"]
+        self.session = session
+
+    def get_raw_file(self, uuid: str, fname: str) -> bytes:
+        url = f"{self.base_url}api/download/raw/{uuid}/{fname}"
+        return self.session.get(url).content

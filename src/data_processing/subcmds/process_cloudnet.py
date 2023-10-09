@@ -18,9 +18,10 @@ from cloudnetpy.exceptions import (
 from cloudnetpy.utils import date_range
 from requests.exceptions import RequestException
 
+import housekeeping
 from data_processing import instrument_process, processing_tools, utils
 from data_processing.processing_tools import ProcessBase, Uuid
-from data_processing.utils import MiscError, RawDataMissingError, make_session
+from data_processing.utils import MiscError, RawApi, RawDataMissingError, make_session
 
 warnings.simplefilter("ignore", UserWarning)
 warnings.simplefilter("ignore", RuntimeWarning)
@@ -143,7 +144,21 @@ class ProcessCloudnet(ProcessBase):
             if instrument == "halo-doppler-lidar-calibrated"
             else instrument
         )
+        try:
+            self._process_housekeeping(instrument_pid)
+        except housekeeping.HousekeepingException as err:
+            logging.error(err)
+
         return process.uuid, instrument
+
+    def _process_housekeeping(self, instrument_pid: str):
+        raw_api = RawApi(session=make_session())
+        records = self.md_api.get(
+            "upload-metadata", self._get_payload(instrument_pid=instrument_pid)
+        )
+        with housekeeping.Database() as db:
+            for record in records:
+                housekeeping.process_record(record, raw_api=raw_api, db=db)
 
     def process_categorize(self, uuid: Uuid, cat_variant: str) -> tuple[Uuid, str]:
         l1_products = ["lidar", "model", "mwr", "radar"]

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import os
 import tempfile
@@ -14,9 +16,31 @@ from numpy import ma
 from rpgpy import read_rpg
 from rpgpy.utils import decode_rpg_status_flags, rpg_seconds2datetime64
 
+from data_processing.utils import RawApi
+
 from .chm15k import read_chm15k
-from .exceptions import UnsupportedFile
+from .exceptions import HousekeepingException, UnsupportedFile
 from .hatpro import HatproHkd, HatproHkdNc
+
+
+def process_record(record: dict, raw_api: RawApi, db: Database):
+    try:
+        reader = get_reader(record)
+        filename = record["filename"]
+        uuid = record["uuid"]
+        if reader is None:
+            logging.info(f"Skipping: {filename}")
+            return
+        logging.info(f"Processing housekeeping data: {filename}")
+        filebytes = raw_api.get_raw_file(uuid, filename)
+        points = reader(filebytes, record)
+        db.write(points)
+    except UnsupportedFile as err:
+        logging.warning(f"Unable to process file: {err}")
+    except KeyboardInterrupt as err:
+        raise err
+    except Exception as err:
+        raise HousekeepingException from err
 
 
 def _handle_hatpro_hkd(src: bytes, metadata: dict) -> list[Point]:

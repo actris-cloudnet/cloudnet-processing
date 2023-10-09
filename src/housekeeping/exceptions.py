@@ -1,2 +1,6 @@
-class UnsupportedFile(Exception):
+class HousekeepingException(Exception):
+    pass
+
+
+class UnsupportedFile(HousekeepingException):
     pass
