@@ -6,7 +6,9 @@ RUN apt-get update \
 
 WORKDIR /app
 
-COPY . /app
+COPY setup.py /app
+COPY src /app/src
+COPY scripts /app/scripts
 
 RUN pip3 install --upgrade pip
 RUN pip3 install torch --extra-index-url https://download.pytorch.org/whl/cpu \
