@@ -100,6 +100,7 @@ class Database:
             url=os.environ["INFLUXDB_URL"],
             token=os.environ["INFLUXDB_TOKEN"],
             org=os.environ["INFLUXDB_ORG"],
+            timeout=60_000,
         )
         self.bucket = os.environ["INFLUXDB_BUCKET"]
         self.write_api = self.client.write_api(write_options=SYNCHRONOUS)
