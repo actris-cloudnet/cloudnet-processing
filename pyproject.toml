@@ -8,3 +8,10 @@ line_length = 88
 
 [tool.pylint]
 max-line-length = 88
+
+[tool.mypy]
+check_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = ["netCDF4.*"]
+ignore_missing_imports = true
