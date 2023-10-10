@@ -38,7 +38,7 @@ def test_process_radar(suffix, result):
         assert out_files[0].endswith(result)
 
 
-def _create_file(dir_name: str, suffix: str) -> None:
+def _create_file(dir_name: str, suffix: str) -> str:
     filename = f"{dir_name}/foo{suffix}"
     f = open(filename, "w")
     f.close()

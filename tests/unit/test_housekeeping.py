@@ -57,6 +57,7 @@ def test_something(filename, instrument_id, measurement_date):
         "siteId": "hyytiala",
     }
     reader = get_reader(metadata)
+    assert reader is not None
     points = reader(path.read_bytes(), metadata)
     assert len(points) > 0
 

@@ -27,7 +27,7 @@ jobs:
         run: docker run --env-file test.env -v $PWD:/app test pylint **/*.py --errors-only
 
       - name: Check type hints
-        run: docker run --env-file test.env -v $PWD:/app test /bin/bash -c "mypy scripts/ src/"
+        run: docker run --env-file test.env -v $PWD:/app test /bin/bash -c "mypy scripts/ src/ tests/unit/"
 
       - name: Test
         run: docker run --env-file test.env -v $PWD:/app test pytest

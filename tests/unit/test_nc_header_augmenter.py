@@ -19,7 +19,7 @@ TEST_FILE_PATH = Path(__file__).parent.absolute()
 class TestMwr:
     @pytest.fixture(autouse=True)
     def _before_and_after(self):
-        self.data = {
+        self.data: dict = {
             "site_name": "bucharest",
             "date": "2020-10-23",
             "uuid": None,
@@ -31,17 +31,16 @@ class TestMwr:
         self.data["full_path"] = mwr_file
         self.data["original_filename"] = os.path.basename(mwr_file)
         uuid = nca.harmonize_hatpro_file(self.data)
-        nc = netCDF4.Dataset(mwr_file)
-        assert len(nc.variables["time"][:]) == 5
-        assert len(uuid) == 36
-        assert nc.file_uuid == uuid
-        assert nc.year == "2020"
-        assert nc.month == "10"
-        assert nc.day == "23"
-        assert nc.location == "Bucharest"
-        assert nc.title == "HATPRO microwave radiometer from Bucharest"
-        assert nc.Conventions == "CF-1.8"
-        nc.close()
+        with netCDF4.Dataset(mwr_file) as nc:
+            assert len(nc.variables["time"][:]) == 5
+            assert len(uuid) == 36
+            assert nc.file_uuid == uuid
+            assert nc.year == "2020"
+            assert nc.month == "10"
+            assert nc.day == "23"
+            assert nc.location == "Bucharest"
+            assert nc.title == "HATPRO microwave radiometer from Bucharest"
+            assert nc.Conventions == "CF-1.8"
         run_quality_tests(self.data["full_path"])
 
     def test_user_supplied_uuid(self, mwr_file):
@@ -50,10 +49,9 @@ class TestMwr:
         self.data["original_filename"] = os.path.basename(mwr_file)
         self.data["uuid"] = uuid_volatile
         uuid = nca.harmonize_hatpro_file(self.data)
-        nc = netCDF4.Dataset(mwr_file)
-        assert uuid == uuid_volatile
-        assert nc.file_uuid == uuid_volatile
-        nc.close()
+        with netCDF4.Dataset(mwr_file) as nc:
+            assert uuid == uuid_volatile
+            assert nc.file_uuid == uuid_volatile
 
     def test_null_latitude(self, mwr_file):
         self.data["full_path"] = mwr_file
@@ -74,27 +72,26 @@ class TestMwr:
         self.data["full_path"] = mwr_file
         self.data["original_filename"] = os.path.basename(mwr_file)
         nca.harmonize_hatpro_file(self.data)
-        nc = netCDF4.Dataset(mwr_file)
-        key = "lwp"
-        for attr in ("long_name", "units", "standard_name"):
-            assert getattr(nc.variables[key], attr) == getattr(
-                COMMON_ATTRIBUTES[key], attr
-            )
-        time = nc.variables["time"][:]
-        assert (
-            nc.variables["time"].units
-            == f'hours since {self.data["date"]} 00:00:00 +00:00'
-        )
-        assert nc.variables["time"].dtype == "double"
-        assert np.all(np.diff(time) > 0)
-        for key in ("altitude", "latitude", "longitude"):
-            assert key in nc.variables
-            assert nc.variables[key][:] == float(self.data["site_meta"][key]), key
-            for attr in ("long_name", "units"):
+        with netCDF4.Dataset(mwr_file) as nc:
+            key = "lwp"
+            for attr in ("long_name", "units", "standard_name"):
                 assert getattr(nc.variables[key], attr) == getattr(
                     COMMON_ATTRIBUTES[key], attr
                 )
-        nc.close()
+            time = nc.variables["time"][:]
+            assert (
+                nc.variables["time"].units
+                == f'hours since {self.data["date"]} 00:00:00 +00:00'
+            )
+            assert nc.variables["time"].dtype == "double"
+            assert np.all(np.diff(time) > 0)
+            for key in ("altitude", "latitude", "longitude"):
+                assert key in nc.variables
+                assert nc.variables[key][:] == float(self.data["site_meta"][key]), key
+                for attr in ("long_name", "units"):
+                    assert getattr(nc.variables[key], attr) == getattr(
+                        COMMON_ATTRIBUTES[key], attr
+                    )
         run_quality_tests(self.data["full_path"])
 
     def test_palaiseau_mwr(self):
@@ -104,17 +101,16 @@ class TestMwr:
         self.data["full_path"] = temp_file.name
         self.data["date"] = "2021-10-07"
         nca.harmonize_hatpro_file(self.data)
-        nc = netCDF4.Dataset(self.data["full_path"])
-        assert nc.Conventions == "CF-1.8"
-        assert nc.variables["lwp"].units == "kg m-2"
-        time = nc.variables["time"][:]
-        assert (
-            nc.variables["time"].units
-            == f'hours since {self.data["date"]} 00:00:00 +00:00'
-        )
-        assert nc.variables["time"].dtype == "double"
-        assert np.all(np.diff(time) > 0)
-        nc.close()
+        with netCDF4.Dataset(self.data["full_path"]) as nc:
+            assert nc.Conventions == "CF-1.8"
+            assert nc.variables["lwp"].units == "kg m-2"
+            time = nc.variables["time"][:]
+            assert (
+                nc.variables["time"].units
+                == f'hours since {self.data["date"]} 00:00:00 +00:00'
+            )
+            assert nc.variables["time"].dtype == "double"
+            assert np.all(np.diff(time) > 0)
         run_quality_tests(self.data["full_path"])
 
 
@@ -153,7 +149,7 @@ def test_halo_fix(filename):
     test_file = f"{TEST_FILE_PATH}/../data/raw/halo/{filename}"
     temp_file = NamedTemporaryFile(suffix=".nc")
     shutil.copy(test_file, temp_file.name)
-    data = {
+    data: dict = {
         "site_name": "hyytiala",
         "date": "2020-01-07",
         "uuid": None,
@@ -162,12 +158,11 @@ def test_halo_fix(filename):
     }
     nca.harmonize_halo_calibrated_file(data)
     run_quality_tests(data["full_path"])
-    nc = netCDF4.Dataset(data["full_path"])
-    wavelength = nc.variables["wavelength"][:]
-    assert (
-        1490 < wavelength < 1560
-    )  # It should be 1550, but it is incorrectly 1.5e-6 um in the daily file.
-    nc.close()
+    with netCDF4.Dataset(data["full_path"]) as nc:
+        wavelength = nc.variables["wavelength"][:]
+        assert (
+            1490 < wavelength < 1560
+        )  # It should be 1550, but it is incorrectly 1.5e-6 um in the daily file.
 
 
 @pytest.mark.parametrize(
@@ -178,7 +173,7 @@ def test_production_parsivel_files(filename, site, serial_number):
     test_file = f"{TEST_FILE_PATH}/../data/raw/parsivel/{filename}"
     temp_file = NamedTemporaryFile(suffix=".nc")
     shutil.copy(test_file, temp_file.name)
-    data = {
+    data: dict = {
         "site_name": site,
         "date": "2023-04-18",
         "uuid": None,
@@ -194,7 +189,7 @@ def test_production_parsivel_files(filename, site, serial_number):
 class TestModel:
     @pytest.fixture(autouse=True)
     def _before_and_after(self):
-        self.data = {
+        self.data: dict = {
             "site_name": "punta-arenas",
             "date": "2021-11-20",
             "uuid": None,
@@ -206,16 +201,15 @@ class TestModel:
     def test_model_fix(self, model_file):
         self.data["full_path"] = model_file
         uuid = nca.harmonize_model_file(self.data)
-        nc = netCDF4.Dataset(model_file)
-        assert len(uuid) == 36
-        assert nc.file_uuid == uuid
-        assert nc.year == "2020"
-        assert nc.month == "10"
-        assert nc.day == "14"
-        assert nc.title == "ECMWF single-site output over Bucharest"
-        assert nc.Conventions == "CF-1.8"
-        assert nc.variables["time"].dtype == "float32"
-        nc.close()
+        with netCDF4.Dataset(model_file) as nc:
+            assert len(uuid) == 36
+            assert nc.file_uuid == uuid
+            assert nc.year == "2020"
+            assert nc.month == "10"
+            assert nc.day == "14"
+            assert nc.title == "ECMWF single-site output over Bucharest"
+            assert nc.Conventions == "CF-1.8"
+            assert nc.variables["time"].dtype == "float32"
 
     def test_bad_model_file(self, bad_gdas1_file):
         self.data["full_path"] = bad_gdas1_file
@@ -231,16 +225,15 @@ class TestModel:
         self.data["date"] = "2021-11-20"
         self.data["site"] = "punta-arenas"
         nca.harmonize_model_file(self.data)
-        nc = netCDF4.Dataset(self.data["full_path"])
-        assert nc.Conventions == "CF-1.8"
-        time = nc.variables["time"][:]
-        assert (
-            nc.variables["time"].units
-            == f'hours since {self.data["date"]} 00:00:00 +00:00'
-        )
-        assert nc.variables["time"].dtype == "float32"
-        assert np.all(np.diff(time) > 0)
-        nc.close()
+        with netCDF4.Dataset(self.data["full_path"]) as nc:
+            assert nc.Conventions == "CF-1.8"
+            time = nc.variables["time"][:]
+            assert (
+                nc.variables["time"].units
+                == f'hours since {self.data["date"]} 00:00:00 +00:00'
+            )
+            assert nc.variables["time"].dtype == "float32"
+            assert np.all(np.diff(time) > 0)
         run_quality_tests(self.data["full_path"])
 
     def test_bucharest_ecmwf(self):
