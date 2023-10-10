@@ -19,6 +19,7 @@ jobs:
           context: .
           load: true
           tags: test
+          target: dev
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

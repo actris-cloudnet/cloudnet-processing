@@ -1,4 +1,4 @@
-FROM python:3.10-bullseye
+FROM python:3.10-bullseye AS base
 
 RUN apt-get update \
   && apt-get install -y --no-install-recommends libudunits2-dev gdb \
@@ -14,5 +14,8 @@ RUN pip3 install --upgrade pip
 RUN pip3 install torch --extra-index-url https://download.pytorch.org/whl/cpu \
   && pip3 install --no-cache-dir -e .
 
-RUN chgrp -R 0 /app \
-  && chmod -R g+rwX /app
+FROM base AS dev
+
+RUN pip3 install --no-cache-dir -e .[dev]
+
+FROM base AS prod
