@@ -53,7 +53,10 @@ def main(args, storage_session: requests.Session | None = None):
 
                         process.upload_product(product, uuid, model, filename)
                         process.create_and_upload_images(product, uuid.product, model)
-                        process.print_info(uuid)
+                        result = process.upload_quality_report(
+                            process.temp_file.name, uuid.product
+                        )
+                        process.print_info(uuid, result)
                     except (RawDataMissingError, MiscError, NotImplementedError) as err:
                         logging.warning(err)
                     except (RequestException, RuntimeError, ValueError) as err:
