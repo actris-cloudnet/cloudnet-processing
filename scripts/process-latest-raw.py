@@ -12,5 +12,15 @@ interpreter = "python3"
 
 for site in sites:
     subprocess.check_call(
-        [interpreter, wrapper, interpreter, script, "-s", site, subcommand, "-u=1"]
+        [
+            interpreter,
+            wrapper,
+            interpreter,
+            script,
+            "-s",
+            site,
+            subcommand,
+            "-u=1",
+            "-H",
+        ]
     )
