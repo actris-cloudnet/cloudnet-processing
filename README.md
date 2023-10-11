@@ -42,6 +42,7 @@ General arguments. These arguments are available for most commands. The argument
 |       | `--start`    | `current day - 5` | Starting date.                                                                     |
 |       | `--stop`     | `current day `    | Stopping date.                                                                     |
 | `-p`  | `--products` | all               | Processed products, e.g, `radar,lidar,categorize,classification`.                  |
+| `-l`  | `--loglevel` | `INFO`            | Log level: `INFO`, `DEBUG`, `WARNING` or `ERROR`.                                  |
 
 Shortcut for the `--products` argument:
 
@@ -67,6 +68,7 @@ In addition to the general arguments, it accepts the following special arguments
 | `-u`  | `--updated_since`      |         | Process all raw files submitted within `--updated_since` in days. Ignores other arguments than `--site`. Note: Creates only Level 1b products. |
 | `-f`  | `--force`              | `False` | Force upload of the processed file to the data portal.                                                                                         |
 |       | `--pid`                |         | Process Level 1b data only from some specific instrument.                                                                                      |
+| `-H`  | `--housekeeping`       | `False` | Process housekeeping data.                                                                                                                     |
 
 Behavior of the `--reprocess` flag:
 
