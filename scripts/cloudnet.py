@@ -96,6 +96,7 @@ def _parse_args(args):
         type=str,
         metavar="LEVEL",
         help="Logging level. Default is INFO.",
+        choices=["INFO", "DEBUG", "WARNING", "ERROR"],
         default="INFO",
     )
 
