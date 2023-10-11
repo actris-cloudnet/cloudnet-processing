@@ -702,7 +702,7 @@ def _compare_dimensions(nc1: netCDF4.Dataset, nc2: netCDF4.Dataset):
 
 
 def _skip_compare_global_attribute(name: str) -> bool:
-    return name in ("history", "file_uuid") or name.endswith("_version")
+    return name in ("history", "file_uuid", "pid") or name.endswith("_version")
 
 
 def _compare_global_attributes(nc1: netCDF4.Dataset, nc2: netCDF4.Dataset):
