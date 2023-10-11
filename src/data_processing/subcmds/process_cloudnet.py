@@ -144,10 +144,12 @@ class ProcessCloudnet(ProcessBase):
             if instrument == "halo-doppler-lidar-calibrated"
             else instrument
         )
-        try:
-            self._process_housekeeping(instrument_pid)
-        except housekeeping.HousekeepingException as err:
-            logging.error(err)
+        if self.args.housekeeping:
+            logging.info("Processing housekeeping data")
+            try:
+                self._process_housekeeping(instrument_pid)
+            except housekeeping.HousekeepingException as err:
+                logging.error(err)
 
         return process.uuid, instrument
 
@@ -456,6 +458,13 @@ def add_arguments(subparser):
         "--force",
         action="store_true",
         help="Skip checking of file contents compared to data portal.",
+        default=False,
+    )
+    parser.add_argument(
+        "-H",
+        "--housekeeping",
+        action="store_true",
+        help="Process housekeeping data.",
         default=False,
     )
     return subparser
