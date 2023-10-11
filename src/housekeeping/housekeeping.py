@@ -29,9 +29,9 @@ def process_record(record: dict, raw_api: RawApi, db: Database):
         filename = record["filename"]
         uuid = record["uuid"]
         if reader is None:
-            logging.info(f"Skipping: {filename}")
+            logging.debug(f"Skipping: {filename}")
             return
-        logging.info(f"Processing housekeeping data: {filename}")
+        logging.debug(f"Processing housekeeping data: {filename}")
         filebytes = raw_api.get_raw_file(uuid, filename)
         points = reader(filebytes, record)
         db.write(points)
