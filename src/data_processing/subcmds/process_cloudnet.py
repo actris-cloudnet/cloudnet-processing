@@ -161,7 +161,7 @@ class ProcessCloudnet(ProcessBase):
                 housekeeping.process_record(record, raw_api=raw_api, db=db)
 
     def process_categorize(self, uuid: Uuid, cat_variant: str) -> tuple[Uuid, str]:
-        l1_products = ["lidar", "model", "mwr", "radar"]
+        l1_products = ["lidar", "model", "mwr", "radar"]  # radar should be last
         meta_records = self._get_level1b_metadata_for_categorize(l1_products)
         missing = self._get_missing_level1b_products(meta_records, l1_products)
         if missing:
@@ -233,6 +233,11 @@ class ProcessCloudnet(ProcessBase):
                 )
                 for row in metadata:
                     for preferred_instrument in preferred:
+                        # Use RPG cloud radar instead of MIRA if no MWR data
+                        if preferred_instrument == "mira" and not meta_records.get(
+                            "mwr"
+                        ):
+                            continue
                         if row["instrument"]["id"] == preferred_instrument:
                             meta_records[product] = row
                         break
