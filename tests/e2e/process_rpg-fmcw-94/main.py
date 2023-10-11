@@ -34,7 +34,7 @@ def main():
     session = utils.register_storage_urls(
         temp_file, source_data, site, date, instrument, True
     )
-    main_args = [f"-s={site}", f"--date={date}", "-p=radar", "process"]
+    main_args = [f"-s={site}", f"--date={date}", "-p=radar", "process", "-H"]
     utils.process(session, main_args, temp_file, SCRIPT_PATH)
 
 
