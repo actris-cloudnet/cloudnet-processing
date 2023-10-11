@@ -162,7 +162,7 @@ class ProcessBase:
         with TemporaryDirectory() as temp_dir:
             full_path = self._storage_api.download_product(meta[0], temp_dir)
             if utils.are_identical_nc_files(full_path, self.temp_file.name) is True:
-                raise MiscError("Abort processing: File has not changed")
+                raise MiscError("Skipping PUT to data portal, file has not changed")
 
     def _upload_img(
         self,
