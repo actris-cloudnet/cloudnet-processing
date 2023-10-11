@@ -21,7 +21,7 @@ class TestModelEvaluationProcessing:
         assert nc.month == "10"
         assert nc.day == "22"
         assert nc.title == "Downsampled Cf of ecmwf from Bucharest"
-        assert nc.cloudnet_file_type == "cf_ecmwf"
+        assert nc.cloudnet_file_type == "l3-cf"
         assert nc.Conventions == "CF-1.8"
         assert (
             ", ".join(sorted(nc.source_file_uuids.split(", ")))
@@ -32,7 +32,7 @@ class TestModelEvaluationProcessing:
     def test_that_calls_metadata_api(self):
         data = read_log_file(SCRIPT_PATH)
         n_gets = 4
-        n_puts = 1
+        n_puts = 2
         assert len(data) == n_gets + n_puts + self.n_img
 
         # Check product status
@@ -65,3 +65,6 @@ class TestModelEvaluationProcessing:
         # PUT images
         img_put = '"PUT /visualizations/20201022_bucharest_l3-cf_downsampled'
         assert count_strings(data, img_put) == self.n_img
+
+        # PUT quality report
+        assert "PUT /quality/" in data[-1]
