@@ -131,7 +131,8 @@ def _submit_to_local_ss(filename: Path, row: dict):
             res = requests.put(f'{url}data/{metadata["checksum"]}', data=f, auth=auth)
             res.raise_for_status()
     elif res.status_code != 409:
-        res.raise_for_status()
+        error = res.content.decode("utf-8", errors="replace")
+        raise Exception(f"{res.status_code} {res.reason}: {error}")
     return res.text
 
 
