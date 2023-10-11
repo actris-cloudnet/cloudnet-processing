@@ -510,7 +510,7 @@ def concatenate_text_files(filenames: list, output_filename: str) -> None:
 def init_logger(args, log_filename: str):
     """Initializes logger."""
     logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
+    logger.setLevel(args.loglevel.upper())
     formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
     output_file_handler = logging.FileHandler(log_filename, mode="w")
     output_file_handler.setFormatter(formatter)

@@ -90,6 +90,14 @@ def _parse_args(args):
         metavar="YYYY-MM-DD",
         help="Single date to be processed.",
     )
+    group.add_argument(
+        "-l",
+        "--loglevel",
+        type=str,
+        metavar="LEVEL",
+        help="Logging level. Default is INFO.",
+        default="INFO",
+    )
 
     args_parsed = parser.parse_args(args)
     valid_products = validate_products(args_parsed.products)
