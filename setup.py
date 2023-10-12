@@ -14,7 +14,7 @@ setup(
         "cloudnetpy_qc>=1.10.8",
         "cloudnetpy[extras]>=1.54.1",
         "rpgpy>=0.14.2",
-        "halo-reader>=0.1.0",
+        "halo-reader>=0.1.7",
         "requests",
         "toml",
         "influxdb-client",
