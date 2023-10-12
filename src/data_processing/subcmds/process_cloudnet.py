@@ -16,6 +16,7 @@ from cloudnetpy.exceptions import (
     ValidTimeStampError,
 )
 from cloudnetpy.utils import date_range
+from haloreader.exceptions import HaloException
 from requests.exceptions import RequestException
 
 import housekeeping
@@ -91,7 +92,12 @@ class ProcessCloudnet(ProcessBase):
             self.create_and_upload_images(product, uuid.product, filename)
             result = self.upload_quality_report(self.temp_file.name, uuid.product)
             self.print_info(uuid, result)
-        except (RawDataMissingError, MiscError, NotImplementedError) as err:
+        except (
+            RawDataMissingError,
+            MiscError,
+            NotImplementedError,
+            HaloException,
+        ) as err:
             logging.warning(err)
         except (
             MissingInputFileError,
