@@ -38,6 +38,9 @@ class Dvas:
         try:
             dvas_metadata = DvasMetadata(file)
             dvas_json = dvas_metadata.create_dvas_json()
+            if len(dvas_json["md_content_information"]["attribute_descriptions"]) == 0:
+                logging.error("Skipping - no ACTRIS variables")
+                return
             self._post(dvas_json)
             md_api.update_dvas_timestamp(
                 file["uuid"], dvas_json["md_metadata"]["datestamp"]
@@ -97,6 +100,7 @@ class DvasMetadata:
         self.file = file
         self._product = file["product"]
         self._site = file["site"]
+        self._is_model_data = self._product["id"] == "model"
 
     def create_dvas_json(self) -> dict:
         time_begin = f"{self.file['measurementDate']}T00:00:00.0000000Z"
@@ -157,7 +161,7 @@ class DvasMetadata:
                 "language": "en",
                 "topic_category": "climatologyMeteorologyAtmosphere",
                 "description": "time series of profile measurements",
-                "facility_identifier": self._site["dvasId"],
+                "facility_identifier": self._parse_facility_identifier(),
             },
             "ex_geographic_bounding_box": {
                 "west_bound_longitude": self._site["longitude"],
@@ -188,7 +192,7 @@ class DvasMetadata:
                 }
             ],
             "md_actris_specific": {
-                "facility_type": "observation platform, fixed",
+                "facility_type": self._parse_facility_type(),
                 "product_type": self._parse_product_type(),
                 "matrix": "cloud phase",
                 "sub_matrix": None,
@@ -228,21 +232,26 @@ class DvasMetadata:
             affiliation.append("ACTRIS")
         return affiliation
 
-    def _parse_instrument_type(self) -> list[str] | None:
+    def _parse_instrument_type(self) -> list[str]:
         # https://prod-actris-md.nilu.no/vocabulary/instrumenttype
         clu_to_dvas_map = {
             "radar": "cloud radar",
             "lidar": "lidar",
             "mwr": "microwave radiometer",
         }
-        if self._product["id"] == "model":
-            # This should work but DVAS API does not yet accept it
-            return None
+        if self._is_model_data:
+            return ["not_applicable"]
         elif self._product["id"] in clu_to_dvas_map:
             return [clu_to_dvas_map[self._product["id"]]]
         elif self._product["level"] == "2":
             return list(clu_to_dvas_map.values())
         raise DvasError(f"Instrument type {self._product['id']} not implemented")
+
+    def _parse_facility_identifier(self):
+        return None if self._is_model_data else self._site["dvasId"]
+
+    def _parse_facility_type(self):
+        return None if self._is_model_data else "observation platform, fixed"
 
     def _parse_timeliness(self) -> str:
         # https://prod-actris-md.nilu.no/vocabulary/observationtimeliness
@@ -255,11 +264,11 @@ class DvasMetadata:
 
     def _parse_data_product(self) -> str:
         """Description of the data product"""
-        prefix = "model" if self._product["id"] == "model" else self._parse_timeliness()
+        prefix = "model" if self._is_model_data else self._parse_timeliness()
         return f"{prefix} data"
 
     def _parse_product_type(self) -> str:
-        return "model" if self._product["id"] == "model" else "observation"
+        return "model" if self._is_model_data else "observation"
 
     def _parse_compliance(self) -> str:
         return "ACTRIS legacy" if self.file["legacy"] else "ACTRIS compliant"
@@ -268,6 +277,8 @@ class DvasMetadata:
         return self.file["format"]
 
     def _parse_title(self) -> str:
+        if self._is_model_data:
+            return f"Model profile data at {self._site['humanReadableName']}"
         return (
             f"Ground-based remote sensing observations "
             f"of {self._product['humanReadableName']} "
