@@ -70,11 +70,9 @@ class Dvas:
         logging.info("Done. All Cloudnet files deleted from DVAS")
 
     def _delete(self, url: str):
-        auth = (
-            base64.b64encode(f"{self.DVAS_USERNAME}:{self.DVAS_PASSWORD}".encode())
-            .decode()
-            .strip()
-        )
+        auth = base64.b64encode(
+            f"{self.DVAS_USERNAME}:{self.DVAS_PASSWORD}".encode()
+        ).decode()
         headers = {"X-Authorization": f"Basic {auth}"}
         res = self.session.delete(url, headers=headers)
         if not res.ok:
@@ -88,7 +86,7 @@ class Dvas:
         logging.debug(f"POST to DVAS API successful: {res.status_code} {res.text}")
 
     def _init_session(self) -> requests.Session:
-        s = requests.Session()
+        s = utils.make_session()
         s.headers.update({"X-Authorization": f"Bearer {self.DVAS_ACCESS_TOKEN}"})
         return s
 

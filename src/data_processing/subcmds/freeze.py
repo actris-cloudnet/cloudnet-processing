@@ -50,15 +50,14 @@ def main(args, storage_session: requests.Session | None = None):
             continue
         s3key = f"legacy/{row['filename']}" if row["legacy"] else row["filename"]
         try:
-            uuid, pid = pid_utils.add_pid_to_file(full_path)
+            uuid, pid, url = pid_utils.add_pid_to_file(full_path)
             if UUID(uuid) != UUID(row["uuid"]):
                 logging.error(
                     f"File {s3key} UUID mismatch (DB: {row['uuid']}, File: {uuid})"
                 )
                 error = True
                 continue
-            url = utils.build_file_landing_page_url(uuid)
-            logging.info(f'Minting "{url}" to PID "{pid}')
+            logging.info(f'Minting PID "{pid}" to URL "{url}')
             response_data = storage_api.upload_product(full_path, s3key)
             payload = {
                 "uuid": uuid,
