@@ -808,7 +808,7 @@ def _parse_datetime_from_filename(filename: str) -> list[int] | None:
 
 
 def _count_lines(filename: str) -> int:
-    with open(filename, "r") as file:
+    with open(filename, "rb") as file:
         n_lines = 0
         for _ in file:
             n_lines += 1
