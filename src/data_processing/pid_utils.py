@@ -1,7 +1,7 @@
 import netCDF4
 from requests import HTTPError
 
-from data_processing.utils import MiscError
+from data_processing.utils import MiscError, random_string
 
 from .utils import build_file_landing_page_url, make_session
 
@@ -16,16 +16,17 @@ class PidUtils:
         is_test_env = config["PID_SERVICE_TEST_ENV"].lower() == "true"
         return not is_test_env
 
-    def add_pid_to_file(self, filepath: str) -> tuple[str, str]:
+    def add_pid_to_file(self, filepath: str) -> tuple[str, str, str]:
         """Queries PID service and adds the PID to NC file metadata."""
         session = make_session()
         with netCDF4.Dataset(filepath, "r+") as rootgrp:
             uuid = getattr(rootgrp, "file_uuid")
+            url = build_file_landing_page_url(uuid)
             if self._is_production:
                 payload = {
                     "type": "file",
                     "uuid": uuid,
-                    "url": build_file_landing_page_url(uuid),
+                    "url": url,
                 }
                 res = session.post(self._pid_service_url, json=payload)
                 try:
@@ -36,7 +37,7 @@ class PidUtils:
                     ) from exc
                 pid = res.json()["pid"]
             else:
-                pid = "https://www.example.pid/"
+                pid = f"https://www.example.pid/{random_string(5)}"
             rootgrp.pid = pid
 
-        return uuid, pid
+        return uuid, pid, url

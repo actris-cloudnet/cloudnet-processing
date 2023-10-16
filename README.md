@@ -28,9 +28,9 @@ The main wrapper for running all the processing steps.
 
 Positional arguments:
 
-| Name      | Description                                                                                                                               |
-| :-------- | :---------------------------------------------------------------------------------------------------------------------------------------- |
-| `command` | Command to execute. Must be one of `freeze`, `process`, `model`, `me`, `plot`, `fetch`, or `qc`. Commands are detailed [here](#commands). |
+| Name      | Description                                                                                                                                       |
+| :-------- | :------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `command` | Command to execute. Must be one of `freeze`, `process`, `model`, `me`, `plot`, `fetch`, `dvas`, or `qc`. Commands are detailed [here](#commands). |
 
 General arguments. These arguments are available for most commands. The arguments must be issued before the command argument.
 
@@ -146,6 +146,18 @@ Additional arguments:
 | :---- | :--------------- | :------ | :---------------------------------------------------------------------------------------------------------------------- |
 | `-f`  | `--force`        | `False` | Ignore environment variables `FREEZE_AFTER_DAYS` and `FREEZE_MODEL_AFTER_DAYS`. Allows freezing recently changed files. |
 | `-e`  | `--experimental` | `False` | Also freeze experimental products.                                                                                      |
+|       | `--dvas`         | `False` | Also upload metadata to DVAS.                                                                                           |
+
+### `dvas`
+
+Upload Cloudnet metadata to DVAS data portal.
+
+Additional arguments:
+
+| Short | Long         | Default | Description                                                               |
+| :---- | :----------- | :------ | :------------------------------------------------------------------------ |
+|       | `--delete`   | `False` | Instead of uploading, delete selected metadata from the DVAS data portal. |
+|       | `--truncate` | `False` | Instead of uploading, delete ALL CLU metadata from the DVAS data portal.  |
 
 ### `housekeeping`
 

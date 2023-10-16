@@ -16,6 +16,7 @@ from data_processing.subcmds import (
     process_housekeeping,
     process_model,
     process_model_evaluation,
+    upload_to_dvas,
 )
 
 warnings.simplefilter("ignore", UserWarning)
@@ -31,6 +32,7 @@ modules = {
     "qc": create_qc_reports,
     "housekeeping": process_housekeeping,
     "fetch": fetch_data_to_dev,
+    "dvas": upload_to_dvas,
 }
 
 
