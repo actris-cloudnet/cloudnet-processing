@@ -169,19 +169,12 @@ class ProcessCloudnet(ProcessBase):
                 housekeeping.process_record(record, raw_api=raw_api, db=db)
 
     def process_categorize(self, uuid: Uuid, cat_variant: str) -> tuple[Uuid, str]:
-        l1_products = ["lidar", "model", "mwr", "radar"]  # radar should be last
-        meta_records = self._get_level1b_metadata_for_categorize(l1_products)
-        missing = self._get_missing_level1b_products(meta_records, l1_products)
-        if missing:
-            raise MiscError(f'Missing required input files: {", ".join(missing)}')
+        meta_records = self._get_level1b_metadata_for_categorize()
         self._check_source_status(cat_variant, meta_records)
-        input_files = {key: "" for key in l1_products}
-        for product, metadata in meta_records.items():
-            input_files[product] = self._storage_api.download_product(
-                metadata, self.temp_dir.name
-            )
-        if not input_files["mwr"] and "rpg-fmcw-94" in input_files["radar"]:
-            input_files["mwr"] = input_files["radar"]
+        input_files = {
+            product: self._storage_api.download_product(metadata, self.temp_dir.name)
+            for product, metadata in meta_records.items()
+        }
         if cat_variant == "categorize-voodoo":
             payload = self._get_payload(instrument="rpg-fmcw-94")
             metadata = self.md_api.get("upload-metadata", payload)
@@ -216,56 +209,41 @@ class ProcessCloudnet(ProcessBase):
                 raise MiscError("Bad ecmwf model data and no gdas1") from exc
         return uuid, cat_variant
 
-    def _get_level1b_metadata_for_categorize(self, source_products: list) -> dict:
+    def _get_level1b_metadata_for_categorize(self) -> dict:
+        instrument_order = {
+            "mwr": ("hatpro", "radiometrics"),
+            "radar": ("mira", "rpg-fmcw-94", "copernicus"),
+            "lidar": ("chm15k", "chm15kx", "cl61d", "cl51", "cl31"),
+            "model": "",  # You always get 1 and it's the best one
+        }
         meta_records = {}
-        for product in source_products:
+        for product in instrument_order:
             if product == "model":
                 payload = self._get_payload()
-                metadata = self.md_api.get("api/model-files", payload)
+                route = "api/model-files"
             else:
                 payload = self._get_payload(product=product)
+                route = "api/files"
+            metadata = self.md_api.get(route, payload)
+            if product == "mwr" and not metadata:
+                payload["product"] = "radar"
+                payload["instrument"] = "rpg-fmcw-94"
                 metadata = self.md_api.get("api/files", payload)
             if not metadata:
-                continue
+                raise MiscError(f"Missing required input product: {product}")
             meta_records[product] = metadata[0]
-            if len(metadata) > 1:
-                preferred = (
-                    "mira",
-                    "rpg-fmcw-94",
-                    "copernicus",
-                    "chm15k",
-                    "chm15kx",
-                    "cl61d",
-                    "cl51",
-                    "cl31",
-                )
-                for row in metadata:
-                    for preferred_instrument in preferred:
-                        # Use RPG cloud radar instead of MIRA if no MWR data
-                        if preferred_instrument == "mira" and not meta_records.get(
-                            "mwr"
-                        ):
-                            continue
-                        if row["instrument"]["id"] == preferred_instrument:
-                            meta_records[product] = row
-                        break
-                logging.info(
-                    f"Several options for {product}, using {meta_records[product]['instrument']['id']} with PID {meta_records[product]['instrumentPid']}"
-                )
+            if len(metadata) == 1 or product not in order:
+                continue
+            found = False
+            for row in metadata:
+                for preferred_instrument in instrument_order[product]:
+                    if row["instrument"]["id"] == preferred_instrument and not found:
+                        meta_records[product] = row
+                        found = True
+            logging.info(
+                f"Several options for {product}, using {meta_records[product]['instrument']['id']} with PID {meta_records[product]['instrumentPid']}"
+            )
         return meta_records
-
-    @staticmethod
-    def _get_missing_level1b_products(
-        meta_records: dict, required_products: list
-    ) -> list:
-        existing_products = list(meta_records.keys())
-        if "mwr" not in meta_records and (
-            "radar" in meta_records and "rpg-fmcw" in meta_records["radar"]["filename"]
-        ):
-            existing_products.append("mwr")
-        return [
-            product for product in required_products if product not in existing_products
-        ]
 
     def process_level2(self, uuid: Uuid, product: str) -> tuple[Uuid, str]:
         if product == "mwr-single":
