@@ -114,6 +114,8 @@ def _submit_to_local_ss(filename: Path, row: dict):
         "site": row["site"]["id"],
         "measurementDate": row["measurementDate"],
     }
+    if "tags" in row:
+        metadata["tags"] = row["tags"]
     if "instrument" in row:
         metadata["instrument"] = row["instrument"]["id"]
         metadata["instrumentPid"] = row["instrumentPid"]
