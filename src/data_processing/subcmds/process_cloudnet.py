@@ -171,26 +171,12 @@ class ProcessCloudnet(ProcessBase):
     def process_categorize(self, uuid: Uuid, cat_variant: str) -> tuple[Uuid, str]:
         meta_records = self._get_level1b_metadata_for_categorize()
         self._check_source_status(cat_variant, meta_records)
-        input_files = {
+        input_files: dict[str, str | list[str]] = {
             product: self._storage_api.download_product(metadata, self.temp_dir.name)
             for product, metadata in meta_records.items()
         }
         if cat_variant == "categorize-voodoo":
-            payload = self._get_payload(instrument="rpg-fmcw-94")
-            metadata = self.md_api.get("upload-metadata", payload)
-            unique_pids = list(set(row["instrumentPid"] for row in metadata))
-            if unique_pids:
-                instrument_pid = unique_pids[0]
-            else:
-                raise RawDataMissingError("No rpg-fmcw-94 cloud radar found")
-            (
-                full_paths,
-                _,
-            ) = self.download_instrument(instrument_pid, include_pattern=".LV0")
-            full_paths_list = (
-                [full_paths] if isinstance(full_paths, str) else full_paths
-            )
-            input_files["lv0_files"] = full_paths_list  # type: ignore
+            input_files["lv0_files"] = self._get_input_files_for_voodoo()
         try:
             uuid.product = generate_categorize(
                 input_files, self.temp_file.name, uuid=uuid.volatile
@@ -226,13 +212,14 @@ class ProcessCloudnet(ProcessBase):
                 route = "api/files"
             metadata = self.md_api.get(route, payload)
             if product == "mwr" and not metadata:
+                # Use RPG-FMCW-94 as a fallback MWR
                 payload["product"] = "radar"
                 payload["instrument"] = "rpg-fmcw-94"
                 metadata = self.md_api.get("api/files", payload)
             if not metadata:
                 raise MiscError(f"Missing required input product: {product}")
             meta_records[product] = metadata[0]
-            if len(metadata) == 1 or product not in order:
+            if len(metadata) == 1:
                 continue
             found = False
             for row in metadata:
@@ -244,6 +231,20 @@ class ProcessCloudnet(ProcessBase):
                 f"Several options for {product}, using {meta_records[product]['instrument']['id']} with PID {meta_records[product]['instrumentPid']}"
             )
         return meta_records
+
+    def _get_input_files_for_voodoo(self) -> list[str]:
+        payload = self._get_payload(instrument="rpg-fmcw-94")
+        metadata = self.md_api.get("upload-metadata", payload)
+        unique_pids = list(set(row["instrumentPid"] for row in metadata))
+        if unique_pids:
+            instrument_pid = unique_pids[0]
+        else:
+            raise RawDataMissingError("No rpg-fmcw-94 cloud radar found")
+        (
+            full_paths,
+            _,
+        ) = self.download_instrument(instrument_pid, include_pattern=".LV0")
+        return [full_paths] if isinstance(full_paths, str) else full_paths
 
     def process_level2(self, uuid: Uuid, product: str) -> tuple[Uuid, str]:
         if product == "mwr-single":
