@@ -1,1 +1,63 @@
-[]
+[
+  {
+    "uuid": "64c52e24-873f-497d-b32a-3ce922f9756e",
+    "version": "",
+    "pid": "https://hdl.handle.net/21.12132/1.9ca468580484403f",
+    "volatile": false,
+    "legacy": false,
+    "measurementDate": "2020-10-22",
+    "checksum": "6e876177df3da5a0f2cf3679a880fe45b010267b6c8a977d7dbd1dc2f58f6493",
+    "size": "446776",
+    "format": "HDF5 (NetCDF4)",
+    "errorLevel": "pass",
+    "createdAt": "2021-03-20T11:09:08.362Z",
+    "updatedAt": "2023-10-10T20:48:00.508Z",
+    "dvasUpdatedAt": null,
+    "sourceFileIds": null,
+    "instrumentPid": "https://hdl.handle.net/21.12132/3.e7fe5a4f26ac4717",
+    "site": {
+      "id": "bucharest",
+      "humanReadableName": "Bucharest",
+      "type": ["cloudnet"],
+      "latitude": 44.348,
+      "longitude": 26.029,
+      "altitude": 93,
+      "gaw": "INO",
+      "dvasId": "actris.observational.ro.67",
+      "actrisId": 99,
+      "country": "Romania",
+      "countryCode": "RO",
+      "countrySubdivisionCode": null
+    },
+    "product": {
+      "id": "mwr",
+      "humanReadableName": "Microwave radiometer",
+      "level": "1b",
+      "experimental": false
+    },
+    "software": [
+      {
+        "id": "cloudnet-processing",
+        "version": "2.25.1",
+        "title": "Cloudnet processing 2.25.1",
+        "url": "https://github.com/actris-cloudnet/cloudnet-processing/tree/v2.25.1"
+      },
+      {
+        "id": "cloudnetpy",
+        "version": "1.55.14",
+        "title": "CloudnetPy 1.55.14",
+        "url": "https://doi.org/10.5281/zenodo.8418584"
+      }
+    ],
+    "instrument": {
+      "id": "hatpro",
+      "type": "mwr",
+      "humanReadableName": "RPG-Radiometer Physics HATPRO microwave radiometer",
+      "shortName": "HATPRO microwave radiometer",
+      "allowedTags": []
+    },
+    "downloadUrl": "https://cloudnet.fmi.fi/api/download/product/64c52e24-873f-497d-b32a-3ce922f9756e/20201022_bucharest_hatpro.nc",
+    "filename": "20201022_bucharest_hatpro.nc",
+    "timeliness": "scheduled"
+  }
+]

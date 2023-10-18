@@ -13,6 +13,7 @@ product = "categorize"
 source_data = [
     ("", "tests/data/products/20201022_bucharest_chm15k.nc", "cloudnet-product"),
     ("", "tests/data/products/20201022_bucharest_rpg-fmcw-94.nc", "cloudnet-product"),
+    ("", "tests/data/products/20201022_bucharest_hatpro.nc", "cloudnet-product"),
     ("", "tests/data/products/20201022_bucharest_ecmwf.nc", "cloudnet-product"),
     ("", "tests/data/products/20201022_bucharest_categorize.nc", "cloudnet-product"),
 ]
