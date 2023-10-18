@@ -222,8 +222,8 @@ class ProcessCloudnet(ProcessBase):
             if len(metadata) == 1:
                 continue
             found = False
-            for row in metadata:
-                for preferred_instrument in instrument_order[product]:
+            for preferred_instrument in instrument_order[product]:
+                for row in metadata:
                     if row["instrument"]["id"] == preferred_instrument and not found:
                         meta_records[product] = row
                         found = True
