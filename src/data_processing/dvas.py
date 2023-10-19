@@ -32,8 +32,8 @@ class Dvas:
         if not file["pid"]:
             logging.error("Skipping - volatile file")
             return
-        if file["product"]["level"] != "2" and not file["product"]["id"] == "model":
-            logging.error("Skipping - only L2 and model products supported")
+        if file["product"]["level"] != "2":
+            logging.error("Skipping - only L2 products supported for now")
             return
         try:
             dvas_metadata = DvasMetadata(file)

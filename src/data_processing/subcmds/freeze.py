@@ -68,9 +68,7 @@ def main(args, storage_session: requests.Session | None = None):
             }
             md_api.post("files", payload)
             storage_api.delete_volatile_product(s3key)
-            if args.dvas and (
-                row["product"]["level"] == "2" or row["product"]["id"] == "model"
-            ):
+            if args.dvas and row["product"]["level"] == "2":
                 row = md_api.get(f"api/files/{row['uuid']}")
                 dvas.upload(md_api, row)
         except (OSError, MiscError) as err:
