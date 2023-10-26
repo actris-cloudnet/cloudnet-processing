@@ -15,7 +15,7 @@ DOWNLOAD_DIR = Path("download")
 
 
 def main(args: argparse.Namespace):
-    params = {"site": args.site, "instruments": args.instruments}
+    params = {"site": args.site}
     if args.date:
         params["start"] = args.date
         params["stop"] = args.date
@@ -30,27 +30,27 @@ def main(args: argparse.Namespace):
 
     DOWNLOAD_DIR.mkdir(exist_ok=True)
 
-    upload_metadata = _get_metadata("raw-files", **params)
-    if args.include is not None:
-        upload_metadata = utils.include_records_with_pattern_in_filename(
-            upload_metadata, args.include
-        )
-    if args.exclude is not None:
-        upload_metadata = utils.exclude_records_with_pattern_in_filename(
-            upload_metadata, args.exclude
-        )
+    instruments = [i for i in args.instruments if i != "model"]
+    if instruments:
+        upload_metadata = _get_metadata("raw-files", **params, instruments=instruments)
+        if args.include is not None:
+            upload_metadata = utils.include_records_with_pattern_in_filename(
+                upload_metadata, args.include
+            )
+        if args.exclude is not None:
+            upload_metadata = utils.exclude_records_with_pattern_in_filename(
+                upload_metadata, args.exclude
+            )
 
-    if upload_metadata:
-        print("\nMeasurement files:\n")
-    _process_metadata(upload_metadata, args)
+        if upload_metadata:
+            print("\nMeasurement files:\n")
+        _process_metadata(upload_metadata, args)
 
-    if params["instruments"] is not None and "model" not in params["instruments"]:
-        return
-    del params["instruments"]
-    upload_metadata = _get_metadata("raw-model-files", **params)
-    if upload_metadata:
-        print("\nModel files:\n")
-    _process_metadata(upload_metadata, args)
+    if args.instruments is None or "model" in args.instruments:
+        upload_metadata = _get_metadata("raw-model-files", **params)
+        if upload_metadata:
+            print("\nModel files:\n")
+        _process_metadata(upload_metadata, args)
 
 
 def _get_metadata(
