@@ -198,6 +198,28 @@ Process missing model files for Munich:
 
 Code that is not involved in the Cloudnet data processing chain can be found in other scripts under the `scripts` directory.
 
+### `submit-data-to-dev.py`
+
+Submit raw files to data portal in your development environment.
+
+    usage: submit-data-to-dev.py [-h] -s SITE -i INSTRUMENT -d DATE --pid PID filename
+
+Positional arguments:
+
+| Name       | Description         |
+| :--------- | :------------------ |
+| `filename` | Raw file to submit. |
+
+Options:
+
+| Short | Long           | Description                           |
+| :---- | :------------- | :------------------------------------ |
+| `-h`  | `--help`       | Show help and exit.                   |
+| `-s`  | `--site`       | Submit data to site, e.g, `hyytiala`. |
+| `-d`  | `--date`       | Date to submit, e.g. `2023-10-27`.    |
+| `-i`  | `--instrument` | Instrument to submit, e.g. `chm15k`.  |
+|       | `--pid`        | Instrument PID to submit.             |
+
 ### `put-legacy-files.py`
 
 Upload Matlab processed legacy products (`categorize`, and level 2 products) to data portal.
