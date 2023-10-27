@@ -158,7 +158,16 @@ def harmonize_parsivel_file(data: dict) -> str:
         parsivel = ParsivelNc(nc_raw, nc, data)
         valid_ind = parsivel.get_valid_time_indices()
         parsivel.copy_file_contents(
-            time_ind=valid_ind, skip=("lat", "lon", "zsl", "time_bnds")
+            time_ind=valid_ind,
+            skip=(
+                "lat",
+                "lon",
+                "zsl",
+                "time_bnds",
+                "timestamp",
+                "code_4678",
+                "code_NWS",
+            ),
         )
         parsivel.fix_variable_names()
         parsivel.convert_time()
@@ -600,39 +609,59 @@ class ParsivelNc(Level1Nc):
             "V_sensor": "V_power_supply",
             "E_kin": "kinetic_energy",
             "Synop_WaWa": "synop_WaWa",
+            "rain_intensity": "rainfall_rate",
+            "MOR": "visibility",
+            "reflectivity": "radar_reflectivity",
+            "fieldN": "number_concentration",
+            "fieldV": "fall_velocity",
+            "amplitude": "sig_laser",
+            "time_interval": "interval",
+            "snowfall_intensity": "snowfall_rate",
+            "code_4680": "synop_WaWa",
+            "code_4677": "synop_WW",
+            "velocity_center_classes": "velocity",
+            "diameter_center_classes": "diameter",
         }
         for old_name, new_name in keymap.items():
             if old_name in self.nc.variables:
                 self.nc.renameVariable(old_name, new_name)
 
     def fix_global_attributes(self):
-        self.nc.serial_number = self.nc.Sensor_ID
+        for attr in ("Sensor_ID", "sensor_serial_number"):
+            if hasattr(self.nc, attr):
+                self.nc.serial_number = getattr(self.nc, attr)
 
     def clean_global_attributes(self):
-        keys = (
-            "Title",
-            "Institute",
-            "Contact_person",
-            "Data_telegram_setting",
-            "Dependencies",
-            "Processing_date",
-            "Author",
-            "Comments",
-            "Licence",
-            "Station_Name",
-            "Sensor_ID",
-            "Date",
-            "Source",
-            "Institution",
-            "History",
-            "Station_Latitude",
-            "Station_longitude",
-            "Station_altitude",
-            "Contact",
-        )
-        for key in keys:
-            if hasattr(self.nc, key):
-                delattr(self.nc, key)
+        keep_case_sensitive = {"history", "source", "title"}
+        ignore_case_insensitive = {
+            "author",
+            "comments",
+            "contact",
+            "contact_person",
+            "contributors",
+            "data_telegram_setting",
+            "date",
+            "dependencies",
+            "institute",
+            "institution",
+            "licence",
+            "processing_date",
+            "project_name",
+            "sensor_id",
+            "sensor_name",
+            "sensor_serial_number",
+            "sensor_type",
+            "site_name",
+            "station_altitude",
+            "station_latitude",
+            "station_longitude",
+            "station_name",
+        }
+        for attr in self.nc.ncattrs():
+            if attr.lower() in ignore_case_insensitive or (
+                attr.lower() in keep_case_sensitive and attr not in keep_case_sensitive
+            ):
+                delattr(self.nc, attr)
 
     def get_valid_time_indices(self) -> list:
         """Finds valid time indices."""
@@ -663,6 +692,10 @@ class ParsivelNc(Level1Nc):
             "T_sensor": "f4",
             "data_raw": "int16",
             "diameter_bnds": "f4",
+            "code_4680": "int32",
+            "code_4677": "int32",
+            "state_sensor": "int32",
+            "error_code": "int32",
         }
         if key in keymap:
             dtype = keymap[key]
@@ -677,11 +710,23 @@ class ParsivelNc(Level1Nc):
         self._copy_variable_attributes(variable, var_out)
         screened_data = self._screen_data(variable, time_ind)
 
-        if key == "T_sensor":
+        if key in ("T_sensor", "T_pcb", "T_L_sensor_head", "T_R_sensor_head"):
             screened_data = temperature_to_k(screened_data)
 
-        if key == "rainfall_rate":
-            screened_data = rainfall_rate_to_ms1(screened_data, variable.units)
+        if key in (
+            "rainfall_rate",
+            "rain_intensity",
+            "snowfall_intensity",
+            "fieldV",
+        ):
+            screened_data = to_ms1(
+                key,
+                screened_data,
+                variable.units if hasattr(variable, "units") else "m s-1",
+            )
+
+        if key in ("diameter_center_classes", "diameter_spread"):
+            screened_data = to_m(key, screened_data, variable.units)
 
         var_out[:] = screened_data
 
@@ -702,6 +747,11 @@ class ParsivelNc(Level1Nc):
             "kinetic_energy": "Kinetic energy of the hydrometeors",
             "state_sensor": "State of the sensor",
             "I_heating": "Heating current",
+            "visibility": "Visibility range in precipitation after MOR",
+            "n_particles": "Number of particles in time interval",
+            "snowfall_rate": "Snowfall rate",
+            "fall_velocity": "Average velocity of each diameter class",
+            "diameter": "Center diameter of precipitation particles",
         }
         for key, long_name in keymap.items():
             if key in self.nc.variables:
@@ -726,6 +776,15 @@ class ParsivelNc(Level1Nc):
             "state_sensor": "1",
             "synop_WaWa": "1",
             "rainfall_rate": "m s-1",
+            "snowfall_rate": "m s-1",
+            "fall_velocity": "m s-1",
+            "T_sensor": "K",
+            "T_pcb": "K",
+            "T_L_sensor_head": "K",
+            "T_R_sensor_head": "K",
+            "synop_WW": "1",
+            "diameter": "m",
+            "diameter_spread": "m",
         }
         for key, units in keymap.items():
             if key in self.nc.variables:
@@ -745,6 +804,7 @@ class ParsivelNc(Level1Nc):
         keymap = {
             "visibility": "visibility_in_air",
             "radar_reflectivity": "equivalent_reflectivity_factor",
+            "rainfall_rate": "rainfall_rate",
         }
         for key, standard_name in keymap.items():
             if key in self.nc.variables:
@@ -761,10 +821,21 @@ class ParsivelNc(Level1Nc):
                     delattr(self.nc.variables[key], "comment")
 
 
-def rainfall_rate_to_ms1(data: np.ndarray, units: str) -> np.ndarray:
-    if units.lower() in ("mm h", "mm h-1", "mm / h"):
-        logging.info('Converting rainfall rate from "mm h-1" to "m s-1".')
+def to_ms1(variable: str, data: np.ndarray, units: str) -> np.ndarray:
+    if units.lower() in ("mm h", "mm h-1", "mm/h", "mm / h"):
+        logging.info(f'Converting {variable} from "{units}" to "m s-1".')
         data /= 1000 * 3600
+    elif units.lower() not in ("m s-1", "m/s", "m / s"):
+        raise ValueError(f"Unsupported unit {units} in variable {variable}")
+    return data
+
+
+def to_m(variable: str, data: np.ndarray, units: str) -> np.ndarray:
+    if units.lower() == "mm":
+        logging.info(f'Converting {variable} from "{units}" to "m".')
+        data /= 1000
+    elif units.lower() != "m":
+        raise ValueError(f"Unsupported unit {units} in variable {variable}")
     return data
 
 

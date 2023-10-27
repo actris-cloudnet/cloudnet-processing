@@ -167,7 +167,14 @@ def test_halo_fix(filename):
 
 @pytest.mark.parametrize(
     "filename, site, serial_number",
-    [("20230418_disdrometer.nc", "leipzig", "291937")],
+    [
+        ("20230418_disdrometer.nc", "leipzig", "291937"),
+        (
+            "20231024_Lutjewad_Atmospheric_Station-LUTJEWAD_PAR009.nc",
+            "lutjewad",
+            "450907",
+        ),
+    ],
 )
 def test_production_parsivel_files(filename, site, serial_number):
     test_file = f"{TEST_FILE_PATH}/../data/raw/parsivel/{filename}"
