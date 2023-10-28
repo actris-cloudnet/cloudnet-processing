@@ -13,6 +13,7 @@ from cloudnetpy.exceptions import (
     InconsistentDataError,
     MissingInputFileError,
     ModelDataError,
+    RadarDataError,
     ValidTimeStampError,
 )
 from cloudnetpy.utils import date_range
@@ -104,6 +105,7 @@ class ProcessCloudnet(ProcessBase):
             InconsistentDataError,
             DisdrometerDataError,
             ValidTimeStampError,
+            RadarDataError,
         ) as err:
             logging.error(err)
         except (RequestException, RuntimeError, ValueError) as err:
