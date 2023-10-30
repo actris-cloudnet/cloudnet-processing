@@ -72,7 +72,7 @@ def create_product_put_payload(
 
 
 def get_data_timestamps(nc: netCDF4) -> tuple[str, str]:
-    """Returns first timestamp."""
+    """Returns first and last timestamps."""
     t1 = _get_datetime(nc, ind=0)
     t2 = _get_datetime(nc, ind=-1)
     time_format = "%Y-%m-%dT%H:%M:%S%z"
