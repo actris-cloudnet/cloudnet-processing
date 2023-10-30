@@ -39,6 +39,7 @@ def create_product_put_payload(
 ) -> dict:
     """Creates put payload for data portal."""
     with netCDF4.Dataset(full_path, "r") as nc:
+        start_time, stop_time = get_data_timestamps(nc)
         payload = {
             "product": product or nc.cloudnet_file_type,
             "site": site or nc.location.lower(),
@@ -49,6 +50,8 @@ def create_product_put_payload(
             "uuid": getattr(nc, "file_uuid", ""),
             "pid": getattr(nc, "pid", ""),
             "software": {"cloudnet-processing": get_data_processing_version()},
+            "startTime": start_time,
+            "stopTime": stop_time,
             **storage_service_response,
         }
         if instrument_pid := getattr(nc, "instrument_pid", None):
@@ -66,6 +69,24 @@ def create_product_put_payload(
         if version := getattr(nc, "voodoonet_version", None):
             payload["software"]["voodoonet"] = version
     return payload
+
+
+def get_data_timestamps(nc: netCDF4) -> tuple[str, str]:
+    """Returns first and last timestamps."""
+    t1 = _get_datetime(nc, ind=0)
+    t2 = _get_datetime(nc, ind=-1)
+    time_format = "%Y-%m-%dT%H:%M:%S%z"
+    return t1.strftime(time_format), t2.strftime(time_format)
+
+
+def _get_datetime(nc: netCDF4, ind: int) -> datetime.datetime:
+    y, m, d = int(nc.year), int(nc.month), int(nc.day)
+    tz = datetime.timezone.utc
+    base = datetime.datetime(y, m, d, tzinfo=tz)
+    fraction_hour = float(nc.variables["time"][:][ind])
+    delta_seconds = 1 if fraction_hour == 24 else 0
+    delta = datetime.timedelta(seconds=delta_seconds)
+    return base + datetime.timedelta(hours=fraction_hour) - delta
 
 
 def get_data_processing_version() -> str:
