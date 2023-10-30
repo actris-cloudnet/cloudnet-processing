@@ -29,8 +29,12 @@ def main(args: argparse.Namespace):
 
     DOWNLOAD_DIR.mkdir(exist_ok=True)
 
-    instruments = [i for i in args.instruments if i != "model"]
-    if instruments:
+    instruments = (
+        [i for i in args.instruments if i != "model"]
+        if args.instruments is not None
+        else None
+    )
+    if instruments is None or len(instruments) > 0:
         upload_metadata = _get_metadata("raw-files", **params, instruments=instruments)
         if args.include is not None:
             upload_metadata = utils.include_records_with_pattern_in_filename(
