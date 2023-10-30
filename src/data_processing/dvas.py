@@ -98,11 +98,15 @@ class DvasMetadata:
         self.file = file
         self._product = file["product"]
         self._site = file["site"]
-        self._is_model_data = self._product["id"] == "model"
 
     def create_dvas_json(self) -> dict:
-        time_begin = f"{self.file['measurementDate']}T00:00:00.0000000Z"
-        time_end = f"{self.file['measurementDate']}T23:59:59.9999999Z"
+        time_begin = self.file.get(
+            "startTime", f"{self.file['measurementDate']}T00:00:00.0000000Z"
+        )
+        time_end = self.file.get(
+            "stopTime", f"{self.file['measurementDate']}T23:59:59.9999999Z"
+        )
+
         return {
             "md_metadata": {
                 "file_identifier": self.file["filename"],
@@ -159,7 +163,7 @@ class DvasMetadata:
                 "language": "en",
                 "topic_category": "climatologyMeteorologyAtmosphere",
                 "description": "time series of profile measurements",
-                "facility_identifier": self._parse_facility_identifier(),
+                "facility_identifier": self._site["dvasId"],
             },
             "ex_geographic_bounding_box": {
                 "west_bound_longitude": self._site["longitude"],
@@ -190,15 +194,13 @@ class DvasMetadata:
                 }
             ],
             "md_actris_specific": {
-                "facility_type": self._parse_facility_type(),
-                "product_type": self._parse_product_type(),
+                "facility_type": "observation platform, fixed",
+                "product_type": "observation",
                 "matrix": "cloud phase",
                 "sub_matrix": None,
                 "instrument_type": self._parse_instrument_type(),
                 "program_affiliation": self._parse_affiliation(),
-                "variable_statistical_property": [
-                    "arithmetic mean"
-                ],  # Now mandatory but should be optional
+                "variable_statistical_property": None,
                 "legacy_data": self.file["legacy"],
                 "observation_timeliness": self._parse_timeliness(),
                 "data_product": self._parse_data_product(),
@@ -236,20 +238,28 @@ class DvasMetadata:
             "radar": "cloud radar",
             "lidar": "lidar",
             "mwr": "microwave radiometer",
+            "disdrometer": "particle size spectrometer",
         }
-        if self._is_model_data:
-            return ["not_applicable"]
-        elif self._product["id"] in clu_to_dvas_map:
-            return [clu_to_dvas_map[self._product["id"]]]
-        elif self._product["level"] == "2":
-            return list(clu_to_dvas_map.values())
-        raise DvasError(f"Instrument type {self._product['id']} not implemented")
+        if self._product["level"] != "2":
+            raise DvasError(f"Product {self._product['id']} not implemented")
+        instruments = self._find_instrument_types(self.file["uuid"])
+        dvas_instruments = []
+        for instrument in instruments:
+            dvas_instruments.append(clu_to_dvas_map[instrument])
+        return dvas_instruments
 
-    def _parse_facility_identifier(self):
-        return None if self._is_model_data else self._site["dvasId"]
-
-    def _parse_facility_type(self):
-        return None if self._is_model_data else "observation platform, fixed"
+    def _find_instrument_types(self, uuid: str) -> list[str]:
+        """Recursively find instrument types from source files."""
+        instruments = []
+        json_data = utils.get_from_data_portal_api(f"api/files/{uuid}")
+        assert isinstance(json_data, dict)
+        if json_data["product"]["level"] == "1b" and "instrument" in json_data:
+            instruments.append(json_data["instrument"]["type"])
+        source_ids = json_data.get("sourceFileIds", [])
+        if source_ids:
+            for source_uuid in source_ids:
+                instruments.extend(self._find_instrument_types(source_uuid))
+        return instruments
 
     def _parse_timeliness(self) -> str:
         # https://prod-actris-md.nilu.no/vocabulary/observationtimeliness
@@ -262,11 +272,7 @@ class DvasMetadata:
 
     def _parse_data_product(self) -> str:
         """Description of the data product"""
-        prefix = "model" if self._is_model_data else self._parse_timeliness()
-        return f"{prefix} data"
-
-    def _parse_product_type(self) -> str:
-        return "model" if self._is_model_data else "observation"
+        return f"{self._parse_timeliness()} data"
 
     def _parse_compliance(self) -> str:
         return "ACTRIS legacy" if self.file["legacy"] else "ACTRIS compliant"
@@ -275,11 +281,9 @@ class DvasMetadata:
         return self.file["format"]
 
     def _parse_title(self) -> str:
-        if self._is_model_data:
-            return f"Model profile data at {self._site['humanReadableName']}"
         return (
-            f"Ground-based remote sensing observations "
-            f"of {self._product['humanReadableName']} "
+            f"{self._product['humanReadableName']} data "
+            f"derived from cloud remote sensing measurements "
             f"at {self._site['humanReadableName']}"
         )
 
