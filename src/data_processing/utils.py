@@ -71,7 +71,7 @@ def create_product_put_payload(
     return payload
 
 
-def get_data_timestamps(nc: netCDF4) -> tuple[str, str]:
+def get_data_timestamps(nc: netCDF4.Dataset) -> tuple[str, str]:
     """Returns first and last timestamps."""
     t1 = _get_datetime(nc, ind=0)
     t2 = _get_datetime(nc, ind=-1)
@@ -79,7 +79,7 @@ def get_data_timestamps(nc: netCDF4) -> tuple[str, str]:
     return t1.strftime(time_format), t2.strftime(time_format)
 
 
-def _get_datetime(nc: netCDF4, ind: int) -> datetime.datetime:
+def _get_datetime(nc: netCDF4.Dataset, ind: int) -> datetime.datetime:
     y, m, d = int(nc.year), int(nc.month), int(nc.day)
     tz = datetime.timezone.utc
     base = datetime.datetime(y, m, d, tzinfo=tz)
@@ -92,7 +92,7 @@ def _get_datetime(nc: netCDF4, ind: int) -> datetime.datetime:
     return base + datetime.timedelta(hours=fraction_hour) - delta
 
 
-def _get_last_proper_model_data_ind(nc: netCDF4) -> int:
+def _get_last_proper_model_data_ind(nc: netCDF4.Dataset) -> int:
     temperature = nc.variables["temperature"][:]
     unmasked_rows = ~np.all(ma.getmaskarray(temperature), axis=1)
     return min(np.where(unmasked_rows)[0][-1] + 1, temperature.shape[0] - 1)
