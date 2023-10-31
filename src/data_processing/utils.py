@@ -83,10 +83,19 @@ def _get_datetime(nc: netCDF4, ind: int) -> datetime.datetime:
     y, m, d = int(nc.year), int(nc.month), int(nc.day)
     tz = datetime.timezone.utc
     base = datetime.datetime(y, m, d, tzinfo=tz)
+    is_model = getattr(nc, "cloudnet_file_type", None) == "model"
+    if is_model and ind == -1:
+        ind = _get_last_proper_model_data_ind(nc)
     fraction_hour = float(nc.variables["time"][:][ind])
-    delta_seconds = 1 if fraction_hour == 24 else 0
+    delta_seconds = 1 if (is_model and ind != 0) else 0
     delta = datetime.timedelta(seconds=delta_seconds)
     return base + datetime.timedelta(hours=fraction_hour) - delta
+
+
+def _get_last_proper_model_data_ind(nc: netCDF4) -> int:
+    temperature = nc.variables["temperature"][:]
+    unmasked_rows = ~np.all(ma.getmaskarray(temperature), axis=1)
+    return min(np.where(unmasked_rows)[0][-1] + 1, temperature.shape[0] - 1)
 
 
 def get_data_processing_version() -> str:
