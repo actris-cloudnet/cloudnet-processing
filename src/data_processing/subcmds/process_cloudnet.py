@@ -119,7 +119,7 @@ class ProcessCloudnet(ProcessBase):
 
     def _get_uploaded_raw_metadata(self) -> list:
         updated_at_from = datetime.date.today() - datetime.timedelta(
-            days=self.args.updated_since
+            hours=self.args.updated_since
         )
         payload = {
             "updatedAtFrom": updated_at_from,
@@ -430,8 +430,8 @@ def add_arguments(subparser):
     parser.add_argument(
         "-u",
         "--updated_since",
-        type=int,
-        help="Process all raw files submitted within `--updated_since` in days. Ignores other "
+        type=float,
+        help="Process all raw files submitted within `--updated_since` in hours. Ignores other "
         "arguments than `--site`",
     )
     parser.add_argument(
