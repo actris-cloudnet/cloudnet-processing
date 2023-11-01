@@ -61,14 +61,14 @@ The `process` command processes standard Cloudnet products, such as `radar`, `li
 
 In addition to the general arguments, it accepts the following special arguments.
 
-| Short | Long                   | Default | Description                                                                                                                                    |
-| :---- | :--------------------- | :------ | :--------------------------------------------------------------------------------------------------------------------------------------------- |
-| `-r`  | `--reprocess`          | `False` | See below.                                                                                                                                     |
-|       | `--reprocess_volatile` | `False` | Reprocess volatile files only (and create new volatile file from unprocessed).                                                                 |
-| `-u`  | `--updated_since`      |         | Process all raw files submitted within `--updated_since` in days. Ignores other arguments than `--site`. Note: Creates only Level 1b products. |
-| `-f`  | `--force`              | `False` | Force upload of the processed file to the data portal.                                                                                         |
-|       | `--pid`                |         | Process Level 1b data only from some specific instrument.                                                                                      |
-| `-H`  | `--housekeeping`       | `False` | Process housekeeping data.                                                                                                                     |
+| Short | Long                   | Default | Description                                                                                                                                     |
+| :---- | :--------------------- | :------ | :---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `-r`  | `--reprocess`          | `False` | See below.                                                                                                                                      |
+|       | `--reprocess_volatile` | `False` | Reprocess volatile files only (and create new volatile file from unprocessed).                                                                  |
+| `-u`  | `--updated_since`      |         | Process all raw files submitted within `--updated_since` in hours. Ignores other arguments than `--site`. Note: Creates only Level 1b products. |
+| `-f`  | `--force`              | `False` | Force upload of the processed file to the data portal.                                                                                          |
+|       | `--pid`                |         | Process Level 1b data only from some specific instrument.                                                                                       |
+| `-H`  | `--housekeeping`       | `False` | Process housekeeping data.                                                                                                                      |
 
 Behavior of the `--reprocess` flag:
 
