@@ -18,7 +18,7 @@ def main(args, storage_session: requests.Session | None = None):
     if storage_session is None:
         storage_session = make_session()
     config = read_main_conf()
-    md_api = metadata_api.MetadataApi(config, make_session())
+    md_api = metadata_api.MetadataApi(config)
     storage_api = StorageApi(config, storage_session)
     metadata = md_api.find_product_metadata(args)
     temp_dir_root = utils.get_temp_dir(config)

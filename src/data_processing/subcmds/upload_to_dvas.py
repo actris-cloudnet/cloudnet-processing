@@ -8,7 +8,7 @@ from data_processing.metadata_api import MetadataApi
 
 def main(args):
     config = utils.read_main_conf()
-    md_api = MetadataApi(config, utils.make_session())
+    md_api = MetadataApi(config)
 
     if args.truncate:
         _truncate_clu_data(md_api)

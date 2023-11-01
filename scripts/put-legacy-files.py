@@ -25,7 +25,7 @@ def main(ARGS: argparse.Namespace):
     logging.basicConfig(level="INFO")
 
     config = utils.read_main_conf()
-    md_api = MetadataApi(config, make_session())
+    md_api = MetadataApi(config)
     storage_api = StorageApi(config, make_session())
     pid_utils = PidUtils(config)
     ARGS.site = PurePath(ARGS.path[0]).name
