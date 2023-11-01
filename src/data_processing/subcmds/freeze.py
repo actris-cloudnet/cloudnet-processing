@@ -32,7 +32,7 @@ def main(args, storage_session: requests.Session | None = None):
 
     config = read_main_conf()
     pid_utils = PidUtils(config)
-    md_api = metadata_api.MetadataApi(config, make_session())
+    md_api = metadata_api.MetadataApi(config)
     storage_api = StorageApi(config, storage_session)
     metadata = md_api.find_files_to_freeze(args)
     logging.info(f"Found {len(metadata)} files to freeze.")
