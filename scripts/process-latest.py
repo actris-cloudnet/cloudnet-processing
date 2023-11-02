@@ -29,8 +29,7 @@ class MetaData:
     def _get_time_limit(self) -> str:
         """Get time limit for metadata queries."""
         now = datetime.datetime.now(tz=datetime.timezone.utc)
-        time_limit = (now - datetime.timedelta(hours=self.args_in.hours)).isoformat()
-        return time_limit
+        return (now - datetime.timedelta(hours=self.args_in.hours)).isoformat()
 
     def _get_sites(self) -> list[str]:
         """Find candidate sites for processing."""
@@ -38,14 +37,26 @@ class MetaData:
         site_metadata = self.md_api.get("api/sites", payload)
         return [s["id"] for s in site_metadata]
 
-    @staticmethod
-    def _extract_unique_sites(metadata: list[dict]) -> list[str]:
-        return list({m["site"]["id"] for m in metadata})
+    def _get_model_metadata(self) -> list[dict]:
+        payload = {"updatedAtFrom": self.time_limit, "site": self._get_sites()}
+        metadata = self.md_api.get("api/model-files", payload)
+        cloudnet_metadata = [m for m in metadata if "cloudnet" in m["site"]["type"]]
+        # Most of the campaign sites have been inactive for ages
+        # so let's focus on the active ones
+        active_campaign_metadata = [
+            m
+            for m in metadata
+            if m["site"]["type"] == "campaign" and m["site"]["status"] == "active"
+        ]
+        return active_campaign_metadata + cloudnet_metadata
 
     @staticmethod
-    def _extract_unique_site_dates(metadata: list[dict]) -> list[tuple[str, str]]:
-        site_dates = {(m["site"]["id"], m["measurementDate"]) for m in metadata}
-        return list(site_dates)
+    def _extract_unique_sites(metadata: list[dict]) -> set[str]:
+        return {m["site"]["id"] for m in metadata}
+
+    @staticmethod
+    def _extract_unique_site_dates(metadata: list[dict]) -> set[tuple[str, str]]:
+        return {(m["site"]["id"], m["measurementDate"]) for m in metadata}
 
     @staticmethod
     def _call_subprocess(site: str, args: list[str]):
@@ -57,17 +68,18 @@ class QcMetadata(MetaData):
     def process(self) -> None:
         metadata = self._get_metadata()
         for site, date in self._extract_unique_site_dates(metadata):
-            products = [
+            products = {
                 m["product"]["id"]
                 for m in metadata
                 if m["site"]["id"] == site and m["measurementDate"] == date
-            ]
+            }
             args = ["-p", ",".join(products), "-d", date, "qc", "-f"]
             self._call_subprocess(site, args)
 
     def _get_metadata(self) -> list[dict]:
         metadata = self.md_api.get("api/files", {"updatedAtFrom": self.time_limit})
-        return metadata
+        model_metadata = self._get_model_metadata()
+        return metadata + model_metadata
 
 
 class RawMetadata(MetaData):
@@ -107,19 +119,6 @@ class ProductsMetadata(MetaData):
         payload = {"updatedAtFrom": self.time_limit, "product": categorize_input}
         metadata = self.md_api.get("api/files", payload)
         return metadata
-
-    def _get_model_metadata(self) -> list[dict]:
-        payload = {"updatedAtFrom": self.time_limit, "site": self._get_sites()}
-        metadata = self.md_api.get("api/model-files", payload)
-        cloudnet_metadata = [m for m in metadata if m["site"]["type"] == "cloudnet"]
-        # Most of the campaign sites have been inactive for ages
-        # so let's focus on the active ones
-        active_campaign_metadata = [
-            m
-            for m in metadata
-            if m["site"]["type"] == "campaign" and m["site"]["status"] == "active"
-        ]
-        return active_campaign_metadata + cloudnet_metadata
 
 
 if __name__ == "__main__":
