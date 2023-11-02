@@ -15,3 +15,7 @@ check_untyped_defs = true
 [[tool.mypy.overrides]]
 module = ["netCDF4.*"]
 ignore_missing_imports = true
+
+[tool.release-version]
+filename = "src/data_processing/version.py"
+pattern = ["MAJOR = (?P<major>\\d+)", "MINOR = (?P<minor>\\d+)", "PATCH = (?P<patch>\\d+)"]

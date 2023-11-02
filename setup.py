@@ -33,6 +33,7 @@ setup(
             "black",
             "docformatter",
             "pre-commit",
+            "release-version @ git+https://github.com/actris-cloudnet/release-version.git",
         ],
     },
     include_package_data=True,
