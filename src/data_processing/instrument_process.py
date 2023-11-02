@@ -298,6 +298,7 @@ class ProcessLidar(ProcessInstrument):
 
 class ProcessMwrL1c(ProcessInstrument):
     def process_hatpro(self):
+        data = self._get_calibration_data()
         full_paths, self.uuid.raw = self.base.download_instrument(
             self.instrument_pid,
             include_pattern=r"\.(brt|hkd|met|irt|blb|bls)$",
@@ -305,18 +306,8 @@ class ProcessMwrL1c(ProcessInstrument):
         output_filename, site_meta = self._args
 
         with tempfile.TemporaryDirectory() as temp_dir:
-            coeff_paths = []
-            payload = {
-                "date": self.base.date_str,
-                "instrumentPid": self.instrument_pid,
-            }
-            try:
-                data = self.base.md_api.get("api/calibration", payload)
-            except HTTPError:
-                raise MiscError("Skipping due to missing mwrpy coefficients")
-
             site_meta = {**site_meta, **data["data"]}
-
+            coeff_paths = []
             for link in data["data"]["coefficientLinks"]:
                 filename = link.split("/")[-1]
                 full_path = os.path.join(temp_dir, filename)
@@ -330,6 +321,17 @@ class ProcessMwrL1c(ProcessInstrument):
             self.uuid.product = hatpro2l1c(
                 self.base.temp_dir.name, output_filename, site_meta, **self._kwargs
             )
+
+    def _get_calibration_data(self) -> dict:
+        payload = {
+            "date": self.base.date_str,
+            "instrumentPid": self.instrument_pid,
+        }
+        try:
+            data = self.base.md_api.get("api/calibration", payload)
+        except HTTPError:
+            raise MiscError("Skipping due to missing mwrpy coefficients")
+        return data
 
 
 class ProcessMwr(ProcessInstrument):
