@@ -48,9 +48,9 @@ class MetaData:
         return list(site_dates)
 
     @staticmethod
-    def _call_subprocess(args: list[str]):
+    def _call_subprocess(site: str, args: list[str]):
         prefix = ["python3", "scripts/wrapper.py", "python3", "scripts/cloudnet.py"]
-        subprocess.check_call(prefix + args)
+        subprocess.check_call(prefix + ["-s", site] + args)
 
 
 class QcMetadata(MetaData):
@@ -62,8 +62,8 @@ class QcMetadata(MetaData):
                 for m in metadata
                 if m["site"]["id"] == site and m["measurementDate"] == date
             ]
-            args = ["-s", site, "-p", ",".join(products), "-d", date, "qc", "-f"]
-            self._call_subprocess(args)
+            args = ["-p", ",".join(products), "-d", date, "qc", "-f"]
+            self._call_subprocess(site, args)
 
     def _get_metadata(self) -> list[dict]:
         metadata = self.md_api.get("api/files", {"updatedAtFrom": self.time_limit})
@@ -74,8 +74,8 @@ class RawMetadata(MetaData):
     def process(self) -> None:
         metadata = self._get_metadata()
         for site in self._extract_unique_sites(metadata):
-            args = ["-s", site, "process", "-u", str(self.args_in.hours)]
-            self._call_subprocess(args)
+            args = ["process", "-u", str(self.args_in.hours)]
+            self._call_subprocess(site, args)
 
     def _get_metadata(self) -> list[dict]:
         payload = {
@@ -93,9 +93,9 @@ class ProductsMetadata(MetaData):
         products = "categorize,classification,iwc,lwc,drizzle,ier,der,mwr-l1c,mwr-single,mwr-multi"
         metadata = self._get_metadata()
         for site, date in self._extract_unique_site_dates(metadata):
-            args = ["-s", site, "-p", products, "-d", date, "process"]
+            args = ["-p", products, "-d", date, "process"]
             args += ["-r"] if self.args_in.reprocess else []
-            self._call_subprocess(args)
+            self._call_subprocess(site, args)
 
     def _get_metadata(self) -> list[dict]:
         l1b_metadata = self._get_l1b_metadata()
