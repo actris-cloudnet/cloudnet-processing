@@ -87,6 +87,8 @@ class RawMetadata(MetaData):
         metadata = self._get_metadata()
         for site in self._extract_unique_sites(metadata):
             args = ["process", "-u", str(self.args_in.hours)]
+            if self.args_in.housekeeping:
+                args.append("-H")
             self._call_subprocess(site, args)
 
     def _get_metadata(self) -> list[dict]:
@@ -106,7 +108,8 @@ class ProductsMetadata(MetaData):
         metadata = self._get_metadata()
         for site, date in self._extract_unique_site_dates(metadata):
             args = ["-p", products, "-d", date, "process"]
-            args += ["-r"] if self.args_in.reprocess else []
+            if self.args_in.reproces:
+                args.append("-r")
             self._call_subprocess(site, args)
 
     def _get_metadata(self) -> list[dict]:
@@ -128,6 +131,12 @@ if __name__ == "__main__":
     parser.add_argument(
         "-r",
         "--reprocess",
+        action="store_true",
+        default=False,
+    )
+    parser.add_argument(
+        "-H",
+        "--housekeeping",
         action="store_true",
         default=False,
     )
