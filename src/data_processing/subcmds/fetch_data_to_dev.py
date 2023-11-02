@@ -105,7 +105,15 @@ def _process_row(row: dict, args: argparse.Namespace):
 def _download_file(row: dict) -> Path:
     res = requests.get(row["downloadUrl"])
     res.raise_for_status()
-    filename = DOWNLOAD_DIR / row["filename"]
+    if "instrumentPid" in row:
+        subdir = row["instrument"]["id"] + "-" + row["instrumentPid"].split(".")[-1][:8]
+    elif "model" in row:
+        subdir = "model-" + row["model"]["id"]
+    else:
+        raise ValueError("Row does not contain instrument or model.")
+    outdir = DOWNLOAD_DIR / subdir
+    outdir.mkdir(exist_ok=True, parents=True)
+    filename = outdir / row["filename"]
     filename.write_bytes(res.content)
     return filename
 
