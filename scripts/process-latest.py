@@ -108,7 +108,7 @@ class ProductsMetadata(MetaData):
         metadata = self._get_metadata()
         for site, date in self._extract_unique_site_dates(metadata):
             args = ["-p", products, "-d", date, "process"]
-            if self.args_in.reproces:
+            if self.args_in.reprocess:
                 args.append("-r")
             self._call_subprocess(site, args)
 
