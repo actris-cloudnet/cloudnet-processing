@@ -73,7 +73,9 @@ class QcMetadata(MetaData):
                 for m in metadata
                 if m["site"]["id"] == site and m["measurementDate"] == date
             }
-            args = ["-p", ",".join(products), "-d", date, "qc", "-f"]
+            args = ["-p", ",".join(products), "-d", date, "qc"]
+            if self.args_in.force:
+                args.append("-f")
             self._call_subprocess(site, args)
 
     def _get_metadata(self) -> list[dict]:
@@ -139,5 +141,12 @@ if __name__ == "__main__":
         "--housekeeping",
         action="store_true",
         default=False,
+    )
+    parser.add_argument(
+        "-f",
+        "--force",
+        action="store_true",
+        default=False,
+        help="Force QC checks",
     )
     main(parser.parse_args())
