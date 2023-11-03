@@ -33,13 +33,15 @@ class MetaData:
 
     def _get_sites(self) -> list[str]:
         """Find candidate sites for processing."""
-        payload = {type: ["campaign", "cloudnet"]}
+        if self.args_in.sites in ("campaign", "cloudnet"):
+            payload = {"type": self.args_in.sites}
+        else:
+            payload = {"type": ["campaign", "cloudnet"]}
         site_metadata = self.md_api.get("api/sites", payload)
         return [s["id"] for s in site_metadata]
 
     def _get_model_metadata(self) -> list[dict]:
-        payload = {"updatedAtFrom": self.time_limit, "site": self._get_sites()}
-        metadata = self.md_api.get("api/model-files", payload)
+        metadata = self.md_api.get("api/model-files", self._get_payload())
         cloudnet_metadata = [m for m in metadata if "cloudnet" in m["site"]["type"]]
         # Most of the campaign sites have been inactive for ages
         # so let's focus on the active ones
@@ -63,6 +65,9 @@ class MetaData:
         prefix = ["python3", "scripts/wrapper.py", "python3", "scripts/cloudnet.py"]
         subprocess.check_call(prefix + ["-s", site] + args)
 
+    def _get_payload(self) -> dict:
+        return {"updatedAtFrom": self.time_limit, "site": self._get_sites()}
+
 
 class QcMetadata(MetaData):
     def process(self) -> None:
@@ -79,7 +84,7 @@ class QcMetadata(MetaData):
             self._call_subprocess(site, args)
 
     def _get_metadata(self) -> list[dict]:
-        metadata = self.md_api.get("api/files", {"updatedAtFrom": self.time_limit})
+        metadata = self.md_api.get("api/files", self._get_payload())
         model_metadata = self._get_model_metadata()
         return metadata + model_metadata
 
@@ -94,11 +99,7 @@ class RawMetadata(MetaData):
             self._call_subprocess(site, args)
 
     def _get_metadata(self) -> list[dict]:
-        payload = {
-            "updatedAtFrom": self.time_limit,
-            "site": self._get_sites(),
-            "status": "uploaded",
-        }
+        payload = {**self._get_payload(), "status": "uploaded"}
         metadata = self.md_api.get("api/raw-files", payload)
         metadata = [m for m in metadata if not m["filename"].lower().endswith(".lv0")]
         return metadata
@@ -120,8 +121,7 @@ class ProductsMetadata(MetaData):
         return l1b_metadata + model_metadata
 
     def _get_l1b_metadata(self) -> list[dict]:
-        categorize_input = ["radar", "lidar", "mwr"]
-        payload = {"updatedAtFrom": self.time_limit, "product": categorize_input}
+        payload = {**self._get_payload(), "product": ["radar", "lidar", "mwr"]}
         metadata = self.md_api.get("api/files", payload)
         return metadata
 
@@ -147,6 +147,13 @@ if __name__ == "__main__":
         "--force",
         action="store_true",
         default=False,
+        help="Force QC checks",
+    )
+    parser.add_argument(
+        "-s",
+        "--sites",
+        choices=["all", "campaign", "cloudnet"],
+        default="all",
         help="Force QC checks",
     )
     main(parser.parse_args())
