@@ -1,6 +1,7 @@
 import argparse
 import concurrent.futures
 import datetime
+import logging
 import os
 import sys
 from pathlib import Path
@@ -14,6 +15,11 @@ DOWNLOAD_DIR = Path("download")
 
 
 def main(args: argparse.Namespace):
+    is_production = os.environ.get("PID_SERVICE_TEST_ENV", "false").lower() != "true"
+    if is_production:
+        logging.warning("Running in production, not fetching anything.")
+        return
+
     params = {"site": args.site}
     if args.date:
         params["start"] = args.date
