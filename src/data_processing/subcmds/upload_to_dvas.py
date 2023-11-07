@@ -52,7 +52,7 @@ def _truncate_clu_data(md_api: MetadataApi):
     dvas.delete_all()
     files = md_api.get("api/files", {"dvasUpdated": True})
     for file in files:
-        md_api.update_dvas_timestamp(file["uuid"])
+        md_api.update_dvas_info(file["uuid"])
 
 
 def _delete_clu_data(md_api: MetadataApi, files: list[dict]):
@@ -65,7 +65,7 @@ def _delete_clu_data(md_api: MetadataApi, files: list[dict]):
         except DvasError as err:
             logging.error(f"Failed to process {file['uuid']}: {err}")
         finally:
-            md_api.update_dvas_timestamp(file["uuid"])
+            md_api.update_dvas_info(file["uuid"])
 
 
 def add_arguments(subparser):

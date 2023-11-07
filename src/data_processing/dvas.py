@@ -41,9 +41,9 @@ class Dvas:
             if len(dvas_json["md_content_information"]["attribute_descriptions"]) == 0:
                 logging.error("Skipping - no ACTRIS variables")
                 return
-            self._post(dvas_json)
-            md_api.update_dvas_timestamp(
-                file["uuid"], dvas_json["md_metadata"]["datestamp"]
+            dvas_id = self._post(dvas_json)
+            md_api.update_dvas_info(
+                file["uuid"], dvas_json["md_metadata"]["datestamp"], dvas_id
             )
         except DvasError as err:
             logging.error(f"Failed to upload {file['filename']} to DVAS")
@@ -79,11 +79,13 @@ class Dvas:
             raise DvasError(res)
         logging.debug(f"DELETE successful: {res.status_code} {res.text}")
 
-    def _post(self, metadata: dict):
+    def _post(self, metadata: dict) -> int:
         res = self.session.post(f"{self.DVAS_URL}/add", json=metadata)
         if not res.ok:
             raise DvasError(f"POST to DVAS API failed: {res.status_code} {res.text}")
         logging.debug(f"POST to DVAS API successful: {res.status_code} {res.text}")
+        dvas_id = res.headers["Location"].rsplit("/", 1)[-1]
+        return int(dvas_id)
 
     def _init_session(self) -> requests.Session:
         s = utils.make_session()
