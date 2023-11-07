@@ -60,8 +60,7 @@ def _delete_clu_data(md_api: MetadataApi, files: list[dict]):
     dvas = Dvas()
     for file in files:
         try:
-            dvas_metadata = dvas.get(file["pid"])
-            dvas.delete(dvas_metadata["id"])
+            dvas.delete(file)
         except DvasError as err:
             logging.error(f"Failed to process {file['uuid']}: {err}")
         finally:
