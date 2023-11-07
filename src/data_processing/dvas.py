@@ -115,13 +115,13 @@ class DvasMetadata:
         self._site = file["site"]
 
     def create_dvas_json(self) -> dict:
-        time_begin = self.file.get(
-            "startTime", f"{self.file['measurementDate']}T00:00:00.0000000Z"
+        time_begin = (
+            self.file["startTime"]
+            or f"{self.file['measurementDate']}T00:00:00.0000000Z"
         )
-        time_end = self.file.get(
-            "stopTime", f"{self.file['measurementDate']}T23:59:59.9999999Z"
+        time_end = (
+            self.file["stopTime"] or f"{self.file['measurementDate']}T23:59:59.9999999Z"
         )
-
         return {
             "md_metadata": {
                 "file_identifier": self.file["filename"],
