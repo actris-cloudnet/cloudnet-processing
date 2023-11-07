@@ -41,26 +41,21 @@ class Dvas:
             if len(dvas_json["md_content_information"]["attribute_descriptions"]) == 0:
                 logging.error("Skipping - no ACTRIS variables")
                 return
-            self._post(dvas_json)
-            md_api.update_dvas_timestamp(
-                file["uuid"], dvas_json["md_metadata"]["datestamp"]
+            self._delete_old_versions(md_api, file)
+            dvas_id = self._post(dvas_json)
+            md_api.update_dvas_info(
+                file["uuid"], dvas_json["md_metadata"]["datestamp"], dvas_id
             )
         except DvasError as err:
             logging.error(f"Failed to upload {file['filename']} to DVAS")
             logging.debug(err)
 
-    def get(self, pid: str) -> dict:
-        """Fetch metadata for a single Cloudnet file from DVAS API"""
-        url = f"{self.DVAS_URL}/pid/{pid}/type/Handle"
-        res = self.session.get(url)
-        if not res.ok:
-            raise DvasError(f"GET failed: {res.status_code} {res.text}")
-        return res.json()
-
-    def delete(self, identifier: int):
+    def delete(self, file: dict):
         """Delete Cloudnet file metadata from DVAS API"""
-        logging.warning(f"Deleting Cloudnet file {identifier} from DVAS")
-        url = f"{self.DVAS_URL}/delete/{identifier}"
+        logging.warning(
+            f"Deleting Cloudnet file {file['pid']} with dvasId {file['dvasId']} from DVAS"
+        )
+        url = f"{self.DVAS_URL}/delete/{file['dvasId']}"
         self._delete(url)
 
     def delete_all(self):
@@ -79,11 +74,31 @@ class Dvas:
             raise DvasError(res)
         logging.debug(f"DELETE successful: {res.status_code} {res.text}")
 
-    def _post(self, metadata: dict):
+    def _delete_old_versions(self, md_api: MetadataApi, file: dict):
+        # get all versions and delete before posting new version
+        versions = md_api.get(
+            "api/files",
+            {"filename": file["filename"], "allVersions": True, "showLegacy": True},
+        )
+        for version in versions:
+            if version["dvasId"] is None:
+                continue
+            logging.debug(
+                f"Deleting version {version['version']} of {file['filename']}"
+            )
+            try:
+                self.delete(version)
+            except DvasError as err:
+                logging.error(f"Failed to delete {version['filename']} from DVAS")
+                logging.debug(err)
+
+    def _post(self, metadata: dict) -> int:
         res = self.session.post(f"{self.DVAS_URL}/add", json=metadata)
         if not res.ok:
             raise DvasError(f"POST to DVAS API failed: {res.status_code} {res.text}")
         logging.debug(f"POST to DVAS API successful: {res.status_code} {res.text}")
+        dvas_id = res.headers["Location"].rsplit("/", 1)[-1]
+        return int(dvas_id)
 
     def _init_session(self) -> requests.Session:
         s = utils.make_session()
