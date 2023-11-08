@@ -383,10 +383,7 @@ class ProcessDisdrometer(ProcessInstrument):
             if calibration["missing_timestamps"] is True:
                 full_paths, timestamps = utils.deduce_parsivel_timestamps(full_paths)
                 kwargs["timestamps"] = timestamps
-            utils.concatenate_text_files(full_paths, self.base.daily_file.name)
-            self.uuid.product = parsivel2nc(
-                self.base.daily_file.name, *self._args, **kwargs
-            )
+            self.uuid.product = parsivel2nc(full_paths, *self._args, **kwargs)
 
     def process_thies_lnm(self):
         full_paths, self.uuid.raw = self.base.download_instrument(self.instrument_pid)
