@@ -75,10 +75,9 @@ class Dvas:
         logging.debug(f"DELETE successful: {res.status_code} {res.text}")
 
     def _delete_old_versions(self, md_api: MetadataApi, file: dict):
-        # get all versions and delete before posting new version
+        """Delete all versions of the given file from DVAS API. To be used before posting new version."""
         versions = md_api.get(
-            "api/files",
-            {"filename": file["filename"], "allVersions": True, "showLegacy": True},
+            f"api/files/{file['uuid']}/versions", {"properties": ["dvasId"]}
         )
         for version in versions:
             if version["dvasId"] is None:
