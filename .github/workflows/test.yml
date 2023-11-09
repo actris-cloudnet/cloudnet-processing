@@ -1,5 +1,6 @@
 name: Test and lint
-on: [push]
+
+on: [push, pull_request]
 
 jobs:
   test:
@@ -23,14 +24,26 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Lint
-        run: docker run --env-file test.env -v $PWD:/app test pylint **/*.py --errors-only
-
-      - name: Check type hints
-        run: docker run --env-file test.env -v $PWD:/app test /bin/bash -c "mypy scripts/ src/ tests/unit/"
-
-      - name: Test
+      - name: Run unit tests
         run: docker run --env-file test.env -v $PWD:/app test pytest
 
       - name: Run e2e tests
         run: docker run --env-file e2e-test.env -v $PWD:/app test /bin/sh -c 'for f in tests/e2e/*/main.py; do $f || exit; done'
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+          cache: "pip"
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install torch --extra-index-url https://download.pytorch.org/whl/cpu
+          pip install .[dev]
+      - name: Run pre-commit checks
+        run: pre-commit run --all-files --show-diff-on-failure

@@ -9,8 +9,6 @@ from tempfile import NamedTemporaryFile
 import cloudnetpy.utils
 import netCDF4
 import requests.exceptions
-from requests import HTTPError
-
 from data_processing import utils
 from data_processing.metadata_api import MetadataApi
 from data_processing.nc_header_augmenter import fix_legacy_file
@@ -18,6 +16,7 @@ from data_processing.pid_utils import PidUtils
 from data_processing.processing_tools import ProcessBase
 from data_processing.storage_api import StorageApi
 from data_processing.utils import MiscError, make_session
+from requests import HTTPError
 
 
 def main(ARGS: argparse.Namespace):

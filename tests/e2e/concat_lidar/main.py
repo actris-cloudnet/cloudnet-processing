@@ -3,7 +3,6 @@ import glob
 from tempfile import NamedTemporaryFile
 
 import pytest
-
 from data_processing.concat_wrapper import concat_chm15k_files
 
 

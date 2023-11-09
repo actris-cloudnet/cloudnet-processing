@@ -11,7 +11,6 @@ import time
 
 import requests
 import requests_mock
-
 from data_processing.subcmds import (
     process_cloudnet,
     process_model,

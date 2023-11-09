@@ -5,6 +5,7 @@ import importlib
 import logging
 import warnings
 
+import housekeeping
 import netCDF4
 import requests
 from cloudnetpy.categorize import generate_categorize
@@ -20,7 +21,6 @@ from cloudnetpy.utils import date_range
 from haloreader.exceptions import HaloException
 from requests.exceptions import RequestException
 
-import housekeeping
 from data_processing import instrument_process, processing_tools, utils
 from data_processing.processing_tools import ProcessBase, Uuid
 from data_processing.utils import MiscError, RawApi, RawDataMissingError, make_session

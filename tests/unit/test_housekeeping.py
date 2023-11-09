@@ -2,7 +2,6 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-
 from housekeeping.housekeeping import get_reader
 from housekeeping.utils import decode_bits
 

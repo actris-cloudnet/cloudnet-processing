@@ -2,7 +2,6 @@ from os import path
 
 import netCDF4
 import pytest
-
 from test_utils.utils import count_strings, read_log_file
 
 SCRIPT_PATH = path.dirname(path.realpath(__file__))

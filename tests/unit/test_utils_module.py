@@ -2,12 +2,11 @@ import datetime
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 
+import data_processing.utils as utils
 import netCDF4
 import numpy as np
 import pytest
 from numpy import ma
-
-import data_processing.utils as utils
 
 test_file_path = Path(__file__).parent.absolute()
 

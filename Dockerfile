@@ -8,10 +8,11 @@ RUN apt-get update \
 
 WORKDIR /app
 
-COPY setup.py /app
+COPY pyproject.toml /app
+
 RUN pip3 install --upgrade pip \
-  && pip3 install torch --extra-index-url https://download.pytorch.org/whl/cpu \
-  && pip3 install --no-cache-dir -e .
+    && pip3 install torch --extra-index-url https://download.pytorch.org/whl/cpu \
+    && pip3 install --no-cache-dir -e .
 
 COPY src /app/src
 COPY scripts /app/scripts

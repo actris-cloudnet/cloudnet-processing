@@ -2,7 +2,6 @@ import glob
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 
 import pytest
-
 from data_processing import instrument_process
 from data_processing.processing_tools import Uuid
 

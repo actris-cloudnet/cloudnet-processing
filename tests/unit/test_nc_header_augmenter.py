@@ -9,7 +9,6 @@ import pytest
 from cloudnetpy.exceptions import ValidTimeStampError
 from cloudnetpy.metadata import COMMON_ATTRIBUTES
 from cloudnetpy_qc import quality
-
 from data_processing import nc_header_augmenter as nca
 from data_processing.utils import MiscError
 

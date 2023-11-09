@@ -7,7 +7,6 @@ from urllib.parse import parse_qs, urlparse
 import pytest
 import requests
 import requests_mock
-
 from data_processing import metadata_api
 
 adapter = requests_mock.Adapter()

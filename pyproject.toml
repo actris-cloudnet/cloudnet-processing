@@ -1,21 +1,69 @@
-[tool.black]
-line-length = 88
-target-version = ['py310']
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
 
-[tool.isort]
-profile= "black"
-line_length = 88
+[project]
+name = "data_processing"
+description = "Glue code for Cloudnet processing libraries"
+authors = [{name = "Finnish Meteorological Institute"}]
+readme = "README.md"
+license = {file = "LICENSE"}
+requires-python = ">=3.10"
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Topic :: Scientific/Engineering"
+]
+dependencies = [
+  "cloudnetpy[extras]",
+  "rpgpy",
+  "halo-reader==0.1.8",
+  "requests",
+  "toml",
+  "influxdb-client",
+  "cftime"
+]
+dynamic = ["version"]
 
-[tool.pylint]
-max-line-length = 88
+[project.optional-dependencies]
+dev = [
+  "pytest",
+  "pytest-flakefinder",
+  "mypy",
+  "requests_mock",
+  "types-requests",
+  "types-requests",
+  "types-urllib3",
+  "types-influxdb-client",
+  "types-toml",
+  "pre-commit",
+  "release-version"
+]
+
+[project.urls]
+Homepage = "https://github.com/actris-cloudnet/cloudnet-processing"
+Repository = "https://github.com/actris-cloudnet/cloudnet-processing"
 
 [tool.mypy]
 check_untyped_defs = true
 
 [[tool.mypy.overrides]]
-module = ["netCDF4.*"]
+module = ["netCDF4.*", "cftime.*"]
 ignore_missing_imports = true
 
 [tool.release-version]
 filename = "src/data_processing/version.py"
 pattern = ["MAJOR = (?P<major>\\d+)", "MINOR = (?P<minor>\\d+)", "PATCH = (?P<patch>\\d+)"]
+
+[tool.ruff]
+extend-select = ["I"]
+
+[tool.ruff.lint.extend-per-file-ignores]
+"__init__.py" = ["F401"]
+
+[tool.setuptools.dynamic]
+version = {attr = "data_processing.version.__version__"}

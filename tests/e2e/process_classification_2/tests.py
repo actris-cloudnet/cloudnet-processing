@@ -2,7 +2,6 @@ from os import path
 
 import netCDF4
 import pytest
-
 from data_processing import utils
 from test_utils.utils import count_strings, read_log_file
 
