@@ -16,32 +16,32 @@ classifiers = [
   "Operating System :: OS Independent",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
-  "Topic :: Scientific/Engineering"
+  "Topic :: Scientific/Engineering",
 ]
 dependencies = [
+  "cftime",
   "cloudnetpy[extras]",
-  "rpgpy",
   "halo-reader==0.1.8",
-  "requests",
-  "toml",
   "influxdb-client",
-  "cftime"
+  "requests",
+  "rpgpy",
+  "toml",
 ]
 dynamic = ["version"]
 
 [project.optional-dependencies]
 dev = [
+  "mypy",
+  "pre-commit",
   "pytest",
   "pytest-flakefinder",
-  "mypy",
+  "release-version",
   "requests_mock",
-  "types-requests",
-  "types-requests",
-  "types-urllib3",
   "types-influxdb-client",
+  "types-requests",
+  "types-requests",
   "types-toml",
-  "pre-commit",
-  "release-version"
+  "types-urllib3",
 ]
 
 [project.urls]
@@ -52,7 +52,7 @@ Repository = "https://github.com/actris-cloudnet/cloudnet-processing"
 check_untyped_defs = true
 
 [[tool.mypy.overrides]]
-module = ["netCDF4.*", "cftime.*"]
+module = ["cftime.*", "netCDF4.*"]
 ignore_missing_imports = true
 
 [tool.release-version]
@@ -67,3 +67,7 @@ extend-select = ["I"]
 
 [tool.setuptools.dynamic]
 version = {attr = "data_processing.version.__version__"}
+
+[tool.tomlsort]
+trailing_comma_inline_array = true
+sort_inline_arrays = true
