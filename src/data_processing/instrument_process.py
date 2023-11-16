@@ -158,6 +158,15 @@ class ProcessDopplerLidar(ProcessInstrument):
         data = self._get_payload_for_nc_file_augmenter(self.temp_file.name)
         self.uuid.product = nc_header_augmenter.harmonize_halo_file(data)
 
+    def process_wls100s(self):
+        raise NotImplementedError()
+
+    def process_wls200s(self):
+        raise NotImplementedError()
+
+    def process_wls400s(self):
+        raise NotImplementedError()
+
 
 class ProcessLidar(ProcessInstrument):
     def process_cs135(self):
