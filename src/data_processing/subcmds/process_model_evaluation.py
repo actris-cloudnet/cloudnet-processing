@@ -160,7 +160,7 @@ class ProcessModelEvaluation(ProcessBase):
         )
         # Single plots
         # Check this potential error here
-        for field in fields:  # pylint: disable=not-an-iterable
+        for field in fields:
             generate_L3_day_plots(
                 self.temp_file.name,
                 l3_product,

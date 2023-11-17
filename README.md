@@ -285,14 +285,6 @@ Type hints:
 
     docker run -tv $PWD:/app --env-file test.env test mypy scripts/ src/
 
-Flake8:
-
-    docker run -tv $PWD:/app --env-file test.env test flake8
-
-Linter:
-
-    docker run -tv $PWD:/app --env-file test.env test pylint **/*.py --errors-only
-
 ### Licence
 
 MIT

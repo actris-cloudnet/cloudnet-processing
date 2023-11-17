@@ -232,7 +232,7 @@ def send_slack_alert(
         try:
             with open(args.log_filename) as file:
                 log = file.read()
-        except Exception as e:  # pylint: disable=broad-except
+        except Exception as e:
             log = f"(failed to read log file: {e})"
 
     padding = " " * 7
