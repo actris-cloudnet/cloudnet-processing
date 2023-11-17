@@ -34,7 +34,6 @@ dev = [
   "mypy",
   "pre-commit",
   "pytest",
-  "pytest-flakefinder",
   "release-version",
   "requests_mock",
   "types-influxdb-client",
