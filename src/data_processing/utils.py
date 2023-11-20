@@ -18,7 +18,6 @@ import requests
 from cloudnetpy.plotting.plot_meta import ATTRIBUTES as ATTR
 from cloudnetpy.plotting.plotting import Dimensions
 from cloudnetpy.utils import get_time
-from cloudnetpy_qc import quality
 from numpy import ma
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
@@ -552,12 +551,6 @@ def init_logger(args, log_filename: str):
     msg = f"Starting {script_name}"
     msg += f" with args {vars(args)}" if args is not None else ""
     logging.info(msg)
-
-
-def create_quality_report(filename: str, product: str | None = None) -> dict:
-    """Creates quality report for data portal."""
-    report = quality.run_tests(Path(filename), cloudnet_file_type=product)
-    return report
 
 
 def get_temp_dir(config: dict) -> str:

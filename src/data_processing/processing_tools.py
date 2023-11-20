@@ -7,6 +7,7 @@ from tempfile import NamedTemporaryFile, TemporaryDirectory
 import numpy as np
 import requests
 from cloudnetpy.plotting import generate_figure
+from cloudnetpy_qc import quality
 from cloudnetpy_qc.quality import ErrorLevel
 
 from data_processing import utils
@@ -186,18 +187,36 @@ class ProcessBase:
     def upload_quality_report(
         self, full_path: str, uuid: str, product: str | None = None
     ) -> str:
-        quality_report = utils.create_quality_report(full_path, product=product)
+        try:
+            quality_report = quality.run_tests(full_path, product=product)
+        except ValueError:
+            logging.exception("Failed to run quality control")
+            return "FATAL"
+        quality_dict = {
+            "timestamp": quality_report.timestamp.isoformat(),
+            "qcVersion": quality_report.qc_version,
+            "tests": [
+                {
+                    "testId": test.test_id,
+                    "exceptions": [
+                        {"result": exception.result.value, "message": exception.message}
+                        for exception in test.exceptions
+                    ],
+                }
+                for test in quality_report.tests
+            ],
+        }
         exception_results = [
-            exception["result"]
-            for test in quality_report.get("tests", [])
-            for exception in test.get("exceptions", [])
+            exception.result
+            for test in quality_report.tests
+            for exception in test.exceptions
         ]
-        result: ErrorLevel | str = "OK"
+        result = "OK"
         for error_level in [ErrorLevel.ERROR, ErrorLevel.WARNING, ErrorLevel.INFO]:
             if error_level in exception_results:
                 result = error_level.value
                 break
-        self.md_api.put("quality", uuid, quality_report)
+        self.md_api.put("quality", uuid, quality_dict)
         return result
 
     def _read_volatile_uuid(self, metadata: list) -> str | None:
