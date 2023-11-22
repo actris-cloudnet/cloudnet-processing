@@ -189,6 +189,7 @@ class ProcessCloudnet(ProcessBase):
             "mwr": ("hatpro", "radiometrics"),
             "radar": ("mira", "rpg-fmcw-94", "copernicus"),
             "lidar": ("chm15k", "chm15kx", "cl61d", "cl51", "cl31"),
+            "disdrometer": ("parsivel", "thies-lnm"),
             "model": "",  # You always get 1 and it's the best one
         }
         meta_records = {}
@@ -205,6 +206,8 @@ class ProcessCloudnet(ProcessBase):
                 payload["product"] = "radar"
                 payload["instrument"] = "rpg-fmcw-94"
                 metadata = self.md_api.get("api/files", payload)
+            if product == "disdrometer" and not metadata:
+                continue
             if not metadata:
                 raise MiscError(f"Missing required input product: {product}")
             meta_records[product] = metadata[0]
