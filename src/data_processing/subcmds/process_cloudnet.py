@@ -9,14 +9,7 @@ import housekeeping
 import netCDF4
 import requests
 from cloudnetpy.categorize import generate_categorize
-from cloudnetpy.exceptions import (
-    DisdrometerDataError,
-    InconsistentDataError,
-    MissingInputFileError,
-    ModelDataError,
-    RadarDataError,
-    ValidTimeStampError,
-)
+from cloudnetpy.exceptions import CloudnetException, ModelDataError
 from cloudnetpy.utils import date_range
 from haloreader.exceptions import HaloException
 from requests.exceptions import RequestException
@@ -100,13 +93,7 @@ class ProcessCloudnet(ProcessBase):
             HaloException,
         ) as err:
             logging.warning(err)
-        except (
-            MissingInputFileError,
-            InconsistentDataError,
-            DisdrometerDataError,
-            ValidTimeStampError,
-            RadarDataError,
-        ) as err:
+        except CloudnetException as err:
             logging.error(err)
         except (RequestException, RuntimeError, ValueError) as err:
             utils.send_slack_alert(err, "data", self.args, self.date_str, product)
