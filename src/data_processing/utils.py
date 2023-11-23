@@ -312,6 +312,7 @@ def get_fields_for_plot(cloudnet_file_type: str) -> tuple[list, int]:
                 "Tw",
                 "radar_gas_atten",
                 "radar_liquid_atten",
+                "rainfall_rate",
             ]
         case "classification":
             fields = ["target_classification", "detection_status"]
@@ -389,6 +390,7 @@ def get_fields_for_plot(cloudnet_file_type: str) -> tuple[list, int]:
                 "srho_hv",
                 "rho_cx",
                 "lwp",
+                "rainfall_rate",
             ]
         case "disdrometer":
             fields = ["rainfall_rate", "n_particles"]
