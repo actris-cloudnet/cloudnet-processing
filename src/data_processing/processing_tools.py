@@ -6,7 +6,7 @@ from tempfile import NamedTemporaryFile, TemporaryDirectory
 
 import numpy as np
 import requests
-from cloudnetpy.plotting import generate_figure
+from cloudnetpy.plotting import PlotParameters, generate_figure
 from cloudnetpy_qc import quality
 from cloudnetpy_qc.quality import ErrorLevel
 
@@ -127,17 +127,18 @@ class ProcessBase:
         except NotImplementedError:
             logging.warning(f"Plotting for {product} not implemented")
             return
+        options = PlotParameters()
+        options.max_y = max_alt
+        options.title = False
+        options.subtitle = False
         for field in fields:
             try:
                 dimensions = generate_figure(
                     self.temp_file.name,
                     [field],
                     show=False,
-                    image_name=temp_file.name,
-                    max_y=max_alt,
-                    sub_title=False,
-                    title=False,
-                    dpi=120,
+                    output_filename=temp_file.name,
+                    options=options,
                 )
             except (IndexError, ValueError, TypeError) as err:
                 logging.debug(f"Skipping plotting {field}: {err}")
