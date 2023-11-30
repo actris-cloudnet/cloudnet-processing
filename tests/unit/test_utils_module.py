@@ -71,22 +71,6 @@ def test_get_date_from_past(n, input_date, result):
     assert utils.get_date_from_past(n, input_date) == result
 
 
-def test_get_plottable_variables_info():
-    res = utils.get_plottable_variables_info("lidar")
-    expected = {
-        "lidar-beta": ["Attenuated backscatter coefficient", 0],
-        "lidar-beta_raw": ["Raw attenuated backscatter coefficient", 1],
-        "lidar-depolarisation": ["Lidar depolarisation", 2],
-        "lidar-depolarisation_raw": ["Raw depolarisation", 3],
-        "lidar-beta_1064": ["Attenuated backscatter coefficient at 1064 nm", 4],
-        "lidar-beta_532": ["Attenuated backscatter coefficient at 532 nm", 5],
-        "lidar-beta_355": ["Attenuated backscatter coefficient at 355 nm", 6],
-        "lidar-depolarisation_532": ["Lidar depolarisation at 532 nm", 7],
-        "lidar-depolarisation_355": ["Lidar depolarisation at 355 nm", 8],
-    }
-    assert res == expected
-
-
 @pytest.mark.parametrize(
     "instrument, file_type",
     [
