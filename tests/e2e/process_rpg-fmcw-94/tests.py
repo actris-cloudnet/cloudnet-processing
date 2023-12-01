@@ -36,7 +36,7 @@ class TestRPGFMCW94Processing:
         data = read_log_file(SCRIPT_PATH)
         n_raw_files = 2
         n_gets = 6  # product check (1) + instrument checks (2)  + rpg-fmcw-94 raw (1) + previous product (1) + hkd(1)
-        n_img = 6
+        n_img = 7
         n_puts = 2 + n_img
         n_posts = n_raw_files
 
