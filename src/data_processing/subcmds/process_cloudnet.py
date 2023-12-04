@@ -238,10 +238,10 @@ class ProcessCloudnet(ProcessBase):
     def process_level2(self, uuid: Uuid, product: str) -> tuple[Uuid, str]:
         if product == "mwr-single":
             cat_file = "mwr-l1c"
-            module_name = "mwr_single"
+            module_name = "mwr_tools"
         elif product == "mwr-multi":
             cat_file = "mwr-l1c"
-            module_name = "mwr_multi"
+            module_name = "mwr_tools"
         elif product == "classification-voodoo":
             cat_file = "categorize-voodoo"
             module_name = "classification"
@@ -260,7 +260,8 @@ class ProcessCloudnet(ProcessBase):
             raise MiscError(f"Missing required input file: {cat_file}")
         self._check_source_status(product, meta_record)
         module = importlib.import_module(f"cloudnetpy.products.{module_name}")
-        fun = getattr(module, f"generate_{module_name}")
+        prod = product.replace("-", "_")
+        fun = getattr(module, f"generate_{prod}")
         uuid.product = fun(categorize_file, self.temp_file.name, uuid=uuid.volatile)
         identifier = utils.get_product_identifier(product)
         return uuid, identifier
