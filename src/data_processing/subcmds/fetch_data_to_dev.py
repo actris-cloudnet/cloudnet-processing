@@ -53,13 +53,15 @@ def main(args: argparse.Namespace):
 
         if upload_metadata:
             print("\nMeasurement files:\n")
-        _process_metadata(upload_metadata, args)
+            _process_metadata(upload_metadata, args)
+            print("\nCalibration:\n")
+            _fetch_calibration(upload_metadata)
 
     if args.instruments is None or "model" in args.instruments:
         upload_metadata = _get_metadata("raw-model-files", **params)
         if upload_metadata:
             print("\nModel files:\n")
-        _process_metadata(upload_metadata, args)
+            _process_metadata(upload_metadata, args)
 
 
 def _get_metadata(
@@ -153,6 +155,30 @@ def _submit_to_local_ss(filename: Path, row: dict):
         error = res.content.decode("utf-8", errors="replace")
         raise Exception(f"{res.status_code} {res.reason}: {error}")
     return res.text
+
+
+def _fetch_calibration(upload_metadata: list):
+    processed_pids = set()
+    for upload in upload_metadata:
+        if upload["instrumentPid"] in processed_pids:
+            continue
+        processed_pids.add(upload["instrumentPid"])
+        print(upload["instrumentPid"])
+        params = {
+            "instrumentPid": upload["instrumentPid"],
+            "date": upload["measurementDate"],
+        }
+        res = requests.get("https://cloudnet.fmi.fi/api/calibration", params=params)
+        if res.status_code == 404:
+            continue
+        res.raise_for_status()
+        res = requests.put(
+            f"{DATAPORTAL_URL}/api/calibration",
+            params=params,
+            json=res.json()["data"],
+            auth=("admin", "admin"),
+        )
+        res.raise_for_status()
 
 
 def add_arguments(subparser):
