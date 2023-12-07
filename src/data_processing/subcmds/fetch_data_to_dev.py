@@ -163,7 +163,6 @@ def _fetch_calibration(upload_metadata: list):
         if upload["instrumentPid"] in processed_pids:
             continue
         processed_pids.add(upload["instrumentPid"])
-        print(upload["instrumentPid"])
         params = {
             "instrumentPid": upload["instrumentPid"],
             "date": upload["measurementDate"],
@@ -171,6 +170,7 @@ def _fetch_calibration(upload_metadata: list):
         res = requests.get("https://cloudnet.fmi.fi/api/calibration", params=params)
         if res.status_code == 404:
             continue
+        print(upload["instrumentPid"])
         res.raise_for_status()
         res = requests.put(
             f"{DATAPORTAL_URL}/api/calibration",
