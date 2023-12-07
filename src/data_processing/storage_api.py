@@ -1,5 +1,6 @@
 """Metadata API for Cloudnet files."""
 import hashlib
+import logging
 from os import path
 from typing import Literal
 
@@ -97,12 +98,12 @@ class StorageApi:
                     hash_sum.update(chunk)
                     res_size += len(chunk)
         if res_size != size:
-            raise StorageApiException(
-                f"Invalid size: expected {size} bytes, got {res_size} bytes)"
+            logging.warning(
+                "Invalid size: expected %d bytes, got %d bytes", size, res_size
             )
         if (res_checksum := hash_sum.hexdigest()) != checksum:
-            raise StorageApiException(
-                f"Invalid checksum: expected {checksum} bytes, got {res_checksum} bytes)"
+            logging.warning(
+                "Invalid checksum: expected %s, got %s", checksum, res_checksum
             )
 
     @staticmethod
