@@ -20,7 +20,7 @@ classifiers = [
 ]
 dependencies = [
   "cftime",
-  "cloudnetpy[extras]>=1.56.6",
+  "cloudnetpy[extras]>=1.56.7",
   "halo-reader==0.1.8",
   "influxdb-client",
   "requests",
