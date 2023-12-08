@@ -6,6 +6,7 @@ from tempfile import NamedTemporaryFile, TemporaryDirectory
 
 import numpy as np
 import requests
+from cloudnetpy.exceptions import PlottingError
 from cloudnetpy.plotting import PlotParameters, generate_figure
 from cloudnetpy_qc import quality
 from cloudnetpy_qc.quality import ErrorLevel
@@ -140,7 +141,7 @@ class ProcessBase:
                     output_filename=temp_file.name,
                     options=options,
                 )
-            except (IndexError, ValueError, TypeError) as err:
+            except PlottingError as err:
                 logging.debug(f"Skipping plotting {field}: {err}")
                 continue
 
