@@ -260,7 +260,11 @@ class ProcessCloudnet(ProcessBase):
             raise MiscError(f"Missing required input file: {cat_file}")
         self._check_source_status(product, meta_record)
         module = importlib.import_module(f"cloudnetpy.products.{module_name}")
-        prod = product.replace("-", "_")
+        prod = (
+            "classification"
+            if product == "classification-voodoo"
+            else product.replace("-", "_")
+        )
         fun = getattr(module, f"generate_{prod}")
         uuid.product = fun(categorize_file, self.temp_file.name, uuid=uuid.volatile)
         identifier = utils.get_product_identifier(product)
