@@ -84,7 +84,11 @@ def _get_datetime(nc: netCDF4.Dataset, ind: int) -> datetime.datetime:
     is_model = getattr(nc, "cloudnet_file_type", None) == "model"
     if is_model and ind == -1:
         ind = _get_last_proper_model_data_ind(nc)
-    fraction_hour = float(nc.variables["time"][:][ind])
+    try:
+        fraction_hour = float(nc.variables["time"][:][ind])
+    except IndexError:
+        msg = "Abort PUT to data portal: time vector not an array"
+        raise MiscError(msg)
     delta_seconds = 1 if (is_model and ind != 0) else 0
     delta = datetime.timedelta(seconds=delta_seconds)
     return base + datetime.timedelta(hours=fraction_hour) - delta
