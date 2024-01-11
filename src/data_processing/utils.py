@@ -307,6 +307,7 @@ def get_fields_for_plot(cloudnet_file_type: str) -> tuple[list, int]:
                 "radar_gas_atten",
                 "radar_liquid_atten",
                 "rainfall_rate",
+                "Z_error",
             ]
         case "classification":
             fields = ["target_classification", "detection_status"]
