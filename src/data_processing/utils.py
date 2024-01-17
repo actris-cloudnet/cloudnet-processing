@@ -402,7 +402,13 @@ def get_fields_for_plot(cloudnet_file_type: str) -> tuple[list, int]:
                 "rainfall_rate",
             ]
         case "disdrometer":
-            fields = ["rainfall_rate", "n_particles"]
+            fields = [
+                "rainfall_rate",
+                "snowfall_rate",
+                "n_particles",
+                "number_concentration",
+                "fall_velocity",
+            ]
         case "drizzle":
             fields = ["Do", "drizzle_N"]
             max_alt = 4
