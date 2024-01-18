@@ -75,4 +75,4 @@ class TestCategorizeProcessing:
 
         # PUT images
         img_put = '"PUT /visualizations/20201022_bucharest_categorize-'
-        assert count_strings(data, img_put) == self.n_img
+        assert count_strings(data, img_put) == self.n_img - 1
