@@ -49,6 +49,15 @@ class MetadataApi:
         res.raise_for_status()
         return res
 
+    def delete(
+        self, end_point: str, resource: str, payload: dict | None = None
+    ) -> requests.Response:
+        """Delete Cloudnet metadata."""
+        url = os.path.join(self._url, end_point, resource)
+        res = self.session.delete(url, auth=("admin", "admin"), json=payload)
+        res.raise_for_status()
+        return res
+
     def put_images(self, img_metadata: list, product_uuid: str):
         for data in img_metadata:
             payload = {

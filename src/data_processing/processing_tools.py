@@ -128,6 +128,7 @@ class ProcessBase:
         except NotImplementedError:
             logging.warning(f"Plotting for {product} not implemented")
             return
+        self._delete_obsolete_images(uuid, product, fields)
         options = PlotParameters()
         options.max_y = max_alt
         options.title = False
@@ -151,6 +152,17 @@ class ProcessBase:
                 )
             )
         self.md_api.put_images(visualizations, uuid)
+
+    def _delete_obsolete_images(self, uuid: str, product: str, fields: list[str]):
+        image_metadata = self.md_api.get(f"api/visualizations/{uuid}").get(
+            "visualizations", []
+        )
+        plotted_images = {image["productVariable"]["id"] for image in image_metadata}
+        expected_images = {f"{product}-{field}" for field in fields}
+        if obsolete_images := plotted_images - expected_images:
+            self.md_api.delete(
+                "api/visualizations", uuid, payload={"images": list(obsolete_images)}
+            )
 
     def compare_file_content(self, product: str):
         payload = {
