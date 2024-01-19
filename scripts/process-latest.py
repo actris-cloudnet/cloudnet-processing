@@ -121,7 +121,10 @@ class ProductsMetadata(MetaData):
         return l1b_metadata + model_metadata
 
     def _get_l1b_metadata(self) -> list[dict]:
-        payload = {**self._get_payload(), "product": ["radar", "lidar", "mwr"]}
+        payload = {
+            **self._get_payload(),
+            "product": ["radar", "lidar", "mwr", "disdrometer"],
+        }
         metadata = self.md_api.get("api/files", payload)
         return metadata
 
