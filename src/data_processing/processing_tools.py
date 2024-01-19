@@ -161,7 +161,7 @@ class ProcessBase:
         expected_images = {f"{product}-{field}" for field in fields}
         if obsolete_images := plotted_images - expected_images:
             self.md_api.delete(
-                "api/visualizations", uuid, payload={"images": list(obsolete_images)}
+                "api/visualizations", uuid, params={"images": list(obsolete_images)}
             )
 
     def compare_file_content(self, product: str):
