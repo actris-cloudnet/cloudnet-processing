@@ -34,8 +34,12 @@ class TestModelProcessing:
         n_file_puts = 2
         n_img_puts = len(self.images)
         n_metadata_posts = 1
+        n_check_images = 1
 
-        assert len(data) == n_gets + n_file_puts + n_img_puts + n_metadata_posts
+        assert (
+            len(data)
+            == n_gets + n_file_puts + n_img_puts + n_metadata_posts + n_check_images
+        )
 
         # Check existing (not-processed) model metadata for the whole period
         assert '"GET /upload-model-metadata?site=bucharest&status=uploaded' in data[0]
