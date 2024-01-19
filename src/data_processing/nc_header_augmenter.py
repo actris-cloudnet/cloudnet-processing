@@ -165,6 +165,7 @@ def harmonize_parsivel_file(data: dict) -> str:
                 "zsl",
                 "time_bnds",
                 "timestamp",
+                "datetime",
                 "code_4678",
                 "code_NWS",
             ),
