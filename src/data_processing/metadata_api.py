@@ -49,11 +49,9 @@ class MetadataApi:
         res.raise_for_status()
         return res
 
-    def delete(
-        self, end_point: str, resource: str, params: dict | None = None
-    ) -> requests.Response:
+    def delete(self, end_point: str, params: dict | None = None) -> requests.Response:
         """Delete Cloudnet metadata."""
-        url = os.path.join(self._url, end_point, resource)
+        url = os.path.join(self._url, end_point)
         res = self.session.delete(url, auth=("admin", "admin"), params=params)
         res.raise_for_status()
         return res

@@ -132,7 +132,7 @@ class ProcessBase:
         options.max_y = max_alt
         options.title = False
         options.subtitle = False
-        plotted_images = []
+        valid_images = []
         for field in fields:
             try:
                 dimensions = generate_figure(
@@ -142,7 +142,7 @@ class ProcessBase:
                     output_filename=temp_file.name,
                     options=options,
                 )
-                plotted_images.append(field)
+                valid_images.append(field)
             except PlottingError as err:
                 logging.debug(f"Skipping plotting {field}: {err}")
                 continue
@@ -153,17 +153,15 @@ class ProcessBase:
                 )
             )
         self.md_api.put_images(visualizations, uuid)
-        self._delete_obsolete_images(uuid, product, plotted_images)
+        self._delete_obsolete_images(uuid, product, valid_images)
 
     def _delete_obsolete_images(self, uuid: str, product: str, valid_images: list[str]):
-        key = "visualizations"
-        image_metadata = self.md_api.get(f"api/{key}/{uuid}").get(key, [])
+        url = f"api/visualizations/{uuid}"
+        image_metadata = self.md_api.get(url).get("visualizations", [])
         images_on_portal = {image["productVariable"]["id"] for image in image_metadata}
         expected_images = {f"{product}-{image}" for image in valid_images}
         if obsolete_images := images_on_portal - expected_images:
-            self.md_api.delete(
-                f"api/{key}", uuid, params={"images": list(obsolete_images)}
-            )
+            self.md_api.delete(url, {"images": [obsolete_images]})
 
     def compare_file_content(self, product: str):
         payload = {
