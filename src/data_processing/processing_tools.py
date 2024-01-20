@@ -128,11 +128,11 @@ class ProcessBase:
         except NotImplementedError:
             logging.warning(f"Plotting for {product} not implemented")
             return
-        self._delete_obsolete_images(uuid, product, fields)
         options = PlotParameters()
         options.max_y = max_alt
         options.title = False
         options.subtitle = False
+        plotted_images = []
         for field in fields:
             try:
                 dimensions = generate_figure(
@@ -142,6 +142,7 @@ class ProcessBase:
                     output_filename=temp_file.name,
                     options=options,
                 )
+                plotted_images.append(field)
             except PlottingError as err:
                 logging.debug(f"Skipping plotting {field}: {err}")
                 continue
@@ -152,16 +153,16 @@ class ProcessBase:
                 )
             )
         self.md_api.put_images(visualizations, uuid)
+        self._delete_obsolete_images(uuid, product, plotted_images)
 
-    def _delete_obsolete_images(self, uuid: str, product: str, fields: list[str]):
-        image_metadata = self.md_api.get(f"api/visualizations/{uuid}").get(
-            "visualizations", []
-        )
-        plotted_images = {image["productVariable"]["id"] for image in image_metadata}
-        expected_images = {f"{product}-{field}" for field in fields}
-        if obsolete_images := plotted_images - expected_images:
+    def _delete_obsolete_images(self, uuid: str, product: str, valid_images: list[str]):
+        key = "visualizations"
+        image_metadata = self.md_api.get(f"api/{key}/{uuid}").get(key, [])
+        images_on_portal = {image["productVariable"]["id"] for image in image_metadata}
+        expected_images = {f"{product}-{image}" for image in valid_images}
+        if obsolete_images := images_on_portal - expected_images:
             self.md_api.delete(
-                "api/visualizations", uuid, params={"images": list(obsolete_images)}
+                f"api/{key}", uuid, params={"images": list(obsolete_images)}
             )
 
     def compare_file_content(self, product: str):
