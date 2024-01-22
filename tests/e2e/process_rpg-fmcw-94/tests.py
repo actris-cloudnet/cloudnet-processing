@@ -39,8 +39,9 @@ class TestRPGFMCW94Processing:
         n_img = 7
         n_puts = 2 + n_img
         n_posts = n_raw_files
+        n_check_images = 1
 
-        assert len(data) == n_gets + n_puts + n_posts
+        assert len(data) == n_gets + n_puts + n_posts + n_check_images
 
         # Check product status
         assert (

@@ -16,6 +16,10 @@ class MetadataApi:
         self.config = config
         self.session = session
         self._url = config["DATAPORTAL_URL"]
+        self._auth = (
+            config.get("DATA_SUBMISSION_USERNAME", "admin"),
+            config.get("DATA_SUBMISSION_PASSWORD", "admin"),
+        )
 
     def get(self, end_point: str, payload: dict | None = None):
         """Get Cloudnet metadata."""
@@ -49,6 +53,13 @@ class MetadataApi:
         res.raise_for_status()
         return res
 
+    def delete(self, end_point: str, params: dict | None = None) -> requests.Response:
+        """Delete Cloudnet metadata."""
+        url = os.path.join(self._url, end_point)
+        res = self.session.delete(url, auth=self._auth, params=params)
+        res.raise_for_status()
+        return res
+
     def put_images(self, img_metadata: list, product_uuid: str):
         for data in img_metadata:
             payload = {
@@ -61,9 +72,6 @@ class MetadataApi:
     def upload_instrument_file(
         self, base, instrument: str, filename: str, instrument_pid: str | None = None
     ):
-        username = self.config.get("DATA_SUBMISSION_USERNAME", "admin")
-        password = self.config.get("DATA_SUBMISSION_PASSWORD", "admin")
-        auth = (username, password)
         checksum = utils.md5sum(base.daily_file.name)
         metadata = {
             "filename": filename,
@@ -74,11 +82,11 @@ class MetadataApi:
             "instrumentPid": instrument_pid,
         }
         try:
-            self.post("upload/metadata", metadata, auth=auth)
+            self.post("upload/metadata", metadata, auth=self._auth)
         except requests.exceptions.HTTPError as err:
             logging.info(err)
             return
-        self.put_file("upload/data", checksum, base.daily_file.name, auth)
+        self.put_file("upload/data", checksum, base.daily_file.name, self._auth)
 
     def find_files_to_freeze(self, args: Namespace) -> list:
         """Find volatile files released before certain time limit."""

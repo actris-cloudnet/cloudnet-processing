@@ -45,7 +45,11 @@ class TestCategorizeProcessing:
         n_gets = len(utils.get_product_types(level="1b")) - 1
         n_puts = 3
         n_checks_for_updated_at = 1
-        assert len(data) == n_gets + self.n_img + n_puts + n_checks_for_updated_at
+        n_check_images = 1
+        assert (
+            len(data)
+            == n_gets + self.n_img + n_puts + n_checks_for_updated_at + n_check_images
+        )
 
         # Check product status
         assert (

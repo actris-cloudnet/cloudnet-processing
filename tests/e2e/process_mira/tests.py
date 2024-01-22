@@ -48,8 +48,9 @@ class TestMIRAProcessing:
         n_gets = 6  # instrument checks (2) + product check (1) + mira raw (1) + previous product (1) + hkd(1)
         n_puts = 2 + self.n_img
         n_posts = n_raw_files
+        n_check_images = 1
 
-        assert len(data) == n_gets + n_puts + n_posts
+        assert len(data) == n_gets + n_puts + n_posts + n_check_images
 
         prefix = "?dateFrom=2021-01-27&dateTo=2021-01-27&site=juelich&developer=True&"
 
