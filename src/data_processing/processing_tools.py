@@ -161,7 +161,7 @@ class ProcessBase:
         images_on_portal = {image["productVariable"]["id"] for image in image_metadata}
         expected_images = {f"{product}-{image}" for image in valid_images}
         if obsolete_images := images_on_portal - expected_images:
-            self.md_api.delete(url, {"images": list(obsolete_images)})
+            self.md_api.delete(url, {"images": obsolete_images})
 
     def compare_file_content(self, product: str):
         payload = {
