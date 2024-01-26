@@ -77,6 +77,7 @@ def _get_metadata(
         "dateFrom": start.isoformat() if start else None,
         "dateTo": stop.isoformat() if stop else None,
         "instrument": instruments,
+        "status": ["uploaded", "processed"],
     }
     res = requests.get(url=url, params=payload)
     res.raise_for_status()
