@@ -219,6 +219,9 @@ class ProcessLidar(ProcessInstrument):
             date=self.base.date_str,
         )
 
+    def process_minimpl(self):
+        raise NotImplementedError()
+
     def process_cl31(self):
         full_paths, self.uuid.raw = self.base.download_instrument(self.instrument_pid)
         full_paths.sort()
