@@ -792,7 +792,7 @@ class ParsivelNc(Level1Nc):
             "kinetic_energy": "Kinetic energy of the hydrometeors",
             "state_sensor": "State of the sensor",
             "I_heating": "Heating current",
-            "visibility": "Visibility range in precipitation after MOR",
+            "visibility": "Meteorological optical range (MOR) visibility",
             "n_particles": "Number of particles in time interval",
             "snowfall_rate": "Snowfall rate",
             "fall_velocity": "Average velocity of each diameter class",
@@ -800,10 +800,9 @@ class ParsivelNc(Level1Nc):
         }
         self.fix_attribute(keymap, "long_name")
         skip = ("time", "visibility", "synop_WaWa", "synop_WW")
-        for key in self.nc.variables:
+        for key, var in self.nc.variables.items():
             if key not in skip:
-                long_name = self.nc.variables[key].long_name
-                self.nc.variables[key].long_name = long_name.lower().capitalize()
+                var.long_name = var.long_name.lower().capitalize()
 
     def fix_units(self):
         keymap = {
