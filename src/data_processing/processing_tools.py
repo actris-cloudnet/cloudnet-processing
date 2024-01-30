@@ -201,7 +201,11 @@ class ProcessBase:
         self, full_path: str, uuid: str, product: str | None = None
     ) -> str:
         try:
-            quality_report = quality.run_tests(full_path, product=product)
+            is_dev = self.config.get("PID_SERVICE_TEST_ENV", "").lower() == "true"
+            ignore_tests = ["TestInstrumentPid"] if is_dev else None
+            quality_report = quality.run_tests(
+                full_path, product=product, ignore_tests=ignore_tests
+            )
         except ValueError:
             logging.exception("Failed to run quality control")
             return "FATAL"
