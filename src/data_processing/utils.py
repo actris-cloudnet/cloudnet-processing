@@ -807,9 +807,21 @@ def _compare_variable_attributes(nc1: netCDF4.Dataset, nc2: netCDF4.Dataset):
         for attr in attrs1:
             value1 = getattr(nc1.variables[name], attr)
             value2 = getattr(nc2.variables[name], attr)
-            assert value1 == value2, _log(
-                "variable attribute values", f"{name} - {attr}", value1, value2
+            assert type(value1) == type(value2), _log(
+                "variable attribute types",
+                f"{name} - {attr}",
+                type(value1),
+                type(value2),
             )
+            if isinstance(value1, np.ndarray):
+                assert np.array_equal(
+                    value1,
+                    value2,
+                ), _log("variable attribute values", f"{name} - {attr}", value1, value2)
+            else:
+                assert value1 == value2, _log(
+                    "variable attribute values", f"{name} - {attr}", value1, value2
+                )
 
 
 def _log(text: str, var_name: str, value1, value2) -> str:
