@@ -366,6 +366,23 @@ class Level1Nc:
             if key in self.nc.variables:
                 self.nc.variables[key].__setattr__(attribute, value)
 
+    def get_valid_time_indices(self) -> list:
+        """Finds valid time indices."""
+        time = self.nc_raw.variables["time"]
+        time_stamps = time[:]
+        if "seconds since" in time.units:
+            time_stamps = np.array(cloudnetpy.utils.seconds2hours(time_stamps))
+        max_time = 1440 if "minutes" in time.units else 24
+        valid_ind: list[int] = []
+        for ind, t in enumerate(time_stamps):
+            if 0 < t < max_time:
+                if len(valid_ind) > 1 and t <= time_stamps[valid_ind[-1]]:
+                    continue
+                valid_ind.append(ind)
+        if not valid_ind:
+            raise ValidTimeStampError
+        return valid_ind
+
     def _copy_global_attributes(self):
         for name in self.nc_raw.ncattrs():
             setattr(self.nc, name, self.nc_raw.getncattr(name))
@@ -473,19 +490,6 @@ class HaloNc(Level1Nc):
         self.nc.variables["time"].units = self._get_time_units()
         self.nc.variables["time"].calendar = "standard"
 
-    def get_valid_time_indices(self) -> list:
-        """Finds valid time indices."""
-        time_stamps = self.nc_raw.variables["time"][:]
-        valid_ind: list[int] = []
-        for ind, t in enumerate(time_stamps):
-            if 0 < t < 24:
-                if len(valid_ind) > 1 and t <= time_stamps[valid_ind[-1]]:
-                    continue
-                valid_ind.append(ind)
-        if not valid_ind:
-            raise ValidTimeStampError
-        return valid_ind
-
 
 class HaloNcCalibrated(Level1Nc):
     def copy_file(self, valid_ind: list):
@@ -521,19 +525,6 @@ class HaloNcCalibrated(Level1Nc):
         """Fixes time units."""
         self.nc.variables["time"].units = self._get_time_units()
         self.nc.variables["time"].calendar = "standard"
-
-    def get_valid_time_indices(self) -> list:
-        """Finds valid time indices."""
-        time_stamps = self.nc_raw.variables["time"][:]
-        valid_ind: list[int] = []
-        for ind, t in enumerate(time_stamps):
-            if 0 < t < 24:
-                if len(valid_ind) > 1 and t <= time_stamps[valid_ind[-1]]:
-                    continue
-                valid_ind.append(ind)
-        if not valid_ind:
-            raise ValidTimeStampError
-        return valid_ind
 
 
 class HatproNc(Level1Nc):
@@ -708,20 +699,6 @@ class ParsivelNc(Level1Nc):
             ):
                 delattr(self.nc, attr)
 
-    def get_valid_time_indices(self) -> list:
-        """Finds valid time indices."""
-        time_stamps = self.nc_raw.variables["time"][:]
-        time_stamps = np.array(cloudnetpy.utils.seconds2hours(time_stamps))
-        valid_ind: list[int] = []
-        for ind, t in enumerate(time_stamps):
-            if 0 < t < 24:
-                if len(valid_ind) > 1 and t <= time_stamps[valid_ind[-1]]:
-                    continue
-                valid_ind.append(ind)
-        if not valid_ind:
-            raise ValidTimeStampError
-        return valid_ind
-
     def copy_variable(self, key: str, time_ind: list | None = None):
         """Copies one variable from Parsivel source file to target.
         Optionally uses certain time indices only.
@@ -877,20 +854,6 @@ class Ws(Level1Nc):
             )
             self._copy_variable_attributes(var_in, var)
             var[:] = var_in[time_ind] if "time" in var_in.dimensions else var_in[:]
-
-    def get_valid_time_indices(self) -> list:
-        """Finds valid time indices."""
-        time_stamps = self.nc_raw.variables["time"][:]
-        valid_ind: list[int] = []
-        minutes_in_day = 1440
-        for ind, t in enumerate(time_stamps):
-            if 0 < t < minutes_in_day:
-                if len(valid_ind) > 1 and t <= time_stamps[valid_ind[-1]]:
-                    continue
-                valid_ind.append(ind)
-        if not valid_ind:
-            raise ValidTimeStampError
-        return valid_ind
 
     def fix_time(self):
         """Fixes time units."""
