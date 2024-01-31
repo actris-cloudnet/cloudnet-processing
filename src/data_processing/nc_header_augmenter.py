@@ -66,7 +66,7 @@ def harmonize_model_file(data: dict) -> str:
         model.check_time_dimension()
         model.add_date()
         model.add_history("model")
-        shutil.copy(temp_file.name, data["full_path"])
+    shutil.copy(temp_file.name, data["full_path"])
     return uuid
 
 
@@ -90,7 +90,7 @@ def harmonize_hatpro_file(data: dict) -> str:
         hatpro.add_date()
         hatpro.add_global_attributes("mwr", instruments.HATPRO)
         hatpro.add_history("mwr")
-        shutil.copy(temp_file.name, data["full_path"])
+    shutil.copy(temp_file.name, data["full_path"])
     return uuid
 
 
@@ -118,7 +118,7 @@ def harmonize_halo_file(data: dict) -> str:
         for attribute in ("units", "long_name", "standard_name"):
             halo.harmonize_attribute(attribute)
         halo.add_history("lidar")
-        shutil.copy(temp_file.name, data["full_path"])
+    shutil.copy(temp_file.name, data["full_path"])
     return uuid
 
 
@@ -146,7 +146,7 @@ def harmonize_halo_calibrated_file(data: dict) -> str:
         for attribute in ("units", "long_name", "standard_name"):
             halo.harmonize_attribute(attribute)
         halo.add_history("lidar")
-        shutil.copy(temp_file.name, data["full_path"])
+    shutil.copy(temp_file.name, data["full_path"])
     return uuid
 
 
@@ -183,7 +183,7 @@ def harmonize_parsivel_file(data: dict) -> str:
         parsivel.fix_units()
         parsivel.fix_standard_names()
         parsivel.fix_comments()
-        shutil.copy(temp_file.name, data["full_path"])
+    shutil.copy(temp_file.name, data["full_path"])
     return uuid
 
 
@@ -216,7 +216,7 @@ def harmonize_ws_file(data: dict) -> str:
         ws.fix_long_names()
         ws.fix_flag_attributes()
         ws.fix_ancillary_variable_names()
-        shutil.copy(temp_file.name, data["full_path"])
+    shutil.copy(temp_file.name, data["full_path"])
     return uuid
 
 
