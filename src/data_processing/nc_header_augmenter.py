@@ -12,6 +12,7 @@ from cloudnetpy.instruments import instruments
 from cloudnetpy.instruments.disdrometer import ATTRIBUTES
 from cloudnetpy.metadata import COMMON_ATTRIBUTES
 from cloudnetpy.utils import get_time, get_uuid, seconds2date
+from numpy import ma
 
 from data_processing import utils
 from data_processing.utils import MiscError
@@ -216,6 +217,7 @@ def harmonize_ws_file(data: dict) -> str:
         ws.fix_long_names()
         ws.fix_flag_attributes()
         ws.fix_ancillary_variable_names()
+        ws.mask_bad_data()
     shutil.copy(temp_file.name, data["full_path"])
     return uuid
 
@@ -936,6 +938,11 @@ class Ws(Level1Nc):
             if key.endswith("_flag") and hasattr(var, "flag_values"):
                 var.flag_values = np.array(var.flag_values, dtype="i1")
                 var.units = "1"
+
+    def mask_bad_data(self):
+        for key, var in self.nc.variables.items():
+            if flagvar := self.nc.variables.get(f"{key}_quality_flag"):
+                var[:] = ma.masked_where(flagvar[:] < 2, var[:])
 
 
 def to_ms1(variable: str, data: np.ndarray, units: str) -> np.ndarray:
