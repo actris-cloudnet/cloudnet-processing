@@ -158,13 +158,14 @@ class ProcessCloudnet(ProcessBase):
                 housekeeping.process_record(record, raw_api=raw_api, db=db)
 
     def process_categorize(self, uuid: Uuid, cat_variant: str) -> tuple[Uuid, str]:
-        meta_records = self._get_level1b_metadata_for_categorize()
+        is_voodoo = cat_variant == "categorize-voodoo"
+        meta_records = self._get_level1b_metadata_for_categorize(is_voodoo)
         self._check_source_status(cat_variant, meta_records)
         input_files: dict[str, str | list[str]] = {
             product: self._storage_api.download_product(metadata, self.temp_dir.name)
             for product, metadata in meta_records.items()
         }
-        if cat_variant == "categorize-voodoo":
+        if is_voodoo:
             input_files["lv0_files"] = self._get_input_files_for_voodoo()
         try:
             uuid.product = generate_categorize(
@@ -184,7 +185,7 @@ class ProcessCloudnet(ProcessBase):
                 raise MiscError("Bad ecmwf model data and no gdas1") from exc
         return uuid, cat_variant
 
-    def _get_level1b_metadata_for_categorize(self) -> dict:
+    def _get_level1b_metadata_for_categorize(self, is_voodoo: bool) -> dict:
         instrument_order = {
             "mwr": ("hatpro", "radiometrics"),
             "radar": ("mira", "rpg-fmcw-94", "copernicus"),
@@ -200,6 +201,8 @@ class ProcessCloudnet(ProcessBase):
             else:
                 payload = self._get_payload(product=product)
                 route = "api/files"
+            if is_voodoo and product == "radar":
+                payload["instrument"] = "rpg-fmcw-94"
             metadata = self.md_api.get(route, payload)
             if product == "mwr" and not metadata:
                 # Use RPG-FMCW-94 as a fallback MWR
