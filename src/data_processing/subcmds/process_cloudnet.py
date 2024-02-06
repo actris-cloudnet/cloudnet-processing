@@ -370,7 +370,7 @@ class ProcessCloudnet(ProcessBase):
         """Get all possible instruments for given product."""
         instrument_metadata = self.md_api.get("api/instruments")
         if product == "mwr-l1c":
-            product = "mwr"
+            return ["hatpro"]
         return [item["id"] for item in instrument_metadata if item["type"] == product]
 
     def _get_upload_metadata(self, instruments: list[str]):
