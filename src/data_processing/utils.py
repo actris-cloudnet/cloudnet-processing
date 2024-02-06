@@ -369,6 +369,7 @@ def get_fields_for_plot(cloudnet_file_type: str) -> tuple[list, int]:
                 "tb_12",
                 "tb_13",
                 "irt_0",
+                "irt_01",
             ]
         case "mwr-single":
             fields = [
