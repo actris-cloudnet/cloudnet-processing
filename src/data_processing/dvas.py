@@ -161,10 +161,11 @@ class DvasMetadata:
                 "date": time_begin,
             },
             "md_constraints": {
-                "access_constraints": "otherRestrictions",
+                "access_constraints": "license",
                 "use_constraints": "license",
-                "other_constraints": "http://actris.nilu.no/Content/Documents/DataPolicy.pdf",
+                "other_constraints": "N/A",
                 "data_license": "https://creativecommons.org/licenses/by/4.0/",
+                "metadata_license": "https://creativecommons.org/licenses/by/4.0/",
             },
             "md_keywords": {
                 "keywords": [
