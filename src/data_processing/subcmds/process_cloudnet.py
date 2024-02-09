@@ -12,7 +12,6 @@ from cloudnetpy.categorize import generate_categorize
 from cloudnetpy.exceptions import CloudnetException, ModelDataError
 from cloudnetpy.utils import date_range
 from haloreader.exceptions import HaloException
-from requests.exceptions import RequestException
 
 from data_processing import instrument_process, processing_tools, utils
 from data_processing.processing_tools import ProcessBase, Uuid
@@ -95,7 +94,7 @@ class ProcessCloudnet(ProcessBase):
             logging.warning(err)
         except CloudnetException as err:
             logging.error(err)
-        except (RequestException, RuntimeError, ValueError) as err:
+        except Exception as err:
             utils.send_slack_alert(err, "data", self.args, self.date_str, product)
 
     def process_raw_data_using_updated_at(self):
