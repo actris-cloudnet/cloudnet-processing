@@ -2,10 +2,10 @@ import datetime
 import gzip
 import logging
 import os
-import pathlib
 import shutil
 import tempfile
 
+import doppy
 from cloudnetpy.instruments import (
     basta2nc,
     ceilo2nc,
@@ -23,11 +23,10 @@ from cloudnetpy.instruments import (
     ws2nc,
 )
 from cloudnetpy.utils import is_timestamp
-from haloreader.read import read as read_halo
-from haloreader.read import read_bg as read_halobg
 from requests.exceptions import HTTPError
 
 from data_processing import concat_wrapper, nc_header_augmenter, utils
+from data_processing.netcdf_utils import Dataset
 from data_processing.processing_tools import Uuid
 from data_processing.utils import MiscError, RawDataMissingError, fetch_calibration
 
@@ -121,40 +120,20 @@ class ProcessDopplerLidar(ProcessInstrument):
             include_pattern=r"Stare.*\.hpl",
             exclude_tag_subset={"cross"},
         )
+        measurement_date = datetime.date.fromisoformat(self.base.date_str)
         full_paths_bg, _ = self.base.download_instrument(
             self.instrument_pid,
             include_pattern=r"Background.*\.txt",
             exclude_tag_subset={"cross"},
-            date_from=str(
-                datetime.date.fromisoformat(self.base.date_str)
-                - datetime.timedelta(days=30)
-            ),
+            date_from=str(measurement_date - datetime.timedelta(days=1)),
         )
-        full_paths_ = [pathlib.Path(path) for path in full_paths]
-        full_paths_bg_ = [pathlib.Path(path) for path in full_paths_bg]
-        halo = read_halo(full_paths_)
-        halobg = read_halobg(full_paths_bg_)
-        if halo is None:
-            raise RawDataMissingError
-        if halobg is None:
-            raise RawDataMissingError
-        halo.correct_background(halobg)
-        halo.compute_beta()
-        screen = halo.compute_noise_screen()
-        halo.compute_beta_screened(screen)
-        halo.compute_doppler_velocity_screened(screen)
-        halo.convert_time_unit2cloudnet_time()
-        nc_buf = halo.to_nc(
-            nc_map={
-                "variables": {
-                    "beta": "beta_raw",
-                    "beta_screened": "beta",
-                    "doppler_velocity_screened": "v",
-                }
-            },
-            nc_exclude={"variables": {"beta_raw"}},
+        stare = doppy.product.Stare.from_halo_data(
+            data=full_paths,
+            data_bg=full_paths_bg,
+            bg_correction_method=doppy.options.BgCorrectionMethod.FIT,
         )
-        self.temp_file.write(nc_buf)
+
+        _doppy_stare_to_nc(stare, self.temp_file.name)
         data = self._get_payload_for_nc_file_augmenter(self.temp_file.name)
         self.uuid.product = nc_header_augmenter.harmonize_halo_file(data)
 
@@ -474,3 +453,66 @@ def _fix_cl51_timestamps(filename: str, hours: int) -> None:
             lines[ind] = f"-{date_time_utc}\n"
     with open(filename, "w") as file:
         file.writelines(lines)
+
+
+def _doppy_stare_to_nc(stare: doppy.product.Stare, filename: str) -> None:
+    return (
+        Dataset(filename)
+        .add_dimension("time")
+        .add_dimension("range")
+        .add_time(
+            name="time",
+            dimensions=("time",),
+            standard_name="time",
+            long_name="Time UTC",
+            data=stare.time,
+            dtype="f8",
+        )
+        .add_variable(
+            name="range",
+            dimensions=("range",),
+            units="m",
+            data=stare.radial_distance,
+            dtype="f4",
+        )
+        .add_variable(
+            name="elevation",
+            dimensions=("time",),
+            units="degrees",
+            data=stare.elevation,
+            dtype="f4",
+            long_name="elevation from horizontal",
+        )
+        .add_variable(
+            name="beta_raw",
+            dimensions=("time", "range"),
+            units="sr-1 m-1",
+            data=stare.beta,
+            dtype="f4",
+        )
+        .add_variable(
+            name="beta",
+            dimensions=("time", "range"),
+            units="sr-1 m-1",
+            data=stare.beta,
+            dtype="f4",
+            mask=stare.mask,
+        )
+        .add_variable(
+            name="v",
+            dimensions=("time", "range"),
+            units="m s-1",
+            long_name="Doppler velocity",
+            data=stare.radial_velocity,
+            dtype="f4",
+            mask=stare.mask,
+        )
+        .add_scalar_variable(
+            name="wavelength",
+            units="m",
+            standard_name="radiation_wavelength",
+            data=stare.wavelength,
+            dtype="f4",
+        )
+        .add_atribute("doppy_version", doppy.__version__)
+    ).close()

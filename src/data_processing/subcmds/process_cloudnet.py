@@ -11,7 +11,6 @@ import requests
 from cloudnetpy.categorize import generate_categorize
 from cloudnetpy.exceptions import CloudnetException, ModelDataError
 from cloudnetpy.utils import date_range
-from haloreader.exceptions import HaloException
 
 from data_processing import instrument_process, processing_tools, utils
 from data_processing.processing_tools import ProcessBase, Uuid
@@ -89,7 +88,6 @@ class ProcessCloudnet(ProcessBase):
             RawDataMissingError,
             MiscError,
             NotImplementedError,
-            HaloException,
         ) as err:
             logging.warning(err)
         except CloudnetException as err:

@@ -62,8 +62,8 @@ def create_product_put_payload(
             payload["software"]["cloudnetpy"] = version
         if version := getattr(nc, "mwrpy_version", None):
             payload["software"]["mwrpy"] = version
-        if version := getattr(nc, "haloreader_version", None):
-            payload["software"]["halo-reader"] = version
+        if version := getattr(nc, "doppy_version", None):
+            payload["software"]["doppy"] = version
         if version := getattr(nc, "voodoonet_version", None):
             payload["software"]["voodoonet"] = version
     return payload
