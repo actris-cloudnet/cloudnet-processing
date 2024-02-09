@@ -54,7 +54,6 @@ def main(args: argparse.Namespace):
         if upload_metadata:
             print("\nMeasurement files:\n")
             _process_metadata(upload_metadata, args)
-            print("\nCalibration:\n")
             _fetch_calibration(upload_metadata)
 
     if args.instruments is None or "model" in args.instruments:
@@ -159,11 +158,10 @@ def _submit_to_local_ss(filename: Path, row: dict):
 
 
 def _fetch_calibration(upload_metadata: list):
-    processed_pids = set()
+    processed_pids: set[str] = set()
     for upload in upload_metadata:
         if upload["instrumentPid"] in processed_pids:
             continue
-        processed_pids.add(upload["instrumentPid"])
         params = {
             "instrumentPid": upload["instrumentPid"],
             "date": upload["measurementDate"],
@@ -171,6 +169,8 @@ def _fetch_calibration(upload_metadata: list):
         res = requests.get("https://cloudnet.fmi.fi/api/calibration", params=params)
         if res.status_code == 404:
             continue
+        if not processed_pids:
+            print("\nCalibration:\n")
         print(upload["instrumentPid"])
         res.raise_for_status()
         res = requests.put(
@@ -180,6 +180,7 @@ def _fetch_calibration(upload_metadata: list):
             auth=("admin", "admin"),
         )
         res.raise_for_status()
+        processed_pids.add(upload["instrumentPid"])
 
 
 def add_arguments(subparser):
