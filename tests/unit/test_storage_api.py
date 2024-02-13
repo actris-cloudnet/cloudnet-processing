@@ -1,16 +1,25 @@
 import os
 from tempfile import TemporaryDirectory
 
+from data_processing.config import Config
 from data_processing.storage_api import StorageApi
 from test_utils import utils as utils
 
 session, adapter, mock_addr = utils.init_test_session()
 
-config = {
-    "STORAGE_SERVICE_URL": mock_addr,
-    "STORAGE_SERVICE_USER": "test",
-    "STORAGE_SERVICE_PASSWORD": "test",
-}
+config = Config(
+    {
+        "STORAGE_SERVICE_URL": mock_addr,
+        "STORAGE_SERVICE_USER": "test",
+        "STORAGE_SERVICE_PASSWORD": "test",
+        "DATAPORTAL_PUBLIC_URL": "http://dataportal.test",
+        "DATAPORTAL_URL": "http://backend.test",
+        "PID_SERVICE_URL": "http://pid.test/",
+        "PID_SERVICE_TEST_ENV": "true",
+        "FREEZE_AFTER_DAYS": "3",
+        "FREEZE_MODEL_AFTER_DAYS": "4",
+    }
+)
 
 
 class TestStorageApi:
@@ -35,18 +44,18 @@ class TestStorageApi:
 
     def test_download_raw_files(self):
         filename = "00100_A202010221205_CHM170137.nc"
-        s3path = "/ur/a/nus"
+        s3key = f"ur/a/nus/{filename}"
         metadata = [
             {
                 "uuid": "1234123",
-                "s3path": s3path,
+                "s3key": s3key,
                 "filename": filename,
                 "size": "53764",
                 "checksum": "2c80eae7adce951ab80b3557004388a6",
             },
         ]
         file = open(f"tests/data/raw/chm15k/{filename}", "rb")
-        url = f"{mock_addr}{s3path[1:]}"
+        url = f"{mock_addr}cloudnet-upload/{s3key}"
         adapter.register_uri("GET", url, body=file)
         storage_api = StorageApi(config, session)
         full_paths, uuids = storage_api.download_raw_data(metadata, self.temp_dir.name)

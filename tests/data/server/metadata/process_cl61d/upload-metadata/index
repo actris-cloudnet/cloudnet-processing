@@ -26,7 +26,7 @@
     "createdAt": "2021-09-14T14:49:16.783Z",
     "updatedAt": "2021-09-14T14:49:17.138Z",
     "downloadUrl": "http://localhost:3000/api/download/raw/5d5aae0d-4351-4d40-a359-5e7ff0560a56/HYYlive_20210911_182940.nc",
-    "s3path": "/cloudnet-upload/hyytiala/5d5aae0d-4351-4d40-a359-5e7ff0560a56/HYYlive_20210911_182940.nc"
+    "s3key": "hyytiala/5d5aae0d-4351-4d40-a359-5e7ff0560a56/HYYlive_20210911_182940.nc"
   },
   {
     "uuid": "14cf8fa5-7d0f-471a-b85d-6ed0ee0d8c6d",
@@ -55,7 +55,7 @@
     "createdAt": "2021-09-14T14:49:17.149Z",
     "updatedAt": "2021-09-14T14:49:17.697Z",
     "downloadUrl": "http://localhost:3000/api/download/raw/14cf8fa5-7d0f-471a-b85d-6ed0ee0d8c6d/HYYlive_20210911_182740.nc",
-    "s3path": "/cloudnet-upload/hyytiala/14cf8fa5-7d0f-471a-b85d-6ed0ee0d8c6d/HYYlive_20210911_182740.nc"
+    "s3key": "hyytiala/14cf8fa5-7d0f-471a-b85d-6ed0ee0d8c6d/HYYlive_20210911_182740.nc"
   },
   {
     "uuid": "be23a333-1a65-4d7d-99df-5f4134fb616e",
@@ -84,7 +84,7 @@
     "createdAt": "2021-09-14T14:49:17.708Z",
     "updatedAt": "2021-09-14T14:49:18.259Z",
     "downloadUrl": "http://localhost:3000/api/download/raw/be23a333-1a65-4d7d-99df-5f4134fb616e/HYYlive_20210911_182640.nc",
-    "s3path": "/cloudnet-upload/hyytiala/be23a333-1a65-4d7d-99df-5f4134fb616e/HYYlive_20210911_182640.nc"
+    "s3key": "hyytiala/be23a333-1a65-4d7d-99df-5f4134fb616e/HYYlive_20210911_182640.nc"
   },
   {
     "uuid": "9c2a67e0-ecfb-4914-93bf-3b77ee95a06b",
@@ -113,6 +113,6 @@
     "createdAt": "2021-09-14T14:49:18.308Z",
     "updatedAt": "2021-09-14T14:49:18.813Z",
     "downloadUrl": "http://localhost:3000/api/download/raw/9c2a67e0-ecfb-4914-93bf-3b77ee95a06b/HYYlive_20210911_191440.nc",
-    "s3path": "/cloudnet-upload/hyytiala/9c2a67e0-ecfb-4914-93bf-3b77ee95a06b/HYYlive_20210911_191440.nc"
+    "s3key": "hyytiala/9c2a67e0-ecfb-4914-93bf-3b77ee95a06b/HYYlive_20210911_191440.nc"
   }
 ]

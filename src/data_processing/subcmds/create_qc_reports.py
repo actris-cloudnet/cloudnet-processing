@@ -22,7 +22,7 @@ def main(args, storage_session: requests.Session | None = None):
     md_api = metadata_api.MetadataApi(config)
     storage_api = StorageApi(config, storage_session)
     metadata = md_api.find_product_metadata(args, legacy_files=False)
-    temp_dir_root = utils.get_temp_dir(config)
+    temp_dir_root = utils.get_temp_dir()
     temp_dir = TemporaryDirectory(dir=temp_dir_root)
     qc = ProcessBase(args, config)
     for row in metadata:

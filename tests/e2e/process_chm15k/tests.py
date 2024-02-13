@@ -52,7 +52,7 @@ class TestChm15kProcessing:
         f = open(f"{SCRIPT_PATH}/pid.log")
         data = f.readlines()
         assert len(data) == 1
-        assert 'POST /pid/ HTTP/1.1" 200 -' in data[0]
+        assert 'POST /pid HTTP/1.1" 200 -' in data[0]
 
     @pytest.mark.reprocess
     def test_that_calls_metadata_api(self):

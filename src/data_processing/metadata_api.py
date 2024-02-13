@@ -1,29 +1,29 @@
 """Metadata API for Cloudnet files."""
 import logging
-import os
+import uuid
 from argparse import Namespace
 from datetime import datetime, timedelta, timezone
 
 import requests
 
 from data_processing import utils
+from data_processing.config import Config
 
 
 class MetadataApi:
     """Class handling connection between Cloudnet files and database."""
 
-    def __init__(self, config: dict, session: requests.Session = utils.make_session()):
+    def __init__(
+        self, config: Config, session: requests.Session = utils.make_session()
+    ):
         self.config = config
         self.session = session
-        self._url = config["DATAPORTAL_URL"]
-        self._auth = (
-            config.get("DATA_SUBMISSION_USERNAME", "admin"),
-            config.get("DATA_SUBMISSION_PASSWORD", "admin"),
-        )
+        self._url = config.dataportal_url
+        self._auth = config.data_submission_auth
 
     def get(self, end_point: str, payload: dict | None = None):
         """Get Cloudnet metadata."""
-        url = os.path.join(self._url, end_point)
+        url = f"{self._url}/{end_point}"
         res = self.session.get(url, params=payload)
         res.raise_for_status()
         return res.json()
@@ -32,14 +32,14 @@ class MetadataApi:
         self, end_point: str, payload: dict, auth: tuple[str, str] | None = None
     ) -> requests.Response:
         """Update upload / product metadata."""
-        url = os.path.join(self._url, end_point)
+        url = f"{self._url}/{end_point}"
         res = self.session.post(url, json=payload, auth=auth)
         res.raise_for_status()
         return res
 
     def put(self, end_point: str, resource: str, payload: dict) -> requests.Response:
         """PUT metadata to Cloudnet data portal."""
-        url = os.path.join(self._url, end_point, resource)
+        url = f"{self._url}/{end_point}/{resource}"
         res = self.session.put(url, json=payload)
         res.raise_for_status()
         return res
@@ -48,22 +48,22 @@ class MetadataApi:
         self, end_point: str, resource: str, full_path: str, auth: tuple[str, str]
     ) -> requests.Response:
         """PUT file to Cloudnet data portal."""
-        url = os.path.join(self._url, end_point, resource)
+        url = f"{self._url}/{end_point}/{resource}"
         res = self.session.put(url, data=open(full_path, "rb"), auth=auth)
         res.raise_for_status()
         return res
 
     def delete(self, end_point: str, params: dict | None = None) -> requests.Response:
         """Delete Cloudnet metadata."""
-        url = os.path.join(self._url, end_point)
+        url = f"{self._url}/{end_point}"
         res = self.session.delete(url, auth=self._auth, params=params)
         res.raise_for_status()
         return res
 
-    def put_images(self, img_metadata: list, product_uuid: str):
+    def put_images(self, img_metadata: list, product_uuid: str | uuid.UUID):
         for data in img_metadata:
             payload = {
-                "sourceFileId": product_uuid,
+                "sourceFileId": str(product_uuid),
                 "variableId": data["variable_id"],
                 "dimensions": data["dimensions"],
             }
@@ -99,7 +99,7 @@ class MetadataApi:
             **common_payload,
             **{"product": products},
             **{"showLegacy": True},
-            **self._get_freeze_payload("FREEZE_AFTER_DAYS", args),
+            **self._get_freeze_payload(self.config.freeze_after_days, args),
         }
         regular_files = self.get("api/files", files_payload)
 
@@ -109,7 +109,7 @@ class MetadataApi:
             models_payload = {
                 **common_payload,
                 **{"allModels": True},
-                **self._get_freeze_payload("FREEZE_MODEL_AFTER_DAYS", args),
+                **self._get_freeze_payload(self.config.freeze_model_after_days, args),
             }
             model_files = self.get("api/model-files", models_payload)
 
@@ -127,11 +127,10 @@ class MetadataApi:
         payload = {"uuid": uuid, "dvasUpdatedAt": updated_timestamp, "dvasId": dvas_id}
         self.post("files", payload)
 
-    def _get_freeze_payload(self, key: str, args: Namespace) -> dict:
-        freeze_after_days = int(self.config[key])
+    def _get_freeze_payload(self, freeze_after_days, args: Namespace) -> dict:
         if args.force:
             logging.warning(
-                f"Overriding {key} -config option. Also recently changed files may be freezed."
+                f"Overriding config option ({freeze_after_days} days). Also recently changed files may be freezed."
             )
             updated_before = None
         else:

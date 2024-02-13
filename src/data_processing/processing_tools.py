@@ -12,6 +12,7 @@ from cloudnetpy_qc import quality
 from cloudnetpy_qc.quality import ErrorLevel
 
 from data_processing import utils
+from data_processing.config import Config
 from data_processing.metadata_api import MetadataApi
 from data_processing.pid_utils import PidUtils
 from data_processing.storage_api import StorageApi
@@ -41,7 +42,7 @@ class ProcessBase:
     def __init__(
         self,
         args,
-        config: dict,
+        config: Config,
         storage_session: requests.Session | None = None,
         metadata_session: requests.Session | None = None,
     ):
@@ -59,7 +60,7 @@ class ProcessBase:
         self._storage_api = StorageApi(config, storage_session)
         self._pid_utils = PidUtils(config)
         self._create_new_version = False
-        self._temp_dir_root = utils.get_temp_dir(config)
+        self._temp_dir_root = utils.get_temp_dir()
         self.temp_dir = TemporaryDirectory(dir=self._temp_dir_root)
         self.temp_file = NamedTemporaryFile(dir=self._temp_dir_root, suffix=".nc")
         self.daily_file = NamedTemporaryFile(dir=self._temp_dir_root, suffix=".nc")
@@ -205,8 +206,7 @@ class ProcessBase:
         self, full_path: str, uuid: str, product: str | None = None
     ) -> str:
         try:
-            is_dev = self.config.get("PID_SERVICE_TEST_ENV", "").lower() == "true"
-            ignore_tests = ["TestInstrumentPid"] if is_dev else None
+            ignore_tests = None if self.config.is_production else ["TestInstrumentPid"]
             quality_report = quality.run_tests(
                 full_path, product=product, ignore_tests=ignore_tests
             )

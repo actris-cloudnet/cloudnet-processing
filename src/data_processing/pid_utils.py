@@ -1,20 +1,16 @@
 import netCDF4
 from requests import HTTPError
 
+from data_processing.config import Config
 from data_processing.utils import MiscError, random_string
 
 from .utils import build_file_landing_page_url, make_session
 
 
 class PidUtils:
-    def __init__(self, config: dict):
-        self._pid_service_url = config["PID_SERVICE_URL"]
-        self._is_production = self._get_env(config)
-
-    @staticmethod
-    def _get_env(config) -> bool:
-        is_test_env = config["PID_SERVICE_TEST_ENV"].lower() == "true"
-        return not is_test_env
+    def __init__(self, config: Config):
+        self._pid_service_url = config.pid_service_url
+        self._is_production = config.is_production
 
     def add_pid_to_file(self, filepath: str) -> tuple[str, str, str]:
         """Queries PID service and adds the PID to NC file metadata."""

@@ -26,7 +26,7 @@
     "createdAt": "2021-09-27T16:47:15.671Z",
     "updatedAt": "2021-09-27T16:47:15.768Z",
     "downloadUrl": "http://localhost:3000/api/download/raw/8db08368-f92c-44ab-af25-37189d15f4da/2021091509.txt",
-    "s3path": "/cloudnet-upload/lindenberg/8db08368-f92c-44ab-af25-37189d15f4da/2021091509.txt"
+    "s3key": "lindenberg/8db08368-f92c-44ab-af25-37189d15f4da/2021091509.txt"
   },
   {
     "uuid": "737df008-b8f3-4798-bbe6-12168bf0f843",
@@ -55,6 +55,6 @@
     "createdAt": "2021-09-27T16:47:14.809Z",
     "updatedAt": "2021-09-27T16:47:14.886Z",
     "downloadUrl": "http://localhost:3000/api/download/raw/737df008-b8f3-4798-bbe6-12168bf0f843/2021091510.txt",
-    "s3path": "/cloudnet-upload/lindenberg/737df008-b8f3-4798-bbe6-12168bf0f843/2021091510.txt"
+    "s3key": "lindenberg/737df008-b8f3-4798-bbe6-12168bf0f843/2021091510.txt"
   }
 ]

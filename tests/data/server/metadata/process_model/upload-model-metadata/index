@@ -22,6 +22,6 @@
     "updatedAt": "2020-12-05T06:47:43.231Z",
     "instrument": null,
     "model": { "id": "ecmwf", "optimumOrder": 0 },
-    "s3path": "/cloudnet-upload/bucharest/eb176ca3-374e-471c-9c82-fc9a45578883/20201022_bucharest_ecmwf.nc"
+    "s3key": "bucharest/eb176ca3-374e-471c-9c82-fc9a45578883/20201022_bucharest_ecmwf.nc"
   }
 ]

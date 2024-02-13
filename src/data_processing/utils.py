@@ -9,6 +9,7 @@ import re
 import shutil
 import string
 import sys
+import tempfile
 from argparse import Namespace
 from pathlib import Path
 
@@ -22,6 +23,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 import data_processing.version
+from data_processing.config import Config
 
 
 def isodate2date(date_str: str) -> datetime.date:
@@ -29,7 +31,7 @@ def isodate2date(date_str: str) -> datetime.date:
 
 
 def create_product_put_payload(
-    full_path: str,
+    full_path: str | Path,
     storage_service_response: dict,
     product: str | None = None,
     site: str | None = None,
@@ -159,7 +161,7 @@ def fetch_calibration(instrument_pid: str, date: str) -> dict | None:
     """Gets calibration factor."""
     session = make_session()
     data_portal_url = fetch_data_portal_url()
-    url = f"{data_portal_url}api/calibration"
+    url = f"{data_portal_url}/api/calibration"
     payload = {"instrumentPid": instrument_pid, "date": date}
     res = session.get(url, params=payload)
     return res.json() if res.ok else None
@@ -209,11 +211,8 @@ def send_slack_alert(
     else:
         logging.error(error_msg, exc_info=True)
 
-    key = "SLACK_API_TOKEN"
-    if key not in config or config[key] == "":
-        logging.warning(
-            f"Environment variable '{key}' is not defined, no notification will be sent."
-        )
+    if not config.slack_api_token:
+        logging.warning("Slack API token not defined, no notification will be sent.")
         return
 
     match error_source:
@@ -260,7 +259,7 @@ def send_slack_alert(
     r = session.post(
         "https://slack.com/api/files.upload",
         data=payload,
-        headers={"Authorization": f"Bearer {config[key]}"},
+        headers={"Authorization": f"Bearer {config.slack_api_token}"},
     )
     r.raise_for_status()
     body = r.json()
@@ -268,9 +267,9 @@ def send_slack_alert(
         logging.fatal(f"Failed to send Slack notification: {body.text}")
 
 
-def read_main_conf() -> dict:
+def read_main_conf() -> Config:
     """Reads config from env vars."""
-    return dict(os.environ)
+    return Config(os.environ)
 
 
 def str2bool(s: str) -> bool | str:
@@ -472,12 +471,12 @@ def get_var_id(cloudnet_file_type: str, field: str) -> str:
     return f"{cloudnet_file_type}-{field}"
 
 
-def sha256sum(filename: str) -> str:
+def sha256sum(filename: str | Path) -> str:
     """Calculates hash of file using sha-256."""
     return _calc_hash_sum(filename, "sha256")
 
 
-def md5sum(filename: str, is_base64: bool = False) -> str:
+def md5sum(filename: str | Path, is_base64: bool = False) -> str:
     """Calculates hash of file using md5."""
     return _calc_hash_sum(filename, "md5", is_base64)
 
@@ -497,7 +496,7 @@ def get_product_bucket(volatile: bool = False) -> str:
     return "cloudnet-product-volatile" if volatile else "cloudnet-product"
 
 
-def is_volatile_file(filename: str) -> bool:
+def is_volatile_file(filename: str | Path) -> bool:
     """Check if nc-file is volatile."""
     with netCDF4.Dataset(filename) as nc:
         is_missing_pid = not hasattr(nc, "pid")
@@ -580,9 +579,9 @@ def init_logger(args, log_filename: str):
     logging.info(msg)
 
 
-def get_temp_dir(config: dict) -> str:
+def get_temp_dir() -> str:
     """Returns temporary directory path."""
-    return config.get("TEMP_DIR", "/tmp")
+    return tempfile.gettempdir()
 
 
 def get_cloudnet_sites() -> list:
@@ -605,20 +604,20 @@ def get_from_data_portal_api(
     """Reads from data portal API."""
     session = make_session()
     data_portal_url = fetch_data_portal_url()
-    url = f"{data_portal_url}{end_point}"
+    url = f"{data_portal_url}/{end_point}"
     return session.get(url=url, params=payload).json()
 
 
 def fetch_data_portal_url() -> str:
     """Returns data portal url."""
     config = read_main_conf()
-    return config["DATAPORTAL_URL"]
+    return config.dataportal_url
 
 
 def build_file_landing_page_url(uuid: str) -> str:
     """Returns file landing page url."""
     config = read_main_conf()
-    base = config["DATAPORTAL_PUBLIC_URL"].rstrip("/")
+    base = config.dataportal_public_url
     return f"{base}/file/{uuid}"
 
 
@@ -879,15 +878,15 @@ def _count_lines(filename: str) -> int:
 
 class RawApi:
     def __init__(
-        self, cfg: dict | None = None, session: requests.Session | None = None
+        self, cfg: Config | None = None, session: requests.Session | None = None
     ):
         if cfg is None:
             cfg = read_main_conf()
         if session is None:
             session = make_session()
-        self.base_url = cfg["DATAPORTAL_URL"]
+        self.base_url = cfg.dataportal_url
         self.session = session
 
     def get_raw_file(self, uuid: str, fname: str) -> bytes:
-        url = f"{self.base_url}api/download/raw/{uuid}/{fname}"
+        url = f"{self.base_url}/api/download/raw/{uuid}/{fname}"
         return self.session.get(url).content
