@@ -5,6 +5,7 @@ import importlib
 import logging
 import warnings
 
+import doppy
 import housekeeping
 import netCDF4
 import requests
@@ -59,7 +60,7 @@ class ProcessCloudnet(ProcessBase):
                     uuid, identifier = self.process_categorize(uuid, product)
                 case product if product in utils.get_product_types(
                     level="1b"
-                ) or product == "mwr-l1c":
+                ) or product in ("mwr-l1c", "doppler-lidar-wind"):
                     instrument_id, instrument_pid = self._fetch_instrument_to_process(
                         product
                     )
@@ -74,6 +75,8 @@ class ProcessCloudnet(ProcessBase):
                     raise ValueError(f"Bad product: {bad_product}")
             if product == "mwr-l1c":
                 identifier = "hatpro-l1c"
+            if product == "doppler-lidar-wind":
+                identifier = product
             if not self.args.force:
                 self.compare_file_content(product)
             self.add_pid()
@@ -88,6 +91,7 @@ class ProcessCloudnet(ProcessBase):
             RawDataMissingError,
             MiscError,
             NotImplementedError,
+            doppy.exceptions.NoDataError,
         ) as err:
             logging.warning(err)
         except CloudnetException as err:
@@ -368,6 +372,12 @@ class ProcessCloudnet(ProcessBase):
         instrument_metadata = self.md_api.get("api/instruments")
         if product == "mwr-l1c":
             return ["hatpro"]
+        elif product == "doppler-lidar-wind":
+            return [
+                item["id"]
+                for item in instrument_metadata
+                if item["type"] == "doppler-lidar"
+            ]
         return [item["id"] for item in instrument_metadata if item["type"] == product]
 
     def _get_upload_metadata(self, instruments: list[str]):

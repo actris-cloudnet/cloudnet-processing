@@ -350,6 +350,13 @@ def get_fields_for_plot(cloudnet_file_type: str) -> tuple[list, int]:
                 "beta_raw",
                 "v",
             ]
+        case "doppler-lidar-wind":
+            fields = [
+                "uwind",
+                "uwind_raw",
+                "vwind",
+                "vwind_raw",
+            ]
         case "mwr":
             fields = ["lwp", "iwv"]
         case "mwr-l1c":

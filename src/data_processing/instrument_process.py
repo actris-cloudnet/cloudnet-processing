@@ -113,6 +113,22 @@ class ProcessRadar(ProcessInstrument):
             self.base.site_meta[key] = data.get(api_key or key, default_value)
 
 
+class ProcessDopplerLidarWind(ProcessInstrument):
+    def process_halo_doppler_lidar(self):
+        full_paths, self.uuid.raw = self.base.download_instrument(
+            self.instrument_pid,
+            include_pattern=r".*\.hpl",
+            exclude_pattern=r"Stare.*",
+            exclude_tag_subset={"cross"},
+        )
+        wind = doppy.product.Wind.from_halo_data(data=full_paths)
+        _doppy_wind_to_nc(wind, self.temp_file.name)
+        data = self._get_payload_for_nc_file_augmenter(self.temp_file.name)
+        self.uuid.product = nc_header_augmenter.harmonize_halo_doppler_lidar_wind_file(
+            data
+        )
+
+
 class ProcessDopplerLidar(ProcessInstrument):
     def process_halo_doppler_lidar(self):
         full_paths, self.uuid.raw = self.base.download_instrument(
@@ -513,6 +529,64 @@ def _doppy_stare_to_nc(stare: doppy.product.Stare, filename: str) -> None:
             standard_name="radiation_wavelength",
             data=stare.wavelength,
             dtype="f4",
+        )
+        .add_atribute("doppy_version", doppy.__version__)
+    ).close()
+
+
+def _doppy_wind_to_nc(wind: doppy.product.Wind, filename: str) -> None:
+    return (
+        Dataset(filename)
+        .add_dimension("time")
+        .add_dimension("height")
+        .add_time(
+            name="time",
+            dimensions=("time",),
+            standard_name="time",
+            long_name="Time UTC",
+            data=wind.time,
+            dtype="f8",
+        )
+        .add_variable(
+            name="height",
+            dimensions=("height",),
+            units="m",
+            data=wind.height,
+            dtype="f4",
+        )
+        .add_variable(
+            name="uwind_raw",
+            dimensions=("time", "height"),
+            units="m s-1",
+            data=wind.zonal_wind,
+            dtype="f4",
+            long_name="Non-screened zonal wind",
+        )
+        .add_variable(
+            name="uwind",
+            dimensions=("time", "height"),
+            units="m s-1",
+            data=wind.zonal_wind,
+            mask=wind.mask,
+            dtype="f4",
+            long_name="Zonal wind",
+        )
+        .add_variable(
+            name="vwind_raw",
+            dimensions=("time", "height"),
+            units="m s-1",
+            data=wind.meridional_wind,
+            dtype="f4",
+            long_name="Non-screened meridional wind",
+        )
+        .add_variable(
+            name="vwind",
+            dimensions=("time", "height"),
+            units="m s-1",
+            data=wind.meridional_wind,
+            mask=wind.mask,
+            dtype="f4",
+            long_name="Meridional wind",
         )
         .add_atribute("doppy_version", doppy.__version__)
     ).close()
