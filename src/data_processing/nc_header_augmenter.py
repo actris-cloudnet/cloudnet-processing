@@ -151,6 +151,26 @@ def harmonize_halo_calibrated_file(data: dict) -> str:
     return uuid
 
 
+def harmonize_halo_doppler_lidar_wind_file(data: dict) -> str:
+    """Harmonizes Doppler lidar wind netCDF file."""
+    temp_file = NamedTemporaryFile()
+    with (
+        netCDF4.Dataset(data["full_path"], "r") as nc_raw,
+        netCDF4.Dataset(temp_file.name, "w", format="NETCDF4_CLASSIC") as nc,
+    ):
+        wind = DopplerLidarWindNc(nc_raw, nc, data)
+        valid_ind = wind.get_valid_time_indices()
+        wind.copy_file(valid_ind)
+        wind.add_geolocation()
+        wind.height_to_asl_height()
+        wind.add_date()
+        wind.add_global_attributes("doppler-lidar-wind", instruments.HALO)
+        uuid = wind.add_uuid()
+        wind.add_history("doppler-lidar-wind")
+    shutil.copy(temp_file.name, data["full_path"])
+    return uuid
+
+
 def harmonize_parsivel_file(data: dict) -> str:
     temp_file = NamedTemporaryFile()
     with netCDF4.Dataset(data["full_path"], "r") as nc_raw, netCDF4.Dataset(
@@ -437,6 +457,24 @@ class ModelNc(Level1Nc):
         """Adds required global attributes."""
         self.nc.cloudnet_file_type = "model"
         self.nc.Conventions = "CF-1.8"
+
+
+class DopplerLidarWindNc(Level1Nc):
+    def copy_file(self, valid_ind: list):
+        keys = (
+            "time",
+            "height",
+            "uwind",
+            "vwind",
+            "uwind_raw",
+            "vwind_raw",
+        )
+        self.copy_file_contents(keys, valid_ind)
+
+    def height_to_asl_height(self):
+        self.nc.variables["height"][:] += self.nc.variables["altitude"][:]
+        self.nc.variables["height"].standard_name = "height_above_mean_sea_level"
+        self.nc.variables["height"].long_name = "Height above mean sea level"
 
 
 class HaloNc(Level1Nc):
