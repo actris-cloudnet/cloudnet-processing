@@ -120,6 +120,9 @@ def validate_products(products: list) -> list:
         if prod in ("l1b", "l1c", "l2"):
             product_types = utils.get_product_types(prod[1:])
             accepted_products.extend(product_types)
+        if prod == "voodoo":
+            product_types = ["categorize-voodoo", "classification-voodoo"]
+            accepted_products.extend(product_types)
         if prod == "standard":
             product_types = utils.get_product_types_excluding_level3(
                 ignore_experimental=True
