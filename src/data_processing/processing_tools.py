@@ -107,7 +107,10 @@ class ProcessBase:
 
         payload["product"] = product  # L3 files use different products in NC vars
         self.md_api.put("files", s3key, payload)
-        if product in utils.get_product_types(level="1b") or product == "mwr-l1c":
+        if product in utils.get_product_types(level="1b") or product in (
+            "mwr-l1c",
+            "doppler-lidar-wind",
+        ):
             self.update_statuses(uuid.raw)
 
     def create_and_upload_images(

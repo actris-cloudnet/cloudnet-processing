@@ -6,6 +6,11 @@ import subprocess
 from data_processing import utils
 from data_processing.metadata_api import MetadataApi
 
+L1B_PRODUCTS = ",".join(utils.get_product_types(level="1b"))
+L1C_AND_L2_PRODUCTS = ",".join(
+    utils.get_product_types(level="1c") + utils.get_product_types(level="2")
+)
+
 
 def main(args_in: argparse.Namespace):
     class_map = {
@@ -93,7 +98,7 @@ class RawMetadata(MetaData):
     def process(self) -> None:
         metadata = self._get_metadata()
         for site in self._extract_unique_sites(metadata):
-            args = ["process", "-u", str(self.args_in.hours)]
+            args = ["-p", L1B_PRODUCTS, "process", "-u", str(self.args_in.hours)]
             if self.args_in.housekeeping:
                 args.append("-H")
             self._call_subprocess(site, args)
@@ -101,16 +106,14 @@ class RawMetadata(MetaData):
     def _get_metadata(self) -> list[dict]:
         payload = {**self._get_payload(), "status": "uploaded"}
         metadata = self.md_api.get("api/raw-files", payload)
-        metadata = [m for m in metadata if not m["filename"].lower().endswith(".lv0")]
         return metadata
 
 
 class ProductsMetadata(MetaData):
     def process(self) -> None:
-        products = "categorize,classification,iwc,lwc,drizzle,ier,der,mwr-l1c,mwr-single,mwr-multi"
         metadata = self._get_metadata()
         for site, date in self._extract_unique_site_dates(metadata):
-            args = ["-p", products, "-d", date, "process"]
+            args = ["-p", L1C_AND_L2_PRODUCTS, "-d", date, "process"]
             if self.args_in.reprocess:
                 args.append("-r")
             self._call_subprocess(site, args)
@@ -123,7 +126,7 @@ class ProductsMetadata(MetaData):
     def _get_l1b_metadata(self) -> list[dict]:
         payload = {
             **self._get_payload(),
-            "product": ["radar", "lidar", "mwr", "disdrometer"],
+            "product": ["radar", "lidar", "mwr", "disdrometer", "doppler-lidar"],
         }
         metadata = self.md_api.get("api/files", payload)
         return metadata
