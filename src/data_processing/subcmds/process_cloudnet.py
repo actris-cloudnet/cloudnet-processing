@@ -168,6 +168,8 @@ class ProcessCloudnet(ProcessBase):
         }
         if is_voodoo:
             input_files["lv0_files"], lv0_uuid = self._get_input_files_for_voodoo()
+        else:
+            lv0_uuid = []
         try:
             uuid.product = generate_categorize(
                 input_files, self.temp_file.name, uuid=uuid.volatile
