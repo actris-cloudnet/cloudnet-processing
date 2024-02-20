@@ -167,11 +167,12 @@ class ProcessCloudnet(ProcessBase):
             for product, metadata in meta_records.items()
         }
         if is_voodoo:
-            input_files["lv0_files"] = self._get_input_files_for_voodoo()
+            input_files["lv0_files"], lv0_uuid = self._get_input_files_for_voodoo()
         try:
             uuid.product = generate_categorize(
                 input_files, self.temp_file.name, uuid=uuid.volatile
             )
+            uuid.raw.extend(lv0_uuid)
         except ModelDataError as exc:
             payload = self._get_payload(model="gdas1")
             metadata = self.md_api.get("api/model-files", payload)
@@ -228,7 +229,7 @@ class ProcessCloudnet(ProcessBase):
             )
         return meta_records
 
-    def _get_input_files_for_voodoo(self) -> list[str]:
+    def _get_input_files_for_voodoo(self) -> tuple[list[str], list[str]]:
         payload = self._get_payload(instrument="rpg-fmcw-94")
         metadata = self.md_api.get("upload-metadata", payload)
         unique_pids = list(set(row["instrumentPid"] for row in metadata))
@@ -238,9 +239,10 @@ class ProcessCloudnet(ProcessBase):
             raise RawDataMissingError("No rpg-fmcw-94 cloud radar found")
         (
             full_paths,
-            _,
+            uuids,
         ) = self.download_instrument(instrument_pid, include_pattern=".LV0")
-        return [full_paths] if isinstance(full_paths, str) else full_paths
+        full_paths_list = [full_paths] if isinstance(full_paths, str) else full_paths
+        return full_paths_list, uuids
 
     def process_level2(self, uuid: Uuid, product: str) -> tuple[Uuid, str]:
         if product == "mwr-single":

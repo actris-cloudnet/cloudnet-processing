@@ -110,6 +110,7 @@ class ProcessBase:
         if product in utils.get_product_types(level="1b") or product in (
             "mwr-l1c",
             "doppler-lidar-wind",
+            "categorize-voodoo",
         ):
             self.update_statuses(uuid.raw)
 
