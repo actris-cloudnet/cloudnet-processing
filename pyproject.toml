@@ -21,7 +21,7 @@ classifiers = [
 dependencies = [
   "cftime",
   "cloudnetpy[extras]>=1.58.0",
-  "doppy",
+  "doppy >= 0.1.0",
   "influxdb-client",
   "requests",
   "rpgpy",

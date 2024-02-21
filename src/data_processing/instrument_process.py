@@ -132,7 +132,17 @@ class ProcessDopplerLidarWind(ProcessInstrument):
         raise NotImplementedError()
 
     def process_wls200s(self):
-        raise NotImplementedError()
+        full_paths, self.uuid.raw = self.base.download_instrument(
+            self.instrument_pid,
+            include_pattern=r".*vad.*\.nc.*",
+        )
+        full_paths = _unzip_gz_files(full_paths)
+        wind = doppy.product.Wind.from_windcube_data(data=full_paths)
+        _doppy_wind_to_nc(wind, self.temp_file.name)
+        data = self._get_payload_for_nc_file_augmenter(self.temp_file.name)
+        self.uuid.product = nc_header_augmenter.harmonize_halo_doppler_lidar_wind_file(
+            data
+        )
 
     def process_wls400s(self):
         raise NotImplementedError()
@@ -464,7 +474,10 @@ def _unzip_gz_file(path_in: str) -> str:
 def _unzip_gz_files(full_paths: list):
     paths_out = []
     for path_in in full_paths:
-        paths_out.append(_unzip_gz_file(path_in))
+        try:
+            paths_out.append(_unzip_gz_file(path_in))
+        except (EOFError, gzip.BadGzipFile) as err:
+            logging.warning("Cannot unzip gz file %s: %s", path_in, err)
     return paths_out
 
 
