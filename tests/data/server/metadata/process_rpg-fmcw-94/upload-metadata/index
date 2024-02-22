@@ -27,7 +27,7 @@
       "humanReadableName": "RPG FMCW-94 cloud radar"
     },
     "model": null,
-    "s3path": "/cloudnet-upload/bucharest/1bd2bd3b-45ae-455e-ab2b-627d9fde3a53/201022_070003_P06_ZEN.LV1"
+    "s3key": "bucharest/1bd2bd3b-45ae-455e-ab2b-627d9fde3a53/201022_070003_P06_ZEN.LV1"
   },
   {
     "uuid": "01425ad8-4acd-429b-b395-88723538e308",
@@ -56,7 +56,7 @@
       "humanReadableName": "RPG FMCW-94 cloud radar"
     },
     "model": null,
-    "s3path": "/cloudnet-upload/bucharest/01425ad8-4acd-429b-b395-88723538e308/201022_100001_P06_ZEN.LV1"
+    "s3key": "bucharest/01425ad8-4acd-429b-b395-88723538e308/201022_100001_P06_ZEN.LV1"
   },
   {
     "uuid": "d5859d33-c7b0-4f1b-bf40-66a236be76c6",
@@ -86,6 +86,6 @@
       "humanReadableName": "RPG FMCW-94 cloud radar"
     },
     "model": null,
-    "s3path": "/cloudnet-upload/bucharest/d5859d33-c7b0-4f1b-bf40-66a236be76c6/201023_160000_P06_ZEN.LV1"
+    "s3key": "bucharest/d5859d33-c7b0-4f1b-bf40-66a236be76c6/201023_160000_P06_ZEN.LV1"
   }
 ]

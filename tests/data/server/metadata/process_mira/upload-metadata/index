@@ -26,7 +26,7 @@
       "humanReadableName": "METEK MIRA-35 cloud radar"
     },
     "model": null,
-    "s3path": "/cloudnet-upload/juelich/18641b51-ac8c-4a53-a1b9-54f41c045296/20210127_0206.mmclx.gz"
+    "s3key": "juelich/18641b51-ac8c-4a53-a1b9-54f41c045296/20210127_0206.mmclx.gz"
   },
   {
     "uuid": "2c3a10dc-ebab-4fd6-bbb3-f559eb64bc37",
@@ -55,6 +55,6 @@
       "humanReadableName": "METEK MIRA-35 cloud radar"
     },
     "model": null,
-    "s3path": "/cloudnet-upload/juelich/2c3a10dc-ebab-4fd6-bbb3-f559eb64bc37/20210127_0106.mmclx.gz"
+    "s3key": "juelich/2c3a10dc-ebab-4fd6-bbb3-f559eb64bc37/20210127_0106.mmclx.gz"
   }
 ]

@@ -4,6 +4,7 @@ import sys
 
 import requests
 import requests_mock
+from data_processing.config import Config
 from data_processing.subcmds import process_model
 
 sys.path.append("scripts/")
@@ -16,14 +17,19 @@ mock_addr = "http://test/"
 
 args = cloudnet._parse_args(["-s=bucharest", "model"])  # Initialize default arguments
 
-config = {
-    "DATAPORTAL_URL": mock_addr,
-    "STORAGE_SERVICE_URL": "foo",
-    "STORAGE_SERVICE_USER": "foo",
-    "STORAGE_SERVICE_PASSWORD": "foo",
-    "PID_SERVICE_URL": "foo",
-    "PID_SERVICE_TEST_ENV": "foo",
-}
+config = Config(
+    {
+        "DATAPORTAL_PUBLIC_URL": "http://dataportal.test",
+        "DATAPORTAL_URL": mock_addr,
+        "STORAGE_SERVICE_URL": "foo",
+        "STORAGE_SERVICE_USER": "foo",
+        "STORAGE_SERVICE_PASSWORD": "foo",
+        "PID_SERVICE_URL": "foo",
+        "PID_SERVICE_TEST_ENV": "foo",
+        "FREEZE_AFTER_DAYS": "3",
+        "FREEZE_MODEL_AFTER_DAYS": "4",
+    }
+)
 
 resp = """
 [

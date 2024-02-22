@@ -26,7 +26,7 @@
       "humanReadableName": "Lufft CHM15k ceilometer"
     },
     "instrumentPid": "http://pid.test/3.abcabcabcchm15k",
-    "s3path": "/cloudnet-upload/bucharest/27d8ac0d-3bab-45fe-9d85-1cc2528e9f95/00100_A202010221900_CHM170137.nc"
+    "s3key": "bucharest/27d8ac0d-3bab-45fe-9d85-1cc2528e9f95/00100_A202010221900_CHM170137.nc"
   },
   {
     "uuid": "d72d71af-a949-4094-aa14-73d1894c6aa5",
@@ -55,7 +55,7 @@
       "humanReadableName": "Lufft CHM15k ceilometer"
     },
     "instrumentPid": "http://pid.test/3.abcabcabcchm15k",
-    "s3path": "/cloudnet-upload/bucharest/d72d71af-a949-4094-aa14-73d1894c6aa5/00100_A202010220835_CHM170137.nc"
+    "s3key": "bucharest/d72d71af-a949-4094-aa14-73d1894c6aa5/00100_A202010220835_CHM170137.nc"
   },
   {
     "uuid": "80c2fab5-2dc5-4692-bafe-a7274071770e",
@@ -84,7 +84,7 @@
       "humanReadableName": "Lufft CHM15k ceilometer"
     },
     "instrumentPid": "http://pid.test/3.abcabcabcchm15k",
-    "s3path": "/cloudnet-upload/bucharest/80c2fab5-2dc5-4692-bafe-a7274071770e/00100_A202010221205_CHM170137.nc"
+    "s3key": "bucharest/80c2fab5-2dc5-4692-bafe-a7274071770e/00100_A202010221205_CHM170137.nc"
   },
   {
     "uuid": "ada7f659-68e8-45aa-b88d-e5cd54520052",
@@ -113,6 +113,6 @@
       "humanReadableName": "Lufft CHM15k ceilometer"
     },
     "instrumentPid": "http://pid.test/3.abcabcabcchm15k",
-    "s3path": "/cloudnet-upload/bucharest/ada7f659-68e8-45aa-b88d-e5cd54520052/00100_A202010212350_CHM170137.nc"
+    "s3key": "bucharest/ada7f659-68e8-45aa-b88d-e5cd54520052/00100_A202010212350_CHM170137.nc"
   }
 ]

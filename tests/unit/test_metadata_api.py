@@ -8,16 +8,25 @@ import pytest
 import requests
 import requests_mock
 from data_processing import metadata_api
+from data_processing.config import Config
 
 adapter = requests_mock.Adapter()
 session = requests.Session()
 session.mount("http://", adapter)
 mock_addr = "http://test/"
-config = {
-    "DATAPORTAL_URL": mock_addr,
-    "FREEZE_AFTER_DAYS": 2,
-    "FREEZE_MODEL_AFTER_DAYS": 3,
-}
+config = Config(
+    {
+        "DATAPORTAL_URL": mock_addr,
+        "DATAPORTAL_PUBLIC_URL": "http://dataportal.test",
+        "STORAGE_SERVICE_URL": "foo",
+        "STORAGE_SERVICE_USER": "foo",
+        "STORAGE_SERVICE_PASSWORD": "foo",
+        "PID_SERVICE_URL": "foo",
+        "PID_SERVICE_TEST_ENV": "foo",
+        "FREEZE_AFTER_DAYS": "2",
+        "FREEZE_MODEL_AFTER_DAYS": "3",
+    }
+)
 
 files_response = """
 [
