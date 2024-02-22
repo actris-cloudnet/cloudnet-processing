@@ -12,6 +12,8 @@ from data_processing import utils
 from data_processing.metadata_api import MetadataApi
 from data_processing.storage_api import StorageApi
 
+MIN_MODEL_FILESIZE = 20200
+
 
 class ModelParams(NamedTuple):
     site: str
@@ -33,21 +35,18 @@ class Processor:
         return self.storage_api.download_raw_data(upload_metadata, directory)
 
     def get_unprocessed_model_uploads(self) -> list:
-        minimum_size = 20200
-        # payload = {"status": "uploaded"}
-        payload = {"status": "processed"}
+        payload = {"status": "uploaded"}
         metadata = self.md_api.get("api/raw-model-files", payload)
-        return [row for row in metadata if int(row["size"]) > minimum_size]
+        return [row for row in metadata if int(row["size"]) > MIN_MODEL_FILESIZE]
 
     def get_model_upload(self, params: ModelParams) -> dict | None:
-        minimum_size = 20200
         payload = {
             "site": params.site,
             "date": params.date.isoformat(),
             "model": params.model,
         }
         rows = self.md_api.get("api/raw-model-files", payload)
-        rows = [row for row in rows if int(row["size"]) > minimum_size]
+        rows = [row for row in rows if int(row["size"]) > MIN_MODEL_FILESIZE]
         if len(rows) == 0:
             return None
         if len(rows) > 1:
