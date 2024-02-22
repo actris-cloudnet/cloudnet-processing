@@ -13,6 +13,7 @@ from cloudnetpy.instruments import (
     galileo2nc,
     hatpro2l1c,
     hatpro2nc,
+    instruments,
     mira2nc,
     mrr2nc,
     parsivel2nc,
@@ -124,8 +125,8 @@ class ProcessDopplerLidarWind(ProcessInstrument):
         wind = doppy.product.Wind.from_halo_data(data=full_paths)
         _doppy_wind_to_nc(wind, self.temp_file.name)
         data = self._get_payload_for_nc_file_augmenter(self.temp_file.name)
-        self.uuid.product = nc_header_augmenter.harmonize_halo_doppler_lidar_wind_file(
-            data
+        self.uuid.product = nc_header_augmenter.harmonize_doppler_lidar_wind_file(
+            data, instruments.HALO
         )
 
     def process_wls100s(self):
@@ -140,8 +141,8 @@ class ProcessDopplerLidarWind(ProcessInstrument):
         wind = doppy.product.Wind.from_windcube_data(data=full_paths)
         _doppy_wind_to_nc(wind, self.temp_file.name)
         data = self._get_payload_for_nc_file_augmenter(self.temp_file.name)
-        self.uuid.product = nc_header_augmenter.harmonize_halo_doppler_lidar_wind_file(
-            data
+        self.uuid.product = nc_header_augmenter.harmonize_doppler_lidar_wind_file(
+            data, instruments.WINDCUBE
         )
 
     def process_wls400s(self):

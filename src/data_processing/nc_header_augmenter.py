@@ -151,7 +151,9 @@ def harmonize_halo_calibrated_file(data: dict) -> str:
     return uuid
 
 
-def harmonize_halo_doppler_lidar_wind_file(data: dict) -> str:
+def harmonize_doppler_lidar_wind_file(
+    data: dict, instrument: instruments.Instrument
+) -> str:
     """Harmonizes Doppler lidar wind netCDF file."""
     temp_file = NamedTemporaryFile()
     with (
@@ -164,7 +166,7 @@ def harmonize_halo_doppler_lidar_wind_file(data: dict) -> str:
         wind.add_geolocation()
         wind.height_to_asl_height()
         wind.add_date()
-        wind.add_global_attributes("doppler-lidar-wind", instruments.HALO)
+        wind.add_global_attributes("doppler-lidar-wind", instrument)
         uuid = wind.add_uuid()
         wind.add_history("doppler-lidar-wind")
     shutil.copy(temp_file.name, data["full_path"])
