@@ -123,6 +123,9 @@ def validate_products(products: list) -> list:
         if prod == "voodoo":
             product_types = ["categorize-voodoo", "classification-voodoo"]
             accepted_products.extend(product_types)
+        if prod == "mwrpy":
+            product_types = ["mwr-l1c", "mwr-single", "mwr-multi"]
+            accepted_products.extend(product_types)
         if prod == "standard":
             product_types = utils.get_product_types_excluding_level3(
                 ignore_experimental=True
