@@ -82,9 +82,10 @@ class Worker:
                 err,
                 source="model",
                 log=self.logger.content,
-                site=task.get("measurementDate"),
-                date=task.get("date"),
+                site=task.get("siteId"),
+                date=task.get("measurementDate"),
                 model=task.get("modelId"),
+                product=task.get("productId"),
             )
             action = "fail"
         res = self.session.put(
