@@ -11,12 +11,8 @@ from data_processing import utils
 from data_processing.config import Config
 
 
-class StorageApiException(Exception):
-    pass
-
-
 class StorageApi:
-    """Class for uploading / downloading files from the Cloudnet S3 data archive in Sodankylä."""
+    """Class for uploading and downloading files from the Cloudnet S3 data archive."""
 
     def __init__(self, config: Config, session: requests.Session):
         self.session = session
