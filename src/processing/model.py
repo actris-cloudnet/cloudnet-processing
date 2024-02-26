@@ -7,7 +7,7 @@ from tempfile import TemporaryDirectory
 from data_processing import nc_header_augmenter
 from data_processing.metadata_api import MetadataApi
 from data_processing.storage_api import StorageApi
-from data_processing.utils import make_session, read_main_conf
+from data_processing.utils import MiscError, make_session, read_main_conf
 from processing.processor import ModelParams, Processor
 
 
@@ -45,16 +45,19 @@ def process_model(processor: Processor, params: ModelParams, directory: Path):
         product_uuid = generate_uuid()
         filename = generate_filename(params)
 
-    harmonize_model(params, full_paths[0], product_uuid)
-    processor.upload_file(params, full_paths[0], filename)
-    if is_hidden:
-        logging.info("Skipping plotting for hidden site")
-    else:
-        processor.create_and_upload_images(
-            full_paths[0], "model", product_uuid, filename, directory
-        )
-    processor.upload_quality_report(full_paths[0], product_uuid)
-    processor.update_statuses(raw_uuids, "processed")
+    try:
+        harmonize_model(params, full_paths[0], product_uuid)
+        processor.upload_file(params, full_paths[0], filename)
+        if is_hidden:
+            logging.info("Skipping plotting for hidden site")
+        else:
+            processor.create_and_upload_images(
+                full_paths[0], "model", product_uuid, filename, directory
+            )
+        processor.upload_quality_report(full_paths[0], product_uuid)
+        processor.update_statuses(raw_uuids, "processed")
+    except MiscError as err:
+        logging.warning(err)
 
 
 def generate_uuid() -> uuid.UUID:
