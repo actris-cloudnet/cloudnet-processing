@@ -6,6 +6,7 @@
     "volatile": false,
     "legacy": false,
     "quality": "nrt",
+    "dvasId": null,
     "measurementDate": "2020-10-22",
     "checksum": "48e006f769a9352a42bf41beac449eae62aea545f4d3ba46bffd35759d8982ca",
     "size": "120931",

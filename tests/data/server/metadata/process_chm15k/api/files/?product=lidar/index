@@ -6,6 +6,7 @@
     "volatile": false,
     "measurementDate": "2020-10-22",
     "instrumentPid": null,
+    "dvasId": null,
     "checksum": "1d0de1a6fc5754caed03da5955fb43ba574da52c3dd5f28c3ebf556ae6bdcf4a",
     "size": "12799785",
     "format": "HDF5 (NetCDF4)",

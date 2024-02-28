@@ -5,6 +5,7 @@
     "pid": "https://hdl.handle.net/21.12132/1.d740d61b09d546d1",
     "volatile": false,
     "measurementDate": "2020-10-22",
+    "dvasId": null,
     "software": [
       {
         "title": "CloudnetPy 1.3.2",
