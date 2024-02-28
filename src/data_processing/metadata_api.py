@@ -120,11 +120,12 @@ class MetadataApi:
 
         return all_files
 
-    def update_dvas_info(
-        self, uuid, updated_timestamp: str | None = None, dvas_id: int | None = None
-    ):
-        """Update dvasUpdatedAt timestamp."""
-        payload = {"uuid": uuid, "dvasUpdatedAt": updated_timestamp, "dvasId": dvas_id}
+    def update_dvas_info(self, uuid: uuid.UUID, timestamp: str, dvas_id: int):
+        payload = {"uuid": uuid, "dvasUpdatedAt": timestamp, "dvasId": dvas_id}
+        self.post("files", payload)
+
+    def clean_dvas_info(self, uuid: uuid.UUID):
+        payload = {"uuid": uuid, "dvasUpdatedAt": None, "dvasId": None}
         self.post("files", payload)
 
     def _get_freeze_payload(self, freeze_after_days, args: Namespace) -> dict:

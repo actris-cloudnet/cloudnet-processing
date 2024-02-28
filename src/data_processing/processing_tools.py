@@ -13,6 +13,7 @@ from cloudnetpy_qc.quality import ErrorLevel
 
 from data_processing import utils
 from data_processing.config import Config
+from data_processing.dvas import Dvas
 from data_processing.metadata_api import MetadataApi
 from data_processing.pid_utils import PidUtils
 from data_processing.storage_api import StorageApi
@@ -114,6 +115,20 @@ class ProcessBase:
             "categorize-voodoo",
         ):
             self.update_statuses(uuid.raw)
+
+        if self._create_new_version is True:
+            self._update_dvas_if_needed(product)
+
+    def _update_dvas_if_needed(self, product: str):
+        payload = {
+            "site": self.site,
+            "product": product,
+            "date": self.date_str,
+            "allVersions": "true",
+        }
+        metadata = self.md_api.get("api/files", payload)
+        if any(row["dvasId"] is not None for row in metadata):
+            Dvas().upload(self.md_api, metadata[0])
 
     def create_and_upload_images(
         self,

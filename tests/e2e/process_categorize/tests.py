@@ -46,9 +46,15 @@ class TestCategorizeProcessing:
         n_puts = 3
         n_checks_for_updated_at = 1
         n_check_images = 1
+        n_check_dvas = 1
         assert (
             len(data)
-            == n_gets + self.n_img + n_puts + n_checks_for_updated_at + n_check_images
+            == n_gets
+            + self.n_img
+            + n_puts
+            + n_checks_for_updated_at
+            + n_check_images
+            + n_check_dvas
         )
 
         # Check product status
