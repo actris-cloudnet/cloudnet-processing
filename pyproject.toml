@@ -54,6 +54,11 @@ check_untyped_defs = true
 module = ["cftime.*", "netCDF4.*"]
 ignore_missing_imports = true
 
+# Skip modules that seem to slow up mypy.
+[[tool.mypy.overrides]]
+module = ["torch.*", "wandb.*"]
+follow_imports = "skip"
+
 [tool.release-version]
 filename = "src/data_processing/version.py"
 pattern = ["MAJOR = (?P<major>\\d+)", "MINOR = (?P<minor>\\d+)", "PATCH = (?P<patch>\\d+)"]
