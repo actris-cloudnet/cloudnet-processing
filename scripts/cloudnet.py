@@ -67,9 +67,8 @@ def _parse_args(args):
         "-p",
         "--products",
         help="Products to be processed, e.g., radar,lidar,mwr,categorize,iwc.\
-                        Default is all regular products.",
-        type=lambda s: s.split(","),
-        default=utils.get_product_types_excluding_level3(),
+                        Default is all l3 products with 'me' command and \
+                        all products excluding l3 with other commands.",
     )
     group.add_argument(
         "--start",
@@ -103,6 +102,14 @@ def _parse_args(args):
     )
 
     args_parsed = parser.parse_args(args)
+    if args_parsed.products is None:
+        args_parsed.products = (
+            utils.get_product_types(level="3")
+            if args_parsed.cmd == "me"
+            else utils.get_product_types_excluding_level3()
+        )
+    else:
+        args_parsed.products = args_parsed.products.split(",")
     valid_products = validate_products(args_parsed.products)
     if len(valid_products) == 0:
         raise ValueError("No valid products were given.")
@@ -130,6 +137,9 @@ def validate_products(products: list) -> list:
             product_types = utils.get_product_types_excluding_level3(
                 ignore_experimental=True
             )
+            accepted_products.extend(product_types)
+        if prod == "doppy":
+            product_types = ["doppler-lidar", "doppler-lidar-wind"]
             accepted_products.extend(product_types)
     return list(OrderedDict.fromkeys(accepted_products))  # unique values
 
