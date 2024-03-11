@@ -83,7 +83,8 @@ def _get_datetime(nc: netCDF4.Dataset, ind: int) -> datetime.datetime:
     y, m, d = int(nc.year), int(nc.month), int(nc.day)
     tz = datetime.timezone.utc
     base = datetime.datetime(y, m, d, tzinfo=tz)
-    is_model = getattr(nc, "cloudnet_file_type", None) == "model"
+    model_types = get_product_types(level="3") + ["model"]
+    is_model = getattr(nc, "cloudnet_file_type", None) in model_types
     if is_model and ind == -1:
         ind = _get_last_proper_model_data_ind(nc)
     try:
@@ -97,9 +98,13 @@ def _get_datetime(nc: netCDF4.Dataset, ind: int) -> datetime.datetime:
 
 
 def _get_last_proper_model_data_ind(nc: netCDF4.Dataset) -> int:
-    temperature = nc.variables["temperature"][:]
-    unmasked_rows = ~np.all(ma.getmaskarray(temperature), axis=1)
-    return min(np.where(unmasked_rows)[0][-1] + 1, temperature.shape[0] - 1)
+    keys = ["temperature", "ecmwf_lwc", "ecmwf_cf", "ecmwf_iwc"]
+    for key in keys:
+        if key in nc.variables:
+            data = nc.variables[key][:]
+            unmasked_rows = ~np.all(ma.getmaskarray(data), axis=1)
+            return min(np.where(unmasked_rows)[0][-1] + 1, data.shape[0] - 1)
+    raise ValueError("No suitable variable in file")
 
 
 def get_data_processing_version() -> str:
