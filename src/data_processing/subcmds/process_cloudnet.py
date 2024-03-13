@@ -3,6 +3,7 @@
 import datetime
 import importlib
 import logging
+import random
 import warnings
 
 import doppy
@@ -408,7 +409,10 @@ def screen_upload_metadata(metadata: list) -> list:
 def decide_instrument_to_process(metadata: list) -> tuple[str, str]:
     uploaded_data = [row for row in metadata if row["status"] == "uploaded"]
     if uploaded_data:
-        return uploaded_data[0]["instrument"]["id"], uploaded_data[0]["instrumentPid"]
+        unique_instruments = list(
+            {(row["instrumentId"], row["instrumentPid"]) for row in uploaded_data}
+        )
+        return random.choice(unique_instruments)
     else:
         unique_pids = list(set(row["instrumentPid"] for row in metadata))
         if len(unique_pids) == 1:
