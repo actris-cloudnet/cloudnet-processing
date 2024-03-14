@@ -50,6 +50,7 @@
     "size": "6049999",
     "createdAt": "2020-12-06T04:41:10.322Z",
     "updatedAt": "2020-12-06T04:41:10.414Z",
+    "instrumentPid": "http://pid.test/3.abcabcabcrpg",
     "instrument": {
       "id": "rpg-fmcw-94",
       "type": "radar",

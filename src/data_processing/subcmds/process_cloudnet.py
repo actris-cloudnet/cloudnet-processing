@@ -410,7 +410,7 @@ def decide_instrument_to_process(metadata: list) -> tuple[str, str]:
     uploaded_data = [row for row in metadata if row["status"] == "uploaded"]
     if uploaded_data:
         unique_instruments = list(
-            {(row["instrumentId"], row["instrumentPid"]) for row in uploaded_data}
+            {(row["instrument"]["id"], row["instrumentPid"]) for row in uploaded_data}
         )
         return random.choice(unique_instruments)
     else:
