@@ -27,7 +27,6 @@ from cloudnetpy.utils import is_timestamp
 from requests.exceptions import HTTPError
 
 from data_processing import concat_wrapper, nc_header_augmenter, utils
-from data_processing.netcdf_utils import Dataset
 from data_processing.processing_tools import Uuid
 from data_processing.utils import MiscError, RawDataMissingError, fetch_calibration
 
@@ -496,7 +495,7 @@ def _fix_cl51_timestamps(filename: str, hours: int) -> None:
 
 def _doppy_stare_to_nc(stare: doppy.product.Stare, filename: str) -> None:
     return (
-        Dataset(filename)
+        doppy.netcdf.Dataset(filename)
         .add_dimension("time")
         .add_dimension("range")
         .add_time(
@@ -559,7 +558,7 @@ def _doppy_stare_to_nc(stare: doppy.product.Stare, filename: str) -> None:
 
 def _doppy_wind_to_nc(wind: doppy.product.Wind, filename: str) -> None:
     return (
-        Dataset(filename)
+        doppy.netcdf.Dataset(filename)
         .add_dimension("time")
         .add_dimension("height")
         .add_time(
