@@ -147,6 +147,9 @@ class ProcessDopplerLidarWind(ProcessInstrument):
     def process_wls400s(self):
         raise NotImplementedError()
 
+    def process_wls70(self):
+        raise NotImplementedError()
+
 
 class ProcessDopplerLidar(ProcessInstrument):
     def process_halo_doppler_lidar(self):
@@ -179,6 +182,9 @@ class ProcessDopplerLidar(ProcessInstrument):
         raise NotImplementedError()
 
     def process_wls400s(self):
+        raise NotImplementedError()
+
+    def process_wls70(self):
         raise NotImplementedError()
 
 
