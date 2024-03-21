@@ -122,17 +122,18 @@ Additional arguments:
 
 ### `fetch`
 
-Download raw data from S3 and add to locally running data portal.
+Download products or raw data from production and upload them to locally running data portal.
 
 Additional arguments:
 
-| Short | Long            | Default | Description                                        |
-| :---- | :-------------- | :------ | :------------------------------------------------- |
-| `-i`  | `--instruments` |         | Download only data from some specific instruments. |
-| `-e`  | `--extension`   |         | File extension to be downloaded, e.g, `.LV1`.      |
-|       | `--save`        |         | Store downloaded files in `download` directory.    |
-|       | `--include`     |         | Include only files that match the given pattern.   |
-|       | `--exclude`     | `*.LV0` | Exclude files that match the given pattern.        |
+| Short | Long            | Default | Description                                                                                       |
+| :---- | :-------------- | :------ | :------------------------------------------------------------------------------------------------ |
+| `-i`  | `--instruments` |         | Download raw files from the given instruments, or all available instruments if none is specified. |
+| `-m`  | `--models`      |         | Download raw model files from the given models, or all available models if none is specified.     |
+| `-e`  | `--extension`   |         | File extension to be downloaded, e.g, `.LV1`.                                                     |
+|       | `--save`        |         | Store downloaded files in `download` directory.                                                   |
+|       | `--include`     |         | Include only files that match the given pattern.                                                  |
+|       | `--exclude`     | `*.LV0` | Exclude files that match the given pattern.                                                       |
 
 ### `freeze`
 

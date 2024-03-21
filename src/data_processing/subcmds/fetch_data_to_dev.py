@@ -1,9 +1,12 @@
 import argparse
 import concurrent.futures
 import datetime
+import hashlib
 import logging
 import os
 import sys
+from base64 import b64encode
+from collections.abc import Callable
 from pathlib import Path
 
 import requests
@@ -11,6 +14,12 @@ import requests
 from data_processing import utils
 
 DATAPORTAL_URL = os.environ["DATAPORTAL_URL"].rstrip("/")
+DATAPORTAL_AUTH = ("admin", "admin")
+STORAGE_SERVICE_URL = os.environ["STORAGE_SERVICE_URL"].rstrip("/")
+STORAGE_SERVICE_AUTH = (
+    os.environ["STORAGE_SERVICE_USER"],
+    os.environ["STORAGE_SERVICE_PASSWORD"],
+)
 DOWNLOAD_DIR = Path("download")
 
 
@@ -33,15 +42,24 @@ def main(args: argparse.Namespace):
     params["start"] = datetime.date.fromisoformat(params["start"])
     params["stop"] = datetime.date.fromisoformat(params["stop"])
 
+    if not args.products_specified and args.instruments is None and args.models is None:
+        print("Please specify --products, --instruments or --models", file=sys.stderr)
+        sys.exit(1)
+
     DOWNLOAD_DIR.mkdir(exist_ok=True)
 
-    instruments = (
-        [i for i in args.instruments if i != "model"]
-        if args.instruments is not None
-        else None
-    )
-    if instruments is None or len(instruments) > 0:
-        upload_metadata = _get_metadata("raw-files", **params, instruments=instruments)
+    if args.products_specified:
+        file_metadata = _get_file_metadata(**params, products=args.products)
+        if file_metadata:
+            print("\nProduct files:\n")
+        _process_metadata(_submit_file, file_metadata, args)
+
+    if args.instruments:
+        upload_metadata = _get_upload_metadata(
+            "raw-files",
+            **params,
+            instruments=args.instruments if args.instruments != ["all"] else None,
+        )
         if args.include is not None:
             upload_metadata = utils.include_records_with_pattern_in_filename(
                 upload_metadata, args.include
@@ -53,22 +71,27 @@ def main(args: argparse.Namespace):
 
         if upload_metadata:
             print("\nMeasurement files:\n")
-            _process_metadata(upload_metadata, args)
+            _process_metadata(_submit_upload, upload_metadata, args)
             _fetch_calibration(upload_metadata)
 
-    if args.instruments is None or "model" in args.instruments:
-        upload_metadata = _get_metadata("raw-model-files", **params)
+    if args.models:
+        upload_metadata = _get_upload_metadata(
+            "raw-model-files",
+            **params,
+            models=args.models if args.models != ["all"] else None,
+        )
         if upload_metadata:
             print("\nModel files:\n")
-            _process_metadata(upload_metadata, args)
+            _process_metadata(_submit_upload, upload_metadata, args)
 
 
-def _get_metadata(
+def _get_upload_metadata(
     end_point: str,
     site: str,
     start: datetime.date | None,
     stop: datetime.date | None,
     instruments: list[str] | None = None,
+    models: list[str] | None = None,
 ) -> list:
     url = f"https://cloudnet.fmi.fi/api/{end_point}"
     payload = {
@@ -76,6 +99,7 @@ def _get_metadata(
         "dateFrom": start.isoformat() if start else None,
         "dateTo": stop.isoformat() if stop else None,
         "instrument": instruments,
+        "model": models,
         "status": ["uploaded", "processed"],
     }
     res = requests.get(url=url, params=payload)
@@ -84,10 +108,40 @@ def _get_metadata(
     return metadata
 
 
-def _process_metadata(upload_metadata: list, args: argparse.Namespace):
+def _get_file_metadata(
+    site: str,
+    start: datetime.date | None,
+    stop: datetime.date | None,
+    products: list[str] | None = None,
+) -> list:
+    url = "https://cloudnet.fmi.fi/api/files"
+    payload = {
+        "site": site,
+        "dateFrom": start.isoformat() if start else None,
+        "dateTo": stop.isoformat() if stop else None,
+        "product": products,
+    }
+    res = requests.get(url=url, params=payload)
+    res.raise_for_status()
+    metadata = res.json()
+    return metadata
+
+
+def _process_metadata(
+    submitter: Callable[[Path, dict], str],
+    upload_metadata: list,
+    args: argparse.Namespace,
+):
+    def process_row(row: dict, args: argparse.Namespace):
+        filename = _download_file(row)
+        response = submitter(filename, row)
+        if not args.save:
+            filename.unlink()
+        return response
+
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
         future_to_filename = {
-            executor.submit(_process_row, row, args): row["filename"]
+            executor.submit(process_row, row, args): row["filename"]
             for row in upload_metadata
         }
         completed = 0
@@ -102,14 +156,6 @@ def _process_metadata(upload_metadata: list, args: argparse.Namespace):
                 print(f"{info} {exc}")
 
 
-def _process_row(row: dict, args: argparse.Namespace):
-    filename = _download_file(row)
-    response = _submit_to_local_ss(filename, row)
-    if not args.save:
-        filename.unlink()
-    return response
-
-
 def _download_file(row: dict) -> Path:
     res = requests.get(row["downloadUrl"])
     res.raise_for_status()
@@ -117,6 +163,8 @@ def _download_file(row: dict) -> Path:
         subdir = row["instrument"]["id"] + "-" + row["instrumentPid"].split(".")[-1][:8]
     elif "model" in row:
         subdir = "model-" + row["model"]["id"]
+    elif "product" in row:
+        subdir = "product-" + row["product"]["id"]
     else:
         raise ValueError("Row does not contain instrument or model.")
     outdir = DOWNLOAD_DIR / subdir
@@ -126,7 +174,7 @@ def _download_file(row: dict) -> Path:
     return filename
 
 
-def _submit_to_local_ss(filename: Path, row: dict):
+def _submit_upload(filename: Path, row: dict) -> str:
     metadata = {
         "filename": row["filename"],
         "checksum": row["checksum"],
@@ -144,17 +192,76 @@ def _submit_to_local_ss(filename: Path, row: dict):
         end_point = "model-upload"
     else:
         raise ValueError("Row does not contain instrument or model.")
-    auth = ("admin", "admin")
     url = f"{DATAPORTAL_URL}/{end_point}/"
-    res = requests.post(f"{url}metadata", json=metadata, auth=auth)
+    res = requests.post(f"{url}metadata", json=metadata, auth=DATAPORTAL_AUTH)
     if res.status_code == 200:
         with filename.open("rb") as f:
-            res = requests.put(f'{url}data/{metadata["checksum"]}', data=f, auth=auth)
+            res = requests.put(
+                f'{url}data/{metadata["checksum"]}', data=f, auth=DATAPORTAL_AUTH
+            )
             res.raise_for_status()
     elif res.status_code != 409:
         error = res.content.decode("utf-8", errors="replace")
         raise Exception(f"{res.status_code} {res.reason}: {error}")
     return res.text
+
+
+def _submit_file(filename: Path, row: dict) -> str:
+    bucket = "cloudnet-product-volatile" if row["volatile"] else "cloudnet-product"
+    ss_url = f"{STORAGE_SERVICE_URL}/{bucket}/{row['filename']}"
+    ss_body = filename.read_bytes()
+    ss_headers = {"Content-MD5": utils.md5sum(filename, is_base64=True)}
+    ss_res = requests.put(
+        ss_url, ss_body, auth=STORAGE_SERVICE_AUTH, headers=ss_headers
+    )
+    ss_res.raise_for_status()
+    ss_data = ss_res.json()
+    assert int(ss_data["size"]) == int(row["size"]), "Invalid size"
+
+    dp_url = f"{DATAPORTAL_URL}/files/{row['filename']}"
+    dp_body = {**row, "version": ss_data["version"] if "version" in ss_data else ""}
+    dp_res = requests.put(dp_url, json=dp_body)
+    dp_res.raise_for_status()
+
+    viz_url = f"https://cloudnet.fmi.fi/api/visualizations/{row['uuid']}"
+    viz_res = requests.get(viz_url)
+    viz_data = viz_res.json()
+    for viz in viz_data["visualizations"]:
+        img_url = f"https://cloudnet.fmi.fi/api/download/image/{viz['s3key']}"
+        img_res = requests.get(img_url)
+        img_data = img_res.content
+
+        ss_url = f"{STORAGE_SERVICE_URL}/cloudnet-img/{viz['s3key']}"
+        ss_headers = {"Content-MD5": b64encode(hashlib.md5(img_data).digest()).decode()}
+        ss_res = requests.put(
+            ss_url, img_data, auth=STORAGE_SERVICE_AUTH, headers=ss_headers
+        )
+        ss_res.raise_for_status()
+
+        img_payload = {
+            "sourceFileId": row["uuid"],
+            "variableId": viz["productVariable"]["id"],
+            "dimensions": viz["dimensions"],
+        }
+        img_url = f"{DATAPORTAL_URL}/visualizations/{viz['s3key']}"
+        img_res = requests.put(img_url, json=img_payload)
+        img_res.raise_for_status()
+
+    qc_url = f"https://cloudnet.fmi.fi/api/quality/{row['uuid']}"
+    qc_res = requests.get(qc_url)
+    qc_res.raise_for_status()
+    qc_data = qc_res.json()
+
+    qc_url = f"{DATAPORTAL_URL}/quality/{row['uuid']}"
+    qc_payload = {
+        "timestamp": qc_data["timestamp"],
+        "qcVersion": qc_data["qcVersion"],
+        "tests": qc_data["testReports"],
+    }
+    qc_res = requests.put(qc_url, json=qc_payload)
+    qc_res.raise_for_status()
+
+    return "OK"
 
 
 def _fetch_calibration(upload_metadata: list):
@@ -190,6 +297,16 @@ def add_arguments(subparser):
         "--instruments",
         type=lambda s: s.split(","),
         help="Instrument types, e.g. cl51,hatpro",
+        nargs="?",
+        const="all",
+    )
+    fetch_parser.add_argument(
+        "-m",
+        "--models",
+        type=lambda s: s.split(","),
+        help="Model types, e.g. ecmwf",
+        nargs="?",
+        const="all",
     )
     fetch_parser.add_argument(
         "--include", help="Instrument file regex include pattern", type=str

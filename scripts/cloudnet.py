@@ -102,6 +102,7 @@ def _parse_args(args):
     )
 
     args_parsed = parser.parse_args(args)
+    args_parsed.products_specified = args_parsed.products is not None
     if args_parsed.products is None:
         args_parsed.products = (
             utils.get_product_types(level="3")
