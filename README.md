@@ -6,16 +6,18 @@ Various scripts used in Cloudnet data transfer and processing.
 
 ## Installation
 
-The data processing tools are distributed as a docker container as a part of the Cloudnet development toolkit.
+The data processing tools are distributed as a Docker container as a part of the Cloudnet development toolkit.
 Refer to [README of the dev-toolkit repository](https://github.com/actris-cloudnet/dev-toolkit/) on how to set up the CLU development environment.
 
 ## Scripts
 
-Once the CLU development environment is running, scripts can be run inside the cloudnet-processing container with
-the `./run` wrapper.
+Once the CLU development environment is running, start the `cloudnet-processing` container by running:
+
+    ./run-bash
+
 The scripts are located in `scripts/` folder and should be run from the root:
 
-    ./run scripts/<script_name.py> --arg1 foo --arg2 bar ...
+    ./scripts/<script_name.py> --arg1 foo --arg2 bar ...
 
 The following scripts are provided:
 
