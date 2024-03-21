@@ -175,6 +175,17 @@ def test_are_identical_nc_files_real_data():
         (np.array([1.0]), {}, {}, np.array([1.1]), {}, {}, False),
         (np.array([1.0]), {}, {}, np.array([1.0000001]), {}, {}, True),
         (np.array([1]), {}, {}, np.array([1, 2]), {}, {}, False),
+        (np.array([1, 2]), {}, {}, np.array([1, 2]), {"fill_value": 2}, {}, False),
+        (np.array([1, 2]), {"fill_value": 2}, {}, np.array([1, 2]), {}, {}, False),
+        (
+            np.array([1, 2]),
+            {"fill_value": 2},
+            {},
+            np.array([1, 3]),
+            {"fill_value": 3},
+            {},
+            True,
+        ),
         (
             np.array([1, 99]),
             {"fill_value": 99},
