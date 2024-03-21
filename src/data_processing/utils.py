@@ -812,8 +812,8 @@ def _compare_variables(nc1: netCDF4.Dataset, nc2: netCDF4.Dataset, ignore: tuple
 
 def _compare_variable_attributes(nc1: netCDF4.Dataset, nc2: netCDF4.Dataset):
     for name in nc1.variables:
-        attrs1 = set(nc1.variables[name].ncattrs()) - {"_FillValue"}
-        attrs2 = set(nc2.variables[name].ncattrs()) - {"_FillValue"}
+        attrs1 = set(nc1.variables[name].ncattrs())
+        attrs2 = set(nc2.variables[name].ncattrs())
         assert len(attrs1 ^ attrs2) == 0, _log(
             "variable attributes", name, attrs1, attrs2
         )
@@ -826,6 +826,9 @@ def _compare_variable_attributes(nc1: netCDF4.Dataset, nc2: netCDF4.Dataset):
                 type(value1),
                 type(value2),
             )
+            # Allow the value of fill value to change.
+            if attr == "_FillValue":
+                continue
             if isinstance(value1, np.ndarray):
                 assert np.array_equal(
                     value1,
