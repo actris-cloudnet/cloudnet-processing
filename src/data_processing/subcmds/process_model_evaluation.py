@@ -123,45 +123,32 @@ class ProcessModelEvaluation(ProcessBase):
             logging.info("Skipping plotting for hidden site")
             return
         temp_file = NamedTemporaryFile(suffix=".png")
-        visualizations = []
         product_s3key = self.get_l3_product_key(product, model_or_instrument_id)
         fields = utils.get_fields_for_l3_plot(product, model_or_instrument_id)
         l3_product = utils.full_product_to_l3_product(product)
+        visualizations = []
 
-        # Statistic plot
-        generate_L3_day_plots(
-            self.temp_file.name,
-            l3_product,
-            model_or_instrument_id,
-            var_list=fields,
-            image_name=temp_file.name,
-            fig_type="statistic",
-            stats=("area",),
-            title=False,
-        )
-        visualizations.append(
-            self._upload_img(temp_file.name, product_s3key, uuid, product, "area", None)
-        )
-        # Statistic error plot
-        generate_L3_day_plots(
-            self.temp_file.name,
-            l3_product,
-            model_or_instrument_id,
-            var_list=fields,
-            image_name=temp_file.name,
-            fig_type="statistic",
-            stats=("error",),
-            title=False,
-        )
-        visualizations.append(
-            self._upload_img(
-                temp_file.name, product_s3key, uuid, product, "error", None
+        for stat in ("area", "error"):
+            dimensions = generate_L3_day_plots(
+                self.temp_file.name,
+                l3_product,
+                model_or_instrument_id,
+                var_list=fields,
+                image_name=temp_file.name,
+                fig_type="statistic",
+                stats=(stat,),
+                title=False,
             )
-        )
-        # Single plots
-        # Check this potential error here
+            if len(dimensions) > 1:
+                raise ValueError(f"More than one dimension in the plot: {dimensions}")
+            visualizations.append(
+                self._upload_img(
+                    temp_file.name, product_s3key, uuid, product, stat, dimensions[0]
+                )
+            )
+
         for field in fields:
-            generate_L3_day_plots(
+            dimensions = generate_L3_day_plots(
                 self.temp_file.name,
                 l3_product,
                 model_or_instrument_id,
@@ -170,9 +157,11 @@ class ProcessModelEvaluation(ProcessBase):
                 fig_type="single",
                 title=False,
             )
+            if len(dimensions) > 1:
+                raise ValueError(f"More than one dimension in the plot: {dimensions}")
             visualizations.append(
                 self._upload_img(
-                    temp_file.name, product_s3key, uuid, product, field, None
+                    temp_file.name, product_s3key, uuid, product, field, dimensions[0]
                 )
             )
         self.md_api.put_images(visualizations, uuid)
