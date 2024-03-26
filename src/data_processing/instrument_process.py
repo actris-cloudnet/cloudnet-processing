@@ -66,6 +66,9 @@ class ProcessRadar(ProcessInstrument):
         )
         self.uuid.raw = _get_valid_uuids(raw_uuids, full_paths, valid_full_paths)
 
+    def process_rpg_fmcw_35(self):
+        self.process_rpg_fmcw_94()
+
     def process_mira(self):
         full_paths, self.uuid.raw = self.base.download_instrument(self.instrument_pid)
         full_paths = _unzip_gz_files(full_paths)
