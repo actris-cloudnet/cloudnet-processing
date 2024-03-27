@@ -159,7 +159,7 @@ def _process_metadata(
 def _download_file(row: dict) -> Path:
     res = requests.get(row["downloadUrl"])
     res.raise_for_status()
-    if "instrumentPid" in row:
+    if "instrumentPid" in row and row["instrumentPid"] is not None:
         subdir = row["instrument"]["id"] + "-" + row["instrumentPid"].split(".")[-1][:8]
     elif "model" in row:
         subdir = "model-" + row["model"]["id"]
@@ -219,7 +219,11 @@ def _submit_file(filename: Path, row: dict) -> str:
     assert int(ss_data["size"]) == int(row["size"]), "Invalid size"
 
     dp_url = f"{DATAPORTAL_URL}/files/{row['filename']}"
-    dp_body = {**row, "version": ss_data["version"] if "version" in ss_data else ""}
+    dp_body = {
+        **row,
+        "version": ss_data["version"] if "version" in ss_data else "",
+        "sourceFileIds": [],
+    }
     dp_res = requests.put(dp_url, json=dp_body)
     dp_res.raise_for_status()
 
