@@ -53,7 +53,7 @@ class Dvas:
     def delete(self, file: dict):
         """Delete Cloudnet file metadata from DVAS API"""
         logging.warning(
-            f"Deleting Cloudnet file {file['pid']} with dvasId {file['dvasId']} from DVAS"
+            f"Deleting Cloudnet file {file['uuid']} with dvasId {file['dvasId']} from DVAS"
         )
         url = f"{self.DVAS_URL}/delete/{file['dvasId']}"
         self._delete(url)
@@ -82,13 +82,11 @@ class Dvas:
         for version in versions:
             if version["dvasId"] is None:
                 continue
-            logging.debug(
-                f"Deleting version {version['version']} of {file['filename']}"
-            )
+            logging.debug(f"Deleting version {version['uuid']} of {file['filename']}")
             try:
                 self.delete(version)
             except DvasError as err:
-                logging.error(f"Failed to delete {version['filename']} from DVAS")
+                logging.error(f"Failed to delete {version['dvasId']} from DVAS")
                 logging.debug(err)
 
     def _post(self, metadata: dict) -> int:
