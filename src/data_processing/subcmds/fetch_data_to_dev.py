@@ -224,6 +224,8 @@ def _submit_file(filename: Path, row: dict) -> str:
         "version": ss_data["version"] if "version" in ss_data else "",
         "sourceFileIds": [],
     }
+    if row.get("instrument") is not None:
+        dp_body["instrument"] = dp_body["instrument"]["id"]
     dp_res = requests.put(dp_url, json=dp_body)
     dp_res.raise_for_status()
 
