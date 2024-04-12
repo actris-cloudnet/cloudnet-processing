@@ -101,10 +101,7 @@ class ProcessBase:
         if product == "model":
             payload["model"] = model_or_instrument_id
         elif product == "mwr-l1c":
-            payload["instrument"] = "hatpro"  # TODO: don't hardcode
-        elif product == "doppler-lidar-wind":
-            payload["instrument"] = None  # TODO: set real instrument
-            del payload["instrumentPid"]
+            payload["instrument"] = "hatpro"
         elif product in utils.get_product_types(level="1b"):
             payload["instrument"] = model_or_instrument_id
         else:
