@@ -424,8 +424,11 @@ class ProcessDisdrometer(ProcessInstrument):
         full_paths, self.uuid.raw = self.base.download_instrument(self.instrument_pid)
         full_paths.sort()
         utils.concatenate_text_files(full_paths, self.base.daily_file.name)
+        site_meta = self.base.site_meta.copy()
+        if self.base.site == "leipzig-lim":
+            site_meta["truncate_columns"] = 23
         self.uuid.product = thies2nc(
-            self.base.daily_file.name, *self._args, **self._kwargs
+            self.base.daily_file.name, self.temp_file.name, site_meta, **self._kwargs
         )
 
     def _fetch_parsivel_calibration(self) -> dict:
