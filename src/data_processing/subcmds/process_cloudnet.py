@@ -214,6 +214,10 @@ class ProcessCloudnet(ProcessBase):
                 payload["product"] = "radar"
                 payload["instrument"] = "rpg-fmcw-94"
                 metadata = self.md_api.get("api/files", payload)
+            if product == "lidar" and not metadata:
+                # Use Doppler lidar as a fallback lidar
+                payload["product"] = "doppler-lidar"
+                metadata = self.md_api.get("api/files", payload)
             if product == "disdrometer" and not metadata:
                 continue
             if not metadata:
