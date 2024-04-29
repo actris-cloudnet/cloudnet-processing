@@ -193,7 +193,7 @@ class ProcessCloudnet(ProcessBase):
     def _get_level1b_metadata_for_categorize(self, is_voodoo: bool) -> dict:
         instrument_order = {
             "mwr": ("hatpro", "radiometrics"),
-            "radar": ("mira", "rpg-fmcw-94", "copernicus"),
+            "radar": ("mira", "rpg-fmcw-35", "rpg-fmcw-94", "copernicus"),
             "lidar": ("chm15k", "chm15kx", "cl61d", "cl51", "cl31"),
             "disdrometer": ("thies-lnm", "parsivel"),
             "model": "",  # You always get 1 and it's the best one
