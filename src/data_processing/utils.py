@@ -83,28 +83,25 @@ def _get_datetime(nc: netCDF4.Dataset, ind: int) -> datetime.datetime:
     y, m, d = int(nc.year), int(nc.month), int(nc.day)
     tz = datetime.timezone.utc
     base = datetime.datetime(y, m, d, tzinfo=tz)
-    model_types = get_product_types(level="3") + ["model"]
-    is_model = getattr(nc, "cloudnet_file_type", None) in model_types
-    if is_model and ind == -1:
+    file_type = getattr(nc, "cloudnet_file_type", None)
+    if file_type == "model" and ind == -1:
         ind = _get_last_proper_model_data_ind(nc)
     try:
         fraction_hour = float(nc.variables["time"][:][ind])
     except IndexError:
         msg = "Abort PUT to data portal: time vector not an array"
         raise MiscError(msg)
-    delta_seconds = 1 if (is_model and ind != 0) else 0
+    model_types = get_product_types(level="3") + ["model"]
+    is_model_or_l3 = file_type in model_types
+    delta_seconds = 1 if (is_model_or_l3 and ind != 0) else 0
     delta = datetime.timedelta(seconds=delta_seconds)
     return base + datetime.timedelta(hours=fraction_hour) - delta
 
 
 def _get_last_proper_model_data_ind(nc: netCDF4.Dataset) -> int:
-    keys = ["temperature", "ecmwf_lwc", "ecmwf_cf", "ecmwf_iwc"]
-    for key in keys:
-        if key in nc.variables:
-            data = nc.variables[key][:]
-            unmasked_rows = ~np.all(ma.getmaskarray(data), axis=1)
-            return min(np.where(unmasked_rows)[0][-1] + 1, data.shape[0] - 1)
-    raise ValueError("No suitable variable in file")
+    data = nc.variables["temperature"][:]
+    unmasked_rows = ~np.all(ma.getmaskarray(data), axis=1)
+    return min(np.where(unmasked_rows)[0][-1] + 1, data.shape[0] - 1)
 
 
 def get_data_processing_version() -> str:
