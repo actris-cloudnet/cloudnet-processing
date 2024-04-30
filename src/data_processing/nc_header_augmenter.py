@@ -882,20 +882,20 @@ class Ws(Level1Nc):
         self.nc.createDimension("time", len(time_ind))
         for name, var_in in self.nc_raw.variables.items():
             dim = var_in.dimensions
-            dtype = var_in.dtype
+            dtype = var_in.dtype.str[1:]
             if name == "time":
                 dtype = "f8"
             elif len(var_in[:]) == 1:
                 dim = ()
+            data = var_in[time_ind] if "time" in var_in.dimensions else var_in[:]
+            fill_value = getattr(var_in, "_FillValue", None)
+            if fill_value is None and ma.isMaskedArray(data):
+                fill_value = netCDF4.default_fillvals[dtype]
             var = self.nc.createVariable(
-                name,
-                dtype,
-                dim,
-                zlib=True,
-                fill_value=getattr(var_in, "_FillValue", None),
+                name, dtype, dim, zlib=True, fill_value=fill_value
             )
             self._copy_variable_attributes(var_in, var)
-            var[:] = var_in[time_ind] if "time" in var_in.dimensions else var_in[:]
+            var[:] = data
 
     def fix_time(self):
         """Fixes time units."""

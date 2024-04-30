@@ -449,11 +449,11 @@ class ProcessWeatherStation(ProcessInstrument):
         full_path, self.uuid.raw = self.base.download_instrument(
             self.instrument_pid, largest_only=True
         )
-        try:
-            self.uuid.product = ws2nc(full_path, *self._args, **self._kwargs)
-        except IndexError:
+        if self.base.site == "lindenberg":
             data = self._get_payload_for_nc_file_augmenter(full_path)
             self.uuid.product = nc_header_augmenter.harmonize_ws_file(data)
+        else:
+            self.uuid.product = ws2nc(full_path, *self._args, **self._kwargs)
 
 
 class ProcessRainRadar(ProcessInstrument):
