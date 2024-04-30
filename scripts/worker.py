@@ -12,9 +12,11 @@ from threading import Event
 from data_processing import utils
 from data_processing.config import Config
 from data_processing.metadata_api import MetadataApi
+from data_processing.pid_utils import PidUtils
 from data_processing.storage_api import StorageApi
+from processing.instrument import process_instrument
 from processing.model import process_model
-from processing.processor import ModelParams, Processor
+from processing.processor import InstrumentParams, ModelParams, Processor
 from processing.utils import send_slack_alert
 
 
@@ -53,13 +55,14 @@ class Worker:
         self.session = utils.make_session()
         self.md_api = MetadataApi(self.config, self.session)
         self.storage_api = StorageApi(self.config, self.session)
-        self.processor = Processor(self.md_api, self.storage_api)
+        self.pid_utils = PidUtils(self.config, self.session)
+        self.processor = Processor(self.md_api, self.storage_api, self.pid_utils)
         self.logger = MemoryLogger()
 
     def process_task(self) -> bool:
         """Get task from queue and process it. Returns True if a task was
         processed, or False if there's was no task to process."""
-        res = self.session.post(f"{self.dataportal_url}/queue/model/receive")
+        res = self.session.post(f"{self.dataportal_url}/queue/receive")
         if res.status_code == 204:
             return False
         res.raise_for_status()
@@ -67,13 +70,28 @@ class Worker:
         self.logger.clear_memory()
         logging.info(f"Processing task: {task}")
         try:
-            params = ModelParams(
-                site=task["siteId"],
-                date=datetime.date.fromisoformat(task["measurementDate"]),
-                model=task["modelId"],
-            )
+            site = self.processor.get_site(task["siteId"])
+            date = datetime.date.fromisoformat(task["measurementDate"])
+            product_id = task["productId"]
             with TemporaryDirectory() as directory:
-                process_model(self.processor, params, Path(directory))
+                if product_id == "model":
+                    model_params = ModelParams(
+                        site=site,
+                        date=date,
+                        product_id=product_id,
+                        model_id=task["modelId"],
+                    )
+                    process_model(self.processor, model_params, Path(directory))
+                else:
+                    instru_params = InstrumentParams(
+                        site=site,
+                        date=date,
+                        product_id=product_id,
+                        instrument=self.processor.get_instrument(
+                            task["instrumentInfoUuid"]
+                        ),
+                    )
+                    process_instrument(self.processor, instru_params, Path(directory))
             action = "complete"
         except Exception as err:
             logging.exception("Failed to process task")
@@ -88,10 +106,9 @@ class Worker:
                 product=task.get("productId"),
             )
             action = "fail"
-        res = self.session.put(
-            f"{self.dataportal_url}/queue/model/{action}/{task['id']}"
-        )
+        res = self.session.put(f"{self.dataportal_url}/queue/{action}/{task['id']}")
         res.raise_for_status()
+        logging.info("Task proccessed")
         return True
 
 
@@ -101,11 +118,14 @@ def main():
     exit = Event()
 
     def signal_handler(sig, frame):
+        logging.info("Received termination signal")
         exit.set()
 
     signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
 
     try:
+        logging.info("Waiting for a task...")
         while not exit.is_set():
             if not worker.process_task():
                 exit.wait(10)

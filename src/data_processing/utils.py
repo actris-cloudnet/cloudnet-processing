@@ -31,7 +31,7 @@ def isodate2date(date_str: str) -> datetime.date:
 
 
 def create_product_put_payload(
-    full_path: str | Path,
+    full_path: str | os.PathLike,
     storage_service_response: dict,
     product: str | None = None,
     site: str | None = None,
@@ -122,11 +122,15 @@ def get_file_format(nc: netCDF4.Dataset):
     raise RuntimeError("Unknown file type")
 
 
-def add_version_to_global_attributes(full_path: str):
+def add_global_attributes(
+    full_path: str | os.PathLike, instrument_pid: str | None = None
+):
     """Add cloudnet-processing package version to file attributes."""
     version = get_data_processing_version()
     with netCDF4.Dataset(full_path, "r+") as nc:
         nc.cloudnet_processing_version = version
+        if instrument_pid:
+            nc.instrument_pid = instrument_pid
 
 
 def read_site_info(site_name: str) -> dict:
@@ -159,12 +163,14 @@ def get_product_types_excluding_level3(ignore_experimental: bool = False) -> lis
     return l1b + l1c + l2
 
 
-def fetch_calibration(instrument_pid: str, date: str) -> dict | None:
+def fetch_calibration(instrument_pid: str, date: datetime.date | str) -> dict | None:
     """Gets calibration factor."""
     session = make_session()
+    if isinstance(date, str):
+        date = datetime.date.fromisoformat(date)
     data_portal_url = fetch_data_portal_url()
     url = f"{data_portal_url}/api/calibration"
-    payload = {"instrumentPid": instrument_pid, "date": date}
+    payload = {"instrumentPid": instrument_pid, "date": date.isoformat()}
     res = session.get(url, params=payload)
     return res.json() if res.ok else None
 
@@ -473,12 +479,12 @@ def get_var_id(cloudnet_file_type: str, field: str) -> str:
     return f"{cloudnet_file_type}-{field}"
 
 
-def sha256sum(filename: str | Path) -> str:
+def sha256sum(filename: str | os.PathLike) -> str:
     """Calculates hash of file using sha-256."""
     return _calc_hash_sum(filename, "sha256")
 
 
-def md5sum(filename: str | Path, is_base64: bool = False) -> str:
+def md5sum(filename: str | os.PathLike, is_base64: bool = False) -> str:
     """Calculates hash of file using md5."""
     return _calc_hash_sum(filename, "md5", is_base64)
 
@@ -498,7 +504,7 @@ def get_product_bucket(volatile: bool = False) -> str:
     return "cloudnet-product-volatile" if volatile else "cloudnet-product"
 
 
-def is_volatile_file(filename: str | Path) -> bool:
+def is_volatile_file(filename: str | os.PathLike) -> bool:
     """Check if nc-file is volatile."""
     with netCDF4.Dataset(filename) as nc:
         is_missing_pid = not hasattr(nc, "pid")
@@ -556,7 +562,7 @@ def shift_datetime(date_time: str, offset: int) -> str:
     return dt.strftime("%Y-%m-%d %H:%M:%S")
 
 
-def concatenate_text_files(filenames: list, output_filename: str) -> None:
+def concatenate_text_files(filenames: list, output_filename: str | os.PathLike) -> None:
     """Concatenates text files."""
     with open(output_filename, "wb") as target:
         for filename in filenames:
@@ -727,7 +733,9 @@ def make_session() -> requests.Session:
     return http
 
 
-def are_identical_nc_files(filename1: str, filename2: str) -> bool:
+def are_identical_nc_files(
+    filename1: os.PathLike | str, filename2: os.PathLike | str
+) -> bool:
     with netCDF4.Dataset(filename1, "r") as nc1, netCDF4.Dataset(filename2, "r") as nc2:
         try:
             _compare_dimensions(nc1, nc2)

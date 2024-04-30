@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from data_processing.config import Config
@@ -33,35 +33,37 @@ class TestStorageApi:
             "size": "120931",
             "checksum": "48e006f769a9352a42bf41beac449eae62aea545f4d3ba46bffd35759d8982ca",
         }
-        file = open(f"tests/data/products/{filename}", "rb")
-        url = f"{mock_addr}cloudnet-product-volatile/{filename}"
-        adapter.register_uri("GET", url, body=file)
-        storage_api = StorageApi(config, session)
-        full_path = storage_api.download_product(metadata, self.temp_dir.name)
-        assert os.path.isfile(full_path)
-        assert full_path == f"{self.temp_dir.name}/{filename}"
-        file.close()
+        with open(f"tests/data/products/{filename}", "rb") as file:
+            url = f"{mock_addr}cloudnet-product-volatile/{filename}"
+            adapter.register_uri("GET", url, body=file)
+            storage_api = StorageApi(config, session)
+            full_path = storage_api.download_product(metadata, self.temp_dir.name)
+            assert full_path.is_file()
+            assert Path.samefile(full_path, Path(f"{self.temp_dir.name}/{filename}"))
 
     def test_download_raw_files(self):
         filename = "00100_A202010221205_CHM170137.nc"
         s3key = f"ur/a/nus/{filename}"
         metadata = [
             {
-                "uuid": "1234123",
+                "uuid": "09614b3a-484b-43e7-bfa4-c286eb851244",
                 "s3key": s3key,
                 "filename": filename,
                 "size": "53764",
                 "checksum": "2c80eae7adce951ab80b3557004388a6",
             },
         ]
-        file = open(f"tests/data/raw/chm15k/{filename}", "rb")
-        url = f"{mock_addr}cloudnet-upload/{s3key}"
-        adapter.register_uri("GET", url, body=file)
-        storage_api = StorageApi(config, session)
-        full_paths, uuids = storage_api.download_raw_data(metadata, self.temp_dir.name)
-        assert os.path.isfile(full_paths[0])
-        assert full_paths[0] == f"{self.temp_dir.name}/{filename}"
-        file.close()
+        with open(f"tests/data/raw/chm15k/{filename}", "rb") as file:
+            url = f"{mock_addr}cloudnet-upload/{s3key}"
+            adapter.register_uri("GET", url, body=file)
+            storage_api = StorageApi(config, session)
+            full_paths, uuids = storage_api.download_raw_data(
+                metadata, self.temp_dir.name
+            )
+            assert full_paths[0].is_file()
+            assert Path.samefile(
+                full_paths[0], Path(f"{self.temp_dir.name}/{filename}")
+            )
 
     def test_upload_stable_product(self):
         s3key = "20201022_bucharest_ecmwf.nc"

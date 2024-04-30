@@ -54,10 +54,15 @@ def fix_legacy_file(
 
 def harmonize_model_file(data: dict) -> str:
     """Harmonizes model netCDF file."""
-    temp_file = NamedTemporaryFile()
+    if "output_path" not in data:
+        temp_file = NamedTemporaryFile()
     with (
         netCDF4.Dataset(data["full_path"], "r") as nc_raw,
-        netCDF4.Dataset(temp_file.name, "w", format="NETCDF4_CLASSIC") as nc,
+        netCDF4.Dataset(
+            data["output_path"] if "output_path" in data else temp_file.name,
+            "w",
+            format="NETCDF4_CLASSIC",
+        ) as nc,
     ):
         model = ModelNc(nc_raw, nc, data)
         model.copy_file_contents()
@@ -67,16 +72,22 @@ def harmonize_model_file(data: dict) -> str:
         model.check_time_dimension()
         model.add_date()
         model.add_history("model")
-    shutil.copy(temp_file.name, data["full_path"])
+    if "output_path" not in data:
+        shutil.copy(temp_file.name, data["full_path"])
     return uuid
 
 
 def harmonize_hatpro_file(data: dict) -> str:
     """Harmonizes calibrated HATPRO netCDF file."""
-    temp_file = NamedTemporaryFile()
+    if "output_path" not in data:
+        temp_file = NamedTemporaryFile()
     with (
         netCDF4.Dataset(data["full_path"], "r") as nc_raw,
-        netCDF4.Dataset(temp_file.name, "w", format="NETCDF4_CLASSIC") as nc,
+        netCDF4.Dataset(
+            data["output_path"] if "output_path" in data else temp_file.name,
+            "w",
+            format="NETCDF4_CLASSIC",
+        ) as nc,
     ):
         hatpro = HatproNc(nc_raw, nc, data)
         hatpro.copy_file()
@@ -91,16 +102,22 @@ def harmonize_hatpro_file(data: dict) -> str:
         hatpro.add_date()
         hatpro.add_global_attributes("mwr", instruments.HATPRO)
         hatpro.add_history("mwr")
-    shutil.copy(temp_file.name, data["full_path"])
+    if "output_path" not in data:
+        shutil.copy(temp_file.name, data["full_path"])
     return uuid
 
 
 def harmonize_halo_file(data: dict) -> str:
     """Harmonizes HALO Doppler lidar netCDF file."""
-    temp_file = NamedTemporaryFile()
+    if "output_path" not in data:
+        temp_file = NamedTemporaryFile()
     with (
         netCDF4.Dataset(data["full_path"], "r") as nc_raw,
-        netCDF4.Dataset(temp_file.name, "w", format="NETCDF4_CLASSIC") as nc,
+        netCDF4.Dataset(
+            data["output_path"] if "output_path" in data else temp_file.name,
+            "w",
+            format="NETCDF4_CLASSIC",
+        ) as nc,
     ):
         halo = HaloNc(nc_raw, nc, data)
         valid_ind = halo.get_valid_time_indices()
@@ -119,16 +136,22 @@ def harmonize_halo_file(data: dict) -> str:
         for attribute in ("units", "long_name", "standard_name"):
             halo.harmonize_attribute(attribute)
         halo.add_history("lidar")
-    shutil.copy(temp_file.name, data["full_path"])
+    if "output_path" not in data:
+        shutil.copy(temp_file.name, data["full_path"])
     return uuid
 
 
 def harmonize_halo_calibrated_file(data: dict) -> str:
     """Harmonizes calibrated HALO Doppler lidar netCDF file."""
-    temp_file = NamedTemporaryFile()
+    if "output_path" not in data:
+        temp_file = NamedTemporaryFile()
     with (
         netCDF4.Dataset(data["full_path"], "r") as nc_raw,
-        netCDF4.Dataset(temp_file.name, "w", format="NETCDF4_CLASSIC") as nc,
+        netCDF4.Dataset(
+            data["output_path"] if "output_path" in data else temp_file.name,
+            "w",
+            format="NETCDF4_CLASSIC",
+        ) as nc,
     ):
         halo = HaloNcCalibrated(nc_raw, nc, data)
         valid_ind = halo.get_valid_time_indices()
@@ -147,7 +170,8 @@ def harmonize_halo_calibrated_file(data: dict) -> str:
         for attribute in ("units", "long_name", "standard_name"):
             halo.harmonize_attribute(attribute)
         halo.add_history("lidar")
-    shutil.copy(temp_file.name, data["full_path"])
+    if "output_path" not in data:
+        shutil.copy(temp_file.name, data["full_path"])
     return uuid
 
 
@@ -155,10 +179,15 @@ def harmonize_doppler_lidar_wind_file(
     data: dict, instrument: instruments.Instrument
 ) -> str:
     """Harmonizes Doppler lidar wind netCDF file."""
-    temp_file = NamedTemporaryFile()
+    if "output_path" not in data:
+        temp_file = NamedTemporaryFile()
     with (
         netCDF4.Dataset(data["full_path"], "r") as nc_raw,
-        netCDF4.Dataset(temp_file.name, "w", format="NETCDF4_CLASSIC") as nc,
+        netCDF4.Dataset(
+            data["output_path"] if "output_path" in data else temp_file.name,
+            "w",
+            format="NETCDF4_CLASSIC",
+        ) as nc,
     ):
         wind = DopplerLidarWindNc(nc_raw, nc, data)
         valid_ind = wind.get_valid_time_indices()
@@ -169,14 +198,18 @@ def harmonize_doppler_lidar_wind_file(
         wind.add_global_attributes("doppler-lidar-wind", instrument)
         uuid = wind.add_uuid()
         wind.add_history("doppler-lidar-wind")
-    shutil.copy(temp_file.name, data["full_path"])
+    if "output_path" not in data:
+        shutil.copy(temp_file.name, data["full_path"])
     return uuid
 
 
 def harmonize_parsivel_file(data: dict) -> str:
-    temp_file = NamedTemporaryFile()
+    if "output_path" not in data:
+        temp_file = NamedTemporaryFile()
     with netCDF4.Dataset(data["full_path"], "r") as nc_raw, netCDF4.Dataset(
-        temp_file.name, "w", format="NETCDF4_CLASSIC"
+        data["output_path"] if "output_path" in data else temp_file.name,
+        "w",
+        format="NETCDF4_CLASSIC",
     ) as nc:
         parsivel = ParsivelNc(nc_raw, nc, data)
         valid_ind = parsivel.get_valid_time_indices()
@@ -206,16 +239,22 @@ def harmonize_parsivel_file(data: dict) -> str:
         parsivel.fix_units()
         parsivel.fix_standard_names()
         parsivel.fix_comments()
-    shutil.copy(temp_file.name, data["full_path"])
+    if "output_path" not in data:
+        shutil.copy(temp_file.name, data["full_path"])
     return uuid
 
 
 def harmonize_ws_file(data: dict) -> str:
     """Harmonizes weather station netCDF file."""
-    temp_file = NamedTemporaryFile()
+    if "output_path" not in data:
+        temp_file = NamedTemporaryFile()
     with (
         netCDF4.Dataset(data["full_path"], "r") as nc_raw,
-        netCDF4.Dataset(temp_file.name, "w", format="NETCDF4_CLASSIC") as nc,
+        netCDF4.Dataset(
+            data["output_path"] if "output_path" in data else temp_file.name,
+            "w",
+            format="NETCDF4_CLASSIC",
+        ) as nc,
     ):
         ws = Ws(nc_raw, nc, data)
         valid_ind = ws.get_valid_time_indices()
@@ -240,7 +279,8 @@ def harmonize_ws_file(data: dict) -> str:
         ws.fix_flag_attributes()
         ws.fix_ancillary_variable_names()
         ws.mask_bad_data()
-    shutil.copy(temp_file.name, data["full_path"])
+    if "output_path" not in data:
+        shutil.copy(temp_file.name, data["full_path"])
     return uuid
 
 

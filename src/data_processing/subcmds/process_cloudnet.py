@@ -81,7 +81,7 @@ class ProcessCloudnet(ProcessBase):
             if not self.args.force:
                 self.compare_file_content(product)
             self.add_pid()
-            utils.add_version_to_global_attributes(self.temp_file.name)
+            utils.add_global_attributes(self.temp_file.name)
             if filename is None:
                 filename = self._get_product_key(identifier, instrument_pid)
             self.upload_product(product, uuid, identifier, filename)
@@ -164,7 +164,9 @@ class ProcessCloudnet(ProcessBase):
         meta_records = self._get_level1b_metadata_for_categorize(is_voodoo)
         self._check_source_status(cat_variant, meta_records)
         input_files: dict[str, str | list[str]] = {
-            product: self._storage_api.download_product(metadata, self.temp_dir.name)
+            product: str(
+                self._storage_api.download_product(metadata, self.temp_dir.name)
+            )
             for product, metadata in meta_records.items()
         }
         if is_voodoo:
@@ -180,8 +182,8 @@ class ProcessCloudnet(ProcessBase):
             payload = self._get_payload(model="gdas1")
             metadata = self.md_api.get("api/model-files", payload)
             if len(metadata) == 1:
-                input_files["model"] = self._storage_api.download_product(
-                    metadata[0], self.temp_dir.name
+                input_files["model"] = str(
+                    self._storage_api.download_product(metadata[0], self.temp_dir.name)
                 )
                 uuid.product = generate_categorize(
                     input_files, self.temp_file.name, uuid=uuid.volatile

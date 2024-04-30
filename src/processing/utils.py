@@ -69,3 +69,7 @@ def send_slack_alert(
     body = r.json()
     if not body["ok"]:
         logging.fatal(f"Failed to send Slack notification: {body.text}")
+
+
+def utctoday() -> datetime.date:
+    return datetime.datetime.now(datetime.timezone.utc).date()

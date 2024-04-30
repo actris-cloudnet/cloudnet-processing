@@ -43,9 +43,9 @@ def main(args, storage_session: requests.Session | None = None):
             continue
         try:
             if row["legacy"]:
-                result = qc.upload_quality_report(full_path, uuid, product)
+                result = qc.upload_quality_report(str(full_path), uuid, product)
             else:
-                result = qc.upload_quality_report(full_path, uuid)
+                result = qc.upload_quality_report(str(full_path), uuid)
             url = build_file_landing_page_url(uuid)
             url = f"{url}/quality"
             logging.info(

@@ -47,7 +47,7 @@ def main(args, storage_session: requests.Session | None = None):
         url = f"{url}/visualizations"
         logging.info(f"Plotting images for {img.site} {product} {img.date_str}: {url}")
         try:
-            img.temp_file.name = storage_api.download_product(row, temp_dir.name)
+            img.temp_file.name = str(storage_api.download_product(row, temp_dir.name))
         except HTTPError as err:
             utils.send_slack_alert(err, "img", args, img.date_str, product)
             continue
