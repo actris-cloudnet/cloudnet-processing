@@ -399,7 +399,7 @@ class Level1Nc:
         max_time = 1440 if "minutes" in time.units else 24
         valid_ind: list[int] = []
         for ind, t in enumerate(time_stamps):
-            if 0 < t < max_time:
+            if 0 <= t < max_time:
                 if len(valid_ind) > 1 and t <= time_stamps[valid_ind[-1]]:
                     continue
                 valid_ind.append(ind)
