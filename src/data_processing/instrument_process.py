@@ -452,7 +452,7 @@ class ProcessDisdrometer(ProcessInstrument):
 
 class ProcessWeatherStation(ProcessInstrument):
     def process_weather_station(self):
-        supported_sites = ("palaiseau", "lindenberg", "granada")
+        supported_sites = ("palaiseau", "lindenberg", "granada", "juelich")
         if self.base.site not in supported_sites:
             raise NotImplementedError("Weather station not implemented for this site")
         full_path, self.uuid.raw = self.base.download_instrument(
