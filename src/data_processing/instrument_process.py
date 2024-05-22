@@ -452,17 +452,24 @@ class ProcessDisdrometer(ProcessInstrument):
 
 class ProcessWeatherStation(ProcessInstrument):
     def process_weather_station(self):
-        supported_sites = ("palaiseau", "lindenberg", "granada")
+        supported_sites = ("palaiseau", "lindenberg", "granada", "kenttarova")
         if self.base.site not in supported_sites:
             raise NotImplementedError("Weather station not implemented for this site")
-        full_path, self.uuid.raw = self.base.download_instrument(
-            self.instrument_pid, largest_only=True
-        )
-        if self.base.site == "lindenberg":
-            data = self._get_payload_for_nc_file_augmenter(full_path)
-            self.uuid.product = nc_header_augmenter.harmonize_ws_file(data)
+        if self.base.site == "kenttarova":
+            (full_paths, self.uuid.raw) = self.base.download_adjoining_daily_files(
+                self.instrument_pid
+            )
+            full_paths.sort()
+            self.uuid.product = ws2nc(full_paths, *self._args, **self._kwargs)
         else:
-            self.uuid.product = ws2nc(full_path, *self._args, **self._kwargs)
+            full_path, self.uuid.raw = self.base.download_instrument(
+                self.instrument_pid, largest_only=True
+            )
+            if self.base.site == "lindenberg":
+                data = self._get_payload_for_nc_file_augmenter(full_path)
+                self.uuid.product = nc_header_augmenter.harmonize_ws_file(data)
+            else:
+                self.uuid.product = ws2nc(full_path, *self._args, **self._kwargs)
 
 
 class ProcessRainRadar(ProcessInstrument):
