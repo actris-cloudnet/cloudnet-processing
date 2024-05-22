@@ -84,7 +84,7 @@ def get_reader(metadata: dict) -> Callable[[bytes, dict], list[Point]] | None:
         if filename.endswith(".hkd"):
             return _handle_hatpro_hkd
 
-    if instrument_id == "rpg-fmcw-94" and filename.endswith(".lv1"):
+    if instrument_id in ("rpg-fmcw-35", "rpg-fmcw-94") and filename.endswith(".lv1"):
         return _handle_rpg_lv1
 
     if instrument_id == "chm15k" and filename.endswith(".nc"):
