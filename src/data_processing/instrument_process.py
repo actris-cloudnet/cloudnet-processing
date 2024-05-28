@@ -124,7 +124,10 @@ class ProcessDopplerLidarWind(ProcessInstrument):
             exclude_pattern=r"Stare.*",
             exclude_tag_subset={"cross"},
         )
-        wind = doppy.product.Wind.from_halo_data(data=full_paths)
+
+        options = self._calibration_options()
+        wind = doppy.product.Wind.from_halo_data(data=full_paths, options=options)
+
         _doppy_wind_to_nc(wind, self.temp_file.name)
         data = self._get_payload_for_nc_file_augmenter(self.temp_file.name)
         self.uuid.product = nc_header_augmenter.harmonize_doppler_lidar_wind_file(
@@ -140,7 +143,8 @@ class ProcessDopplerLidarWind(ProcessInstrument):
             include_pattern=r".*vad.*\.nc.*",
         )
         full_paths = _unzip_gz_files(full_paths)
-        wind = doppy.product.Wind.from_windcube_data(data=full_paths)
+        options = self._calibration_options()
+        wind = doppy.product.Wind.from_windcube_data(data=full_paths, options=options)
         _doppy_wind_to_nc(wind, self.temp_file.name)
         data = self._get_payload_for_nc_file_augmenter(self.temp_file.name)
         self.uuid.product = nc_header_augmenter.harmonize_doppler_lidar_wind_file(
@@ -155,11 +159,25 @@ class ProcessDopplerLidarWind(ProcessInstrument):
             self.instrument_pid,
             include_pattern=r".*\.rtd",
         )
-        wind = doppy.product.Wind.from_wls70_data(data=full_paths)
+        options = self._calibration_options()
+        wind = doppy.product.Wind.from_wls70_data(data=full_paths, options=options)
         _doppy_wls70_wind_to_nc(wind, self.temp_file.name)
         data = self._get_payload_for_nc_file_augmenter(self.temp_file.name)
         self.uuid.product = nc_header_augmenter.harmonize_doppler_lidar_wind_file(
             data, instruments.WINDCUBE
+        )
+
+    def _calibration_options(self) -> doppy.product.WindOptions | None:
+        calibration = fetch_calibration(self.instrument_pid, self.base.date_str)
+        azimuth_offset = (
+            calibration.get("data", {}).get("azimuth_offset_deg")
+            if calibration
+            else None
+        )
+        return (
+            doppy.product.WindOptions(azimuth_offset_deg=float(azimuth_offset))
+            if azimuth_offset
+            else None
         )
 
 
