@@ -21,12 +21,14 @@ class MetadataApi:
         self._url = config.dataportal_url
         self._auth = config.data_submission_auth
 
-    def get(self, end_point: str, payload: dict | None = None):
+    def get(self, end_point: str, payload: dict | None = None, json: bool = True):
         """Get Cloudnet metadata."""
         url = f"{self._url}/{end_point}"
         res = self.session.get(url, params=payload)
         res.raise_for_status()
-        return res.json()
+        if json:
+            return res.json()
+        return res
 
     def post(
         self, end_point: str, payload: dict, auth: tuple[str, str] | None = None
