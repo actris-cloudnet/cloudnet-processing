@@ -2,6 +2,7 @@ import base64
 import logging
 import os
 from datetime import datetime, timezone
+from typing import Literal
 
 import requests
 
@@ -36,7 +37,7 @@ class Dvas:
             logging.error("Skipping - only L2 products supported for now")
             return
         try:
-            dvas_metadata = DvasMetadata(file)
+            dvas_metadata = DvasMetadata(file, md_api)
             dvas_json = dvas_metadata.create_dvas_json()
             if len(dvas_json["md_content_information"]["attribute_descriptions"]) == 0:
                 logging.error("Skipping - no ACTRIS variables")
@@ -106,8 +107,9 @@ class Dvas:
 class DvasMetadata:
     """Create metadata for DVAS API from Cloudnet file metadata"""
 
-    def __init__(self, file: dict):
+    def __init__(self, file: dict, md_api: MetadataApi):
         self.file = file
+        self.md_api = md_api
         self._product = file["product"]
         self._site = file["site"]
 
@@ -164,6 +166,8 @@ class DvasMetadata:
                 "other_constraints": "N/A",
                 "data_license": "https://creativecommons.org/licenses/by/4.0/",
                 "metadata_license": "https://creativecommons.org/licenses/by/4.0/",
+                "citation": self._fetch_credits("citation"),
+                "acknowledgement": self._fetch_credits("acknowledgements"),
             },
             "md_keywords": {
                 "keywords": [
@@ -303,3 +307,10 @@ class DvasMetadata:
     def _calc_file_size(self) -> float:
         file_size = int(self.file["size"]) / 1000 / 1000  # MB
         return round(file_size, 3)
+
+    def _fetch_credits(self, type: Literal["citation", "acknowledgements"]) -> str:
+        params = {"format": "txt"}
+        response = self.md_api.get(
+            f"api/reference/{self.file['uuid']}/{type}", params, json=False
+        )
+        return response.text
