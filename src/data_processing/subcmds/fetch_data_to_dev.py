@@ -120,6 +120,7 @@ def _get_file_metadata(
         "dateFrom": start.isoformat() if start else None,
         "dateTo": stop.isoformat() if stop else None,
         "product": products,
+        "showLegacy": True,
     }
     res = requests.get(url=url, params=payload)
     res.raise_for_status()
@@ -208,6 +209,8 @@ def _submit_upload(filename: Path, row: dict) -> str:
 
 def _submit_file(filename: Path, row: dict) -> str:
     bucket = "cloudnet-product-volatile" if row["volatile"] else "cloudnet-product"
+    if row["legacy"]:
+        bucket = f"{bucket}/legacy"
     ss_url = f"{STORAGE_SERVICE_URL}/{bucket}/{row['filename']}"
     ss_body = filename.read_bytes()
     ss_headers = {"Content-MD5": utils.md5sum(filename, is_base64=True)}
@@ -218,7 +221,9 @@ def _submit_file(filename: Path, row: dict) -> str:
     ss_data = ss_res.json()
     assert int(ss_data["size"]) == int(row["size"]), "Invalid size"
 
-    dp_url = f"{DATAPORTAL_URL}/files/{row['filename']}"
+    suffix = f"legacy/{row['filename']}" if row["legacy"] else f"{row['filename']}"
+    dp_url = f"{DATAPORTAL_URL}/files/{suffix}"
+
     dp_body = {
         **row,
         "version": ss_data["version"] if "version" in ss_data else "",
