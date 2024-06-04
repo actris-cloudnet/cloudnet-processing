@@ -1,7 +1,6 @@
 import datetime
 import gzip
 import logging
-import os
 import shutil
 from pathlib import Path
 from uuid import UUID
@@ -94,7 +93,9 @@ class ProcessRadar(ProcessInstrument):
         )
         full_paths = _unzip_gz_files(full_paths)
         full_paths = self._fix_suffices(full_paths, ".mmclx")
-        self.uuid.product = mira2nc(full_paths, *self._args, **self._kwargs)
+        self.uuid.product = mira2nc(
+            [str(path) for path in full_paths], *self._args, **self._kwargs
+        )
 
     def process_basta(self):
         full_path, self.uuid.raw = self.processor.download_instrument(
@@ -120,16 +121,13 @@ class ProcessRadar(ProcessInstrument):
         self.uuid.product = galileo2nc(str(self.raw_dir), *self._args, **self._kwargs)
 
     @staticmethod
-    def _fix_suffices(full_paths: list[str], suffix: str) -> list[str]:
+    def _fix_suffices(full_paths: list[Path], suffix: str) -> list[Path]:
         """Fixes filenames that have incorrect suffix."""
         out_paths = []
         for filename in full_paths:
-            if not filename.lower().endswith((".gz", suffix)):
-                new_filename = filename + suffix
-                os.rename(filename, new_filename)
-                out_paths.append(new_filename)
-            else:
-                out_paths.append(filename)
+            if filename.suffix != suffix:
+                filename = filename.rename(filename.with_suffix(suffix))
+            out_paths.append(filename)
         return out_paths
 
     def _add_calibration(
