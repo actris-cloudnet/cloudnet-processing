@@ -79,7 +79,7 @@ def main(ARGS: argparse.Namespace):
                 continue
             if ARGS.freeze:
                 pid_utils.add_pid_to_file(legacy_file.temp_file.name)
-            utils.add_version_to_global_attributes(legacy_file.temp_file.name)
+            utils.add_global_attributes(legacy_file.temp_file.name)
             upload_info = storage_api.upload_product(legacy_file.temp_file.name, s3key)
             payload = utils.create_product_put_payload(
                 legacy_file.temp_file.name,

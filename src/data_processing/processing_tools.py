@@ -366,7 +366,7 @@ class ProcessBase:
 
     def update_statuses(self, uuids: list, status: str = "processed") -> None:
         for uuid in uuids:
-            payload = {"uuid": uuid, "status": status}
+            payload = {"uuid": str(uuid), "status": status}
             self.md_api.post("upload-metadata", payload)
 
     def _get_product_key(self, identifier: str, instrument_pid: str | None) -> str:

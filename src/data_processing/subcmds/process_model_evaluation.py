@@ -87,13 +87,13 @@ class ProcessModelEvaluation(ProcessBase):
             raise MiscError("Missing input level 2 file")
         for m_meta in model_meta:
             m_file = self._storage_api.download_product(m_meta[0], self.temp_dir.name)
-            input_model_files.append(m_file)
+            input_model_files.append(str(m_file))
             # TODO: Raise error if no model meta, warning if only one meta missing
         uuid.product = product_resampling.process_L3_day_product(
             model,
             l3_product,
             input_model_files,
-            l2_file,
+            str(l2_file),
             self.temp_file.name,
             uuid=uuid.volatile,
             overwrite=True,

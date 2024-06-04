@@ -1,7 +1,8 @@
 """Metadata API for Cloudnet files."""
 import hashlib
 import logging
-import os
+import uuid
+from os import PathLike
 from pathlib import Path
 from typing import Literal
 
@@ -19,7 +20,7 @@ class StorageApi:
         self._url = config.storage_service_url
         self._auth = config.storage_service_auth
 
-    def upload_product(self, full_path: str | Path, s3key: str) -> dict:
+    def upload_product(self, full_path: PathLike | str, s3key: str) -> dict:
         """Upload a processed Cloudnet file."""
         volatile = utils.is_volatile_file(full_path)
         bucket = utils.get_product_bucket(volatile)
@@ -29,14 +30,14 @@ class StorageApi:
         return {"version": res.get("version", ""), "size": int(res["size"])}
 
     def download_raw_data(
-        self, metadata: list, dir_name: str | Path
-    ) -> tuple[list, list]:
+        self, metadata: list, dir_name: PathLike | str
+    ) -> tuple[list[Path], list[uuid.UUID]]:
         """Download raw instrument or model files."""
         urls = [f"{self._url}/cloudnet-upload/{row['s3key']}" for row in metadata]
-        full_paths = [os.path.join(dir_name, row["filename"]) for row in metadata]
+        full_paths = [Path(dir_name) / row["filename"] for row in metadata]
         for row, url, full_path in zip(metadata, urls, full_paths):
             self._get(url, full_path, int(row["size"]), row["checksum"], "md5")
-        uuids = [row["uuid"] for row in metadata]
+        uuids = [uuid.UUID(row["uuid"]) for row in metadata]
         instrument_pids = [
             row["instrumentPid"] for row in metadata if "instrumentPid" in row
         ]
@@ -44,7 +45,7 @@ class StorageApi:
             assert len(list(set(instrument_pids))) == 1
         return full_paths, uuids
 
-    def download_product(self, metadata: dict, dir_name: str | Path) -> str:
+    def download_product(self, metadata: dict, dir_name: PathLike | str) -> Path:
         """Download a product."""
         filename = metadata["filename"]
         s3key = (
@@ -52,7 +53,7 @@ class StorageApi:
         )
         bucket = utils.get_product_bucket(metadata["volatile"])
         url = f"{self._url}/{bucket}/{s3key}"
-        full_path = os.path.join(dir_name, filename)
+        full_path = Path(dir_name) / filename
         self._get(url, full_path, int(metadata["size"]), metadata["checksum"], "sha256")
         return full_path
 
@@ -63,13 +64,13 @@ class StorageApi:
         res = self.session.delete(url, auth=self._auth)
         return res
 
-    def upload_image(self, full_path: str | Path, s3key: str) -> None:
+    def upload_image(self, full_path: str | PathLike, s3key: str) -> None:
         url = f"{self._url}/cloudnet-img/{s3key}"
         headers = self._get_headers(full_path)
         self._put(url, full_path, headers=headers)
 
     def _put(
-        self, url: str, full_path: str | Path, headers: dict | None = None
+        self, url: str, full_path: str | PathLike, headers: dict | None = None
     ) -> requests.Response:
         res = self.session.put(
             url, data=open(full_path, "rb"), auth=self._auth, headers=headers
@@ -80,7 +81,7 @@ class StorageApi:
     def _get(
         self,
         url: str,
-        full_path: str | Path,
+        full_path: str | PathLike,
         size: int,
         checksum: str,
         checksum_algorithm: Literal["md5", "sha256"],
@@ -104,6 +105,6 @@ class StorageApi:
             )
 
     @staticmethod
-    def _get_headers(full_path: str | Path) -> dict:
+    def _get_headers(full_path: str | PathLike) -> dict:
         checksum = utils.md5sum(full_path, is_base64=True)
         return {"content-md5": checksum}

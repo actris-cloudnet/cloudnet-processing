@@ -1,6 +1,7 @@
 import datetime
 import logging
 import uuid
+from dataclasses import dataclass
 from pathlib import Path
 from typing import NamedTuple
 
@@ -10,24 +11,70 @@ from cloudnetpy_qc import quality
 from cloudnetpy_qc.quality import ErrorLevel
 from data_processing import utils
 from data_processing.metadata_api import MetadataApi
+from data_processing.pid_utils import PidUtils
 from data_processing.storage_api import StorageApi
 
 MIN_MODEL_FILESIZE = 20200
 
 
-class ModelParams(NamedTuple):
-    site: str
+class Instrument(NamedTuple):
+    uuid: str
+    pid: str
+    type: str
+
+
+class Site(NamedTuple):
+    id: str
+    name: str
+    latitude: float
+    longitude: float
+    altitude: float
+    types: set[str]
+
+
+@dataclass(frozen=True)
+class ProcessParams:
+    site: Site
     date: datetime.date
-    model: str
+    product_id: str
+
+
+@dataclass(frozen=True)
+class ModelParams(ProcessParams):
+    model_id: str
+
+
+@dataclass(frozen=True)
+class InstrumentParams(ProcessParams):
+    instrument: Instrument
 
 
 class Processor:
-    def __init__(self, md_api: MetadataApi, storage_api: StorageApi):
+    def __init__(
+        self, md_api: MetadataApi, storage_api: StorageApi, pid_utils: PidUtils
+    ):
         self.md_api = md_api
         self.storage_api = storage_api
+        self.pid_utils = pid_utils
 
-    def get_site(self, site: str) -> dict:
-        return self.md_api.get(f"api/sites/{site}")
+    def get_site(self, site_id: str) -> Site:
+        site = self.md_api.get(f"api/sites/{site_id}")
+        return Site(
+            id=site["id"],
+            name=site["humanReadableName"],
+            latitude=site["latitude"],
+            longitude=site["longitude"],
+            altitude=site["altitude"],
+            types=set(site["type"]),
+        )
+
+    def get_instrument(self, uuid: str) -> Instrument:
+        instrument = self.md_api.get(f"api/instrument-pids/{uuid}")
+        return Instrument(
+            uuid=instrument["uuid"],
+            pid=instrument["pid"],
+            type=instrument["instrument"]["id"],
+        )
 
     def download_raw_data(
         self, upload_metadata: list[dict], directory: Path
@@ -41,9 +88,9 @@ class Processor:
 
     def get_model_upload(self, params: ModelParams) -> dict | None:
         payload = {
-            "site": params.site,
+            "site": params.site.id,
             "date": params.date.isoformat(),
-            "model": params.model,
+            "model": params.model_id,
         }
         rows = self.md_api.get("api/raw-model-files", payload)
         rows = [row for row in rows if int(row["size"]) > MIN_MODEL_FILESIZE]
@@ -55,9 +102,9 @@ class Processor:
 
     def get_model_file(self, params: ModelParams) -> dict | None:
         payload = {
-            "site": params.site,
+            "site": params.site.id,
             "date": params.date.isoformat(),
-            "model": params.model,
+            "model": params.model_id,
         }
         rows = self.md_api.get("api/model-files", payload)
         if len(rows) == 0:
@@ -66,18 +113,159 @@ class Processor:
             raise ValueError("Multiple model files found")
         return rows[0]
 
-    def upload_file(self, params: ModelParams, full_path: Path, s3key: str):
+    def fetch_product(self, params: ProcessParams) -> dict | None:
+        payload = {
+            "site": params.site.id,
+            "date": params.date.isoformat(),
+            "product": params.product_id,
+            "showLegacy": True,
+        }
+        if isinstance(params, InstrumentParams):
+            payload["instrumentPid"] = params.instrument.pid
+        metadata = self.md_api.get("api/files", payload)
+        if len(metadata) == 0:
+            return None
+        return metadata[0]
+
+    def download_instrument(
+        self,
+        params: InstrumentParams,
+        directory: Path,
+        include_pattern: str | None = None,
+        largest_only: bool = False,
+        exclude_pattern: str | None = None,
+        include_tag_subset: set[str] | None = None,
+        exclude_tag_subset: set[str] | None = None,
+        date: datetime.date | tuple[datetime.date, datetime.date] | None = None,
+    ):
+        """Download raw files matching the given parameters."""
+        payload = self._get_payload(
+            site=params.site.id,
+            date=date if date else params.date,
+            instrument_pid=params.instrument.pid,
+            skip_created=True,
+        )
+        upload_metadata = self.md_api.get("api/raw-files", payload)
+        if include_pattern is not None:
+            upload_metadata = utils.include_records_with_pattern_in_filename(
+                upload_metadata, include_pattern
+            )
+        if exclude_pattern is not None:
+            upload_metadata = utils.exclude_records_with_pattern_in_filename(
+                upload_metadata, exclude_pattern
+            )
+        if include_tag_subset is not None:
+            upload_metadata = [
+                record
+                for record in upload_metadata
+                if include_tag_subset.issubset(set(record["tags"]))
+            ]
+        if exclude_tag_subset is not None:
+            upload_metadata = [
+                record
+                for record in upload_metadata
+                if not exclude_tag_subset.issubset(set(record["tags"]))
+            ]
+        if not upload_metadata:
+            raise utils.RawDataMissingError
+        if largest_only:
+            upload_metadata = [max(upload_metadata, key=lambda item: int(item["size"]))]
+        full_paths, uuids = self.storage_api.download_raw_data(
+            upload_metadata, directory
+        )
+        if largest_only:
+            return full_paths[0], uuids
+        return full_paths, uuids
+
+    def download_adjoining_daily_files(
+        self,
+        params: InstrumentParams,
+        directory: Path,
+    ) -> tuple[list[Path], list[uuid.UUID]]:
+        """Download raw files from today and tomorrow to handle non-UTC timestamps."""
+        next_day = params.date + datetime.timedelta(days=1)
+        payload = self._get_payload(
+            site=params.site.id,
+            date=(params.date, next_day),
+            instrument_pid=params.instrument.pid,
+            skip_created=True,
+        )
+        upload_metadata = self.md_api.get("api/raw-files", payload)
+        upload_metadata = utils.order_metadata(upload_metadata)
+        if not upload_metadata:
+            raise utils.RawDataMissingError
+        full_paths, _ = self.storage_api.download_raw_data(upload_metadata, directory)
+        # Return all full paths but only current day UUIDs
+        uuids_of_current_day = [
+            meta["uuid"]
+            for meta in upload_metadata
+            if meta["measurementDate"] == params.date.isoformat()
+        ]
+        return full_paths, uuids_of_current_day
+
+    def _get_payload(
+        self,
+        site: str | None = None,
+        instrument: str | None = None,
+        product: str | None = None,
+        model: str | None = None,
+        skip_created: bool = False,
+        date: datetime.date | tuple[datetime.date, datetime.date] | None = None,
+        instrument_pid: str | None = None,
+    ) -> dict:
+        payload: dict = {"developer": True}
+        if site is not None:
+            payload["site"] = site
+        if isinstance(date, datetime.date):
+            payload["date"] = date.isoformat()
+        elif isinstance(date, tuple):
+            payload["dateFrom"] = date[0].isoformat()
+            payload["dateTo"] = date[1].isoformat()
+        if instrument is not None:
+            payload["instrument"] = instrument
+        if instrument_pid is not None:
+            payload["instrumentPid"] = instrument_pid
+        if product is not None:
+            payload["product"] = product
+        if model is not None:
+            payload["model"] = model
+        if skip_created is True:
+            payload["status[]"] = ["uploaded", "processed"]
+        return payload
+
+    def upload_file(self, params: ProcessParams, full_path: Path, s3key: str):
         file_info = self.storage_api.upload_product(full_path, s3key)
         payload = utils.create_product_put_payload(
-            full_path, file_info, site=params.site
+            full_path, file_info, site=params.site.id
         )
-        payload["model"] = params.model
+        if isinstance(params, ModelParams):
+            payload["model"] = params.model_id
+        if isinstance(params, InstrumentParams):
+            payload["instrument"] = params.instrument.type
         self.md_api.put("files", s3key, payload)
 
-    def update_statuses(self, raw_uuids: list[str], status: str):
+    def update_statuses(self, raw_uuids: list[uuid.UUID], status: str):
         for raw_uuid in raw_uuids:
-            payload = {"uuid": raw_uuid, "status": status}
+            payload = {"uuid": str(raw_uuid), "status": status}
             self.md_api.post("upload-metadata", payload)
+
+    def are_identical_products(
+        self, file: Path, params: ProcessParams, directory: Path
+    ):
+        payload = {
+            "site": params.site.id,
+            "product": params.product_id,
+            "date": params.date.isoformat(),
+            "showLegacy": True,
+        }
+        if isinstance(params, InstrumentParams):
+            payload["instrumentPid"] = params.instrument.pid
+        meta = self.md_api.get("api/files", payload)
+        assert len(meta) <= 1
+        if not meta:
+            return False
+        full_path = self.storage_api.download_product(meta[0], directory)
+        return utils.are_identical_nc_files(full_path, file)
 
     def create_and_upload_images(
         self,
@@ -121,7 +309,17 @@ class Processor:
                 )
             )
         self.md_api.put_images(visualizations, product_uuid)
-        # delete_obsolete_images(uuid, product, valid_images)
+        self._delete_obsolete_images(product_uuid, product, valid_images)
+
+    def _delete_obsolete_images(
+        self, product_uuid: uuid.UUID, product: str, valid_images: list[str]
+    ):
+        url = f"api/visualizations/{product_uuid}"
+        image_metadata = self.md_api.get(url).get("visualizations", [])
+        images_on_portal = {image["productVariable"]["id"] for image in image_metadata}
+        expected_images = {f"{product}-{image}" for image in valid_images}
+        if obsolete_images := images_on_portal - expected_images:
+            self.md_api.delete(url, {"images": obsolete_images})
 
     def upload_img(
         self,
