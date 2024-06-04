@@ -98,7 +98,7 @@ class Worker:
             send_slack_alert(
                 self.config,
                 err,
-                source="model",
+                source="data",
                 log=self.logger.content,
                 site=task.get("siteId"),
                 date=task.get("measurementDate"),
