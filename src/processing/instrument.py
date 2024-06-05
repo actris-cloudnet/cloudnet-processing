@@ -102,9 +102,10 @@ def process_file(
 
 
 def process_housekeeping(processor: Processor, params: InstrumentParams) -> None:
-    if params.date >= utctoday() - datetime.timedelta(days=3):
-        logging.info("Processing housekeeping data")
+    if params.date < utctoday() - datetime.timedelta(days=3):
+        logging.info("Skipping housekeeping for old data")
         return
+    logging.info("Processing housekeeping data")
     raw_api = utils.RawApi(session=utils.make_session())
     payload = processor._get_payload(
         site=params.site.id, date=params.date, instrument_pid=params.instrument.pid
