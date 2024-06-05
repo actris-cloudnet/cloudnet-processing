@@ -115,5 +115,5 @@ def process_housekeeping(processor: Processor, params: InstrumentParams) -> None
         with housekeeping.Database() as db:
             for record in records:
                 housekeeping.process_record(record, raw_api=raw_api, db=db)
-    except housekeeping.HousekeepingException as err:
-        logging.error(err)
+    except housekeeping.HousekeepingException:
+        logging.exception("Housekeeping failed")
