@@ -110,7 +110,7 @@ def process_housekeeping(processor: Processor, params: InstrumentParams) -> None
     payload = processor._get_payload(
         site=params.site.id, date=params.date, instrument_pid=params.instrument.pid
     )
-    records = processor.md_api.get("upload-metadata", payload)
+    records = processor.md_api.get("api/raw-files", payload)
     try:
         with housekeeping.Database() as db:
             for record in records:
