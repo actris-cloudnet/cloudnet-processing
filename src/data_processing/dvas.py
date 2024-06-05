@@ -256,6 +256,7 @@ class DvasMetadata:
             "lidar": "lidar",
             "mwr": "microwave radiometer",
             "disdrometer": "particle size spectrometer",
+            "doppler-lidar": "Doppler lidar",
         }
         if self._product["level"] != "2":
             raise DvasError(f"Product {self._product['id']} not implemented")
