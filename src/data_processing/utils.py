@@ -854,13 +854,14 @@ def remove_duplicate_dicts(list_of_dicts: list) -> list:
 
 
 def deduce_parsivel_timestamps(
-    filenames: list[str],
+    file_paths: list[os.PathLike],
 ) -> tuple[list[str], list[datetime.datetime]]:
+    filenames = [str(f) for f in file_paths]
     ind = np.argsort(filenames)
     filenames = [filenames[idx] for idx in ind]
     time_stamps, valid_files = [], []
     min_measurements_per_hour = 55
-    for file_ind, filename in enumerate(filenames):
+    for filename in filenames:
         date = _parse_datetime_from_filename(filename)
         n_lines = _count_lines(filename)
         if not date or n_lines < min_measurements_per_hour:
