@@ -1,6 +1,7 @@
 import datetime
 import gzip
 import logging
+import re
 import shutil
 from pathlib import Path
 from uuid import UUID
@@ -508,6 +509,17 @@ class ProcessDisdrometer(ProcessInstrument):
             if calibration["missing_timestamps"] is True:
                 full_paths, timestamps = utils.deduce_parsivel_timestamps(full_paths)
                 kwargs["timestamps"] = timestamps
+            # Add missing semicolon between timestamp and serial number (450416)
+            if self.params.site.id == "norunda":
+                for path in full_paths:
+                    text = path.read_text()
+                    new_text = re.sub(
+                        r"^(\d{14}\.\d{3})450416;",
+                        r"\1;450416;",
+                        text,
+                        flags=re.MULTILINE,
+                    )
+                    path.write_text(new_text)
             self.uuid.product = parsivel2nc(full_paths, *self._args, **kwargs)
 
     def process_thies_lnm(self):
