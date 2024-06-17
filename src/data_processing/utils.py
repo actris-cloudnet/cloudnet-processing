@@ -854,17 +854,20 @@ def remove_duplicate_dicts(list_of_dicts: list) -> list:
 
 
 def deduce_parsivel_timestamps(
-    file_paths: list[os.PathLike],
-) -> tuple[list[str], list[datetime.datetime]]:
-    filenames = [str(f) for f in file_paths]
-    ind = np.argsort(filenames)
-    filenames = [filenames[idx] for idx in ind]
+    file_paths: list[Path]
+) -> tuple[list[Path], list[datetime.datetime]]:
     time_stamps, valid_files = [], []
     min_measurements_per_hour = 55
-    for filename in filenames:
+    for filename in sorted(file_paths):
         date = _parse_datetime_from_filename(filename)
         n_lines = _count_lines(filename)
         if not date or n_lines < min_measurements_per_hour:
+            logging.info(
+                "Expected at least %d measurements but found only %d in %s",
+                min_measurements_per_hour,
+                n_lines,
+                filename.name,
+            )
             continue
         start_datetime = datetime.datetime(date[0], date[1], date[2], date[3])
         time_interval = datetime.timedelta(minutes=60 / n_lines)
@@ -874,15 +877,15 @@ def deduce_parsivel_timestamps(
     return valid_files, time_stamps
 
 
-def _parse_datetime_from_filename(filename: str) -> list[int] | None:
+def _parse_datetime_from_filename(filename: Path) -> list[int] | None:
     pattern = r"(20\d{2})(\d{2})(\d{2})(\d{2})"
-    match = re.search(pattern, filename)
+    match = re.search(pattern, filename.name)
     if not match:
         return None
     return [int(x) for x in match.groups()]
 
 
-def _count_lines(filename: str) -> int:
+def _count_lines(filename: Path) -> int:
     with open(filename, "rb") as file:
         n_lines = 0
         for _ in file:
