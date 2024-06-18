@@ -587,15 +587,10 @@ class ProcessRainRadar(ProcessInstrument):
 
 def _get_valid_uuids(
     uuids: list[UUID], full_paths: list[Path], valid_full_paths: list[str]
-) -> list:
+) -> list[UUID]:
     valid_paths = [Path(path) for path in valid_full_paths]
     return [
         uuid for uuid, full_path in zip(uuids, full_paths) if full_path in valid_paths
-    ]
-    return [
-        uuid
-        for uuid, full_path in zip(uuids, full_paths)
-        if full_path in valid_full_paths
     ]
 
 
