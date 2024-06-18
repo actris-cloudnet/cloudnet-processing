@@ -58,6 +58,7 @@ class Worker:
         self.pid_utils = PidUtils(self.config, self.session)
         self.processor = Processor(self.md_api, self.storage_api, self.pid_utils)
         self.logger = MemoryLogger()
+        self.n_processed_tasks = 0
 
     def process_task(self) -> bool:
         """Get task from queue and process it. Returns True if a task was
@@ -109,6 +110,7 @@ class Worker:
         res = self.session.put(f"{self.dataportal_url}/queue/{action}/{task['id']}")
         res.raise_for_status()
         logging.info("Task proccessed")
+        self.n_processed_tasks += 1
         return True
 
 
@@ -126,9 +128,10 @@ def main():
 
     try:
         logging.info("Waiting for a task...")
-        while not exit.is_set():
+        while not exit.is_set() and worker.n_processed_tasks < 100:
             if not worker.process_task():
                 exit.wait(10)
+        logging.info("Terminate after processing the maximum number of tasks")
     except Exception as err:
         logging.exception("Fatal error in worker")
         send_slack_alert(config, err, source="worker", log=traceback.format_exc())
