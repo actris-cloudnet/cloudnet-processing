@@ -126,11 +126,15 @@ class ProcessDopplerLidarWind(ProcessInstrument):
             exclude_tag_subset={"cross"},
         )
 
-        options = self._calibration_options()
-        wind = doppy.product.Wind.from_halo_data(data=full_paths, options=options)
-
-        _doppy_wind_to_nc(wind, self.temp_file.name)
+        try:
+            options = self._calibration_options()
+            wind = doppy.product.Wind.from_halo_data(data=full_paths, options=options)
+        except doppy.exceptions.NoDataError:
+            raise RawDataMissingError()
+        _doppy_wind_to_nc(wind, self.temp_file.name, options)
         data = self._get_payload_for_nc_file_augmenter(self.temp_file.name)
+        if options is not None and options.azimuth_offset_deg is not None:
+            data["azimuth_offset_deg"] = options.azimuth_offset_deg
         self.uuid.product = nc_header_augmenter.harmonize_doppler_lidar_wind_file(
             data, instruments.HALO
         )
@@ -144,10 +148,17 @@ class ProcessDopplerLidarWind(ProcessInstrument):
             include_pattern=r".*vad.*\.nc.*",
         )
         full_paths = _unzip_gz_files(full_paths)
-        options = self._calibration_options()
-        wind = doppy.product.Wind.from_windcube_data(data=full_paths, options=options)
-        _doppy_wind_to_nc(wind, self.temp_file.name)
+        try:
+            options = self._calibration_options()
+            wind = doppy.product.Wind.from_windcube_data(
+                data=full_paths, options=options
+            )
+        except doppy.exceptions.NoDataError:
+            raise RawDataMissingError()
+        _doppy_wind_to_nc(wind, self.temp_file.name, options)
         data = self._get_payload_for_nc_file_augmenter(self.temp_file.name)
+        if options is not None and options.azimuth_offset_deg is not None:
+            data["azimuth_offset_deg"] = options.azimuth_offset_deg
         self.uuid.product = nc_header_augmenter.harmonize_doppler_lidar_wind_file(
             data, instruments.WINDCUBE
         )
@@ -160,10 +171,15 @@ class ProcessDopplerLidarWind(ProcessInstrument):
             self.instrument_pid,
             include_pattern=r".*\.rtd",
         )
-        options = self._calibration_options()
-        wind = doppy.product.Wind.from_wls70_data(data=full_paths, options=options)
-        _doppy_wls70_wind_to_nc(wind, self.temp_file.name)
+        try:
+            options = self._calibration_options()
+            wind = doppy.product.Wind.from_wls70_data(data=full_paths, options=options)
+        except doppy.exceptions.NoDataError:
+            raise RawDataMissingError()
+        _doppy_wls70_wind_to_nc(wind, self.temp_file.name, options)
         data = self._get_payload_for_nc_file_augmenter(self.temp_file.name)
+        if options is not None and options.azimuth_offset_deg is not None:
+            data["azimuth_offset_deg"] = options.azimuth_offset_deg
         self.uuid.product = nc_header_augmenter.harmonize_doppler_lidar_wind_file(
             data, instruments.WINDCUBE
         )
@@ -611,8 +627,10 @@ def _doppy_stare_to_nc(stare: doppy.product.Stare, filename: str) -> None:
     ).close()
 
 
-def _doppy_wind_to_nc(wind: doppy.product.Wind, filename: str) -> None:
-    return (
+def _doppy_wind_to_nc(
+    wind: doppy.product.Wind, filename: str, options: doppy.product.WindOptions | None
+) -> None:
+    nc = (
         doppy.netcdf.Dataset(filename)
         .add_dimension("time")
         .add_dimension("height")
@@ -667,11 +685,23 @@ def _doppy_wind_to_nc(wind: doppy.product.Wind, filename: str) -> None:
         )
         .add_attribute("serial_number", wind.system_id)
         .add_attribute("doppy_version", doppy.__version__)
-    ).close()
+    )
+    if options is not None and options.azimuth_offset_deg is not None:
+        nc.add_scalar_variable(
+            name="azimuth_offset",
+            units="degrees",
+            data=options.azimuth_offset_deg,
+            dtype="f4",
+            long_name="Azimuth offset of the instrument (positive clockwise from north)",
+        )
+
+    return nc.close()
 
 
-def _doppy_wls70_wind_to_nc(wind: doppy.product.Wind, filename: str) -> None:
-    return (
+def _doppy_wls70_wind_to_nc(
+    wind: doppy.product.Wind, filename: str, options: doppy.product.WindOptions | None
+) -> None:
+    nc = (
         doppy.netcdf.Dataset(filename)
         .add_dimension("time")
         .add_dimension("height")
@@ -710,4 +740,14 @@ def _doppy_wls70_wind_to_nc(wind: doppy.product.Wind, filename: str) -> None:
         )
         .add_attribute("serial_number", wind.system_id)
         .add_attribute("doppy_version", doppy.__version__)
-    ).close()
+    )
+
+    if options is not None and options.azimuth_offset_deg is not None:
+        nc.add_scalar_variable(
+            name="azimuth_offset",
+            units="degrees",
+            data=options.azimuth_offset_deg,
+            dtype="f4",
+            long_name="Azimuth offset of the instrument (positive clockwise from north)",
+        )
+    return nc.close()
