@@ -206,11 +206,14 @@ def harmonize_doppler_lidar_wind_file(
 def harmonize_parsivel_file(data: dict) -> str:
     if "output_path" not in data:
         temp_file = NamedTemporaryFile()
-    with netCDF4.Dataset(data["full_path"], "r") as nc_raw, netCDF4.Dataset(
-        data["output_path"] if "output_path" in data else temp_file.name,
-        "w",
-        format="NETCDF4_CLASSIC",
-    ) as nc:
+    with (
+        netCDF4.Dataset(data["full_path"], "r") as nc_raw,
+        netCDF4.Dataset(
+            data["output_path"] if "output_path" in data else temp_file.name,
+            "w",
+            format="NETCDF4_CLASSIC",
+        ) as nc,
+    ):
         parsivel = ParsivelNc(nc_raw, nc, data)
         valid_ind = parsivel.get_valid_time_indices()
         parsivel.copy_file_contents(
@@ -510,6 +513,7 @@ class DopplerLidarWindNc(Level1Nc):
             "vwind",
             "uwind_raw",
             "vwind_raw",
+            "azimuth_offset",
         )
         self.copy_file_contents(keys, valid_ind)
 
