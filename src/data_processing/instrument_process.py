@@ -604,8 +604,8 @@ def _doppy_stare_to_nc(stare: doppy.product.Stare, filename: str) -> None:
             data=stare.wavelength,
             dtype="f4",
         )
-        .add_atribute("serial_number", stare.system_id)
-        .add_atribute("doppy_version", doppy.__version__)
+        .add_attribute("serial_number", stare.system_id)
+        .add_attribute("doppy_version", doppy.__version__)
     ).close()
 
 
@@ -663,8 +663,8 @@ def _doppy_wind_to_nc(wind: doppy.product.Wind, filename: str) -> None:
             dtype="f4",
             long_name="Meridional wind",
         )
-        .add_atribute("serial_number", wind.system_id)
-        .add_atribute("doppy_version", doppy.__version__)
+        .add_attribute("serial_number", wind.system_id)
+        .add_attribute("doppy_version", doppy.__version__)
     ).close()
 
 
@@ -706,6 +706,6 @@ def _doppy_wls70_wind_to_nc(wind: doppy.product.Wind, filename: str) -> None:
             dtype="f4",
             long_name="Meridional wind",
         )
-        .add_atribute("serial_number", wind.system_id)
-        .add_atribute("doppy_version", doppy.__version__)
+        .add_attribute("serial_number", wind.system_id)
+        .add_attribute("doppy_version", doppy.__version__)
     ).close()

@@ -500,7 +500,7 @@ def _calc_hash_sum(filename, method, is_base64: bool = False) -> str:
 
 
 def get_product_bucket(volatile: bool = False) -> str:
-    """Retrurns correct s3 bucket."""
+    """Returns correct s3 bucket."""
     return "cloudnet-product-volatile" if volatile else "cloudnet-product"
 
 

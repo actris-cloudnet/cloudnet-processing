@@ -109,7 +109,7 @@ class Worker:
             action = "fail"
         res = self.session.put(f"{self.dataportal_url}/queue/{action}/{task['id']}")
         res.raise_for_status()
-        logging.info("Task proccessed")
+        logging.info("Task processed")
         self.n_processed_tasks += 1
         return True
 
