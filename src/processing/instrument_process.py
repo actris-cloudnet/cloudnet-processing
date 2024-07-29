@@ -554,10 +554,12 @@ class ProcessWeatherStation(ProcessInstrument):
             "granada",
             "kenttarova",
             "hyytiala",
+            "bucharest",
+            "galati",
         )
         if self.params.site.id not in supported_sites:
             raise NotImplementedError("Weather station not implemented for this site")
-        if self.params.site.id == "kenttarova":
+        if self.params.site.id in ("kenttarova", "bucharest"):
             (full_paths, self.uuid.raw) = self.processor.download_adjoining_daily_files(
                 self.params, self.raw_dir
             )
