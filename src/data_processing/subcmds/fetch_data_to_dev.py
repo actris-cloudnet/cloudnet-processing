@@ -276,10 +276,8 @@ def _submit_file(filename: Path, row: dict) -> str:
 
 
 def _fetch_calibration(upload_metadata: list):
-    processed_pids: set[str] = set()
+    first = True
     for upload in upload_metadata:
-        if upload["instrumentPid"] in processed_pids:
-            continue
         params = {
             "instrumentPid": upload["instrumentPid"],
             "date": upload["measurementDate"],
@@ -287,9 +285,10 @@ def _fetch_calibration(upload_metadata: list):
         res = requests.get("https://cloudnet.fmi.fi/api/calibration", params=params)
         if res.status_code == 404:
             continue
-        if not processed_pids:
+        if first:
             print("\nCalibration:\n")
-        print(upload["instrumentPid"])
+            first = False
+        print(upload["instrumentPid"], upload["measurementDate"])
         res.raise_for_status()
         res = requests.put(
             f"{DATAPORTAL_URL}/api/calibration",
@@ -298,7 +297,6 @@ def _fetch_calibration(upload_metadata: list):
             auth=("admin", "admin"),
         )
         res.raise_for_status()
-        processed_pids.add(upload["instrumentPid"])
 
 
 def add_arguments(subparser):
