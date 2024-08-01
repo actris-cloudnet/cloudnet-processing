@@ -33,23 +33,24 @@ def process_instrument(processor: Processor, params: InstrumentParams, directory
 
     try:
         new_file = process_file(processor, params, uuid, directory)
-    except (utils.RawDataMissingError, NotImplementedError):
-        return
+    except utils.RawDataMissingError as err:
+        raise utils.SkipTaskError(err.message) from err
+    except NotImplementedError as err:
+        raise utils.SkipTaskError("Processing not implemented yet") from err
 
     if create_new_version:
         processor.pid_utils.add_pid_to_file(new_file)
     utils.add_global_attributes(new_file, instrument_pid=params.instrument.pid)
 
     if existing_file and utils.are_identical_nc_files(existing_file, new_file):
-        logging.info("Skipping PUT to data portal, file has not changed")
-        return
+        raise utils.SkipTaskError("Skipping PUT to data portal, file has not changed")
 
     processor.upload_file(params, new_file, filename)
     processor.create_and_upload_images(
-        new_file, params.product_id, std_uuid.UUID(uuid.product), filename, directory
+        new_file, params.product.id, std_uuid.UUID(uuid.product), filename, directory
     )
     qc_result = processor.upload_quality_report(
-        new_file, std_uuid.UUID(uuid.product), params.product_id
+        new_file, std_uuid.UUID(uuid.product), params.product.id
     )
     processor.update_statuses(uuid.raw, "processed")
     print_info(uuid, create_new_version, qc_result)
@@ -58,11 +59,11 @@ def process_instrument(processor: Processor, params: InstrumentParams, directory
 
 def generate_filename(params: InstrumentParams) -> str:
     identifier = params.instrument.type
-    if params.product_id == "mwr-l1c":
+    if params.product.id == "mwr-l1c":
         identifier += "-l1c"
     elif params.instrument.type == "halo-doppler-lidar-calibrated":
         identifier = "halo-doppler-lidar"
-    elif params.product_id == "doppler-lidar-wind":
+    elif params.product.id == "doppler-lidar-wind":
         identifier += "-wind"
     parts = [
         params.date.strftime("%Y%m%d"),
@@ -90,7 +91,7 @@ def process_file(
     processor: Processor, params: InstrumentParams, uuid: Uuid, directory: Path
 ) -> Path:
     product_camel_case = "".join(
-        [part.capitalize() for part in params.product_id.split("-")]
+        [part.capitalize() for part in params.product.id.split("-")]
     )
     instrument_snake_case = params.instrument.type.replace("-", "_")
     process_class: ProcessClass = getattr(

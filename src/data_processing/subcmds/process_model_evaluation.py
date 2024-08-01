@@ -57,7 +57,11 @@ def main(args, storage_session: requests.Session | None = None):
                             process.temp_file.name, uuid.product
                         )
                         process.print_info(uuid, result)
-                    except (RawDataMissingError, MiscError, NotImplementedError) as err:
+                    except (
+                        RawDataMissingError,
+                        MiscError,
+                        NotImplementedError,
+                    ) as err:
                         logging.warning(err)
                     except (RequestException, RuntimeError, ValueError) as err:
                         utils.send_slack_alert(err, "data", args, date_str, product)

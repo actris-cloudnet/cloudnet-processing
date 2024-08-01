@@ -16,8 +16,15 @@ from data_processing.pid_utils import PidUtils
 from data_processing.storage_api import StorageApi
 from processing.instrument import process_instrument
 from processing.model import process_model
-from processing.processor import InstrumentParams, ModelParams, Processor
-from processing.utils import send_slack_alert
+from processing.processor import (
+    InstrumentParams,
+    ModelParams,
+    Processor,
+    ProcessParams,
+    ProductParams,
+)
+from processing.product import process_product
+from processing.utils import send_slack_alert, utcnow, utctoday
 
 
 class MemoryLogger:
@@ -73,26 +80,44 @@ class Worker:
         try:
             site = self.processor.get_site(task["siteId"])
             date = datetime.date.fromisoformat(task["measurementDate"])
-            product_id = task["productId"]
+            product = self.processor.get_product(task["productId"])
+            params: ProcessParams
             with TemporaryDirectory() as directory:
-                if product_id == "model":
-                    model_params = ModelParams(
+                if product.id == "model":
+                    params = ModelParams(
                         site=site,
                         date=date,
-                        product_id=product_id,
+                        product=product,
                         model_id=task["modelId"],
                     )
-                    process_model(self.processor, model_params, Path(directory))
-                else:
-                    instru_params = InstrumentParams(
+                    process_model(self.processor, params, Path(directory))
+                elif product.source_instrument_ids:
+                    params = InstrumentParams(
                         site=site,
                         date=date,
-                        product_id=product_id,
+                        product=product,
                         instrument=self.processor.get_instrument(
                             task["instrumentInfoUuid"]
                         ),
                     )
-                    process_instrument(self.processor, instru_params, Path(directory))
+                    process_instrument(self.processor, params, Path(directory))
+                else:
+                    params = ProductParams(
+                        site=site,
+                        date=date,
+                        product=product,
+                        instrument=self.processor.get_instrument(
+                            task["instrumentInfoUuid"]
+                        )
+                        if task["instrumentInfoUuid"]
+                        else None,
+                    )
+                    process_product(self.processor, params, Path(directory))
+            action = "complete"
+            for product_id in product.derived_product_ids:
+                self.publish_followup_task(product_id, params)
+        except utils.SkipTaskError as err:
+            logging.warning("Skipped task: %s", err)
             action = "complete"
         except Exception as err:
             logging.exception("Failed to process task")
@@ -112,6 +137,58 @@ class Worker:
         logging.info("Task processed")
         self.n_processed_tasks += 1
         return True
+
+    def publish_followup_task(self, product_id: str, params: ProcessParams):
+        product = self.processor.get_product(product_id)
+        if product.experimental:
+            logging.info(
+                f"Will not publish task for experimental product: {product.id}"
+            )
+            return
+
+        if "instrument" in product.type:
+            assert isinstance(params, InstrumentParams | ProductParams)
+            assert params.instrument is not None
+            instrument = params.instrument
+        else:
+            instrument = None
+
+        payload = {
+            "site": params.site.id,
+            "date": params.date.isoformat(),
+            "product": product.id,
+        }
+        if instrument:
+            payload["instrumentPid"] = instrument.pid
+        metadata = self.processor.md_api.get("api/files", payload)
+        is_freezed = len(metadata) == 1 and not metadata[0]["volatile"]
+
+        if is_freezed:
+            delay = datetime.timedelta(hours=1)
+        elif len(product.source_product_ids) > 1:
+            delay = datetime.timedelta(minutes=15)
+        else:
+            delay = datetime.timedelta(seconds=0)
+        scheduled_at = utcnow() + delay
+        priority = min((utctoday() - params.date) / datetime.timedelta(days=1), 10)
+
+        task = {
+            "type": "process",
+            "siteId": params.site.id,
+            "productId": product.id,
+            "measurementDate": params.date.isoformat(),
+            "scheduledAt": scheduled_at.isoformat(),
+            "priority": priority,
+        }
+        if instrument:
+            task["instrumentInfoUuid"] = instrument.uuid
+        logging.info(f"Publish task: {task}")
+        res = self.session.post(
+            f"{self.dataportal_url}/api/queue/publish",
+            json=task,
+            auth=self.config.data_submission_auth,
+        )
+        res.raise_for_status()
 
 
 def main():
