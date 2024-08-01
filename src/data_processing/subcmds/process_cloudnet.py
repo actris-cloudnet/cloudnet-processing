@@ -173,9 +173,10 @@ class ProcessCloudnet(ProcessBase):
             input_files["lv0_files"], lv0_uuid = self._get_input_files_for_voodoo()
         else:
             lv0_uuid = []
+        options = self._get_categorize_options()
         try:
             uuid.product = generate_categorize(
-                input_files, self.temp_file.name, uuid=uuid.volatile
+                input_files, self.temp_file.name, uuid=uuid.volatile, options=options
             )
             uuid.raw.extend(lv0_uuid)
         except ModelDataError as exc:
@@ -191,6 +192,14 @@ class ProcessCloudnet(ProcessBase):
             else:
                 raise MiscError("Bad ecmwf model data and no gdas1") from exc
         return uuid, cat_variant
+
+    def _get_categorize_options(self) -> dict | None:
+        key = "temperature_offset"
+        if self.site == "schneefernerhaus":
+            return {key: -7}
+        if self.site == "granada":
+            return {key: 3}
+        return None
 
     def _get_level1b_metadata_for_categorize(self, is_voodoo: bool) -> dict:
         instrument_order = {
