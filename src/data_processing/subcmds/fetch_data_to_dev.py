@@ -50,6 +50,9 @@ def main(args: argparse.Namespace):
 
     if args.products_specified:
         file_metadata = _get_file_metadata(**params, products=args.products)
+        if "model" in args.products:
+            model_metadata = _get_model_metadata(**params)
+            file_metadata.extend(model_metadata)
         if file_metadata:
             print("\nProduct files:\n")
         _process_metadata(_submit_file, file_metadata, args)
@@ -121,6 +124,23 @@ def _get_file_metadata(
         "dateTo": stop.isoformat() if stop else None,
         "product": products,
         "showLegacy": True,
+    }
+    res = requests.get(url=url, params=payload)
+    res.raise_for_status()
+    metadata = res.json()
+    return metadata
+
+
+def _get_model_metadata(
+    site: str,
+    start: datetime.date | None,
+    stop: datetime.date | None,
+) -> list:
+    url = "https://cloudnet.fmi.fi/api/model-files"
+    payload = {
+        "site": site,
+        "dateFrom": start.isoformat() if start else None,
+        "dateTo": stop.isoformat() if stop else None,
     }
     res = requests.get(url=url, params=payload)
     res.raise_for_status()
@@ -231,6 +251,9 @@ def _submit_file(filename: Path, row: dict) -> str:
     }
     if row.get("instrument") is not None:
         dp_body["instrument"] = dp_body["instrument"]["id"]
+    elif row.get("model") is not None:
+        dp_body["model"] = dp_body["model"]["id"]
+
     dp_res = requests.put(dp_url, json=dp_body)
     dp_res.raise_for_status()
 
