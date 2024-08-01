@@ -928,9 +928,7 @@ class Ws(Level1Nc):
             elif len(var_in[:]) == 1:
                 dim = ()
             data = var_in[time_ind] if "time" in var_in.dimensions else var_in[:]
-            fill_value = getattr(var_in, "_FillValue", None)
-            if fill_value is None and ma.isMaskedArray(data):
-                fill_value = netCDF4.default_fillvals[dtype]
+            fill_value = _get_fill_value(data)
             var = self.nc.createVariable(
                 name, dtype, dim, zlib=True, fill_value=fill_value
             )
@@ -1009,7 +1007,10 @@ class Ws(Level1Nc):
         dt = np.median(np.diff(self.nc.variables["time"][:]))
         rainfall_rate = to_ms1("rainfall_rate", orig_data / dt, "mm h-1")
         self.nc["rainfall_rate"][:] = rainfall_rate
-        self.nc.createVariable("rainfall_amount", "f4", ("time",), zlib=True)
+        fill_value = _get_fill_value(rainfall_rate)
+        self.nc.createVariable(
+            "rainfall_amount", "f4", ("time",), zlib=True, fill_value=fill_value
+        )
         self.nc["rainfall_amount"][:] = np.cumsum(orig_data) / 1e3  # mm -> m
         self.nc["rainfall_amount"].units = "m"
 
@@ -1051,3 +1052,12 @@ def temperature_to_k(data: np.ndarray) -> np.ndarray:
         logging.info('Converting temperature from "C" to "K".')
         data[ind] += 273.15
     return data
+
+
+def _get_fill_value(data: np.ndarray) -> str | None:
+    if hasattr(data, "_FillValue"):
+        return data._FillValue
+    if isinstance(data, ma.MaskedArray):
+        dtype = data.dtype.str[1:]
+        return netCDF4.default_fillvals[dtype]
+    return None
