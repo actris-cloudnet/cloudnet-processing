@@ -300,7 +300,10 @@ def _submit_file(filename: Path, row: dict) -> str:
 
 def _fetch_calibration(upload_metadata: list):
     first = True
+    processed_pid_dates: set[tuple] = set()
     for upload in upload_metadata:
+        if (upload["instrumentPid"], upload["measurementDate"]) in processed_pid_dates:
+            continue
         params = {
             "instrumentPid": upload["instrumentPid"],
             "date": upload["measurementDate"],
@@ -320,6 +323,7 @@ def _fetch_calibration(upload_metadata: list):
             auth=("admin", "admin"),
         )
         res.raise_for_status()
+        processed_pid_dates.add((upload["instrumentPid"], upload["measurementDate"]))
 
 
 def add_arguments(subparser):
