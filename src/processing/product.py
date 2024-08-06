@@ -181,6 +181,7 @@ def _get_level1b_metadata_for_categorize(
     processor: Processor, params: ProductParams, is_voodoo: bool
 ) -> dict:
     instrument_order = {
+        "mwr-single": "",
         "mwr": ("hatpro", "radiometrics"),
         "radar": ("mira", "rpg-fmcw-35", "rpg-fmcw-94", "copernicus"),
         "lidar": ("chm15k", "chm15kx", "cl61d", "cl51", "cl31"),
@@ -197,9 +198,13 @@ def _get_level1b_metadata_for_categorize(
                 site_id=params.site.id, date=params.date, product_id=product
             )
             route = "api/files"
+        if "mwr-single" in meta_records and product == "mwr":
+            continue
         if is_voodoo and product == "radar":
             payload["instrument"] = "rpg-fmcw-94"
         metadata = processor.md_api.get(route, payload)
+        if product == "mwr-single" and not metadata:
+            continue
         if product == "mwr" and not metadata:
             # Use RPG-FMCW-XX as a fallback MWR
             payload["instrument"] = ["rpg-fmcw-35", "rpg-fmcw-94"]
@@ -212,6 +217,8 @@ def _get_level1b_metadata_for_categorize(
             continue
         if not metadata:
             raise SkipTaskError(f"Missing required input product: {product}")
+        # For now, just take the first one if there are several options
+        # Later, use the one from the "nominal" instrument if available
         meta_records[product] = metadata[0]
         if len(metadata) == 1:
             continue
@@ -221,9 +228,12 @@ def _get_level1b_metadata_for_categorize(
                 if row["instrument"]["id"] == preferred_instrument and not found:
                     meta_records[product] = row
                     found = True
+        name = meta_records[product]["instrument"]["id"] or "the one"
         logging.info(
-            f"Several options for {product}, using {meta_records[product]['instrument']['id']} with PID {meta_records[product]['instrumentPid']}"
+            f"Several options for {product}, using {name} with PID {meta_records[product]['instrumentPid']}"
         )
+    if "mwr-single" in meta_records:
+        meta_records["mwr"] = meta_records.pop("mwr-single")
     return meta_records
 
 
