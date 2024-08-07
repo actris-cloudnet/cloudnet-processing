@@ -103,6 +103,7 @@ def process_mwrpy(
 def process_categorize(
     processor: Processor, params: ProductParams, uuid: Uuid, directory: Path
 ) -> Path:
+    options = _get_categorize_options(params)
     is_voodoo = params.product.id == "categorize-voodoo"
     meta_records = _get_level1b_metadata_for_categorize(processor, params, is_voodoo)
     input_files: dict[str, str | list[str]] = {
@@ -118,7 +119,7 @@ def process_categorize(
     output_path = directory / "output.nc"
     try:
         uuid.product = generate_categorize(
-            input_files, str(output_path), uuid=uuid.volatile
+            input_files, str(output_path), uuid=uuid.volatile, options=options
         )
         uuid.raw.extend(lv0_uuid)
     except ModelDataError as exc:
@@ -135,6 +136,15 @@ def process_categorize(
             input_files, str(output_path), uuid=uuid.volatile
         )
     return output_path
+
+
+def _get_categorize_options(params: ProductParams) -> dict | None:
+    key = "temperature_offset"
+    if params.site.id == "schneefernerhaus":
+        return {key: -7}
+    if params.site.id == "granada":
+        return {key: 3}
+    return None
 
 
 def process_level2(
