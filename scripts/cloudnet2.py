@@ -63,6 +63,10 @@ def main():
     args = _parse_args()
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter("%(levelname)s: %(message)s")
+    handler.setFormatter(formatter)
+    logger.handlers = [handler]
     process_main(args)
 
 
