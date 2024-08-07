@@ -8,7 +8,12 @@ from data_processing.metadata_api import MetadataApi
 
 L1B_PRODUCTS = ",".join(utils.get_product_types(level="1b"))
 L1C_AND_L2_PRODUCTS = ",".join(
-    utils.get_product_types(level="1c") + utils.get_product_types(level="2")
+    [
+        product
+        for product in utils.get_product_types(level="1c")
+        + utils.get_product_types(level="2")
+        if "voodoo" not in product
+    ]
 )
 
 
