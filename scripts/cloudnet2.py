@@ -7,6 +7,7 @@ import logging
 import os
 import re
 import sys
+import warnings
 from argparse import ArgumentTypeError, Namespace
 from collections.abc import Callable
 from pathlib import Path
@@ -31,6 +32,22 @@ from processing.processor import (
 )
 from processing.product import process_product
 from processing.utils import utctoday
+
+pattern = re.compile("overflow encountered in (multiply|divide)")
+warnings.filterwarnings(
+    "ignore",
+    category=RuntimeWarning,
+    message=pattern.pattern,
+    module="matplotlib.colors",
+)
+
+# Investigate these warnings later:
+warnings.filterwarnings(
+    "ignore",
+    category=UserWarning,
+    message="Warning: 'partition' will ignore the 'mask' of the MaskedArray.",
+    module="numpy",
+)
 
 if sys.stdout.isatty() and not os.getenv("NO_COLOR"):
     GREEN = "\033[92m"
