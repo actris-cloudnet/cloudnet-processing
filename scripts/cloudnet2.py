@@ -217,7 +217,8 @@ def process_file(
                     "Site": site.id,
                     "Date": date.isoformat(),
                     "Product": product.id,
-                    "Instrument": instrument.pid,
+                    "Instrument": instrument.type,
+                    "Instrument PID": instrument.pid,
                 }
             )
             instru_params = InstrumentParams(
@@ -243,7 +244,8 @@ def process_file(
                     "Site": site.id,
                     "Date": date.isoformat(),
                     "Product": product.id,
-                    "Instrument": instrument.pid,
+                    "Instrument": instrument.type,
+                    "Instrument PID": instrument.pid,
                 }
             )
             product_params = ProductParams(
