@@ -173,6 +173,7 @@ def process_main(args):
             for product_id in args.products:
                 site = processor.get_site(site_id)
                 product = processor.get_product(product_id)
+                print()
                 try:
                     process_file(processor, product, site, date, args)
                 except utils.SkipTaskError as err:
@@ -283,7 +284,6 @@ def process_file(
         )
         with TemporaryDirectory() as directory:
             process_product(processor, product_params, Path(directory))
-    print()
 
 
 def validate_sites(sites: str) -> list[str]:
