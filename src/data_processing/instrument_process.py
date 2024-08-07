@@ -29,7 +29,7 @@ from requests.exceptions import HTTPError
 
 from data_processing import concat_wrapper, nc_header_augmenter, utils
 from data_processing.processing_tools import Uuid
-from data_processing.utils import MiscError, RawDataMissingError, fetch_calibration
+from data_processing.utils import RawDataMissingError, fetch_calibration
 
 
 class ProcessInstrument:
@@ -409,7 +409,7 @@ class ProcessMwrL1c(ProcessInstrument):
         try:
             data = self.base.md_api.get("api/calibration", payload)
         except HTTPError:
-            raise MiscError("Skipping due to missing mwrpy coefficients")
+            raise RawDataMissingError("Skipping due to missing mwrpy coefficients")
         return data
 
 

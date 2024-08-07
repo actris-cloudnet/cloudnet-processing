@@ -71,5 +71,9 @@ def send_slack_alert(
         logging.fatal(f"Failed to send Slack notification: {body.text}")
 
 
+def utcnow() -> datetime.datetime:
+    return datetime.datetime.now(datetime.timezone.utc)
+
+
 def utctoday() -> datetime.date:
-    return datetime.datetime.now(datetime.timezone.utc).date()
+    return utcnow().date()

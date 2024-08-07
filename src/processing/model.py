@@ -1,34 +1,11 @@
-import datetime
 import logging
 import uuid
 from pathlib import Path
-from tempfile import TemporaryDirectory
 
 from data_processing import nc_header_augmenter
-from data_processing.metadata_api import MetadataApi
-from data_processing.pid_utils import PidUtils
-from data_processing.storage_api import StorageApi
-from data_processing.utils import MiscError, make_session, read_main_conf
+from data_processing.utils import MiscError, SkipTaskError
 
 from processing.processor import ModelParams, Processor
-
-
-def main():
-    config = read_main_conf()
-    session = make_session()
-    md_api = MetadataApi(config, session)
-    storage_api = StorageApi(config, session)
-    pid_utils = PidUtils(config, session)
-    processor = Processor(md_api, storage_api, pid_utils)
-    for metadata in processor.get_unprocessed_model_uploads():
-        with TemporaryDirectory() as directory:
-            params = ModelParams(
-                site=processor.get_site(metadata["site"]["id"]),
-                date=datetime.date.fromisoformat(metadata["measurementDate"]),
-                product_id="model",
-                model_id=metadata["model"]["id"],
-            )
-            process_model(processor, params, Path(directory))
 
 
 def process_model(processor: Processor, params: ModelParams, directory: Path):
@@ -62,7 +39,7 @@ def process_model(processor: Processor, params: ModelParams, directory: Path):
         processor.upload_quality_report(output_path, product_uuid)
         processor.update_statuses(raw_uuids, "processed")
     except MiscError as err:
-        logging.warning(err)
+        raise SkipTaskError(err.message) from err
 
 
 def generate_uuid() -> uuid.UUID:
@@ -91,7 +68,3 @@ def harmonize_model(
         "instrument": None,
     }
     nc_header_augmenter.harmonize_model_file(data)
-
-
-if __name__ == "__main__":
-    main()

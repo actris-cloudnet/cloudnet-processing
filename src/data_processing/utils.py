@@ -547,10 +547,10 @@ class RawDataMissingError(Exception):
         super().__init__(self.message)
 
 
-class SkipBlock(Exception):
-    """Internal exception class."""
+class SkipTaskError(Exception):
+    """Unable to complete task for an expected reason."""
 
-    def __init__(self, msg: str = ""):
+    def __init__(self, msg: str):
         self.message = msg
         super().__init__(self.message)
 

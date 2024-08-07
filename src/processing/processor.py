@@ -3,7 +3,7 @@ import logging
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
-from typing import NamedTuple
+from typing import Literal
 
 from cloudnetpy.exceptions import PlottingError
 from cloudnetpy.plotting import Dimensions, PlotParameters, generate_figure
@@ -17,13 +17,15 @@ from data_processing.storage_api import StorageApi
 MIN_MODEL_FILESIZE = 20200
 
 
-class Instrument(NamedTuple):
+@dataclass(frozen=True)
+class Instrument:
     uuid: str
     pid: str
     type: str
 
 
-class Site(NamedTuple):
+@dataclass(frozen=True)
+class Site:
     id: str
     name: str
     latitude: float
@@ -33,10 +35,20 @@ class Site(NamedTuple):
 
 
 @dataclass(frozen=True)
+class Product:
+    id: str
+    type: set[Literal["instrument", "synergetic"]]
+    source_instrument_ids: set[str]
+    source_product_ids: set[str]
+    derived_product_ids: set[str]
+    experimental: bool
+
+
+@dataclass(frozen=True)
 class ProcessParams:
     site: Site
     date: datetime.date
-    product_id: str
+    product: Product
 
 
 @dataclass(frozen=True)
@@ -47,6 +59,11 @@ class ModelParams(ProcessParams):
 @dataclass(frozen=True)
 class InstrumentParams(ProcessParams):
     instrument: Instrument
+
+
+@dataclass(frozen=True)
+class ProductParams(ProcessParams):
+    instrument: Instrument | None
 
 
 class Processor:
@@ -66,6 +83,17 @@ class Processor:
             longitude=site["longitude"],
             altitude=site["altitude"],
             types=set(site["type"]),
+        )
+
+    def get_product(self, product_id: str) -> Product:
+        product = self.md_api.get(f"api/products/{product_id}")
+        return Product(
+            id=product["id"],
+            type=set(product["type"]),
+            source_instrument_ids={i["id"] for i in product["sourceInstruments"]},
+            source_product_ids={p["id"] for p in product["sourceProducts"]},
+            derived_product_ids={p["id"] for p in product["derivedProducts"]},
+            experimental=product["experimental"],
         )
 
     def get_instrument(self, uuid: str) -> Instrument:
@@ -117,10 +145,12 @@ class Processor:
         payload = {
             "site": params.site.id,
             "date": params.date.isoformat(),
-            "product": params.product_id,
+            "product": params.product.id,
             "showLegacy": True,
         }
         if isinstance(params, InstrumentParams):
+            payload["instrumentPid"] = params.instrument.pid
+        elif isinstance(params, ProductParams) and params.instrument is not None:
             payload["instrumentPid"] = params.instrument.pid
         metadata = self.md_api.get("api/files", payload)
         if len(metadata) == 0:
@@ -129,8 +159,10 @@ class Processor:
 
     def download_instrument(
         self,
-        params: InstrumentParams,
+        site_id: str,
+        instrument_id: str,
         directory: Path,
+        instrument_pid: str | None = None,
         include_pattern: str | None = None,
         largest_only: bool = False,
         exclude_pattern: str | None = None,
@@ -140,9 +172,10 @@ class Processor:
     ):
         """Download raw files matching the given parameters."""
         payload = self._get_payload(
-            site=params.site.id,
-            date=date if date else params.date,
-            instrument_pid=params.instrument.pid,
+            site=site_id,
+            date=date,
+            instrument=instrument_id,
+            instrument_pid=instrument_pid,
             skip_created=True,
         )
         upload_metadata = self.md_api.get("api/raw-files", payload)
@@ -254,11 +287,13 @@ class Processor:
     ):
         payload = {
             "site": params.site.id,
-            "product": params.product_id,
+            "product": params.product.id,
             "date": params.date.isoformat(),
             "showLegacy": True,
         }
         if isinstance(params, InstrumentParams):
+            payload["instrumentPid"] = params.instrument.pid
+        elif isinstance(params, ProductParams) and params.instrument is not None:
             payload["instrumentPid"] = params.instrument.pid
         meta = self.md_api.get("api/files", payload)
         assert len(meta) <= 1
