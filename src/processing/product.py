@@ -5,7 +5,7 @@ import uuid as std_uuid
 from pathlib import Path
 
 from cloudnetpy.categorize import generate_categorize
-from cloudnetpy.exceptions import ModelDataError
+from cloudnetpy.exceptions import CloudnetException, ModelDataError
 from cloudnetpy.products import generate_mwr_multi, generate_mwr_single
 from data_processing import utils
 from data_processing.processing_tools import Uuid
@@ -30,12 +30,15 @@ def process_product(processor: Processor, params: ProductParams, directory: Path
         filename = generate_filename(params)
         existing_file = None
 
-    if params.product.id in ("mwr-single", "mwr-multi"):
-        new_file = process_mwrpy(processor, params, uuid, directory)
-    elif params.product.id in ("categorize", "categorize-voodoo"):
-        new_file = process_categorize(processor, params, uuid, directory)
-    else:
-        new_file = process_level2(processor, params, uuid, directory)
+    try:
+        if params.product.id in ("mwr-single", "mwr-multi"):
+            new_file = process_mwrpy(processor, params, uuid, directory)
+        elif params.product.id in ("categorize", "categorize-voodoo"):
+            new_file = process_categorize(processor, params, uuid, directory)
+        else:
+            new_file = process_level2(processor, params, uuid, directory)
+    except CloudnetException as err:
+        raise utils.SkipTaskError(str(err)) from err
 
     if create_new_version:
         processor.pid_utils.add_pid_to_file(new_file)

@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Type
 
 import housekeeping
+from cloudnetpy.exceptions import CloudnetException
 from data_processing import utils
 from data_processing.processing_tools import Uuid
 
@@ -37,6 +38,8 @@ def process_instrument(processor: Processor, params: InstrumentParams, directory
         raise utils.SkipTaskError(err.message) from err
     except NotImplementedError as err:
         raise utils.SkipTaskError("Processing not implemented yet") from err
+    except CloudnetException as err:
+        raise utils.SkipTaskError(str(err)) from err
 
     if create_new_version:
         processor.pid_utils.add_pid_to_file(new_file)
