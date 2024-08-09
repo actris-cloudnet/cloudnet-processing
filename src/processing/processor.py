@@ -134,12 +134,12 @@ class Processor:
             "date": params.date.isoformat(),
             "model": params.model_id,
         }
-        rows = self.md_api.get("api/model-files", payload)
-        if len(rows) == 0:
+        metadata = self.md_api.get("api/model-files", payload)
+        if len(metadata) == 0:
             return None
-        if len(rows) > 1:
-            raise ValueError("Multiple model files found")
-        return rows[0]
+        if len(metadata) > 1:
+            raise RuntimeError("Multiple model files found")
+        return metadata[0]
 
     def fetch_product(self, params: ProcessParams) -> dict | None:
         payload = {
@@ -155,6 +155,8 @@ class Processor:
         metadata = self.md_api.get("api/files", payload)
         if len(metadata) == 0:
             return None
+        if len(metadata) > 1:
+            raise RuntimeError("Multiple products found")
         return metadata[0]
 
     def download_instrument(
@@ -273,7 +275,9 @@ class Processor:
         )
         if isinstance(params, ModelParams):
             payload["model"] = params.model_id
-        if isinstance(params, InstrumentParams):
+        elif isinstance(params, InstrumentParams):
+            payload["instrument"] = params.instrument.type
+        elif isinstance(params, ProductParams) and params.instrument:
             payload["instrument"] = params.instrument.type
         self.md_api.put("files", s3key, payload)
 
@@ -281,26 +285,6 @@ class Processor:
         for raw_uuid in raw_uuids:
             payload = {"uuid": str(raw_uuid), "status": status}
             self.md_api.post("upload-metadata", payload)
-
-    def are_identical_products(
-        self, file: Path, params: ProcessParams, directory: Path
-    ):
-        payload = {
-            "site": params.site.id,
-            "product": params.product.id,
-            "date": params.date.isoformat(),
-            "showLegacy": True,
-        }
-        if isinstance(params, InstrumentParams):
-            payload["instrumentPid"] = params.instrument.pid
-        elif isinstance(params, ProductParams) and params.instrument is not None:
-            payload["instrumentPid"] = params.instrument.pid
-        meta = self.md_api.get("api/files", payload)
-        assert len(meta) <= 1
-        if not meta:
-            return False
-        full_path = self.storage_api.download_product(meta[0], directory)
-        return utils.are_identical_nc_files(full_path, file)
 
     def create_and_upload_images(
         self,

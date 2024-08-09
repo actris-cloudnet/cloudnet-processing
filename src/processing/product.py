@@ -26,9 +26,13 @@ def process_product(processor: Processor, params: ProductParams, directory: Path
         existing_file = processor.storage_api.download_product(
             existing_product, directory
         )
+        logging.info(
+            "Found existing product for %s with UUID %s", filename, uuid.volatile
+        )
     else:
         filename = generate_filename(params)
         existing_file = None
+        logging.info("No existing product found for %s", filename)
 
     try:
         if params.product.id in ("mwr-single", "mwr-multi"):
@@ -89,6 +93,8 @@ def process_mwrpy(
     metadata = processor.md_api.get("api/files", payload)
     if len(metadata) == 0:
         raise SkipTaskError("Missing required input product: mwr-l1c")
+    if len(metadata) > 1:
+        raise RuntimeError("Multiple products found")
     l1c_file = processor.storage_api.download_product(metadata[0], directory)
 
     output_file = directory / "output.nc"
@@ -166,7 +172,7 @@ def process_level2(
     if len(metadata) == 0:
         raise SkipTaskError(f"Missing required input file: {cat_file}")
     if len(metadata) > 1:
-        logging.info("API responded with several files")
+        raise RuntimeError(f"Multiple {cat_file} products found")
     categorize_file = processor.storage_api.download_product(metadata[0], directory)
     module = importlib.import_module(f"cloudnetpy.products.{module_name}")
     prod = (
