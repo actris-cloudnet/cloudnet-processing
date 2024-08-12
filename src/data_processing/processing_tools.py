@@ -127,8 +127,9 @@ class ProcessBase:
             "allVersions": "true",
         }
         metadata = self.md_api.get("api/files", payload)
+        latest_version = metadata[0]
         if any(row["dvasId"] is not None for row in metadata):
-            Dvas().upload(self.md_api, metadata[0])
+            Dvas(self.config, self.md_api).upload(latest_version)
 
     def create_and_upload_images(
         self,

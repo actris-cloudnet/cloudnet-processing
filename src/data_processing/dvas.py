@@ -1,12 +1,12 @@
 import base64
 import logging
-import os
 from datetime import datetime, timezone
 from typing import Literal
 
 import requests
 
 from data_processing import utils
+from data_processing.config import Config
 from data_processing.metadata_api import MetadataApi
 
 
@@ -17,16 +17,12 @@ class DvasError(Exception):
 class Dvas:
     """Class for managing Cloudnet file metadata operations in the DVAS API."""
 
-    DVAS_URL = f"{os.environ['DVAS_PORTAL_URL']}/Metadata"
-    DVAS_ACCESS_TOKEN = os.environ["DVAS_ACCESS_TOKEN"]
-    DVAS_USERNAME = os.environ["DVAS_USERNAME"]
-    DVAS_PASSWORD = os.environ["DVAS_PASSWORD"]
-    CLU_ID = "11"
-
-    def __init__(self):
+    def __init__(self, config: Config, md_api: MetadataApi):
+        self.config = config
+        self.md_api = md_api
         self.session = self._init_session()
 
-    def upload(self, md_api: MetadataApi, file: dict):
+    def upload(self, file: dict):
         """Upload Cloudnet file metadata to DVAS API and update Cloudnet data portal"""
         landing_page_url = utils.build_file_landing_page_url(file["uuid"])
         logging.info(f"Uploading {landing_page_url} metadata to DVAS")
@@ -37,14 +33,14 @@ class Dvas:
             logging.error("Skipping - only L2 products supported for now")
             return
         try:
-            dvas_metadata = DvasMetadata(file, md_api)
+            dvas_metadata = DvasMetadata(file, self.md_api)
             dvas_json = dvas_metadata.create_dvas_json()
             if len(dvas_json["md_content_information"]["attribute_descriptions"]) == 0:
                 logging.error("Skipping - no ACTRIS variables")
                 return
-            self._delete_old_versions(md_api, file)
+            self._delete_old_versions(file)
             dvas_id = self._post(dvas_json)
-            md_api.update_dvas_info(
+            self.md_api.update_dvas_info(
                 file["uuid"], dvas_json["md_metadata"]["datestamp"], dvas_id
             )
         except DvasError as err:
@@ -56,18 +52,18 @@ class Dvas:
         logging.warning(
             f"Deleting Cloudnet file {file['uuid']} with dvasId {file['dvasId']} from DVAS"
         )
-        url = f"{self.DVAS_URL}/delete/{file['dvasId']}"
+        url = f"{self.config.dvas_portal_url}/Metadata/delete/{file['dvasId']}"
         self._delete(url)
 
     def delete_all(self):
         """Delete all Cloudnet file metadata from DVAS API"""
-        url = f"{self.DVAS_URL}/delete/all/{self.CLU_ID}"
+        url = f"{self.config.dvas_portal_url}/Metadata/delete/all/{self.config.dvas_provider_id}"
         self._delete(url)
         logging.info("Done. All Cloudnet files deleted from DVAS")
 
     def _delete(self, url: str):
         auth = base64.b64encode(
-            f"{self.DVAS_USERNAME}:{self.DVAS_PASSWORD}".encode()
+            f"{self.config.dvas_username}:{self.config.dvas_password}".encode()
         ).decode()
         headers = {"X-Authorization": f"Basic {auth}"}
         res = self.session.delete(url, headers=headers)
@@ -75,9 +71,9 @@ class Dvas:
             raise DvasError(res)
         logging.debug(f"DELETE successful: {res.status_code} {res.text}")
 
-    def _delete_old_versions(self, md_api: MetadataApi, file: dict):
+    def _delete_old_versions(self, file: dict):
         """Delete all versions of the given file from DVAS API. To be used before posting new version."""
-        versions = md_api.get(
+        versions = self.md_api.get(
             f"api/files/{file['uuid']}/versions", {"properties": ["dvasId"]}
         )
         for version in versions:
@@ -91,7 +87,9 @@ class Dvas:
                 logging.debug(err)
 
     def _post(self, metadata: dict) -> int:
-        res = self.session.post(f"{self.DVAS_URL}/add", json=metadata)
+        res = self.session.post(
+            f"{self.config.dvas_portal_url}/Metadata/add", json=metadata
+        )
         if not res.ok:
             raise DvasError(f"POST to DVAS API failed: {res.status_code} {res.text}")
         logging.debug(f"POST to DVAS API successful: {res.status_code} {res.text}")
@@ -100,7 +98,7 @@ class Dvas:
 
     def _init_session(self) -> requests.Session:
         s = utils.make_session()
-        s.headers.update({"X-Authorization": f"Bearer {self.DVAS_ACCESS_TOKEN}"})
+        s.headers.update({"X-Authorization": f"Bearer {self.config.dvas_access_token}"})
         return s
 
 

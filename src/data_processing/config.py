@@ -20,3 +20,8 @@ class Config:
         self.freeze_model_after_days = int(environ["FREEZE_MODEL_AFTER_DAYS"])
         self.slack_api_token = environ.get("SLACK_API_TOKEN")
         self.slack_channel_id = environ.get("SLACK_CHANNEL_ID")
+        self.dvas_portal_url = environ["DVAS_PORTAL_URL"].rstrip("/")
+        self.dvas_access_token = environ["DVAS_ACCESS_TOKEN"]
+        self.dvas_username = environ["DVAS_USERNAME"]
+        self.dvas_password = environ["DVAS_PASSWORD"]
+        self.dvas_provider_id = "11"  # CLU

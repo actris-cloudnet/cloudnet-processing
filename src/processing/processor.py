@@ -10,6 +10,7 @@ from cloudnetpy.plotting import Dimensions, PlotParameters, generate_figure
 from cloudnetpy_qc import quality
 from cloudnetpy_qc.quality import ErrorLevel
 from data_processing import utils
+from data_processing.dvas import Dvas
 from data_processing.metadata_api import MetadataApi
 from data_processing.pid_utils import PidUtils
 from data_processing.storage_api import StorageApi
@@ -68,11 +69,16 @@ class ProductParams(ProcessParams):
 
 class Processor:
     def __init__(
-        self, md_api: MetadataApi, storage_api: StorageApi, pid_utils: PidUtils
+        self,
+        md_api: MetadataApi,
+        storage_api: StorageApi,
+        pid_utils: PidUtils,
+        dvas: Dvas,
     ):
         self.md_api = md_api
         self.storage_api = storage_api
         self.pid_utils = pid_utils
+        self.dvas = dvas
 
     def get_site(self, site_id: str) -> Site:
         site = self.md_api.get(f"api/sites/{site_id}")

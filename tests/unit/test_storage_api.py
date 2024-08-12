@@ -18,6 +18,10 @@ config = Config(
         "PID_SERVICE_TEST_ENV": "true",
         "FREEZE_AFTER_DAYS": "3",
         "FREEZE_MODEL_AFTER_DAYS": "4",
+        "DVAS_PORTAL_URL": "http://dvas.test",
+        "DVAS_ACCESS_TOKEN": "test",
+        "DVAS_USERNAME": "test",
+        "DVAS_PASSWORD": "test",
     }
 )
 

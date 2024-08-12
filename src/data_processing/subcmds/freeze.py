@@ -37,7 +37,7 @@ def main(args, storage_session: requests.Session | None = None):
     metadata = md_api.find_files_to_freeze(args)
     logging.info(f"Found {len(metadata)} files to freeze.")
     temp_dir = TemporaryDirectory()
-    dvas = Dvas()
+    dvas = Dvas(config, md_api)
     error = False
     for row in metadata:
         args.site = row["site"]["id"]  # Needed for slack alerts
@@ -70,7 +70,7 @@ def main(args, storage_session: requests.Session | None = None):
             storage_api.delete_volatile_product(s3key)
             if args.dvas and row["product"]["level"] == "2":
                 row = md_api.get(f"api/files/{row['uuid']}")
-                dvas.upload(md_api, row)
+                dvas.upload(row)
         except (OSError, MiscError) as err:
             utils.send_slack_alert(
                 err, "pid", args, row["measurementDate"], row["product"]["id"]

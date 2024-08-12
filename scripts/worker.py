@@ -11,6 +11,7 @@ from threading import Event
 
 from data_processing import utils
 from data_processing.config import Config
+from data_processing.dvas import Dvas
 from data_processing.metadata_api import MetadataApi
 from data_processing.pid_utils import PidUtils
 from data_processing.storage_api import StorageApi
@@ -63,7 +64,10 @@ class Worker:
         self.md_api = MetadataApi(self.config, self.session)
         self.storage_api = StorageApi(self.config, self.session)
         self.pid_utils = PidUtils(self.config, self.session)
-        self.processor = Processor(self.md_api, self.storage_api, self.pid_utils)
+        self.dvas = Dvas(self.config, self.md_api)
+        self.processor = Processor(
+            self.md_api, self.storage_api, self.pid_utils, self.dvas
+        )
         self.logger = MemoryLogger()
         self.n_processed_tasks = 0
 

@@ -9,20 +9,20 @@ from data_processing.metadata_api import MetadataApi
 def main(args):
     config = utils.read_main_conf()
     md_api = MetadataApi(config)
+    dvas = Dvas(config, md_api)
 
     if args.truncate:
-        _truncate_clu_data(md_api)
+        _truncate_clu_data(md_api, dvas)
         return
 
     files = _get_files(md_api, args)
 
     if args.delete:
-        _delete_clu_data(md_api, files)
+        _delete_clu_data(md_api, dvas, files)
     else:
-        dvas = Dvas()
         logging.info(f"Uploading {len(files)} CLU files to the DVAS data portal.")
         for file in files:
-            dvas.upload(md_api, file)
+            dvas.upload(file)
 
 
 def _get_files(md_api: MetadataApi, args) -> list[dict]:
@@ -40,7 +40,7 @@ def _get_files(md_api: MetadataApi, args) -> list[dict]:
     return files
 
 
-def _truncate_clu_data(md_api: MetadataApi):
+def _truncate_clu_data(md_api: MetadataApi, dvas: Dvas):
     confirmation = input(
         "!!! WARNING !!! This action will permanently delete ALL Cloudnet files from the DVAS production server. !!!\n"
         "Are you ABSOLUTELY sure you want to proceed? (Type 'YES' to confirm, 'no' to cancel): "
@@ -48,16 +48,14 @@ def _truncate_clu_data(md_api: MetadataApi):
     if confirmation.lower() != "yes":
         print("Delete canceled.")
         return
-    dvas = Dvas()
     dvas.delete_all()
     files = md_api.get("api/files", {"dvasUpdated": True})
     for file in files:
         md_api.clean_dvas_info(file["uuid"])
 
 
-def _delete_clu_data(md_api: MetadataApi, files: list[dict]):
+def _delete_clu_data(md_api: MetadataApi, dvas: Dvas, files: list[dict]):
     logging.info(f"Deleting {len(files)} CLU files in the DVAS data portal.")
-    dvas = Dvas()
     for file in files:
         try:
             dvas.delete(file)

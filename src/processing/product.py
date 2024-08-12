@@ -61,6 +61,8 @@ def process_product(processor: Processor, params: ProductParams, directory: Path
         new_file, std_uuid.UUID(uuid.product), params.product.id
     )
     print_info(uuid, create_new_version, qc_result)
+    if create_new_version:
+        update_dvas_metadata(processor, params)
 
 
 def generate_filename(params: ProductParams) -> str:
@@ -308,3 +310,18 @@ def print_info(
     link = utils.build_file_landing_page_url(uuid.product)
     qc_str = f" QC: {qc_result.upper()}" if qc_result is not None else ""
     logging.info(f"{action}: {link}{qc_str}")
+
+
+def update_dvas_metadata(processor: Processor, params: ProductParams):
+    payload = {
+        "site": params.site.id,
+        "product": params.product.id,
+        "date": params.date.isoformat(),
+        "allVersions": "true",
+    }
+    if params.instrument:
+        payload["instrumentPid"] = params.instrument.pid
+    metadata = processor.md_api.get("api/files", payload)
+    latest_version = metadata[0]
+    if any(row["dvasId"] is not None for row in metadata):
+        processor.dvas.upload(latest_version)

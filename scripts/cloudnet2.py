@@ -16,6 +16,7 @@ from typing import TypeVar
 from uuid import UUID
 
 from data_processing import utils
+from data_processing.dvas import Dvas
 from data_processing.metadata_api import MetadataApi
 from data_processing.pid_utils import PidUtils
 from data_processing.storage_api import StorageApi
@@ -169,7 +170,8 @@ def process_main(args):
     md_api = MetadataApi(config, session)
     storage_api = StorageApi(config, session)
     pid_utils = PidUtils(config, session)
-    processor = Processor(md_api, storage_api, pid_utils)
+    dvas = Dvas(config, md_api)
+    processor = Processor(md_api, storage_api, pid_utils, dvas)
 
     date = args.start
     while date <= args.stop:
