@@ -114,8 +114,11 @@ class Worker:
                     )
                     process_product(self.processor, params, Path(directory))
             action = "complete"
-            for product_id in product.derived_product_ids:
-                self.publish_followup_task(product_id, params)
+            if "hidden" in site.types or "model" in site.types:
+                logging.info("Site is model / hidden, will not publish followup tasks")
+            else:
+                for product_id in product.derived_product_ids:
+                    self.publish_followup_task(product_id, params)
         except utils.SkipTaskError as err:
             logging.warning("Skipped task: %s", err)
             action = "complete"
