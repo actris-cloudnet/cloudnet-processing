@@ -29,11 +29,11 @@ def process_instrument(processor: Processor, params: InstrumentParams, directory
             existing_product, directory
         )
     else:
-        filename = generate_filename(params)
+        filename = _generate_filename(params)
         existing_file = None
 
     try:
-        new_file = process_file(processor, params, uuid, directory)
+        new_file = _process_file(processor, params, uuid, directory)
     except utils.RawDataMissingError as err:
         raise utils.SkipTaskError(err.message) from err
     except NotImplementedError as err:
@@ -56,11 +56,11 @@ def process_instrument(processor: Processor, params: InstrumentParams, directory
         new_file, std_uuid.UUID(uuid.product), params.product.id
     )
     processor.update_statuses(uuid.raw, "processed")
-    print_info(uuid, create_new_version, qc_result)
-    process_housekeeping(processor, params)
+    _print_info(uuid, create_new_version, qc_result)
+    _process_housekeeping(processor, params)
 
 
-def generate_filename(params: InstrumentParams) -> str:
+def _generate_filename(params: InstrumentParams) -> str:
     identifier = params.instrument.type
     if params.product.id == "mwr-l1c":
         identifier += "-l1c"
@@ -77,7 +77,7 @@ def generate_filename(params: InstrumentParams) -> str:
     return "_".join(parts) + ".nc"
 
 
-def print_info(
+def _print_info(
     uuid: Uuid, create_new_version: bool, qc_result: str | None = None
 ) -> None:
     action = (
@@ -90,7 +90,7 @@ def print_info(
     logging.info(f"{action}: {link}{qc_str}")
 
 
-def process_file(
+def _process_file(
     processor: Processor, params: InstrumentParams, uuid: Uuid, directory: Path
 ) -> Path:
     product_camel_case = "".join(
@@ -105,7 +105,7 @@ def process_file(
     return process.output_path
 
 
-def process_housekeeping(processor: Processor, params: InstrumentParams) -> None:
+def _process_housekeeping(processor: Processor, params: InstrumentParams) -> None:
     if params.date < utctoday() - datetime.timedelta(days=3):
         logging.info("Skipping housekeeping for old data")
         return

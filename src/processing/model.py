@@ -23,12 +23,12 @@ def process_model(processor: Processor, params: ModelParams, directory: Path):
         product_uuid = uuid.UUID(file_meta["uuid"])
         filename = file_meta["filename"]
     else:
-        product_uuid = generate_uuid()
-        filename = generate_filename(params)
+        product_uuid = _generate_uuid()
+        filename = _generate_filename(params)
 
     try:
         output_path = directory / "output.nc"
-        harmonize_model(params, full_path, output_path, product_uuid)
+        _harmonize_model(params, full_path, output_path, product_uuid)
         processor.upload_file(params, output_path, filename)
         if "hidden" in params.site.types:
             logging.info("Skipping plotting for hidden site")
@@ -42,11 +42,11 @@ def process_model(processor: Processor, params: ModelParams, directory: Path):
         raise SkipTaskError(err.message) from err
 
 
-def generate_uuid() -> uuid.UUID:
+def _generate_uuid() -> uuid.UUID:
     return uuid.uuid4()
 
 
-def generate_filename(params: ModelParams) -> str:
+def _generate_filename(params: ModelParams) -> str:
     parts = [
         params.date.strftime("%Y%m%d"),
         params.site.id,
@@ -55,7 +55,7 @@ def generate_filename(params: ModelParams) -> str:
     return "_".join(parts) + ".nc"
 
 
-def harmonize_model(
+def _harmonize_model(
     params: ModelParams, input_path: Path, output_path: Path, uuid: uuid.UUID
 ):
     data = {

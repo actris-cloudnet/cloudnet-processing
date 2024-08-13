@@ -16,6 +16,7 @@ from data_processing.metadata_api import MetadataApi
 from data_processing.pid_utils import PidUtils
 from data_processing.storage_api import StorageApi
 from processing.instrument import process_instrument
+from processing.jobs import freeze, update_plots, update_qc, upload_to_dvas
 from processing.model import process_model
 from processing.processor import (
     InstrumentParams,
@@ -24,7 +25,7 @@ from processing.processor import (
     ProcessParams,
     ProductParams,
 )
-from processing.product import process_product
+from processing.product import process_me, process_product
 from processing.utils import send_slack_alert, utcnow, utctoday
 
 
@@ -94,7 +95,37 @@ class Worker:
                         product=product,
                         model_id=task["modelId"],
                     )
-                    process_model(self.processor, params, Path(directory))
+                    if task["type"] == "plot":
+                        update_plots(self.processor, params, Path(directory))
+                    elif task["type"] == "qc":
+                        update_qc(self.processor, params, Path(directory))
+                    elif task["type"] == "freeze":
+                        freeze(self.processor, params, Path(directory))
+                    elif task["type"] == "dvas":
+                        raise utils.SkipTaskError(
+                            "DVAS not supported for model products"
+                        )
+                    else:
+                        process_model(self.processor, params, Path(directory))
+                elif product.id in ("l3-cf", "l3-lwc", "l3-iwc"):
+                    params = ModelParams(
+                        site=site,
+                        date=date,
+                        product=product,
+                        model_id="ecmwf",  # hard coded for now
+                    )
+                    if task["type"] == "plot":
+                        update_plots(self.processor, params, Path(directory))
+                    elif task["type"] == "qc":
+                        update_qc(self.processor, params, Path(directory))
+                    elif task["type"] == "freeze":
+                        freeze(self.processor, params, Path(directory))
+                    elif task["type"] == "dvas":
+                        raise utils.SkipTaskError(
+                            "DVAS not supported for instrument products"
+                        )
+                    else:
+                        process_me(self.processor, params, Path(directory))
                 elif product.source_instrument_ids:
                     params = InstrumentParams(
                         site=site,
@@ -104,7 +135,18 @@ class Worker:
                             task["instrumentInfoUuid"]
                         ),
                     )
-                    process_instrument(self.processor, params, Path(directory))
+                    if task["type"] == "plot":
+                        update_plots(self.processor, params, Path(directory))
+                    elif task["type"] == "qc":
+                        update_qc(self.processor, params, Path(directory))
+                    elif task["type"] == "freeze":
+                        freeze(self.processor, params, Path(directory))
+                    elif task["type"] == "dvas":
+                        raise utils.SkipTaskError(
+                            "DVAS not supported for instrument products"
+                        )
+                    else:
+                        process_instrument(self.processor, params, Path(directory))
                 else:
                     params = ProductParams(
                         site=site,
@@ -116,7 +158,16 @@ class Worker:
                         if task["instrumentInfoUuid"]
                         else None,
                     )
-                    process_product(self.processor, params, Path(directory))
+                    if task["type"] == "plot":
+                        update_plots(self.processor, params, Path(directory))
+                    elif task["type"] == "qc":
+                        update_qc(self.processor, params, Path(directory))
+                    elif task["type"] == "freeze":
+                        freeze(self.processor, params, Path(directory))
+                    elif task["type"] == "dvas":
+                        upload_to_dvas(self.processor, params)
+                    else:
+                        process_product(self.processor, params, Path(directory))
             action = "complete"
             if "hidden" in site.types or "model" in site.types:
                 logging.info("Site is model / hidden, will not publish followup tasks")
