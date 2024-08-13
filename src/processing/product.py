@@ -201,7 +201,7 @@ def _get_level1b_metadata_for_categorize(
                 processor, params, "mwr", fallback=["hatpro", "radiometrics"]
             )
             or _find_instrument_product(
-                processor, params, "radar", fallback=["rpg-fmcw-35", "rpg-fmcw-94"]
+                processor, params, "radar", require=["rpg-fmcw-35", "rpg-fmcw-94"]
             )
         ),
         "radar": (
@@ -251,8 +251,13 @@ def _find_instrument_product(
     params: ProductParams,
     product_id: str,
     fallback: list[str] = [],
-    require: list[str] | None = None,
+    require: list[str] = [],
 ) -> dict | None:
+    if require and fallback:
+        raise ValueError("Use either require or fallback")
+    if require:
+        fallback = require
+
     def file_key(file):
         if nominal_instrument_pid and file["instrumentPid"] == nominal_instrument_pid:
             return -1
@@ -262,11 +267,12 @@ def _find_instrument_product(
             return 999
 
     payload = _get_payload(
-        site_id=params.site.id, date=params.date, product_id=product_id
+        site_id=params.site.id,
+        date=params.date,
+        product_id=product_id,
+        instrument_id=require,
     )
     metadata = processor.md_api.get("api/files", payload)
-    if require is not None:
-        metadata = [file for file in metadata if file["instrument"]["id"] in require]
     if not metadata:
         return None
     nominal_instrument_pid = _get_nominal_instrument_pid(processor, params, product_id)
@@ -320,9 +326,9 @@ def _get_input_files_for_voodoo(
 def _get_payload(
     site_id: str,
     date: datetime.date,
-    product_id: str | None = None,
-    instrument_id: str | None = None,
-    instrument_pid: str | None = None,
+    product_id: str | list[str] | None = None,
+    instrument_id: str | list[str] | None = None,
+    instrument_pid: str | list[str] | None = None,
     model_id: str | None = None,
 ) -> dict:
     payload = {
