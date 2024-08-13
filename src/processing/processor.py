@@ -38,7 +38,7 @@ class Site:
 @dataclass(frozen=True)
 class Product:
     id: str
-    type: set[Literal["instrument", "synergetic"]]
+    type: set[Literal["instrument", "geophysical"]]
     source_instrument_ids: set[str]
     source_product_ids: set[str]
     derived_product_ids: set[str]
