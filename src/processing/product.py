@@ -10,6 +10,7 @@ from cloudnetpy.products import generate_mwr_multi, generate_mwr_single
 from data_processing import utils
 from data_processing.processing_tools import Uuid
 from data_processing.utils import SkipTaskError
+from requests import HTTPError
 
 from processing.processor import Processor, ProductParams
 
@@ -120,6 +121,7 @@ def process_categorize(
     input_files: dict[str, str | list[str]] = {
         product: str(processor.storage_api.download_product(metadata, directory))
         for product, metadata in meta_records.items()
+        if metadata is not None
     }
     if is_voodoo:
         input_files["lv0_files"], lv0_uuid = _get_input_files_for_voodoo(
@@ -191,61 +193,101 @@ def process_level2(
 def _get_level1b_metadata_for_categorize(
     processor: Processor, params: ProductParams, is_voodoo: bool
 ) -> dict:
-    instrument_order = {
-        "mwr-single": "",
-        "mwr": ("hatpro", "radiometrics"),
-        "radar": ("mira", "rpg-fmcw-35", "rpg-fmcw-94", "copernicus"),
-        "lidar": ("chm15k", "chm15kx", "cl61d", "cl51", "cl31"),
-        "disdrometer": ("thies-lnm", "parsivel"),
-        "model": "",  # You always get 1 and it's the best one
-    }
-    meta_records = {}
-    for product in instrument_order:
-        if product == "model":
-            payload = _get_payload(site_id=params.site.id, date=params.date)
-            route = "api/model-files"
-        else:
-            payload = _get_payload(
-                site_id=params.site.id, date=params.date, product_id=product
+    meta_records = {
+        "model": _find_model_product(processor, params),
+        "mwr": (
+            _find_instrument_product(processor, params, "mwr-single")
+            or _find_instrument_product(
+                processor, params, "mwr", fallback=["hatpro", "radiometrics"]
             )
-            route = "api/files"
-        if "mwr-single" in meta_records and product == "mwr":
-            continue
-        if is_voodoo and product == "radar":
-            payload["instrument"] = "rpg-fmcw-94"
-        metadata = processor.md_api.get(route, payload)
-        if product == "mwr-single" and not metadata:
-            continue
-        if product == "mwr" and not metadata:
-            # Use RPG-FMCW-XX as a fallback MWR
-            payload["instrument"] = ["rpg-fmcw-35", "rpg-fmcw-94"]
-            metadata = processor.md_api.get("api/files", payload)
-        if product == "lidar" and not metadata:
-            # Use Doppler lidar as a fallback lidar
-            payload["product"] = "doppler-lidar"
-            metadata = processor.md_api.get("api/files", payload)
-        if product == "disdrometer" and not metadata:
-            continue
-        if not metadata:
+            or _find_instrument_product(
+                processor, params, "radar", fallback=["rpg-fmcw-35", "rpg-fmcw-94"]
+            )
+        ),
+        "radar": (
+            _find_instrument_product(
+                processor, params, "radar", require=["rpg-fmcw-94"]
+            )
+            if is_voodoo
+            else _find_instrument_product(
+                processor,
+                params,
+                "radar",
+                fallback=["mira", "rpg-fmcw-35", "rpg-fmcw-94", "copernicus"],
+            )
+        ),
+        "lidar": (
+            _find_instrument_product(
+                processor,
+                params,
+                "lidar",
+                fallback=["chm15k", "chm15kx", "cl61d", "cl51", "cl31"],
+            )
+            or _find_instrument_product(processor, params, "doppler-lidar")
+        ),
+        "disdrometer": _find_instrument_product(
+            processor, params, "disdrometer", fallback=["thies-lnm", "parsivel"]
+        ),
+    }
+    optional_products = ["disdrometer"]
+    for product, metadata in meta_records.items():
+        if product not in optional_products and metadata is None:
             raise SkipTaskError(f"Missing required input product: {product}")
-        # For now, just take the first one if there are several options
-        # Later, use the one from the "nominal" instrument if available
-        meta_records[product] = metadata[0]
-        if len(metadata) == 1:
-            continue
-        found = False
-        for preferred_instrument in instrument_order[product]:
-            for row in metadata:
-                if row["instrument"]["id"] == preferred_instrument and not found:
-                    meta_records[product] = row
-                    found = True
-        name = meta_records[product]["instrument"]["id"] or "the one"
-        logging.info(
-            f"Several options for {product}, using {name} with PID {meta_records[product]['instrumentPid']}"
-        )
-    if "mwr-single" in meta_records:
-        meta_records["mwr"] = meta_records.pop("mwr-single")
     return meta_records
+
+
+def _find_model_product(processor: Processor, params: ProductParams) -> dict | None:
+    payload = _get_payload(site_id=params.site.id, date=params.date)
+    metadata = processor.md_api.get("api/model-files", payload)
+    if len(metadata) == 0:
+        return None
+    if len(metadata) > 1:
+        raise RuntimeError("Multiple products found")
+    return metadata[0]
+
+
+def _find_instrument_product(
+    processor: Processor,
+    params: ProductParams,
+    product_id: str,
+    fallback: list[str] = [],
+    require: list[str] | None = None,
+) -> dict | None:
+    def file_key(file):
+        if nominal_instrument_pid and file["instrumentPid"] == nominal_instrument_pid:
+            return -1
+        try:
+            return fallback.index(file["instrument"]["id"])
+        except ValueError:
+            return 999
+
+    payload = _get_payload(
+        site_id=params.site.id, date=params.date, product_id=product_id
+    )
+    metadata = processor.md_api.get("api/files", payload)
+    if require is not None:
+        metadata = [file for file in metadata if file["instrument"]["id"] in require]
+    if not metadata:
+        return None
+    nominal_instrument_pid = _get_nominal_instrument_pid(processor, params, product_id)
+    return min(metadata, key=file_key)
+
+
+def _get_nominal_instrument_pid(
+    processor: Processor, params: ProductParams, product_id: str
+) -> dict | None:
+    payload = {
+        "site": params.site.id,
+        "product": product_id,
+        "date": params.date.isoformat(),
+    }
+    try:
+        metadata = processor.md_api.get("api/nominal-instrument", payload)
+        return metadata["nominalInstrument"]["pid"]
+    except HTTPError as err:
+        if err.response.status_code == 404:
+            return None
+        raise
 
 
 def _get_input_files_for_voodoo(
