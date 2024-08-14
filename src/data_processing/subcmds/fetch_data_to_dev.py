@@ -186,6 +186,8 @@ def _download_file(row: dict) -> Path:
         subdir = "model-" + row["model"]["id"]
     elif "instrumentPid" in row and row["instrumentPid"] is not None:
         subdir = row["instrument"]["id"] + "-" + row["instrumentPid"].split(".")[-1][:8]
+        if row["tags"]:
+            subdir += "-" + "-".join(sorted(row["tags"]))
     else:
         raise ValueError("Row does not contain product, model or instrument.")
     outdir = DOWNLOAD_DIR / subdir
