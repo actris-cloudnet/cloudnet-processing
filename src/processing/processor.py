@@ -177,6 +177,9 @@ class Processor:
         include_tag_subset: set[str] | None = None,
         exclude_tag_subset: set[str] | None = None,
         date: datetime.date | tuple[datetime.date, datetime.date] | None = None,
+        allow_empty=False,
+        filename_prefix: str | None = None,
+        filename_suffix: str | None = None,
     ):
         """Download raw files matching the given parameters."""
         payload = self._get_payload(
@@ -185,6 +188,8 @@ class Processor:
             instrument=instrument_id,
             instrument_pid=instrument_pid,
             skip_created=True,
+            filename_prefix=filename_prefix,
+            filename_suffix=filename_suffix,
         )
         upload_metadata = self.md_api.get("api/raw-files", payload)
         if include_pattern is not None:
@@ -208,7 +213,10 @@ class Processor:
                 if not exclude_tag_subset.issubset(set(record["tags"]))
             ]
         if not upload_metadata:
-            raise utils.RawDataMissingError
+            if allow_empty:
+                return [], []
+            else:
+                raise utils.RawDataMissingError
         if largest_only:
             upload_metadata = [max(upload_metadata, key=lambda item: int(item["size"]))]
         full_paths, uuids = self.storage_api.download_raw_data(
@@ -253,6 +261,8 @@ class Processor:
         skip_created: bool = False,
         date: datetime.date | tuple[datetime.date, datetime.date] | None = None,
         instrument_pid: str | None = None,
+        filename_prefix: str | None = None,
+        filename_suffix: str | None = None,
     ) -> dict:
         payload: dict = {"developer": True}
         if site is not None:
@@ -272,6 +282,10 @@ class Processor:
             payload["model"] = model
         if skip_created is True:
             payload["status[]"] = ["uploaded", "processed"]
+        if filename_prefix is not None:
+            payload["filenamePrefix"] = filename_prefix
+        if filename_suffix is not None:
+            payload["filenameSuffix"] = filename_suffix
         return payload
 
     def upload_file(self, params: ProcessParams, full_path: Path, s3key: str):

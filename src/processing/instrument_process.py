@@ -81,18 +81,29 @@ class ProcessInstrument:
         include_tag_subset: set[str] | None = None,
         exclude_tag_subset: set[str] | None = None,
         date: datetime.date | tuple[datetime.date, datetime.date] | None = None,
+        allow_empty=False,
+        filename_prefix: str | None = None,
+        filename_suffix: str | None = None,
+        subdir: str | None = None,
     ):
+        directory = self.raw_dir
+        if subdir is not None:
+            directory = directory / subdir
+            directory.mkdir(parents=True, exist_ok=True)
         return self.processor.download_instrument(
             site_id=self.params.site.id,
             date=self.params.date if date is None else date,
             instrument_id=self.params.instrument.type,
             instrument_pid=self.params.instrument.pid,
-            directory=self.raw_dir,
+            directory=directory,
             include_pattern=include_pattern,
             largest_only=largest_only,
             exclude_pattern=exclude_pattern,
             include_tag_subset=include_tag_subset,
             exclude_tag_subset=exclude_tag_subset,
+            allow_empty=allow_empty,
+            filename_prefix=filename_prefix,
+            filename_suffix=filename_suffix,
         )
 
 
@@ -226,23 +237,46 @@ class ProcessDopplerLidarWind(ProcessInstrument):
 
 class ProcessDopplerLidar(ProcessInstrument):
     def process_halo_doppler_lidar(self):
-        full_paths, self.uuid.raw = self.download_instrument(
-            include_pattern=r"Stare.*\.hpl",
+        full_paths_co, raw_uuids_co = self.download_instrument(
+            filename_prefix="Stare",
+            filename_suffix=".hpl",
             exclude_tag_subset={"cross"},
+            subdir="co",
         )
+        full_paths_cross, raw_uuids_cross = self.download_instrument(
+            filename_prefix="Stare",
+            filename_suffix=".hpl",
+            include_tag_subset={"cross"},
+            allow_empty=True,
+            subdir="cross",
+        )
+        self.uuid.raw = raw_uuids_co + raw_uuids_cross
+
+        # Assume background files are the same for co and cross.
         full_paths_bg, _ = self.download_instrument(
-            include_pattern=r"Background.*\.txt",
+            filename_prefix="Background",
+            filename_suffix=".txt",
             exclude_tag_subset={"cross"},
             date=(self.params.date - datetime.timedelta(days=1), self.params.date),
+            subdir="bg",
         )
+
+        stare: doppy.product.Stare | doppy.product.StareDepol
         try:
             stare = doppy.product.Stare.from_halo_data(
-                data=full_paths,
+                data=full_paths_co,
                 data_bg=full_paths_bg,
                 bg_correction_method=doppy.options.BgCorrectionMethod.FIT,
             )
+            if full_paths_cross:
+                stare_cross = doppy.product.Stare.from_halo_data(
+                    data=full_paths_cross,
+                    data_bg=full_paths_bg,
+                    bg_correction_method=doppy.options.BgCorrectionMethod.FIT,
+                )
+                stare = doppy.product.StareDepol(stare, stare_cross)
         except doppy.exceptions.NoDataError:
-            raise RawDataMissingError()
+            raise RawDataMissingError
 
         _doppy_stare_to_nc(stare, str(self.daily_path))
         data = self._get_payload_for_nc_file_augmenter(str(self.daily_path))
@@ -592,12 +626,13 @@ def _fix_cl51_timestamps(filename: str, hours: int) -> None:
         file.writelines(lines)
 
 
-def _doppy_stare_to_nc(stare: doppy.product.Stare, filename: str) -> None:
-    return (
-        doppy.netcdf.Dataset(filename)
-        .add_dimension("time")
-        .add_dimension("range")
-        .add_time(
+def _doppy_stare_to_nc(
+    stare: doppy.product.Stare | doppy.product.StareDepol, filename: str
+) -> None:
+    with doppy.netcdf.Dataset(filename) as nc:
+        nc.add_dimension("time")
+        nc.add_dimension("range")
+        nc.add_time(
             name="time",
             dimensions=("time",),
             standard_name="time",
@@ -605,14 +640,14 @@ def _doppy_stare_to_nc(stare: doppy.product.Stare, filename: str) -> None:
             data=stare.time,
             dtype="f8",
         )
-        .add_variable(
+        nc.add_variable(
             name="range",
             dimensions=("range",),
             units="m",
             data=stare.radial_distance,
             dtype="f4",
         )
-        .add_variable(
+        nc.add_variable(
             name="elevation",
             dimensions=("time",),
             units="degrees",
@@ -620,14 +655,14 @@ def _doppy_stare_to_nc(stare: doppy.product.Stare, filename: str) -> None:
             dtype="f4",
             long_name="elevation from horizontal",
         )
-        .add_variable(
+        nc.add_variable(
             name="beta_raw",
             dimensions=("time", "range"),
             units="sr-1 m-1",
             data=stare.beta,
             dtype="f4",
         )
-        .add_variable(
+        nc.add_variable(
             name="beta",
             dimensions=("time", "range"),
             units="sr-1 m-1",
@@ -635,7 +670,7 @@ def _doppy_stare_to_nc(stare: doppy.product.Stare, filename: str) -> None:
             dtype="f4",
             mask=stare.mask,
         )
-        .add_variable(
+        nc.add_variable(
             name="v",
             dimensions=("time", "range"),
             units="m s-1",
@@ -644,26 +679,40 @@ def _doppy_stare_to_nc(stare: doppy.product.Stare, filename: str) -> None:
             dtype="f4",
             mask=stare.mask,
         )
-        .add_scalar_variable(
+        nc.add_scalar_variable(
             name="wavelength",
             units="m",
             standard_name="radiation_wavelength",
             data=stare.wavelength,
             dtype="f4",
         )
-        .add_attribute("serial_number", stare.system_id)
-        .add_attribute("doppy_version", doppy.__version__)
-    ).close()
+        if isinstance(stare, doppy.product.StareDepol):
+            nc.add_variable(
+                name="depolarisation_raw",
+                dimensions=("time", "range"),
+                units="1",
+                data=stare.depolarisation,
+                dtype="f4",
+            )
+            nc.add_variable(
+                name="depolarisation",
+                dimensions=("time", "range"),
+                units="1",
+                data=stare.depolarisation,
+                dtype="f4",
+                mask=stare.mask,
+            )
+        nc.add_attribute("serial_number", stare.system_id)
+        nc.add_attribute("doppy_version", doppy.__version__)
 
 
 def _doppy_wind_to_nc(
     wind: doppy.product.Wind, filename: str, options: doppy.product.WindOptions | None
 ) -> None:
-    nc = (
-        doppy.netcdf.Dataset(filename)
-        .add_dimension("time")
-        .add_dimension("height")
-        .add_time(
+    with doppy.netcdf.Dataset(filename) as nc:
+        nc.add_dimension("time")
+        nc.add_dimension("height")
+        nc.add_time(
             name="time",
             dimensions=("time",),
             standard_name="time",
@@ -671,14 +720,14 @@ def _doppy_wind_to_nc(
             data=wind.time,
             dtype="f8",
         )
-        .add_variable(
+        nc.add_variable(
             name="height",
             dimensions=("height",),
             units="m",
             data=wind.height,
             dtype="f4",
         )
-        .add_variable(
+        nc.add_variable(
             name="uwind_raw",
             dimensions=("time", "height"),
             units="m s-1",
@@ -686,7 +735,7 @@ def _doppy_wind_to_nc(
             dtype="f4",
             long_name="Non-screened zonal wind",
         )
-        .add_variable(
+        nc.add_variable(
             name="uwind",
             dimensions=("time", "height"),
             units="m s-1",
@@ -695,7 +744,7 @@ def _doppy_wind_to_nc(
             dtype="f4",
             long_name="Zonal wind",
         )
-        .add_variable(
+        nc.add_variable(
             name="vwind_raw",
             dimensions=("time", "height"),
             units="m s-1",
@@ -703,7 +752,7 @@ def _doppy_wind_to_nc(
             dtype="f4",
             long_name="Non-screened meridional wind",
         )
-        .add_variable(
+        nc.add_variable(
             name="vwind",
             dimensions=("time", "height"),
             units="m s-1",
@@ -712,28 +761,25 @@ def _doppy_wind_to_nc(
             dtype="f4",
             long_name="Meridional wind",
         )
-        .add_attribute("serial_number", wind.system_id)
-        .add_attribute("doppy_version", doppy.__version__)
-    )
-    if options is not None and options.azimuth_offset_deg is not None:
-        nc.add_scalar_variable(
-            name="azimuth_offset",
-            units="degrees",
-            data=options.azimuth_offset_deg,
-            dtype="f4",
-            long_name="Azimuth offset of the instrument (positive clockwise from north)",
-        )
-    return nc.close()
+        nc.add_attribute("serial_number", wind.system_id)
+        nc.add_attribute("doppy_version", doppy.__version__)
+        if options is not None and options.azimuth_offset_deg is not None:
+            nc.add_scalar_variable(
+                name="azimuth_offset",
+                units="degrees",
+                data=options.azimuth_offset_deg,
+                dtype="f4",
+                long_name="Azimuth offset of the instrument (positive clockwise from north)",
+            )
 
 
 def _doppy_wls70_wind_to_nc(
     wind: doppy.product.Wind, filename: str, options: doppy.product.WindOptions | None
 ) -> None:
-    nc = (
-        doppy.netcdf.Dataset(filename)
-        .add_dimension("time")
-        .add_dimension("height")
-        .add_time(
+    with doppy.netcdf.Dataset(filename) as nc:
+        nc.add_dimension("time")
+        nc.add_dimension("height")
+        nc.add_time(
             name="time",
             dimensions=("time",),
             standard_name="time",
@@ -741,14 +787,14 @@ def _doppy_wls70_wind_to_nc(
             data=wind.time,
             dtype="f8",
         )
-        .add_variable(
+        nc.add_variable(
             name="height",
             dimensions=("height",),
             units="m",
             data=wind.height,
             dtype="f4",
         )
-        .add_variable(
+        nc.add_variable(
             name="uwind",
             dimensions=("time", "height"),
             units="m s-1",
@@ -757,7 +803,7 @@ def _doppy_wls70_wind_to_nc(
             dtype="f4",
             long_name="Zonal wind",
         )
-        .add_variable(
+        nc.add_variable(
             name="vwind",
             dimensions=("time", "height"),
             units="m s-1",
@@ -766,15 +812,13 @@ def _doppy_wls70_wind_to_nc(
             dtype="f4",
             long_name="Meridional wind",
         )
-        .add_attribute("serial_number", wind.system_id)
-        .add_attribute("doppy_version", doppy.__version__)
-    )
-    if options is not None and options.azimuth_offset_deg is not None:
-        nc.add_scalar_variable(
-            name="azimuth_offset",
-            units="degrees",
-            data=options.azimuth_offset_deg,
-            dtype="f4",
-            long_name="Azimuth offset of the instrument (positive clockwise from north)",
-        )
-    return nc.close()
+        nc.add_attribute("serial_number", wind.system_id)
+        nc.add_attribute("doppy_version", doppy.__version__)
+        if options is not None and options.azimuth_offset_deg is not None:
+            nc.add_scalar_variable(
+                name="azimuth_offset",
+                units="degrees",
+                data=options.azimuth_offset_deg,
+                dtype="f4",
+                long_name="Azimuth offset of the instrument (positive clockwise from north)",
+            )

@@ -135,6 +135,7 @@ def harmonize_halo_file(data: dict) -> str:
         halo.add_wavelength()
         for attribute in ("units", "long_name", "standard_name"):
             halo.harmonize_attribute(attribute)
+        halo.fix_long_names()
         halo.add_history("lidar")
     if "output_path" not in data:
         shutil.copy(temp_file.name, data["full_path"])
@@ -402,7 +403,7 @@ class Level1Nc:
             if value is not None and key in self.nc.variables:
                 setattr(self.nc.variables[key], attribute, value)
             else:
-                logging.debug(f'Can"t find {attribute} for {key}')
+                logging.debug(f"Can't find {attribute} for {key}")
 
     def harmonize_standard_attributes(self, key: str):
         """Harmonizes standard attributes of one variable."""
@@ -539,6 +540,8 @@ class HaloNc(Level1Nc):
         keys = (
             "beta",
             "beta_raw",
+            "depolarisation",
+            "depolarisation_raw",
             "v",
             "time",
             "wavelength",
@@ -577,6 +580,16 @@ class HaloNc(Level1Nc):
         """Fixes time units."""
         self.nc.variables["time"].units = self._get_time_units()
         self.nc.variables["time"].calendar = "standard"
+
+    def fix_long_names(self):
+        if "depolarisation_raw" in self.nc.variables:
+            self.nc.variables[
+                "depolarisation_raw"
+            ].long_name = "Lidar volume linear depolarisation ratio"
+        if "depolarisation" in self.nc.variables:
+            self.nc.variables[
+                "depolarisation"
+            ].long_name = "Lidar volume linear depolarisation ratio"
 
 
 class HaloNcCalibrated(Level1Nc):
