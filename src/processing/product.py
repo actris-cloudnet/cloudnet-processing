@@ -27,13 +27,9 @@ def process_product(processor: Processor, params: ProductParams, directory: Path
         existing_file = processor.storage_api.download_product(
             existing_product, directory
         )
-        logging.info(
-            "Found existing product for %s with UUID %s", filename, uuid.volatile
-        )
     else:
         filename = generate_filename(params)
         existing_file = None
-        logging.info("No existing product found for %s", filename)
 
     try:
         if params.product.id in ("mwr-single", "mwr-multi"):
