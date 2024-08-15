@@ -152,6 +152,11 @@ def get_product_types(level: str | None = None) -> list:
     return [product["id"] for product in products]
 
 
+def get_instrument_types() -> list:
+    instruments = get_from_data_portal_api("api/instruments")
+    return list(set([i["id"] for i in instruments]))
+
+
 def get_product_types_excluding_level3(ignore_experimental: bool = False) -> list:
     """Returns Cloudnet processing types (other than level 3)."""
     products = get_from_data_portal_api("api/products")
@@ -531,6 +536,14 @@ def get_level1b_type(instrument_id: str) -> str:
     """Returns level 1b types."""
     data = get_from_data_portal_api("api/instruments")
     return [instru["type"] for instru in data if instrument_id == instru["id"]][0]
+
+
+def uuid2pid(uuid: str) -> str | None:
+    instrument = get_from_data_portal_api(f"api/instrument-pids/{uuid}")
+    assert isinstance(instrument, dict)
+    if instrument and "pid" in instrument:
+        return str(instrument["pid"])
+    return None
 
 
 class MiscError(Exception):

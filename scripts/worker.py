@@ -16,15 +16,18 @@ from data_processing.metadata_api import MetadataApi
 from data_processing.pid_utils import PidUtils
 from data_processing.storage_api import StorageApi
 from processing.instrument import process_instrument
+from processing.jobs import freeze, hkd, update_plots, update_qc, upload_to_dvas
 from processing.model import process_model
 from processing.processor import (
     InstrumentParams,
     ModelParams,
     Processor,
     ProcessParams,
+    Product,
     ProductParams,
+    Site,
 )
-from processing.product import process_product
+from processing.product import process_me, process_product
 from processing.utils import send_slack_alert, utcnow, utctoday
 
 
@@ -94,7 +97,49 @@ class Worker:
                         product=product,
                         model_id=task["modelId"],
                     )
-                    process_model(self.processor, params, Path(directory))
+                    if task["type"] == "plot":
+                        update_plots(self.processor, params, Path(directory))
+                    elif task["type"] == "qc":
+                        update_qc(self.processor, params, Path(directory))
+                    elif task["type"] == "freeze":
+                        freeze(self.processor, params, Path(directory))
+                    elif task["type"] == "hkd":
+                        raise utils.SkipTaskError(
+                            "Housekeeping not supported for model products"
+                        )
+                    elif task["type"] == "dvas":
+                        raise utils.SkipTaskError(
+                            "DVAS not supported for model products"
+                        )
+                    elif task["type"] == "process":
+                        process_model(self.processor, params, Path(directory))
+                        self.publish_followup_tasks(site, product, params)
+                    else:
+                        raise ValueError(f"Unknown task type: {task['type']}")
+                elif product.id in ("l3-cf", "l3-lwc", "l3-iwc"):
+                    params = ModelParams(
+                        site=site,
+                        date=date,
+                        product=product,
+                        model_id="ecmwf",  # hard coded for now
+                    )
+                    if task["type"] == "plot":
+                        update_plots(self.processor, params, Path(directory))
+                    elif task["type"] == "qc":
+                        update_qc(self.processor, params, Path(directory))
+                    elif task["type"] == "freeze":
+                        freeze(self.processor, params, Path(directory))
+                    elif task["type"] == "hkd":
+                        raise utils.SkipTaskError(
+                            "Housekeeping not supported for L3 products"
+                        )
+                    elif task["type"] == "dvas":
+                        raise utils.SkipTaskError("DVAS not supported for L3 products")
+                    elif task["type"] == "process":
+                        process_me(self.processor, params, Path(directory))
+                        self.publish_followup_tasks(site, product, params)
+                    else:
+                        raise ValueError(f"Unknown task type: {task['type']}")
                 elif product.source_instrument_ids:
                     params = InstrumentParams(
                         site=site,
@@ -104,7 +149,23 @@ class Worker:
                             task["instrumentInfoUuid"]
                         ),
                     )
-                    process_instrument(self.processor, params, Path(directory))
+                    if task["type"] == "plot":
+                        update_plots(self.processor, params, Path(directory))
+                    elif task["type"] == "qc":
+                        update_qc(self.processor, params, Path(directory))
+                    elif task["type"] == "freeze":
+                        freeze(self.processor, params, Path(directory))
+                    elif task["type"] == "hkd":
+                        hkd(self.processor, params)
+                    elif task["type"] == "dvas":
+                        raise utils.SkipTaskError(
+                            "DVAS not supported for instrument products"
+                        )
+                    elif task["type"] == "process":
+                        process_instrument(self.processor, params, Path(directory))
+                        self.publish_followup_tasks(site, product, params)
+                    else:
+                        raise ValueError(f"Unknown task type: {task['type']}")
                 else:
                     params = ProductParams(
                         site=site,
@@ -116,13 +177,24 @@ class Worker:
                         if task["instrumentInfoUuid"]
                         else None,
                     )
-                    process_product(self.processor, params, Path(directory))
+                    if task["type"] == "plot":
+                        update_plots(self.processor, params, Path(directory))
+                    elif task["type"] == "qc":
+                        update_qc(self.processor, params, Path(directory))
+                    elif task["type"] == "freeze":
+                        freeze(self.processor, params, Path(directory))
+                    elif task["type"] == "dvas":
+                        upload_to_dvas(self.processor, params)
+                    elif task["type"] == "hkd":
+                        raise utils.SkipTaskError(
+                            "Housekeeping not supported for products"
+                        )
+                    elif task["type"] == "process":
+                        process_product(self.processor, params, Path(directory))
+                        self.publish_followup_tasks(site, product, params)
+                    else:
+                        raise ValueError(f"Unknown task type: {task['type']}")
             action = "complete"
-            if "hidden" in site.types or "model" in site.types:
-                logging.info("Site is model / hidden, will not publish followup tasks")
-            else:
-                for product_id in product.derived_product_ids:
-                    self.publish_followup_task(product_id, params)
         except utils.SkipTaskError as err:
             logging.warning("Skipped task: %s", err)
             action = "complete"
@@ -144,6 +216,15 @@ class Worker:
         logging.info("Task processed")
         self.n_processed_tasks += 1
         return True
+
+    def publish_followup_tasks(
+        self, site: Site, product: Product, params: ProcessParams
+    ):
+        if "hidden" in site.types or "model" in site.types:
+            logging.info("Site is model / hidden, will not publish followup tasks")
+            return
+        for product_id in product.derived_product_ids:
+            self.publish_followup_task(product_id, params)
 
     def publish_followup_task(self, product_id: str, params: ProcessParams):
         product = self.processor.get_product(product_id)

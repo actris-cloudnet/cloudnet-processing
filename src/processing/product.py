@@ -6,13 +6,64 @@ from pathlib import Path
 
 from cloudnetpy.categorize import generate_categorize
 from cloudnetpy.exceptions import CloudnetException, ModelDataError
+from cloudnetpy.model_evaluation.products import product_resampling
 from cloudnetpy.products import generate_mwr_multi, generate_mwr_single
 from data_processing import utils
 from data_processing.processing_tools import Uuid
 from data_processing.utils import SkipTaskError
 from requests import HTTPError
 
-from processing.processor import Processor, ProductParams
+from processing.processor import ModelParams, Processor, ProductParams
+
+
+def process_me(processor: Processor, params: ModelParams, directory: Path):
+    create_new_version = False
+    uuid = Uuid()
+    if existing_product := processor.fetch_product(params):
+        if existing_product["volatile"]:
+            uuid.volatile = existing_product["uuid"]
+        else:
+            create_new_version = True
+        filename = existing_product["filename"]
+        existing_file = processor.storage_api.download_product(
+            existing_product, directory
+        )
+        logging.info(
+            "Found existing product for %s with UUID %s",
+            filename,
+            existing_product["uuid"],
+        )
+    else:
+        filename = _generate_filename(params)
+        existing_file = None
+        logging.info("No existing product found for %s", filename)
+
+    try:
+        new_file = _process_l3(processor, params, uuid, directory)
+    except CloudnetException as err:
+        raise utils.SkipTaskError(str(err)) from err
+
+    if create_new_version:
+        processor.pid_utils.add_pid_to_file(new_file)
+
+    utils.add_global_attributes(new_file)
+
+    if existing_file and utils.are_identical_nc_files(existing_file, new_file):
+        raise SkipTaskError("Skipping PUT to data portal, file has not changed")
+
+    processor.upload_file(params, new_file, filename)
+    processor.create_and_upload_l3_images(
+        new_file,
+        params.product.id,
+        params.model_id,
+        std_uuid.UUID(uuid.product),
+        filename,
+        directory,
+    )
+    qc_result = processor.upload_quality_report(
+        new_file, std_uuid.UUID(uuid.product), params.product.id
+    )
+    _print_info(uuid, create_new_version, qc_result)
 
 
 def process_product(processor: Processor, params: ProductParams, directory: Path):
@@ -28,16 +79,16 @@ def process_product(processor: Processor, params: ProductParams, directory: Path
             existing_product, directory
         )
     else:
-        filename = generate_filename(params)
+        filename = _generate_filename(params)
         existing_file = None
 
     try:
         if params.product.id in ("mwr-single", "mwr-multi"):
-            new_file = process_mwrpy(processor, params, uuid, directory)
+            new_file = _process_mwrpy(processor, params, uuid, directory)
         elif params.product.id in ("categorize", "categorize-voodoo"):
-            new_file = process_categorize(processor, params, uuid, directory)
+            new_file = _process_categorize(processor, params, uuid, directory)
         else:
-            new_file = process_level2(processor, params, uuid, directory)
+            new_file = _process_level2(processor, params, uuid, directory)
     except CloudnetException as err:
         raise utils.SkipTaskError(str(err)) from err
 
@@ -52,20 +103,24 @@ def process_product(processor: Processor, params: ProductParams, directory: Path
 
     processor.upload_file(params, new_file, filename)
     processor.create_and_upload_images(
-        new_file, params.product.id, std_uuid.UUID(uuid.product), filename, directory
+        new_file,
+        params.product.id,
+        std_uuid.UUID(uuid.product),
+        filename,
+        directory,
     )
     qc_result = processor.upload_quality_report(
         new_file, std_uuid.UUID(uuid.product), params.product.id
     )
-    print_info(uuid, create_new_version, qc_result)
+    _print_info(uuid, create_new_version, qc_result)
     if create_new_version:
-        update_dvas_metadata(processor, params)
+        _update_dvas_metadata(processor, params)
 
 
-def generate_filename(params: ProductParams) -> str:
+def _generate_filename(params: ProductParams | ModelParams) -> str:
     match params.product.id:
         case "mwr-single" | "mwr-multi":
-            assert params.instrument is not None
+            assert isinstance(params, ProductParams) and params.instrument is not None
             identifier = params.product.id.replace("mwr", params.instrument.type)
         case "iwc":
             identifier = "iwc-Z-T-method"
@@ -74,12 +129,14 @@ def generate_filename(params: ProductParams) -> str:
         case product_id:
             identifier = product_id
     parts = [params.date.strftime("%Y%m%d"), params.site.id, identifier]
-    if params.instrument:
+    if isinstance(params, ProductParams) and params.instrument:
         parts.append(params.instrument.uuid[:8])
+    elif isinstance(params, ModelParams):
+        parts.append(params.model_id)
     return "_".join(parts) + ".nc"
 
 
-def process_mwrpy(
+def _process_mwrpy(
     processor: Processor, params: ProductParams, uuid: Uuid, directory: Path
 ) -> Path:
     assert params.instrument is not None
@@ -90,10 +147,7 @@ def process_mwrpy(
         instrument_pid=params.instrument.pid,
     )
     metadata = processor.md_api.get("api/files", payload)
-    if len(metadata) == 0:
-        raise SkipTaskError("Missing required input product: mwr-l1c")
-    if len(metadata) > 1:
-        raise RuntimeError("Multiple products found")
+    _check_response(metadata, "mwr-l1c")
     l1c_file = processor.storage_api.download_product(metadata[0], directory)
 
     output_file = directory / "output.nc"
@@ -108,7 +162,7 @@ def process_mwrpy(
     return output_file
 
 
-def process_categorize(
+def _process_categorize(
     processor: Processor, params: ProductParams, uuid: Uuid, directory: Path
 ) -> Path:
     options = _get_categorize_options(params)
@@ -156,7 +210,35 @@ def _get_categorize_options(params: ProductParams) -> dict | None:
     return None
 
 
-def process_level2(
+def _process_l3(
+    processor: Processor, params: ModelParams, uuid: Uuid, directory: Path
+) -> Path:
+    payload = _get_payload(
+        site_id=params.site.id, date=params.date, model_id=params.model_id
+    )
+    model_meta = processor.md_api.get("api/model-files", payload)
+    _check_response(model_meta, "model")
+    model_file = processor.storage_api.download_product(model_meta[0], directory)
+    l3_prod = params.product.id.split("-")[1]
+    source = "categorize" if l3_prod == "cf" else l3_prod
+    payload = _get_payload(site_id=params.site.id, date=params.date, product_id=source)
+    product_meta = processor.md_api.get("api/files", payload)
+    _check_response(product_meta, source)
+    product_file = processor.storage_api.download_product(product_meta[0], directory)
+    output_file = directory / "output.nc"
+    uuid.product = product_resampling.process_L3_day_product(
+        params.model_id,
+        l3_prod,
+        [str(model_file)],
+        str(product_file),
+        str(output_file),
+        uuid=uuid.volatile,
+        overwrite=True,
+    )
+    return output_file
+
+
+def _process_level2(
     processor: Processor, params: ProductParams, uuid: Uuid, directory: Path
 ) -> Path:
     if params.product.id == "classification-voodoo":
@@ -169,10 +251,7 @@ def process_level2(
         site_id=params.site.id, date=params.date, product_id=cat_file
     )
     metadata = processor.md_api.get("api/files", payload)
-    if len(metadata) == 0:
-        raise SkipTaskError(f"Missing required input file: {cat_file}")
-    if len(metadata) > 1:
-        raise RuntimeError(f"Multiple {cat_file} products found")
+    _check_response(metadata, cat_file)
     categorize_file = processor.storage_api.download_product(metadata[0], directory)
     module = importlib.import_module(f"cloudnetpy.products.{module_name}")
     prod = (
@@ -235,10 +314,7 @@ def _get_level1b_metadata_for_categorize(
 def _find_model_product(processor: Processor, params: ProductParams) -> dict | None:
     payload = _get_payload(site_id=params.site.id, date=params.date)
     metadata = processor.md_api.get("api/model-files", payload)
-    if len(metadata) == 0:
-        return None
-    if len(metadata) > 1:
-        raise RuntimeError("Multiple products found")
+    _check_response(metadata, "model")
     return metadata[0]
 
 
@@ -343,7 +419,7 @@ def _get_payload(
     return payload
 
 
-def print_info(
+def _print_info(
     uuid: Uuid, create_new_version: bool, qc_result: str | None = None
 ) -> None:
     action = (
@@ -356,7 +432,7 @@ def print_info(
     logging.info(f"{action}: {link}{qc_str}")
 
 
-def update_dvas_metadata(processor: Processor, params: ProductParams):
+def _update_dvas_metadata(processor: Processor, params: ProductParams):
     payload = {
         "site": params.site.id,
         "product": params.product.id,
@@ -369,3 +445,10 @@ def update_dvas_metadata(processor: Processor, params: ProductParams):
     latest_version = metadata[0]
     if any(row["dvasId"] is not None for row in metadata):
         processor.dvas.upload(latest_version)
+
+
+def _check_response(metadata: list[dict], product: str) -> None:
+    if len(metadata) == 0:
+        raise SkipTaskError(f"Missing required input product: {product}")
+    if len(metadata) > 1:
+        raise RuntimeError("Multiple products found")

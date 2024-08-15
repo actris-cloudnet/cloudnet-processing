@@ -20,7 +20,9 @@ from data_processing.dvas import Dvas
 from data_processing.metadata_api import MetadataApi
 from data_processing.pid_utils import PidUtils
 from data_processing.storage_api import StorageApi
+from processing.fetch import fetch
 from processing.instrument import process_instrument
+from processing.jobs import freeze, hkd, update_plots, update_qc, upload_to_dvas
 from processing.model import process_model
 from processing.processor import (
     Instrument,
@@ -31,18 +33,26 @@ from processing.processor import (
     ProductParams,
     Site,
 )
-from processing.product import process_product
+from processing.product import process_me, process_product
 from processing.utils import utctoday
 
-pattern = re.compile("overflow encountered in (multiply|divide)")
+logging.basicConfig(level=logging.INFO)
+
 warnings.filterwarnings(
     "ignore",
     category=RuntimeWarning,
-    message=pattern.pattern,
+    message="overflow encountered in (multiply|divide)",
     module="matplotlib.colors",
 )
 
-# Investigate these warnings later:
+# TODO: Investigate these from model-evaluation:
+warnings.filterwarnings(
+    "ignore",
+    category=UserWarning,
+    message="The input coordinates to pcolormesh are interpreted as cell centers",
+)
+
+# TODO: Investigate these warnings later:
 warnings.filterwarnings(
     "ignore",
     category=UserWarning,
@@ -76,6 +86,7 @@ def _parse_args():
         description="Cloudnet processing main wrapper.",
         epilog="Enjoy the program! :)",
     )
+
     group = parser.add_argument_group(title="General options")
     group.add_argument(
         "-s",
@@ -88,13 +99,13 @@ def _parse_args():
         "--products",
         help="Products to be processed, e.g., radar,lidar,mwr.",
         type=validate_products,
-        required=True,
+        required=False,
     )
     parser.add_argument(
         "-t",
         "--types",
         help="Instrument types to be processed, e.g., mira,chm15k,hatpro.",
-        type=list_parser(str),
+        type=validate_types,
     )
     parser.add_argument(
         "-m",
@@ -127,8 +138,35 @@ def _parse_args():
         metavar="YYYY-MM-DD",
         help="Date to be processed.",
     )
+    group.add_argument(
+        "-c",
+        "--cmd",
+        required=False,
+        default="process",
+        choices=["process", "plot", "qc", "freeze", "dvas", "fetch", "hkd"],
+        help="Command.",
+    )
+    group.add_argument(
+        "--raw",
+        action="store_true",
+        help="Fetch raw data. Only applicable if the command is 'fetch'.",
+    )
 
     args = parser.parse_args()
+
+    if args.cmd != "fetch" and not args.products:
+        print("Please provide products to process.", file=sys.stderr)
+        sys.exit(1)
+
+    if args.cmd == "fetch" and not args.raw and not args.products:
+        print("Please provide products to process.", file=sys.stderr)
+        sys.exit(1)
+
+    if args.cmd == "fetch" and args.raw and args.products:
+        logging.info("Defining products has no effect when fetching raw data.")
+
+    if args.cmd == "fetch" and args.raw:
+        args.products = ["model"]
 
     if args.date and (args.start or args.stop):
         print("Cannot use --date with --start and --stop", file=sys.stderr)
@@ -149,21 +187,6 @@ def _parse_args():
     return args
 
 
-def parse_instrument(meta: dict) -> Instrument:
-    return Instrument(
-        uuid=meta["instrumentInfo"]["uuid"],
-        pid=meta["instrumentInfo"]["pid"],
-        type=meta["instrument"]["id"],
-    )
-
-
-def print_header(data):
-    parts = [
-        f"{BOLD}{key}:{RESET} {GREEN}{value}{RESET}" for key, value in data.items()
-    ]
-    print("  ".join(parts))
-
-
 def process_main(args):
     config = utils.read_main_conf()
     session = utils.make_session()
@@ -173,20 +196,26 @@ def process_main(args):
     dvas = Dvas(config, md_api)
     processor = Processor(md_api, storage_api, pid_utils, dvas)
 
+    if args.cmd == "fetch":
+        print_fetch_header(args)
+
     date = args.start
     while date <= args.stop:
         for site_id in args.sites:
+            site = processor.get_site(site_id)
             for product_id in args.products:
-                site = processor.get_site(site_id)
                 product = processor.get_product(product_id)
-                print()
                 try:
-                    process_file(processor, product, site, date, args)
+                    if args.cmd == "fetch":
+                        fetch(product, site, date, args)
+                    else:
+                        process_file(processor, product, site, date, args)
                 except utils.SkipTaskError as err:
                     logging.warning("Skipped task: %s", err)
                 except Exception:
                     logging.exception("Failed to process task")
         date += datetime.timedelta(days=1)
+    print()
 
 
 def process_file(
@@ -210,6 +239,7 @@ def process_file(
         for model_id in model_ids:
             print_header(
                 {
+                    "Task": args.cmd,
                     "Site": site.id,
                     "Date": date.isoformat(),
                     "Product": product.id,
@@ -223,7 +253,16 @@ def process_file(
                 model_id=model_id,
             )
             with TemporaryDirectory() as directory:
-                process_model(processor, model_params, Path(directory))
+                if args.cmd == "plot":
+                    update_plots(processor, model_params, Path(directory))
+                elif args.cmd == "qc":
+                    update_qc(processor, model_params, Path(directory))
+                elif args.cmd == "freeze":
+                    freeze(processor, model_params, Path(directory))
+                elif args.cmd == "dvas":
+                    raise utils.SkipTaskError("DVAS not supported for model products")
+                else:
+                    process_model(processor, model_params, Path(directory))
     elif product.source_instrument_ids:
         if args.instruments:
             instruments = {processor.get_instrument(uuid) for uuid in args.instruments}
@@ -238,6 +277,7 @@ def process_file(
         for instrument in instruments:
             print_header(
                 {
+                    "Task": args.cmd,
                     "Site": site.id,
                     "Date": date.isoformat(),
                     "Product": product.id,
@@ -249,7 +289,20 @@ def process_file(
                 site=site, date=date, product=product, instrument=instrument
             )
             with TemporaryDirectory() as directory:
-                process_instrument(processor, instru_params, Path(directory))
+                if args.cmd == "plot":
+                    update_plots(processor, instru_params, Path(directory))
+                elif args.cmd == "qc":
+                    update_qc(processor, instru_params, Path(directory))
+                elif args.cmd == "freeze":
+                    freeze(processor, instru_params, Path(directory))
+                elif args.cmd == "hkd":
+                    hkd(processor, instru_params)
+                elif args.cmd == "dvas":
+                    raise utils.SkipTaskError(
+                        "DVAS not supported for instrument products"
+                    )
+                else:
+                    process_instrument(processor, instru_params, Path(directory))
     elif product.id in ("mwr-single", "mwr-multi"):
         if args.instruments:
             instruments = {processor.get_instrument(uuid) for uuid in args.instruments}
@@ -265,6 +318,7 @@ def process_file(
         for instrument in instruments:
             print_header(
                 {
+                    "Task": args.cmd,
                     "Site": site.id,
                     "Date": date.isoformat(),
                     "Product": product.id,
@@ -279,9 +333,55 @@ def process_file(
                 instrument=instrument,
             )
             with TemporaryDirectory() as directory:
-                process_product(processor, product_params, Path(directory))
+                if args.cmd == "plot":
+                    update_plots(processor, product_params, Path(directory))
+                elif args.cmd == "qc":
+                    update_qc(processor, product_params, Path(directory))
+                elif args.cmd == "freeze":
+                    freeze(processor, product_params, Path(directory))
+                elif args.cmd == "dvas":
+                    raise utils.SkipTaskError(
+                        "DVAS not supported for instrument products"
+                    )
+                else:
+                    process_product(processor, product_params, Path(directory))
+    elif product.id in ("l3-cf", "l3-iwc", "l3-lwc"):
+        model_id = "ecmwf"  # Hard coded for now. Add support for other models later.
+        print_header(
+            {
+                "Task": args.cmd,
+                "Site": site.id,
+                "Date": date.isoformat(),
+                "Product": product.id,
+                "Model": model_id,
+            }
+        )
+        params = ModelParams(
+            site=site,
+            date=date,
+            product=product,
+            model_id=model_id,
+        )
+        with TemporaryDirectory() as directory:
+            if args.cmd == "plot":
+                update_plots(processor, params, Path(directory))
+            elif args.cmd == "qc":
+                update_qc(processor, params, Path(directory))
+            elif args.cmd == "freeze":
+                freeze(processor, params, Path(directory))
+            elif args.cmd == "dvas":
+                raise utils.SkipTaskError("DVAS not supported for L3 products")
+            else:
+                process_me(processor, params, Path(directory))
     else:
-        print_header({"Site": site.id, "Date": date.isoformat(), "Product": product.id})
+        print_header(
+            {
+                "Task": args.cmd,
+                "Site": site.id,
+                "Date": date.isoformat(),
+                "Product": product.id,
+            }
+        )
         product_params = ProductParams(
             site=site,
             date=date,
@@ -289,7 +389,24 @@ def process_file(
             instrument=None,
         )
         with TemporaryDirectory() as directory:
-            process_product(processor, product_params, Path(directory))
+            if args.cmd == "plot":
+                update_plots(processor, product_params, Path(directory))
+            elif args.cmd == "qc":
+                update_qc(processor, product_params, Path(directory))
+            elif args.cmd == "freeze":
+                freeze(processor, product_params, Path(directory))
+            elif args.cmd == "dvas":
+                upload_to_dvas(processor, product_params)
+            else:
+                process_product(processor, product_params, Path(directory))
+
+
+def validate_types(types: str) -> list[str]:
+    input_types = types.split(",")
+    valid_types = set(utils.get_instrument_types())
+    if invalid_types := set(input_types) - valid_types:
+        raise ArgumentTypeError("Invalid instrument types: " + ", ".join(invalid_types))
+    return input_types
 
 
 def validate_sites(sites: str) -> list[str]:
@@ -332,6 +449,9 @@ def validate_products(products: str) -> list[str]:
             case "doppy":
                 product_types = ["doppler-lidar", "doppler-lidar-wind"]
                 accepted_products.extend(product_types)
+            case "l3":
+                product_types = ["l3-cf", "l3-iwc", "l3-lwc"]
+                accepted_products.extend(product_types)
             case prod if prod in valid_products:
                 accepted_products.append(prod)
             case prod:
@@ -356,6 +476,30 @@ def parse_date(value: str) -> datetime.date:
     if match := re.fullmatch("(\d+)d", value):
         return utctoday() - datetime.timedelta(days=int(match[1]))
     return datetime.date.fromisoformat(value)
+
+
+def parse_instrument(meta: dict) -> Instrument:
+    return Instrument(
+        uuid=meta["instrumentInfo"]["uuid"],
+        pid=meta["instrumentInfo"]["pid"],
+        type=meta["instrument"]["id"],
+    )
+
+
+def print_header(data):
+    parts = [
+        f"{BOLD}{key}:{RESET} {GREEN}{value}{RESET}" for key, value in data.items()
+    ]
+    print()
+    print("  ".join(parts))
+
+
+def print_fetch_header(args: Namespace):
+    print()
+    msg = "Fetching raw data" if args.raw else "Fetching products"
+    print(f"{BOLD}{msg}:{RESET}")
+    if not args.raw:
+        print()
 
 
 if __name__ == "__main__":

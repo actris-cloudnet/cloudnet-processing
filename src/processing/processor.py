@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Literal
 
 from cloudnetpy.exceptions import PlottingError
+from cloudnetpy.model_evaluation.plotting.plotting import generate_L3_day_plots
 from cloudnetpy.plotting import Dimensions, PlotParameters, generate_figure
 from cloudnetpy_qc import quality
 from cloudnetpy_qc.quality import ErrorLevel
@@ -114,11 +115,6 @@ class Processor:
         self, upload_metadata: list[dict], directory: Path
     ) -> tuple[list, list]:
         return self.storage_api.download_raw_data(upload_metadata, directory)
-
-    def get_unprocessed_model_uploads(self) -> list:
-        payload = {"status": "uploaded"}
-        metadata = self.md_api.get("api/raw-model-files", payload)
-        return [row for row in metadata if int(row["size"]) > MIN_MODEL_FILESIZE]
 
     def get_model_upload(self, params: ModelParams) -> dict | None:
         payload = {
@@ -293,7 +289,7 @@ class Processor:
         payload = utils.create_product_put_payload(
             full_path, file_info, site=params.site.id
         )
-        if isinstance(params, ModelParams):
+        if isinstance(params, ModelParams) and "evaluation" not in params.product.type:
             payload["model"] = params.model_id
         elif isinstance(params, InstrumentParams):
             payload["instrument"] = params.instrument.type
@@ -343,10 +339,65 @@ class Processor:
                 continue
 
             visualizations.append(
-                self.upload_img(
+                self._upload_img(
                     img_path, product_s3key, product_uuid, product, field, dimensions
                 )
             )
+        self.md_api.put_images(visualizations, product_uuid)
+        self._delete_obsolete_images(product_uuid, product, valid_images)
+
+    def create_and_upload_l3_images(
+        self,
+        full_path: Path,
+        product: str,
+        model_id: str,
+        product_uuid: uuid.UUID,
+        product_s3key: str,
+        directory: Path,
+    ) -> None:
+        img_path = directory / "plot.png"
+        visualizations = []
+        fields = utils.get_fields_for_l3_plot(product, model_id)
+        l3_product = utils.full_product_to_l3_product(product)
+        valid_images = []
+        for stat in ("area", "error"):
+            dimensions = generate_L3_day_plots(
+                str(full_path),
+                l3_product,
+                model_id,
+                var_list=fields,
+                image_name=str(img_path),
+                fig_type="statistic",
+                stats=(stat,),
+                title=False,
+            )
+            if len(dimensions) > 1:
+                raise ValueError(f"More than one dimension in the plot: {dimensions}")
+            visualizations.append(
+                self._upload_img(
+                    img_path, product_s3key, product_uuid, product, stat, dimensions[0]
+                )
+            )
+            valid_images.append(stat)
+
+        for field in fields:
+            dimensions = generate_L3_day_plots(
+                str(full_path),
+                l3_product,
+                model_id,
+                var_list=[field],
+                image_name=str(img_path),
+                fig_type="single",
+                title=False,
+            )
+            if len(dimensions) > 1:
+                raise ValueError(f"More than one dimension in the plot: {dimensions}")
+            visualizations.append(
+                self._upload_img(
+                    img_path, product_s3key, product_uuid, product, field, dimensions[0]
+                )
+            )
+            valid_images.append(field)
         self.md_api.put_images(visualizations, product_uuid)
         self._delete_obsolete_images(product_uuid, product, valid_images)
 
@@ -360,7 +411,7 @@ class Processor:
         if obsolete_images := images_on_portal - expected_images:
             self.md_api.delete(url, {"images": obsolete_images})
 
-    def upload_img(
+    def _upload_img(
         self,
         img_path: Path,
         product_s3key: str,
