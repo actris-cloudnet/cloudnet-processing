@@ -22,12 +22,7 @@ from data_processing.pid_utils import PidUtils
 from data_processing.storage_api import StorageApi
 from processing.fetch import fetch
 from processing.instrument import process_instrument
-from processing.jobs import (
-    freeze,
-    update_plots,
-    update_qc,
-    upload_to_dvas,
-)
+from processing.jobs import freeze, hkd, update_plots, update_qc, upload_to_dvas
 from processing.model import process_model
 from processing.processor import (
     Instrument,
@@ -147,7 +142,7 @@ def _parse_args():
         "--cmd",
         required=False,
         default="process",
-        choices=["process", "plot", "qc", "freeze", "dvas", "fetch"],
+        choices=["process", "plot", "qc", "freeze", "dvas", "fetch", "hkd"],
         help="Command.",
     )
     group.add_argument(
@@ -299,6 +294,8 @@ def process_file(
                     update_qc(processor, instru_params, Path(directory))
                 elif args.cmd == "freeze":
                     freeze(processor, instru_params, Path(directory))
+                elif args.cmd == "hkd":
+                    hkd(processor, instru_params)
                 elif args.cmd == "dvas":
                     raise utils.SkipTaskError(
                         "DVAS not supported for instrument products"

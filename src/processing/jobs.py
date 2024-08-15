@@ -1,10 +1,14 @@
+import datetime
 import logging
 import uuid
 from pathlib import Path
 
+import housekeeping
 from data_processing import utils
+from data_processing.utils import RawApi
 
 from processing.processor import ModelParams, Processor, ProcessParams
+from processing.utils import utctoday
 
 
 def update_plots(processor: Processor, params: ProcessParams, directory: Path) -> None:
@@ -58,6 +62,25 @@ def upload_to_dvas(processor: Processor, params: ProcessParams) -> None:
         raise utils.SkipTaskError("Already uploaded to DVAS")
     processor.dvas.upload(metadata)
     logging.info("Uploaded to DVAS")
+
+
+def hkd(processor: Processor, params: ProcessParams) -> None:
+    if params.date < utctoday() - datetime.timedelta(days=3):
+        logging.info("Skipping housekeeping for old data")
+        return
+    instruments = housekeeping.list_instruments()
+    payload = {
+        "site": params.site.id,
+        "instrument": instruments,
+        "status": ["uploaded", "processed"],
+        "date": params.date.isoformat(),
+    }
+    metadata = processor.md_api.get("api/raw-files", payload)
+    raw_api = RawApi(processor.md_api.config, processor.md_api.session)
+    with housekeeping.Database() as db:
+        for record in metadata:
+            housekeeping.process_record(record, raw_api, db)
+    logging.info("Processed housekeeping data")
 
 
 def _fetch_data(

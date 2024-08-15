@@ -110,7 +110,7 @@ def _process_housekeeping(processor: Processor, params: InstrumentParams) -> Non
         logging.info("Skipping housekeeping for old data")
         return
     logging.info("Processing housekeeping data")
-    raw_api = utils.RawApi(session=utils.make_session())
+    raw_api = utils.RawApi(processor.md_api.config, processor.md_api.session)
     payload = processor._get_payload(
         site=params.site.id, date=params.date, instrument_pid=params.instrument.pid
     )
