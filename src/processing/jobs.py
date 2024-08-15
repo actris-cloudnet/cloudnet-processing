@@ -5,9 +5,8 @@ from pathlib import Path
 
 import housekeeping
 from data_processing import utils
-from data_processing.utils import RawApi
 
-from processing.processor import ModelParams, Processor, ProcessParams
+from processing.processor import InstrumentParams, ModelParams, Processor, ProcessParams
 from processing.utils import utctoday
 
 
@@ -64,23 +63,23 @@ def upload_to_dvas(processor: Processor, params: ProcessParams) -> None:
     logging.info("Uploaded to DVAS")
 
 
-def hkd(processor: Processor, params: ProcessParams) -> None:
+# TODO: copy-pasted from instrument.py
+def hkd(processor: Processor, params: InstrumentParams) -> None:
     if params.date < utctoday() - datetime.timedelta(days=3):
         logging.info("Skipping housekeeping for old data")
         return
-    instruments = housekeeping.list_instruments()
-    payload = {
-        "site": params.site.id,
-        "instrument": instruments,
-        "status": ["uploaded", "processed"],
-        "date": params.date.isoformat(),
-    }
-    metadata = processor.md_api.get("api/raw-files", payload)
-    raw_api = RawApi(processor.md_api.config, processor.md_api.session)
-    with housekeeping.Database() as db:
-        for record in metadata:
-            housekeeping.process_record(record, raw_api, db)
-    logging.info("Processed housekeeping data")
+    logging.info("Processing housekeeping data")
+    raw_api = utils.RawApi(processor.md_api.config, processor.md_api.session)
+    payload = processor._get_payload(
+        site=params.site.id, date=params.date, instrument_pid=params.instrument.pid
+    )
+    records = processor.md_api.get("api/raw-files", payload)
+    try:
+        with housekeeping.Database() as db:
+            for record in records:
+                housekeeping.process_record(record, raw_api=raw_api, db=db)
+    except housekeeping.HousekeepingException:
+        logging.exception("Housekeeping failed")
 
 
 def _fetch_data(
