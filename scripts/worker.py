@@ -23,7 +23,9 @@ from processing.processor import (
     ModelParams,
     Processor,
     ProcessParams,
+    Product,
     ProductParams,
+    Site,
 )
 from processing.product import process_me, process_product
 from processing.utils import send_slack_alert, utcnow, utctoday
@@ -111,6 +113,7 @@ class Worker:
                         )
                     elif task["type"] == "process":
                         process_model(self.processor, params, Path(directory))
+                        self.publish_followup_tasks(site, product, params)
                     else:
                         raise ValueError(f"Unknown task type: {task['type']}")
                 elif product.id in ("l3-cf", "l3-lwc", "l3-iwc"):
@@ -134,6 +137,7 @@ class Worker:
                         raise utils.SkipTaskError("DVAS not supported for L3 products")
                     elif task["type"] == "process":
                         process_me(self.processor, params, Path(directory))
+                        self.publish_followup_tasks(site, product, params)
                     else:
                         raise ValueError(f"Unknown task type: {task['type']}")
                 elif product.source_instrument_ids:
@@ -159,6 +163,7 @@ class Worker:
                         )
                     elif task["type"] == "process":
                         process_instrument(self.processor, params, Path(directory))
+                        self.publish_followup_tasks(site, product, params)
                     else:
                         raise ValueError(f"Unknown task type: {task['type']}")
                 else:
@@ -186,14 +191,10 @@ class Worker:
                         )
                     elif task["type"] == "process":
                         process_product(self.processor, params, Path(directory))
+                        self.publish_followup_tasks(site, product, params)
                     else:
                         raise ValueError(f"Unknown task type: {task['type']}")
             action = "complete"
-            if "hidden" in site.types or "model" in site.types:
-                logging.info("Site is model / hidden, will not publish followup tasks")
-            else:
-                for product_id in product.derived_product_ids:
-                    self.publish_followup_task(product_id, params)
         except utils.SkipTaskError as err:
             logging.warning("Skipped task: %s", err)
             action = "complete"
@@ -215,6 +216,15 @@ class Worker:
         logging.info("Task processed")
         self.n_processed_tasks += 1
         return True
+
+    def publish_followup_tasks(
+        self, site: Site, product: Product, params: ProcessParams
+    ):
+        if "hidden" in site.types or "model" in site.types:
+            logging.info("Site is model / hidden, will not publish followup tasks")
+            return
+        for product_id in product.derived_product_ids:
+            self.publish_followup_task(product_id, params)
 
     def publish_followup_task(self, product_id: str, params: ProcessParams):
         product = self.processor.get_product(product_id)
