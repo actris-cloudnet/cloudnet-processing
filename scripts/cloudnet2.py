@@ -41,17 +41,18 @@ logging.basicConfig(level=logging.INFO)
 warnings.filterwarnings(
     "ignore",
     category=RuntimeWarning,
-    message=re.compile("overflow encountered in (multiply|divide)").pattern,
+    message="overflow encountered in (multiply|divide)",
     module="matplotlib.colors",
 )
 
+# TODO: Investigate these from model-evaluation:
 warnings.filterwarnings(
     "ignore",
     category=UserWarning,
     message="The input coordinates to pcolormesh are interpreted as cell centers",
 )
 
-# Investigate these warnings later:
+# TODO: Investigate these warnings later:
 warnings.filterwarnings(
     "ignore",
     category=UserWarning,
