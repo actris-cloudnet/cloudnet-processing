@@ -8,12 +8,12 @@ from cloudnetpy.categorize import generate_categorize
 from cloudnetpy.exceptions import CloudnetException, ModelDataError
 from cloudnetpy.model_evaluation.products import product_resampling
 from cloudnetpy.products import generate_mwr_multi, generate_mwr_single
-from data_processing import utils
-from data_processing.processing_tools import Uuid
-from data_processing.utils import SkipTaskError
 from requests import HTTPError
 
+from processing import utils
+from processing.netcdf_comparer import are_identical_nc_files
 from processing.processor import ModelParams, Processor, ProductParams
+from processing.utils import SkipTaskError, Uuid
 
 
 def process_me(processor: Processor, params: ModelParams, directory: Path):
@@ -48,7 +48,7 @@ def process_me(processor: Processor, params: ModelParams, directory: Path):
 
     utils.add_global_attributes(new_file)
 
-    if existing_file and utils.are_identical_nc_files(existing_file, new_file):
+    if existing_file and are_identical_nc_files(existing_file, new_file):
         raise SkipTaskError("Skipping PUT to data portal, file has not changed")
 
     processor.upload_file(params, new_file, filename)
@@ -98,7 +98,7 @@ def process_product(processor: Processor, params: ProductParams, directory: Path
         new_file, instrument_pid=params.instrument.pid if params.instrument else None
     )
 
-    if existing_file and utils.are_identical_nc_files(existing_file, new_file):
+    if existing_file and are_identical_nc_files(existing_file, new_file):
         raise SkipTaskError("Skipping PUT to data portal, file has not changed")
 
     processor.upload_file(params, new_file, filename)

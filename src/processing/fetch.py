@@ -10,8 +10,8 @@ from collections.abc import Callable
 from pathlib import Path
 
 import requests
-from data_processing import utils
 
+from processing import utils
 from processing.processor import Product, Site
 
 DATAPORTAL_URL = os.environ["DATAPORTAL_URL"].rstrip("/")
@@ -51,7 +51,7 @@ class Fetcher:
         payload = {
             **self.payload,
             "status": ["uploaded", "processed"],
-            "instrument": self.args.types,
+            "instrument": self.args.instruments,
         }
         if self.args.instrument_pids:
             payload["instrumentPid"] = self.args.instrument_pids
@@ -79,8 +79,8 @@ class Fetcher:
             "product": self.product.id,
             "showLegacy": "true",
         }
-        if self.args.types:
-            payload["instrument"] = self.args.types
+        if self.args.instruments:
+            payload["instrument"] = self.args.instruments
         if self.args.instrument_pids:
             payload["instrumentPid"] = self.args.instrument_pids
         res = requests.get(url=url, params=payload)
@@ -107,40 +107,39 @@ def fetch(product: Product, site: Site, date: datetime.date, args: Namespace) ->
         logging.warning("Running in production, not fetching anything.")
         return
 
-    if args.instruments:
-        args.instrument_pids = [utils.uuid2pid(i) for i in args.instruments]
+    if args.uuids:
+        args.instrument_pids = [_uuid2pid(i) for i in args.uuids]
     else:
         args.instrument_pids = None
 
     fetcher = Fetcher(product, site, date, args)
 
     if args.raw:
-        if args.types:
+        if "instrument" in product.type:
             print(f"\n{BOLD}Raw instrument files for {date}:{RESET}\n")
             meta = fetcher.get_raw_instrument_metadata()
             if not meta:
                 print(f"{YELLOW}No files found.{RESET}")
             _process_metadata(_submit_upload, meta)
             _fetch_calibration(meta)
-        if args.models and not args.instruments:
+        elif args.models:
             print(f"\n{BOLD}Raw model files for {date}:{RESET}\n")
             meta = fetcher.get_raw_model_metadata()
             if not meta:
                 print(f"{YELLOW}No files found.{RESET}")
             _process_metadata(_submit_upload, meta)
-        if not args.types and not args.models:
+        elif not (args.instruments or args.models):
             print(f"\n{BOLD}Raw instrument files for {date}:{RESET}\n")
             meta = fetcher.get_raw_instrument_metadata()
             if not meta:
                 print(f"{YELLOW}No files found.{RESET}")
             _process_metadata(_submit_upload, meta)
             _fetch_calibration(meta)
-            if not args.instruments:
-                print(f"\n{BOLD}Raw model files for {date}:{RESET}\n")
-                meta = fetcher.get_raw_model_metadata()
-                if not meta:
-                    print(f"{YELLOW}No files found.{RESET}")
-                _process_metadata(_submit_upload, meta)
+            print(f"\n{BOLD}Raw model files for {date}:{RESET}\n")
+            meta = fetcher.get_raw_model_metadata()
+            if not meta:
+                print(f"{YELLOW}No files found.{RESET}")
+            _process_metadata(_submit_upload, meta)
     elif product.id == "model":
         meta = fetcher.get_model_metadata()
         _process_metadata(_submit_file, meta, show_progress=False)
@@ -334,3 +333,11 @@ def _fetch_calibration(upload_metadata: list):
         )
         res.raise_for_status()
         processed_pid_dates.add((upload["instrumentPid"], upload["measurementDate"]))
+
+
+def _uuid2pid(uuid: str) -> str | None:
+    instrument = utils.get_from_data_portal_api(f"api/instrument-pids/{uuid}")
+    assert isinstance(instrument, dict)
+    if instrument and "pid" in instrument:
+        return str(instrument["pid"])
+    return None

@@ -2,7 +2,7 @@
 
 ![](https://github.com/actris-cloudnet/cloudnet-processing/workflows/Test%20and%20lint/badge.svg)
 
-Various scripts used in Cloudnet data transfer and processing.
+Cloudnet data processing glue code.
 
 ## Installation
 
@@ -25,181 +25,42 @@ The following scripts are provided:
 
 The main wrapper for running all the processing steps.
 
-    usage: cloudnet.py [-h] -s SITE [-d YYYY-MM-DD] [--start YYYY-MM-DD]
-                           [--stop YYYY-MM-DD] [-p ...] COMMAND ...
+    usage: cloudnet.py [-h] [-s SITES] [-p PRODUCTS] [-i INSTRUMENTS] [-m MODELS] [-u UUIDS]
+                       [--start YYYY-MM-DD] [--stop YYYY-MM-DD] [-d YYYY-MM-DD]
+                       [-c {process,plot,qc,freeze,dvas,fetch,hkd}] [--raw]
 
-Positional arguments:
+Arguments:
 
-| Name      | Description                                                                                                                                       |
-| :-------- | :------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `command` | Command to execute. Must be one of `freeze`, `process`, `model`, `me`, `plot`, `fetch`, `dvas`, or `qc`. Commands are detailed [here](#commands). |
-
-General arguments. These arguments are available for most commands. The arguments must be issued before the command argument.
-
-| Short | Long         | Default           | Description                                                                        |
-| :---- | :----------- | :---------------- | :--------------------------------------------------------------------------------- |
-| `-h`  | `--help`     |                   | Show help and exit.                                                                |
-| `-s`  | `--site`     |                   | Site to process data from, e.g, `hyytiala`. Required.                              |
-| `-d`  | `--date`     |                   | Single date to be processed. Alternatively, `--start` and `--stop` can be defined. |
-|       | `--start`    | `current day - 5` | Starting date.                                                                     |
-|       | `--stop`     | `current day `    | Stopping date.                                                                     |
-| `-p`  | `--products` | all               | Processed products, e.g, `radar,lidar,categorize,classification`.                  |
-| `-l`  | `--loglevel` | `INFO`            | Log level: `INFO`, `DEBUG`, `WARNING` or `ERROR`.                                  |
+| Short | Long            | Default       | Description                                                                        |
+| :---- | :-------------- | :------------ | :--------------------------------------------------------------------------------- |
+| `-h`  | `--help`        |               | Show help and exit.                                                                |
+| `-s`  | `--sites`       |               | E.g, `hyytiala,granada`.                                                           |
+| `-p`  | `--products`    |               | E.g. `lidar,classification,l3-cf`.                                                 |
+| `-i`  | `--instruments` |               | E.g. `mira,hatpro`.                                                                |
+| `-m`  | `--models`      |               | E.g. `ecmwf,gdas1`.                                                                |
+| `-u`  | `--uuids`       |               | Instrument UUIDs, e.g. `db58480f-58ca-49ad-995c-6c3b89e9a0fc`.                     |
+|       | `--start`       | five days ago | Starting date (included).                                                          |
+|       | `--stop`        | current day   | Stopping date (included).                                                          |
+| `-d`  | `--date`        |               | Single date to be processed. Alternatively, `--start` and `--stop` can be defined. |
+| `-c`  | `--cmd`         | `process`     | Command to be executed.                                                            |
+|       | `--raw`         |               | Fetch raw data. Only applicable if the command is `fetch`.                         |
 
 Shortcut for the `--products` argument:
 
 | Shortcut   | Meaning                                                                             |
 | :--------- | :---------------------------------------------------------------------------------- |
-| `lb1`      | `disdrometer,doppler-lidar,lidar,mwr,radar,weather-station`                         |
-| `l1c`      | `categorize,categorize-voodoo,mwr-l1c`                                              |
+| `lb1`      | `disdrometer,doppler-lidar,lidar,mwr,radar,weather-station,model`                   |
+| `l1c`      | `categorize,categorize-voodoo,mwr-l1c,doppler-lidar-wind`                           |
 | `l2`       | `classification,iwc,lwc,drizzle,ier,der,mwr-single,mwr-multi,classification-voodoo` |
+| `l3`       | `l3-cf,l3-iwc,l3-lwc`                                                               |
+| `doppy`    | `doppler-lidar,doppler-lidar-wind`                                                  |
+| `voodoo`   | `categorize-voodoo,classification-voodoo`                                           |
+| `mwrpy`    | `mwr-l1c,mwr-single,mwr-multi`                                                      |
 | `standard` | All products except experimental and Level 3.                                       |
 
-### Commands
+Notes:
 
-### `process`
-
-The `process` command processes standard Cloudnet products, such as `radar`, `lidar`, `categorize`, and `classification` products.
-
-In addition to the general arguments, it accepts the following special arguments.
-
-| Short | Long                   | Default | Description                                                                                                                                     |
-| :---- | :--------------------- | :------ | :---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `-r`  | `--reprocess`          | `False` | See below.                                                                                                                                      |
-|       | `--reprocess_volatile` | `False` | Reprocess volatile files only (and create new volatile file from unprocessed).                                                                  |
-| `-u`  | `--updated_since`      |         | Process all raw files submitted within `--updated_since` in hours. Ignores other arguments than `--site`. Note: Creates only Level 1b products. |
-| `-f`  | `--force`              | `False` | Force upload of the processed file to the data portal.                                                                                          |
-|       | `--pid`                |         | Process Level 1b data only from some specific instrument.                                                                                       |
-| `-H`  | `--housekeeping`       | `False` | Process housekeeping data.                                                                                                                      |
-
-Behavior of the `--reprocess` flag:
-
-| Existing file            | `--reprocess` | Action                                                               |
-| :----------------------- | :------------ | :------------------------------------------------------------------- |
-| -                        | `False`       | Create volatile file.                                                |
-| -                        | `True`        | Create volatile file.                                                |
-| `volatile`               | `False`       | Reprocess the volatile file (Level 1 products only if new raw data). |
-| `volatile`               | `True`        | Reprocess the volatile file.                                         |
-| `stable` (legacy or not) | `False`       | -                                                                    |
-| `stable`                 | `True`        | Create new stable file version.                                      |
-
-### `plot`
-
-Don't process anything, only plot images for products.
-
-Additional arguments:
-
-| Short | Long        | Default | Description                                                              |
-| :---- | :---------- | :------ | :----------------------------------------------------------------------- |
-| `-m`  | `--missing` | `False` | Only plot images for files that do not have any previous images plotted. |
-
-### `qc`
-
-Don't process anything, only create quality control reports for products.
-
-Additional arguments:
-
-| Short | Long      | Default | Description                                                                                                              |
-| :---- | :-------- | :------ | :----------------------------------------------------------------------------------------------------------------------- |
-| `-f`  | `--force` | `False` | Force creation of QC reports. Otherwise might be skipped if an report exist and `cloudnetpy-qc` version has not changed. |
-
-### `model`
-
-Create Cloudnet model products.
-
-Currently, with this command, arguments `start`, `stop`, `date` and `products` have no effect.
-Thus, all unprocessed model files will be processed.
-
-This command takes no additional arguments.
-
-### `me`
-
-Create Cloudnet level 3 model evaluation products (experimental).
-
-Additional arguments:
-
-| Short | Long          | Default | Description                                                           |
-| :---- | :------------ | :------ | :-------------------------------------------------------------------- |
-| `-r`  | `--reprocess` | `False` | Process new version of the stable files and reprocess volatile files. |
-
-### `fetch`
-
-Download products or raw data from production and upload them to locally running data portal.
-
-Additional arguments:
-
-| Short | Long            | Default | Description                                                                                       |
-| :---- | :-------------- | :------ | :------------------------------------------------------------------------------------------------ |
-| `-i`  | `--instruments` |         | Download raw files from the given instruments, or all available instruments if none is specified. |
-| `-m`  | `--models`      |         | Download raw model files from the given models, or all available models if none is specified.     |
-| `-e`  | `--extension`   |         | File extension to be downloaded, e.g, `.LV1`.                                                     |
-|       | `--save`        |         | Store downloaded files in `download` directory.                                                   |
-|       | `--include`     |         | Include only files that match the given pattern.                                                  |
-|       | `--exclude`     | `*.LV0` | Exclude files that match the given pattern.                                                       |
-
-### `freeze`
-
-Freeze selected files by adding a PID to the files and setting their state to `stable`, preventing further changes to the data.
-
-Note: With this script, all sites can be selected using `--site all` argument.
-
-Additional arguments:
-
-| Short | Long             | Default | Description                                                                                                             |
-| :---- | :--------------- | :------ | :---------------------------------------------------------------------------------------------------------------------- |
-| `-f`  | `--force`        | `False` | Ignore environment variables `FREEZE_AFTER_DAYS` and `FREEZE_MODEL_AFTER_DAYS`. Allows freezing recently changed files. |
-| `-e`  | `--experimental` | `False` | Also freeze experimental products.                                                                                      |
-|       | `--dvas`         | `False` | Also upload metadata to DVAS.                                                                                           |
-
-### `dvas`
-
-Upload Cloudnet metadata to DVAS data portal.
-
-Additional arguments:
-
-| Short | Long         | Default | Description                                                               |
-| :---- | :----------- | :------ | :------------------------------------------------------------------------ |
-|       | `--delete`   | `False` | Instead of uploading, delete selected metadata from the DVAS data portal. |
-|       | `--truncate` | `False` | Instead of uploading, delete ALL CLU metadata from the DVAS data portal.  |
-
-### `housekeeping`
-
-Processes housekeeping data based on [config file](src/housekeeping/config.toml).
-
-Example usage:
-
-```bash
-./scripts/cloudnet.py -s palaiseau housekeeping
-./scripts/cloudnet.py -s palaiseau -d 2022-11-01 housekeeping
-./scripts/cloudnet.py -s palaiseau --start 2022-11-01 housekeeping
-./scripts/cloudnet.py -s palaiseau --start 2022-11-01 --stop 2022-11-05 housekeeping
-```
-
-### Examples
-
-Process classification product for the Bucharest site for the date 2021-12-07:
-
-    scripts/cloudnet.py -s bucharest -d 2021-12-07 -p classification process
-
-Plot missing images for Hyytiälä (since 2000-01-01):
-
-    scripts/cloudnet.py -s hyytiala --start 2000-01-01 plot -m
-
-Freeze all files whose measurement date is 2021-01-01 or later:
-
-    scripts/cloudnet.py -s all --start 2021-01-01 freeze
-
-Reprocess all level 2 files between 2021-01-01 and 2021-01-31 for Norunda:
-
-    scripts/cloudnet.py -s norunda --start 2021-01-01 --stop 2021-01-31 -p l2 process -r
-
-Process missing model files for Munich:
-
-    scripts/cloudnet.py -s munich model
-
-## Other scripts
-
-Code that is not involved in the Cloudnet data processing chain can be found in other scripts under the `scripts` directory.
+- `--products` has no effect when fetching raw data.
 
 ### `submit-data-to-dev.py`
 
@@ -223,71 +84,10 @@ Options:
 | `-i`  | `--instrument` | Instrument to submit, e.g. `chm15k`.  |
 |       | `--pid`        | Instrument PID to submit.             |
 
-### `put-legacy-files.py`
+### `worker.py`
 
-Upload Matlab processed legacy products (`categorize`, and level 2 products) to data portal.
+Launch a worker with `./scripts/worker.py` to process incoming _tasks_. Used mainly in production to process data in real-time.
 
-    usage: put-legacy-files.py [-h] [-y YYYY] PATH
-
-Positional arguments:
-
-| Name   | Description                                                            |
-| :----- | :--------------------------------------------------------------------- |
-| `path` | Root path of the site containing legacy data, e.g, `/foo/bar/munich/`. |
-
-Optional arguments:
-
-| Short | Long       | Default | Description                     |
-| :---- | :--------- | :------ | :------------------------------ |
-| `-h`  | `--help`   |         | Show help and exit.             |
-| `-y`  | `--year`   | all     | Process only some certain year. |
-| `-f`  | `--freeze` | False   | Add PID to file.                |
-
-Behavior:
-
-| Existing file         | Action                                    |
-| :-------------------- | :---------------------------------------- |
-| -                     | Add stable legacy file.                   |
-| `volatile`            | -                                         |
-| `stable` (legacy)     | -                                         |
-| `stable` (non-legacy) | Add stable legacy file as oldest version. |
-
-### `map-variable-names.py`
-
-Print list of Cloudnet variables.
-
-    usage: map-variable-names.py
-
-## Development
-
-For development, you may open a bash session inside the container with:
-
-    ./run-bash
-
-The changes made to the source files on the host computer will be reflected in the container.
-
-### Tests
-
-First, build a separate test container:
-
-    docker build --target dev --tag test .
-
-Run unit tests:
-
-    docker run -tv $PWD:/app --env-file test.env test pytest
-
-Run unit tests and debug on failure:
-
-    docker run -itv $PWD:/app --env-file test.env test pytest --pdb
-
-Run end-to-end tests:
-
-    docker run -tv $PWD:/app --env-file e2e-test.env test /bin/sh -c 'for f in tests/e2e/*/main.py; do $f; done'
-
-Type hints:
-
-    docker run -tv $PWD:/app --env-file test.env test mypy scripts/ src/
-
-### Licence
+## Licence
 
 MIT

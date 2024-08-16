@@ -3,8 +3,8 @@ name: Test and lint
 on: [push, pull_request]
 
 jobs:
-  test:
-    name: Run test suite
+  docker:
+    name: Build Docker image
     runs-on: ubuntu-latest
 
     steps:
@@ -19,19 +19,13 @@ jobs:
         with:
           context: .
           load: true
-          tags: test
-          target: dev
+          tags: latest
+          target: prod
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Run unit tests
-        run: docker run --env-file test.env -v $PWD:/app test pytest
-
-      - name: Run e2e tests
-        run: docker run --env-file e2e-test.env -v $PWD:/app test /bin/sh -c 'for f in tests/e2e/*/main.py; do $f || exit; done'
-
-  lint:
-    name: Lint
+  lint-and-test:
+    name: Lint and test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -47,3 +41,5 @@ jobs:
           pip install .[dev]
       - name: Run pre-commit checks
         run: pre-commit run --all-files --show-diff-on-failure
+      - name: Run unit tests
+        run: python -m pytest tests/unit

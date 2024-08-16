@@ -3,10 +3,12 @@ import gzip
 import logging
 import re
 import shutil
+from os import PathLike
 from pathlib import Path
 from uuid import UUID
 
 import doppy
+import netCDF4
 from cloudnetpy.instruments import (
     basta2nc,
     ceilo2nc,
@@ -25,12 +27,11 @@ from cloudnetpy.instruments import (
     ws2nc,
 )
 from cloudnetpy.utils import is_timestamp
-from data_processing import concat_wrapper, nc_header_augmenter, utils
-from data_processing.processing_tools import Uuid
-from data_processing.utils import RawDataMissingError, fetch_calibration
 from requests.exceptions import HTTPError
 
+from processing import concat_wrapper, nc_header_augmenter
 from processing.processor import InstrumentParams, Processor
+from processing.utils import RawDataMissingError, Uuid, fetch_calibration
 
 
 class ProcessInstrument:
@@ -307,7 +308,7 @@ class ProcessLidar(ProcessInstrument):
     def process_cs135(self):
         full_paths, self.uuid.raw = self.download_instrument()
         full_paths.sort()
-        utils.concatenate_text_files(full_paths, str(self.daily_path))
+        _concatenate_text_files(full_paths, str(self.daily_path))
         self._call_ceilo2nc("cs135")
 
     def process_chm15k(self):
@@ -325,14 +326,14 @@ class ProcessLidar(ProcessInstrument):
             full_paths, self.params.date.isoformat(), str(self.daily_path)
         )
         self.uuid.raw = _get_valid_uuids(raw_uuids, full_paths, valid_full_paths)
-        utils.check_chm_version(str(self.daily_path), model)
+        _check_chm_version(str(self.daily_path), model)
         self._call_ceilo2nc("chm15k")
 
     def process_ct25k(self):
         full_paths, self.uuid.raw = self.download_instrument()
         full_paths.sort()
         full_paths = _unzip_gz_files(full_paths)
-        utils.concatenate_text_files(full_paths, str(self.daily_path))
+        _concatenate_text_files(full_paths, str(self.daily_path))
         self._call_ceilo2nc("ct25k")
 
     def process_halo_doppler_lidar_calibrated(self):
@@ -358,7 +359,7 @@ class ProcessLidar(ProcessInstrument):
     def process_cl31(self):
         full_paths, self.uuid.raw = self.download_instrument()
         full_paths.sort()
-        utils.concatenate_text_files(full_paths, str(self.daily_path))
+        _concatenate_text_files(full_paths, str(self.daily_path))
         self._call_ceilo2nc("cl31")
 
     def process_cl51(self):
@@ -373,7 +374,7 @@ class ProcessLidar(ProcessInstrument):
                 self.uuid.raw,
             ) = self.download_instrument()
         full_paths.sort()
-        utils.concatenate_text_files(full_paths, str(self.daily_path))
+        _concatenate_text_files(full_paths, str(self.daily_path))
         if self.params.site.id == "norunda" and self.params.date < datetime.date(
             2021, 10, 18
         ):
@@ -519,7 +520,7 @@ class ProcessDisdrometer(ProcessInstrument):
             kwargs = self._kwargs.copy()
             kwargs["telegram"] = calibration["telegram"]
             if calibration["missing_timestamps"] is True:
-                full_paths, timestamps = utils.deduce_parsivel_timestamps(full_paths)
+                full_paths, timestamps = _deduce_parsivel_timestamps(full_paths)
                 kwargs["timestamps"] = timestamps
             # Add missing semicolon between timestamp and serial number (450416)
             if self.params.site.id == "norunda":
@@ -537,7 +538,7 @@ class ProcessDisdrometer(ProcessInstrument):
     def process_thies_lnm(self):
         full_paths, self.uuid.raw = self.download_instrument()
         full_paths.sort()
-        utils.concatenate_text_files(full_paths, self.daily_path)
+        _concatenate_text_files(full_paths, self.daily_path)
         site_meta = self.site_meta.copy()
         if self.params.site.id == "leipzig-lim":
             site_meta["truncate_columns"] = 23
@@ -628,7 +629,7 @@ def _fix_cl51_timestamps(filename: str, hours: int) -> None:
     for ind, line in enumerate(lines):
         if is_timestamp(line):
             date_time = line.strip("-").strip("\n")
-            date_time_utc = utils.shift_datetime(date_time, hours)
+            date_time_utc = _shift_datetime(date_time, hours)
             lines[ind] = f"-{date_time_utc}\n"
     with open(filename, "w") as file:
         file.writelines(lines)
@@ -830,3 +831,73 @@ def _doppy_wls70_wind_to_nc(
                 dtype="f4",
                 long_name="Azimuth offset of the instrument (positive clockwise from north)",
             )
+
+
+def _shift_datetime(date_time: str, offset: int) -> str:
+    """Shifts datetime N hours."""
+    dt = datetime.datetime.strptime(date_time, "%Y-%m-%d %H:%M:%S")
+    dt = dt + datetime.timedelta(hours=offset)
+    return dt.strftime("%Y-%m-%d %H:%M:%S")
+
+
+def _concatenate_text_files(filenames: list, output_filename: str | PathLike) -> None:
+    """Concatenates text files."""
+    with open(output_filename, "wb") as target:
+        for filename in filenames:
+            with open(filename, "rb") as source:
+                shutil.copyfileobj(source, target)
+
+
+def _deduce_parsivel_timestamps(
+    file_paths: list[Path]
+) -> tuple[list[Path], list[datetime.datetime]]:
+    time_stamps, valid_files = [], []
+    min_measurements_per_hour = 55
+    for filename in sorted(file_paths):
+        date = _parse_datetime_from_filename(filename)
+        n_lines = _count_lines(filename)
+        if not date or n_lines < min_measurements_per_hour:
+            logging.info(
+                "Expected at least %d measurements but found only %d in %s",
+                min_measurements_per_hour,
+                n_lines,
+                filename.name,
+            )
+            continue
+        start_datetime = datetime.datetime(date[0], date[1], date[2], date[3])
+        time_interval = datetime.timedelta(minutes=60 / n_lines)
+        datetime_stamps = [start_datetime + time_interval * i for i in range(n_lines)]
+        time_stamps.extend(datetime_stamps)
+        valid_files.append(filename)
+    return valid_files, time_stamps
+
+
+def _parse_datetime_from_filename(filename: Path) -> list[int] | None:
+    pattern = r"(20\d{2})(\d{2})(\d{2})(\d{2})"
+    match = re.search(pattern, filename.name)
+    if not match:
+        return None
+    return [int(x) for x in match.groups()]
+
+
+def _count_lines(filename: Path) -> int:
+    with open(filename, "rb") as file:
+        n_lines = 0
+        for _ in file:
+            n_lines += 1
+    return n_lines
+
+
+def _check_chm_version(filename: str, identifier: str):
+    def print_warning(expected: str):
+        logging.warning(
+            f"{expected} data submitted with incorrect identifier {identifier}"
+        )
+
+    with netCDF4.Dataset(filename) as nc:
+        source = getattr(nc, "source", "")[:3].lower()
+    match source, identifier:
+        case "chx", "chm15x" | "chm15k":
+            print_warning("chm15kx")
+        case "chm", "chm15x" | "chm15kx":
+            print_warning("chm15k")

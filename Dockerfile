@@ -3,8 +3,8 @@ FROM python:3.10-bullseye AS base
 RUN apt-get update \
   && apt-get install -y --no-install-recommends libudunits2-dev gdb \
   && rm -rf /var/lib/apt/lists/* \
-  && mkdir -p /app/src/data_processing/ \
-  && echo '__version__ = "0.0.0"' > /app/src/data_processing/version.py
+  && mkdir -p /app/src/processing/ \
+  && echo '__version__ = "0.0.0"' > /app/src/processing/version.py
 
 WORKDIR /app
 

@@ -9,15 +9,14 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from threading import Event
 
-from data_processing import utils
-from data_processing.config import Config
-from data_processing.dvas import Dvas
-from data_processing.metadata_api import MetadataApi
-from data_processing.pid_utils import PidUtils
-from data_processing.storage_api import StorageApi
+from processing import utils
+from processing.config import Config
+from processing.dvas import Dvas
 from processing.instrument import process_instrument
 from processing.jobs import freeze, hkd, update_plots, update_qc, upload_to_dvas
+from processing.metadata_api import MetadataApi
 from processing.model import process_model
+from processing.pid_utils import PidUtils
 from processing.processor import (
     InstrumentParams,
     ModelParams,
@@ -28,6 +27,7 @@ from processing.processor import (
     Site,
 )
 from processing.product import process_me, process_product
+from processing.storage_api import StorageApi
 from processing.utils import send_slack_alert, utcnow, utctoday
 
 
