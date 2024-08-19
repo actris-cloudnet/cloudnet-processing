@@ -231,7 +231,8 @@ def process_main(args):
 def _update_product_list(args: Namespace, processor: Processor) -> list[str]:
     products = set(args.products) if args.products else set()
     if args.instruments:
-        products.update(processor.get_products_from_instrument_types(args.instruments))
+        for instrument in args.instruments:
+            products.update(processor.get_derived_products_of_instrument(instrument))
     if args.uuids:
         for uuid in args.uuids:
             products.update(processor.get_instrument(uuid).derived_product_ids)
