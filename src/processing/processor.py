@@ -87,7 +87,7 @@ class Processor:
     def get_instruments(self, product: str) -> list[str]:
         """Return list of instruments for given product."""
         instruments = self.md_api.get("api/instruments")
-        return [i["id"] for i in instruments if i["type"] == product]
+        return [i["id"] for i in instruments if product in i["derivedProductIds"]]
 
     def get_products_from_instrument_types(self, types: list[str]) -> list[str]:
         instruments = self.md_api.get("api/instruments")
