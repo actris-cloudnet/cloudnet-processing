@@ -196,15 +196,15 @@ def process_main(args):
     if not args.products or args.products == ["model"]:
         args.products = _update_product_list(args, processor)
 
+    if args.models and "model" not in args.products:
+        args.products.append("model")
+
     if args.cmd == "fetch" and args.raw:
         if args.products and not args.instruments:
             args.instruments = _update_instrument_list(args, processor)
 
         if "model" in args.products and not args.models:
             args.models = _get_model_types()
-
-        if args.models and "model" not in args.products:
-            args.products.append("model")
 
         if not args.products:
             args.products = ["model"]  # just to make loop work (fetch all)
