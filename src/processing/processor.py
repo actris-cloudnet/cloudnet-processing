@@ -1,5 +1,6 @@
 import datetime
 import logging
+import re
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
@@ -10,11 +11,12 @@ from cloudnetpy.model_evaluation.plotting.plotting import generate_L3_day_plots
 from cloudnetpy.plotting import Dimensions, PlotParameters, generate_figure
 from cloudnetpy_qc import quality
 from cloudnetpy_qc.quality import ErrorLevel
-from data_processing import utils
-from data_processing.dvas import Dvas
-from data_processing.metadata_api import MetadataApi
-from data_processing.pid_utils import PidUtils
-from data_processing.storage_api import StorageApi
+
+from processing import utils
+from processing.dvas import Dvas
+from processing.metadata_api import MetadataApi
+from processing.pid_utils import PidUtils
+from processing.storage_api import StorageApi
 
 MIN_MODEL_FILESIZE = 20200
 
@@ -24,6 +26,7 @@ class Instrument:
     uuid: str
     pid: str
     type: str
+    derived_product_ids: frozenset[str]
 
 
 @dataclass(frozen=True)
@@ -81,6 +84,20 @@ class Processor:
         self.pid_utils = pid_utils
         self.dvas = dvas
 
+    def get_instruments(self, product: str) -> list[str]:
+        """Return list of instruments for given product."""
+        instruments = self.md_api.get("api/instruments")
+        return [i["id"] for i in instruments if product in i["derivedProductIds"]]
+
+    def get_derived_products_of_instrument(self, instrument_id: str) -> list[str]:
+        instruments = self.md_api.get("api/instruments")
+        return [
+            product_id
+            for instrument in instruments
+            if instrument["id"] == instrument_id
+            for product_id in instrument["derivedProductIds"]
+        ]
+
     def get_site(self, site_id: str) -> Site:
         site = self.md_api.get(f"api/sites/{site_id}")
         return Site(
@@ -109,6 +126,9 @@ class Processor:
             uuid=instrument["uuid"],
             pid=instrument["pid"],
             type=instrument["instrument"]["id"],
+            derived_product_ids=frozenset(
+                instrument["instrument"]["derivedProductIds"]
+            ),
         )
 
     def download_raw_data(
@@ -140,7 +160,7 @@ class Processor:
         if len(metadata) == 0:
             return None
         if len(metadata) > 1:
-            raise RuntimeError("Multiple model files found")
+            raise RuntimeError(f"Multiple {params.model_id} files found")
         return metadata[0]
 
     def fetch_product(self, params: ProcessParams) -> dict | None:
@@ -158,7 +178,7 @@ class Processor:
         if len(metadata) == 0:
             return None
         if len(metadata) > 1:
-            raise RuntimeError("Multiple products found")
+            raise RuntimeError(f"Multiple {params.product.id} files found")
         return metadata[0]
 
     def download_instrument(
@@ -189,11 +209,11 @@ class Processor:
         )
         upload_metadata = self.md_api.get("api/raw-files", payload)
         if include_pattern is not None:
-            upload_metadata = utils.include_records_with_pattern_in_filename(
+            upload_metadata = _include_records_with_pattern_in_filename(
                 upload_metadata, include_pattern
             )
         if exclude_pattern is not None:
-            upload_metadata = utils.exclude_records_with_pattern_in_filename(
+            upload_metadata = _exclude_records_with_pattern_in_filename(
                 upload_metadata, exclude_pattern
             )
         if include_tag_subset is not None:
@@ -236,7 +256,7 @@ class Processor:
             skip_created=True,
         )
         upload_metadata = self.md_api.get("api/raw-files", payload)
-        upload_metadata = utils.order_metadata(upload_metadata)
+        upload_metadata = _order_metadata(upload_metadata)
         if not upload_metadata:
             raise utils.RawDataMissingError
         full_paths, _ = self.storage_api.download_raw_data(upload_metadata, directory)
@@ -315,7 +335,7 @@ class Processor:
         visualizations = []
         product_s3key = f"legacy/{product_s3key}" if legacy is True else product_s3key
         try:
-            fields, max_alt = utils.get_fields_for_plot(product)
+            fields, max_alt = _get_fields_for_plot(product)
         except NotImplementedError:
             logging.warning(f"Plotting for {product} not implemented")
             return
@@ -357,8 +377,8 @@ class Processor:
     ) -> None:
         img_path = directory / "plot.png"
         visualizations = []
-        fields = utils.get_fields_for_l3_plot(product, model_id)
-        l3_product = utils.full_product_to_l3_product(product)
+        fields = _get_fields_for_l3_plot(product, model_id)
+        l3_product = _full_product_to_l3_product(product)
         valid_images = []
         for stat in ("area", "error"):
             dimensions = generate_L3_day_plots(
@@ -424,8 +444,8 @@ class Processor:
         self.storage_api.upload_image(full_path=img_path, s3key=img_s3key)
         return {
             "s3key": img_s3key,
-            "variable_id": utils.get_var_id(product, field),
-            "dimensions": utils.dimensions2dict(dimensions)
+            "variable_id": _get_var_id(product, field),
+            "dimensions": _dimensions2dict(dimensions)
             if dimensions is not None
             else None,
         }
@@ -469,3 +489,240 @@ class Processor:
                 break
         self.md_api.put("quality", str(uuid), quality_dict)
         return result
+
+
+def _get_var_id(cloudnet_file_type: str, field: str) -> str:
+    """Return identifier for variable / Cloudnet file combination."""
+    return f"{cloudnet_file_type}-{field}"
+
+
+def _get_fields_for_plot(cloudnet_file_type: str) -> tuple[list, int]:
+    """Return list of variables and maximum altitude for Cloudnet quicklooks.
+
+    Args:
+        cloudnet_file_type (str): Name of Cloudnet file type, e.g., 'classification'.
+
+    Returns:
+        tuple: 2-element tuple containing feasible variables for plots
+        (list) and maximum altitude (int).
+
+    """
+    max_alt = 12
+    match cloudnet_file_type:
+        case "categorize-voodoo":
+            fields = ["v", "liquid_prob"]
+        case "categorize":
+            fields = [
+                "Z",
+                "v",
+                "width",
+                "ldr",
+                "sldr",
+                "v_sigma",
+                "beta",
+                "lwp",
+                "Tw",
+                "radar_gas_atten",
+                "radar_liquid_atten",
+                "rainfall_rate",
+                "Z_error",
+            ]
+        case "classification":
+            fields = ["target_classification", "detection_status"]
+        case "classification-voodoo":
+            fields = ["target_classification", "detection_status"]
+        case "iwc":
+            fields = ["iwc", "iwc_error", "iwc_retrieval_status"]
+        case "lwc":
+            fields = ["lwc", "lwc_error", "lwc_retrieval_status"]
+            max_alt = 6
+        case "ier":
+            fields = ["ier", "ier_error", "ier_retrieval_status"]
+        case "der":
+            fields = ["der", "der_error", "der_retrieval_status"]
+            max_alt = 6
+        case "model":
+            fields = [
+                "cloud_fraction",
+                "uwind",
+                "vwind",
+                "temperature",
+                "q",
+                "pressure",
+            ]
+        case "lidar":
+            fields = [
+                "beta",
+                "beta_raw",
+                "depolarisation",
+                "depolarisation_raw",
+                "beta_1064",
+                "beta_532",
+                "beta_355",
+                "depolarisation_532",
+                "depolarisation_355",
+            ]
+        case "doppler-lidar":
+            fields = [
+                "beta",
+                "beta_raw",
+                "v",
+                "depolarisation",
+                "depolarisation_raw",
+            ]
+        case "doppler-lidar-wind":
+            fields = [
+                "uwind",
+                "uwind_raw",
+                "vwind",
+                "vwind_raw",
+            ]
+        case "mwr":
+            fields = ["lwp", "iwv"]
+        case "mwr-l1c":
+            fields = [
+                "tb_0",
+                "tb_01",
+                "tb_02",
+                "tb_03",
+                "tb_04",
+                "tb_05",
+                "tb_06",
+                "tb_07",
+                "tb_08",
+                "tb_09",
+                "tb_10",
+                "tb_11",
+                "tb_12",
+                "tb_13",
+                "irt_0",
+                "irt_01",
+            ]
+        case "mwr-single":
+            fields = [
+                "lwp",
+                "iwv",
+                "temperature",
+                "absolute_humidity",
+                "relative_humidity",
+                "potential_temperature",
+                "equivalent_potential_temperature",
+            ]
+            max_alt = 6
+        case "mwr-multi":
+            fields = [
+                "temperature",
+                "relative_humidity",
+                "potential_temperature",
+                "equivalent_potential_temperature",
+            ]
+            max_alt = 6
+        case "radar":
+            fields = [
+                "Zh",
+                "v",
+                "width",
+                "ldr",
+                "sldr",
+                "zdr",
+                "rho_hv",
+                "srho_hv",
+                "rho_cx",
+                "lwp",
+                "rainfall_rate",
+            ]
+        case "disdrometer":
+            fields = [
+                "rainfall_rate",
+                "snowfall_rate",
+                "n_particles",
+                "number_concentration",
+                "fall_velocity",
+            ]
+        case "drizzle":
+            fields = ["Do", "drizzle_N"]
+            max_alt = 4
+        case "weather-station":
+            fields = [
+                "air_temperature",
+                "wind_speed",
+                "wind_direction",
+                "air_pressure",
+                "relative_humidity",
+                "rainfall_rate",
+                "rainfall_amount",
+            ]
+        case "rain-radar":
+            fields = [
+                "Zh",
+                "lwc",
+                "pia",
+                "rainfall_rate",
+                "v",
+                "width",
+            ]
+            max_alt = 3
+        case _:
+            raise NotImplementedError(cloudnet_file_type)
+    return fields, max_alt
+
+
+def _get_fields_for_l3_plot(product: str, model: str) -> list:
+    """Return list of variables and maximum altitude for Cloudnet quicklooks.
+
+    Args:
+        product (str): Name of product, e.g., 'iwc'.
+        model (str): Name of the model, e.g., 'ecmwf'.
+    Returns:
+        list: list of wanted variables
+    """
+    match product:
+        case "l3-iwc":
+            return [f"{model}_iwc", f"iwc_{model}"]
+        case "l3-lwc":
+            return [f"{model}_lwc", f"lwc_{model}"]
+        case "l3-cf":
+            return [f"{model}_cf", f"cf_V_{model}"]
+        case unknown_product:
+            raise NotImplementedError(f"Unknown product: {unknown_product}")
+
+
+def _order_metadata(metadata: list) -> list:
+    """Orders 2-element metadata according to measurementDate."""
+    key = "measurementDate"
+    if len(metadata) == 2 and metadata[0][key] > metadata[1][key]:
+        metadata.reverse()
+    return metadata
+
+
+def _dimensions2dict(dimensions: Dimensions) -> dict:
+    """Converts dimensions object to dictionary."""
+    return {
+        "width": dimensions.width,
+        "height": dimensions.height,
+        "marginTop": dimensions.margin_top,
+        "marginLeft": dimensions.margin_left,
+        "marginBottom": dimensions.margin_bottom,
+        "marginRight": dimensions.margin_right,
+    }
+
+
+def _include_records_with_pattern_in_filename(metadata: list, pattern: str) -> list:
+    """Includes only records with certain pattern."""
+    return [
+        row for row in metadata if re.search(pattern.lower(), row["filename"].lower())
+    ]
+
+
+def _exclude_records_with_pattern_in_filename(metadata: list, pattern: str) -> list:
+    """Excludes records with certain pattern."""
+    return [
+        row
+        for row in metadata
+        if not re.search(pattern.lower(), row["filename"].lower())
+    ]
+
+
+def _full_product_to_l3_product(full_product: str):
+    """Returns l3 product name."""
+    return full_product.split("-")[1]

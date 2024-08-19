@@ -25,10 +25,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Run unit tests
-        run: docker run --env-file test.env -v $PWD:/app test pytest
-
-      - name: Run e2e tests
-        run: docker run --env-file e2e-test.env -v $PWD:/app test /bin/sh -c 'for f in tests/e2e/*/main.py; do $f || exit; done'
+        run: docker run -v $PWD:/app test pytest
 
   lint:
     name: Lint

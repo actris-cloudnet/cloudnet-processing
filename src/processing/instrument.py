@@ -6,12 +6,11 @@ from typing import Type
 
 import housekeeping
 from cloudnetpy.exceptions import CloudnetException
-from data_processing import utils
-from data_processing.processing_tools import Uuid
 
-from processing import instrument_process
+from processing import instrument_process, utils
+from processing.netcdf_comparer import are_identical_nc_files
 from processing.processor import InstrumentParams, Processor
-from processing.utils import utctoday
+from processing.utils import Uuid, utctoday
 
 ProcessClass = Type[instrument_process.ProcessInstrument]
 
@@ -45,7 +44,7 @@ def process_instrument(processor: Processor, params: InstrumentParams, directory
         processor.pid_utils.add_pid_to_file(new_file)
     utils.add_global_attributes(new_file, instrument_pid=params.instrument.pid)
 
-    if existing_file and utils.are_identical_nc_files(existing_file, new_file):
+    if existing_file and are_identical_nc_files(existing_file, new_file):
         raise utils.SkipTaskError("Skipping PUT to data portal, file has not changed")
 
     processor.upload_file(params, new_file, filename)

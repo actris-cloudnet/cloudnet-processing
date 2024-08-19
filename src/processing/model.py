@@ -2,10 +2,9 @@ import logging
 import uuid
 from pathlib import Path
 
-from data_processing import nc_header_augmenter
-from data_processing.utils import MiscError, SkipTaskError
-
+from processing import nc_header_augmenter
 from processing.processor import ModelParams, Processor
+from processing.utils import MiscError, SkipTaskError
 
 
 def process_model(processor: Processor, params: ModelParams, directory: Path):

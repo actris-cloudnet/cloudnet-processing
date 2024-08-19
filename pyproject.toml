@@ -3,7 +3,7 @@ requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "data_processing"
+name = "cloudnet-processing"
 description = "Glue code for Cloudnet processing libraries"
 authors = [{name = "Finnish Meteorological Institute"}]
 readme = "README.md"
@@ -35,9 +35,7 @@ dev = [
   "pre-commit",
   "pytest",
   "release-version",
-  "requests_mock",
   "types-influxdb-client",
-  "types-requests",
   "types-requests",
   "types-toml",
   "types-urllib3",
@@ -60,7 +58,7 @@ module = ["torch.*", "wandb.*"]
 follow_imports = "skip"
 
 [tool.release-version]
-filename = "src/data_processing/version.py"
+filename = "src/processing/version.py"
 pattern = ["MAJOR = (?P<major>\\d+)", "MINOR = (?P<minor>\\d+)", "PATCH = (?P<patch>\\d+)"]
 
 [tool.ruff]
@@ -70,7 +68,7 @@ extend-select = ["I"]
 "__init__.py" = ["F401"]
 
 [tool.setuptools.dynamic]
-version = {attr = "data_processing.version.__version__"}
+version = {attr = "processing.version.__version__"}
 
 [tool.tomlsort]
 trailing_comma_inline_array = true
