@@ -237,12 +237,14 @@ class ProcessDopplerLidarWind(ProcessInstrument):
 
 class ProcessDopplerLidar(ProcessInstrument):
     def process_halo_doppler_lidar(self):
+        # Co files either have "co" tag or no tags at all.
         full_paths_co, raw_uuids_co = self.download_instrument(
             filename_prefix="Stare",
             filename_suffix=".hpl",
             exclude_tag_subset={"cross"},
             subdir="co",
         )
+        # Cross files should always have "cross" tag.
         full_paths_cross, raw_uuids_cross = self.download_instrument(
             filename_prefix="Stare",
             filename_suffix=".hpl",
@@ -250,16 +252,16 @@ class ProcessDopplerLidar(ProcessInstrument):
             allow_empty=True,
             subdir="cross",
         )
-        self.uuid.raw = raw_uuids_co + raw_uuids_cross
-
-        # Assume background files are the same for co and cross.
+        # Background files usually have no tags or "co" tag. Sometimes they have
+        # "co" and "cross" tags randomly because the instrument may save the
+        # files like this.
         full_paths_bg, _ = self.download_instrument(
             filename_prefix="Background",
             filename_suffix=".txt",
-            exclude_tag_subset={"cross"},
             date=(self.params.date - datetime.timedelta(days=1), self.params.date),
             subdir="bg",
         )
+        self.uuid.raw = raw_uuids_co + raw_uuids_cross
 
         stare: doppy.product.Stare | doppy.product.StareDepol
         try:
