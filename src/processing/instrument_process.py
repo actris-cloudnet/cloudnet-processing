@@ -119,6 +119,12 @@ class ProcessRadar(ProcessInstrument):
         self.process_rpg_fmcw_94()
 
     def process_mira(self):
+        self.process_mira_35()
+
+    def process_mira_10(self):
+        raise NotImplementedError()
+
+    def process_mira_35(self):
         full_paths, self.uuid.raw = self.download_instrument()
         full_paths = _unzip_gz_files(full_paths)
         full_paths = self._fix_suffices(full_paths, ".mmclx")
