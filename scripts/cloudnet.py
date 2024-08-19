@@ -232,10 +232,9 @@ def _update_product_list(args: Namespace, processor: Processor) -> list[str]:
     products = set(args.products) if args.products else set()
     if args.instruments:
         products.update(processor.get_products_from_instrument_types(args.instruments))
-    if args.models and not args.raw:
-        products.add("model")
     if args.uuids:
-        products.update(processor.get_instrument(uuid).tech for uuid in args.uuids)
+        for uuid in args.uuids:
+            products.update(processor.get_instrument(uuid).derived_product_ids)
     return list(products)
 
 
@@ -512,7 +511,7 @@ def _parse_instrument(meta: dict) -> Instrument:
         uuid=meta["instrumentInfo"]["uuid"],
         pid=meta["instrumentInfo"]["pid"],
         type=meta["instrument"]["id"],
-        tech=meta["instrument"]["type"],
+        derived_product_ids=meta["instrument"]["derivedProductIds"],
     )
 
 
