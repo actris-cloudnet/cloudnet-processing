@@ -19,10 +19,13 @@ jobs:
         with:
           context: .
           load: true
-          tags: latest
-          target: prod
+          tags: test
+          target: dev
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Run unit tests
+        run: docker run -v $PWD:/app test pytest
 
   lint-and-test:
     name: Lint and test
@@ -41,5 +44,3 @@ jobs:
           pip install .[dev]
       - name: Run pre-commit checks
         run: pre-commit run --all-files --show-diff-on-failure
-      - name: Run unit tests
-        run: python -m pytest tests/unit
