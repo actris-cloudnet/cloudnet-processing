@@ -24,7 +24,6 @@ from processing.metadata_api import MetadataApi
 from processing.model import process_model
 from processing.pid_utils import PidUtils
 from processing.processor import (
-    Instrument,
     InstrumentParams,
     ModelParams,
     Processor,
@@ -509,15 +508,6 @@ def _parse_date(value: str) -> datetime.date:
     if match := re.fullmatch("(\d+)d", value):
         return utils.utctoday() - datetime.timedelta(days=int(match[1]))
     return datetime.date.fromisoformat(value)
-
-
-def _parse_instrument(meta: dict) -> Instrument:
-    return Instrument(
-        uuid=meta["instrumentInfo"]["uuid"],
-        pid=meta["instrumentInfo"]["pid"],
-        type=meta["instrument"]["id"],
-        derived_product_ids=meta["instrument"]["derivedProductIds"],
-    )
 
 
 def _print_header(data):
