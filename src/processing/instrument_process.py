@@ -119,9 +119,6 @@ class ProcessRadar(ProcessInstrument):
     def process_rpg_fmcw_35(self):
         self.process_rpg_fmcw_94()
 
-    def process_mira(self):
-        self.process_mira_35()
-
     def process_mira_10(self):
         raise NotImplementedError()
 
