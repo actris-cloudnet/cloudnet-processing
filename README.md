@@ -49,7 +49,7 @@ Shortcut for the `--products` argument:
 
 | Shortcut   | Meaning                                                                             |
 | :--------- | :---------------------------------------------------------------------------------- |
-| `lb1`      | `disdrometer,doppler-lidar,lidar,mwr,radar,weather-station,model`                   |
+| `l1b`      | `disdrometer,doppler-lidar,lidar,mwr,radar,weather-station,model`                   |
 | `l1c`      | `categorize,categorize-voodoo,mwr-l1c,doppler-lidar-wind`                           |
 | `l2`       | `classification,iwc,lwc,drizzle,ier,der,mwr-single,mwr-multi,classification-voodoo` |
 | `l3`       | `l3-cf,l3-iwc,l3-lwc`                                                               |
