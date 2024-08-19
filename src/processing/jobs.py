@@ -58,7 +58,7 @@ def freeze(processor: Processor, params: ProcessParams, directory: Path) -> None
     logging.info(f'Minting PID "{pid}" to URL "{url}')
     response_data = processor.storage_api.upload_product(full_path, s3key)
     payload = {
-        "uuid": uuid,
+        "uuid": file_uuid,
         "checksum": utils.sha256sum(full_path),
         "volatile": False,
         "pid": pid,
