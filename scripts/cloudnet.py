@@ -298,7 +298,11 @@ def _process_file(
                 "instrument": args.instruments or product.source_instrument_ids,
             }
             metadata = processor.md_api.get("api/raw-files", payload)
-            instruments = {_parse_instrument(meta) for meta in metadata}
+            # Need to get instrument again because derivedProductIds is missing from raw-files response...
+            instruments = {
+                processor.get_instrument(meta["instrumentInfo"]["uuid"])
+                for meta in metadata
+            }
 
         for instrument in instruments:
             _print_header(

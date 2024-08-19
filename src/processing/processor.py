@@ -26,7 +26,7 @@ class Instrument:
     uuid: str
     pid: str
     type: str
-    derived_product_ids: set[str]
+    derived_product_ids: frozenset[str]
 
 
 @dataclass(frozen=True)
@@ -126,7 +126,9 @@ class Processor:
             uuid=instrument["uuid"],
             pid=instrument["pid"],
             type=instrument["instrument"]["id"],
-            derived_product_ids=set(instrument["instrument"]["derivedProductIds"]),
+            derived_product_ids=frozenset(
+                instrument["instrument"]["derivedProductIds"]
+            ),
         )
 
     def download_raw_data(
