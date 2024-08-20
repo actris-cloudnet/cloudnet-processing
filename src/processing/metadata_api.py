@@ -1,8 +1,6 @@
 """Metadata API for Cloudnet files."""
 import logging
 import uuid
-from argparse import Namespace
-from datetime import datetime, timedelta, timezone
 
 import requests
 
@@ -90,38 +88,6 @@ class MetadataApi:
             return
         self.put_file("upload/data", checksum, base.daily_file.name, self._auth)
 
-    def find_files_to_freeze(self, args: Namespace) -> list:
-        """Find volatile files released before certain time limit."""
-        freeze_model_files = not args.products or "model" in args.products
-        products = _get_regular_products(args)
-        common_payload = _get_common_payload(args)
-
-        # Regular files
-        files_payload = {
-            **common_payload,
-            **{"product": products},
-            **{"showLegacy": True},
-            **self._get_freeze_payload(self.config.freeze_after_days, args),
-        }
-        regular_files = self.get("api/files", files_payload)
-
-        # Model files
-        model_files = []
-        if freeze_model_files:
-            models_payload = {
-                **common_payload,
-                **{"allModels": True},
-                **self._get_freeze_payload(self.config.freeze_model_after_days, args),
-            }
-            model_files = self.get("api/model-files", models_payload)
-
-        all_files = regular_files + model_files
-
-        if args.experimental is False:
-            all_files = [f for f in all_files if f["product"]["experimental"] is False]
-
-        return all_files
-
     def update_dvas_info(self, uuid: uuid.UUID, timestamp: str, dvas_id: int):
         payload = {"uuid": uuid, "dvasUpdatedAt": timestamp, "dvasId": dvas_id}
         self.post("files", payload)
@@ -129,56 +95,3 @@ class MetadataApi:
     def clean_dvas_info(self, uuid: uuid.UUID):
         payload = {"uuid": uuid, "dvasUpdatedAt": None, "dvasId": None}
         self.post("files", payload)
-
-    def _get_freeze_payload(self, freeze_after_days, args: Namespace) -> dict:
-        if args.force:
-            logging.warning(
-                f"Overriding config option ({freeze_after_days} days). Also recently changed files may be freezed."
-            )
-            updated_before = None
-        else:
-            updated_before = (
-                datetime.now(timezone.utc) - timedelta(days=freeze_after_days)
-            ).isoformat()
-        return {"volatile": True, "releasedBefore": updated_before}
-
-    def find_product_metadata(self, args: Namespace, legacy_files: bool = True) -> list:
-        common_payload = _get_common_payload(args)
-        products = _get_regular_products(args)
-        files = []
-        if products is not None and len(products) > 0:
-            files_payload = {
-                "showLegacy": legacy_files,
-                **common_payload,
-                "product": products,
-            }
-            files += self.get("api/files", files_payload)
-        if "model" in args.products:
-            model_files_payload = {
-                **common_payload,
-            }
-            files += self.get("api/model-files", model_files_payload)
-        files.sort(key=lambda x: datetime.strptime(x["measurementDate"], "%Y-%m-%d"))
-        return files
-
-    def get_qc_version(self, uuid: str) -> dict | None:
-        try:
-            data = self.get(f"api/quality/{uuid}")
-            return {"result": data["errorLevel"], "qc_version": data["qcVersion"]}
-        except requests.exceptions.HTTPError:
-            return None
-
-
-def _get_common_payload(args: Namespace) -> dict:
-    if args.date is not None:
-        payload = {"date": args.date}
-    else:
-        payload = {"dateFrom": args.start, "dateTo": args.stop}
-    payload["site"] = args.site
-    return payload
-
-
-def _get_regular_products(args: Namespace) -> list | None:
-    if args.products:
-        return [prod for prod in args.products if prod != "model"]
-    return None
