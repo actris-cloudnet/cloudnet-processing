@@ -110,7 +110,10 @@ class ProcessInstrument:
 
 class ProcessRadar(ProcessInstrument):
     def process_rpg_fmcw_94(self):
-        full_paths, raw_uuids = self.download_instrument(include_pattern=r"zen.*\.lv1$")
+        full_paths, raw_uuids = self.download_instrument(
+            include_pattern=r"zen.*\.lv1(\.gz)?$"
+        )
+        full_paths = _unzip_gz_files(full_paths)
         self.uuid.product, valid_full_paths = rpg2nc(
             str(self.raw_dir), *self._args, **self._kwargs
         )
