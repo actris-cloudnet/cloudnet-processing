@@ -24,7 +24,7 @@ dependencies = [
   "doppy>=0.3.0",
   "influxdb-client",
   "requests",
-  "rpgpy",
+  "rpgpy>=0.15.9",
   "toml",
 ]
 dynamic = ["version"]
