@@ -290,19 +290,22 @@ def _submit_file(filename: Path, row: dict) -> str:
         img_res = requests.put(img_url, json=img_payload)
         img_res.raise_for_status()
 
-    qc_url = f"https://cloudnet.fmi.fi/api/quality/{row['uuid']}"
-    qc_res = requests.get(qc_url)
-    qc_res.raise_for_status()
-    qc_data = qc_res.json()
+    try:
+        qc_url = f"https://cloudnet.fmi.fi/api/quality/{row['uuid']}"
+        qc_res = requests.get(qc_url)
+        qc_res.raise_for_status()
+        qc_data = qc_res.json()
 
-    qc_url = f"{DATAPORTAL_URL}/quality/{row['uuid']}"
-    qc_payload = {
-        "timestamp": qc_data["timestamp"],
-        "qcVersion": qc_data["qcVersion"],
-        "tests": qc_data["testReports"],
-    }
-    qc_res = requests.put(qc_url, json=qc_payload)
-    qc_res.raise_for_status()
+        qc_url = f"{DATAPORTAL_URL}/quality/{row['uuid']}"
+        qc_payload = {
+            "timestamp": qc_data["timestamp"],
+            "qcVersion": qc_data["qcVersion"],
+            "tests": qc_data["testReports"],
+        }
+        qc_res = requests.put(qc_url, json=qc_payload)
+        qc_res.raise_for_status()
+    except requests.HTTPError:
+        pass
 
     return "OK"
 
