@@ -304,7 +304,7 @@ def _get_level1b_metadata_for_categorize(
             processor, params, "disdrometer", fallback=["thies-lnm", "parsivel"]
         ),
     }
-    optional_products = ["disdrometer"]
+    optional_products = ["disdrometer", "mwr"]
     for product, metadata in meta_records.items():
         if product not in optional_products and metadata is None:
             raise SkipTaskError(f"Missing required input product: {product}")
