@@ -84,20 +84,6 @@ class Processor:
         self.pid_utils = pid_utils
         self.dvas = dvas
 
-    def get_instruments(self, product: str) -> list[str]:
-        """Return list of instruments for given product."""
-        instruments = self.md_api.get("api/instruments")
-        return [i["id"] for i in instruments if product in i["derivedProductIds"]]
-
-    def get_derived_products_of_instrument(self, instrument_id: str) -> list[str]:
-        instruments = self.md_api.get("api/instruments")
-        return [
-            product_id
-            for instrument in instruments
-            if instrument["id"] == instrument_id
-            for product_id in instrument["derivedProductIds"]
-        ]
-
     def get_site(self, site_id: str) -> Site:
         site = self.md_api.get(f"api/sites/{site_id}")
         return Site(
@@ -126,10 +112,14 @@ class Processor:
             uuid=instrument["uuid"],
             pid=instrument["pid"],
             type=instrument["instrument"]["id"],
-            derived_product_ids=frozenset(
-                instrument["instrument"]["derivedProductIds"]
+            derived_product_ids=self.get_derived_products(
+                instrument["instrument"]["id"]
             ),
         )
+
+    def get_derived_products(self, instrument_id: str) -> frozenset[str]:
+        instrument = self.md_api.get(f"api/instruments/{instrument_id}")
+        return frozenset(p["id"] for p in instrument["derivedProducts"])
 
     def download_raw_data(
         self, upload_metadata: list[dict], directory: Path

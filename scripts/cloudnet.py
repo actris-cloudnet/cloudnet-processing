@@ -231,7 +231,7 @@ def _update_product_list(args: Namespace, processor: Processor) -> list[str]:
     products = set(args.products) if args.products else set()
     if args.instruments:
         for instrument in args.instruments:
-            products.update(processor.get_derived_products_of_instrument(instrument))
+            products.update(processor.get_derived_products(instrument))
     if args.uuids:
         for uuid in args.uuids:
             products.update(processor.get_instrument(uuid).derived_product_ids)
@@ -239,7 +239,9 @@ def _update_product_list(args: Namespace, processor: Processor) -> list[str]:
 
 
 def _update_instrument_list(args: Namespace, processor: Processor) -> list[str]:
-    return [i for product in args.products for i in processor.get_instruments(product)]
+    return [
+        i for p in args.products for i in processor.get_product(p).source_instrument_ids
+    ]
 
 
 def _process_file(
