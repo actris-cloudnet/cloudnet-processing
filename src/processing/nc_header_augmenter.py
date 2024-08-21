@@ -540,11 +540,14 @@ class HaloNc(Level1Nc):
         keys = (
             "beta",
             "beta_raw",
+            "beta_cross",
+            "beta_cross_raw",
             "depolarisation",
             "depolarisation_raw",
             "v",
             "time",
             "wavelength",
+            "polariser_bleed_through",
             "elevation",
             "range",
         )
@@ -590,6 +593,22 @@ class HaloNc(Level1Nc):
             self.nc.variables[
                 "depolarisation"
             ].long_name = "Lidar volume linear depolarisation ratio"
+        if "polariser_bleed_through" in self.nc.variables:
+            self.nc.variables[
+                "polariser_bleed_through"
+            ].long_name = "Polariser bleed-through"
+        if "beta_cross" in self.nc.variables:
+            self.nc.variables[
+                "beta_cross"
+            ].long_name = (
+                "Attenuated backscatter coefficient for the cross-polarised signal"
+            )
+        if "beta_cross_raw" in self.nc.variables:
+            self.nc.variables[
+                "beta_cross_raw"
+            ].long_name = (
+                "Attenuated backscatter coefficient for the cross-polarised signal"
+            )
 
 
 class HaloNcCalibrated(Level1Nc):
