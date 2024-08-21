@@ -702,6 +702,7 @@ def _doppy_stare_to_nc(
                 units="1",
                 data=stare.depolarisation,
                 dtype="f4",
+                mask=stare.mask_depolarisation,
             )
             nc.add_variable(
                 name="depolarisation",
@@ -709,7 +710,30 @@ def _doppy_stare_to_nc(
                 units="1",
                 data=stare.depolarisation,
                 dtype="f4",
-                mask=stare.mask,
+                mask=stare.mask | stare.mask_depolarisation,
+            )
+            nc.add_variable(
+                name="beta_cross_raw",
+                dimensions=("time", "range"),
+                units="sr-1 m-1",
+                data=stare.beta_cross,
+                mask=stare.mask_beta_cross,
+                dtype="f4",
+            )
+            nc.add_variable(
+                name="beta_cross",
+                dimensions=("time", "range"),
+                units="sr-1 m-1",
+                data=stare.beta_cross,
+                mask=stare.mask | stare.mask_beta_cross,
+                dtype="f4",
+            )
+            nc.add_scalar_variable(
+                name="polariser_bleed_through",
+                units="1",
+                long_name="Polariser bleed-through",
+                data=stare.polariser_bleed_through,
+                dtype="f4",
             )
         nc.add_attribute("serial_number", stare.system_id)
         nc.add_attribute("doppy_version", doppy.__version__)
@@ -849,7 +873,7 @@ def _concatenate_text_files(filenames: list, output_filename: str | PathLike) ->
 
 
 def _deduce_parsivel_timestamps(
-    file_paths: list[Path]
+    file_paths: list[Path],
 ) -> tuple[list[Path], list[datetime.datetime]]:
     time_stamps, valid_files = [], []
     min_measurements_per_hour = 55
