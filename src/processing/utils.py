@@ -16,7 +16,7 @@ from urllib3.util.retry import Retry
 import processing.version
 from processing.config import Config
 
-ErrorSource = Literal["model", "pid", "data", "wrapper", "img", "worker"]
+ErrorSource = Literal["data", "worker", "freeze-cronjob", "qc-cronjob"]
 
 
 class Uuid:
@@ -44,18 +44,14 @@ def send_slack_alert(
         return
 
     match source:
-        case "model":
-            label = ":earth_africa: Model processing"
-        case "pid":
-            label = ":id: PID generation"
         case "data":
             label = ":desktop_computer: Data processing"
-        case "wrapper":
-            label = ":fire: Main wrapper"
-        case "img":
-            label = ":frame_with_picture: Image creation"
         case "worker":
             label = ":construction_worker: Worker"
+        case "freeze-cronjob":
+            label = ":cold_face: Freeze cronjob"
+        case "qc-cronjob":
+            label = ":first_place_medal: Yesterday's QC cronjob"
         case unknown_source:
             label = f":interrobang: Unknown error source ({unknown_source})"
 

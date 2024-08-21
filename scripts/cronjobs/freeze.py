@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import logging
+import traceback
 from datetime import timedelta
 
 from processing import utils
@@ -15,9 +16,15 @@ def main():
     config = utils.read_main_conf()
     session = utils.make_session()
     md_api = MetadataApi(config, session)
-    files = _find_files_to_freeze(config, md_api)
-    for file in files:
-        _publish_freeze_task(config, session, file)
+    try:
+        files = _find_files_to_freeze(config, md_api)
+        for file in files:
+            _publish_freeze_task(config, session, file)
+    except Exception as err:
+        logging.exception("Fatal error in cronjob")
+        utils.send_slack_alert(
+            config, err, source="freeze-cronjob", log=traceback.format_exc()
+        )
 
 
 def _find_files_to_freeze(config: Config, md_api: MetadataApi) -> list:
