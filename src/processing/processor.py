@@ -700,7 +700,9 @@ def _dimensions2dict(dimensions: Dimensions) -> dict:
 def _include_records_with_pattern_in_filename(metadata: list, pattern: str) -> list:
     """Includes only records with certain pattern."""
     return [
-        row for row in metadata if re.search(pattern.lower(), row["filename"].lower())
+        row
+        for row in metadata
+        if re.search(pattern, row["filename"], flags=re.IGNORECASE)
     ]
 
 
@@ -709,7 +711,7 @@ def _exclude_records_with_pattern_in_filename(metadata: list, pattern: str) -> l
     return [
         row
         for row in metadata
-        if not re.search(pattern.lower(), row["filename"].lower())
+        if not re.search(pattern, row["filename"], flags=re.IGNORECASE)
     ]
 
 
