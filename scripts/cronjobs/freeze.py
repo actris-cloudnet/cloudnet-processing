@@ -54,7 +54,7 @@ def _is_freezable(md_api: MetadataApi, file_uuid: str, depth: int = 0):
         and not file["product"]["experimental"]
         and all(
             _is_freezable(md_api, src_uuid, depth + 1)
-            for src_uuid in file["sourceFileIds"]
+            for src_uuid in file.get("sourceFileIds", [])
         )
     )
 
