@@ -199,7 +199,7 @@ def process_main(args):
         args.products.append("model")
 
     if args.cmd == "fetch" and args.raw:
-        if args.products and not args.instruments:
+        if (args.products or args.uuids) and not args.instruments:
             args.instruments = _update_instrument_list(args, processor)
 
         if "model" in args.products and not args.models:
@@ -231,10 +231,20 @@ def _update_product_list(args: Namespace, processor: Processor) -> list[str]:
     products = set(args.products) if args.products else set()
     if args.instruments:
         for instrument in args.instruments:
-            products.update(processor.get_derived_products(instrument))
+            derived_products = list(processor.get_derived_products(instrument))
+            if len(derived_products) > 0:
+                if args.raw:
+                    products.update([derived_products[0]])
+                else:
+                    products.update(derived_products)
     if args.uuids:
         for uuid in args.uuids:
-            products.update(processor.get_instrument(uuid).derived_product_ids)
+            derived_products = list(processor.get_instrument(uuid).derived_product_ids)
+            if len(derived_products) > 0:
+                if args.raw:
+                    products.update([derived_products[0]])
+                else:
+                    products.update(derived_products)
     return list(products)
 
 
