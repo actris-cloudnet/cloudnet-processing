@@ -94,8 +94,6 @@ class Fetcher:
         }
         if self.args.models:
             payload["model"] = self.args.models
-        else:
-            payload["allModels"] = "true"
         res = requests.get(url=url, params=payload)
         res.raise_for_status()
         return res.json()
