@@ -102,7 +102,7 @@ def _parse_args():
     parser.add_argument(
         "-i",
         "--instruments",
-        help="Instrument types to be processed, e.g., mira,chm15k,hatpro.",
+        help="Instrument types to be processed, e.g., mira-35,chm15k,hatpro.",
         type=_validate_types,
     )
     parser.add_argument(

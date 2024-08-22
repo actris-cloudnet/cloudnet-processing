@@ -36,7 +36,7 @@ Arguments:
 | `-h`  | `--help`        |               | Show help and exit.                                                                |
 | `-s`  | `--sites`       |               | E.g, `hyytiala,granada`.                                                           |
 | `-p`  | `--products`    |               | E.g. `lidar,classification,l3-cf`.                                                 |
-| `-i`  | `--instruments` |               | E.g. `mira,hatpro`.                                                                |
+| `-i`  | `--instruments` |               | E.g. `mira-35,hatpro`.                                                             |
 | `-m`  | `--models`      |               | E.g. `ecmwf,gdas1`.                                                                |
 | `-u`  | `--uuids`       |               | Instrument UUIDs, e.g. `db58480f-58ca-49ad-995c-6c3b89e9a0fc`.                     |
 |       | `--start`       | five days ago | Starting date (included).                                                          |

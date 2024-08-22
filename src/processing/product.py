@@ -288,7 +288,7 @@ def _get_level1b_metadata_for_categorize(
                 processor,
                 params,
                 "radar",
-                fallback=["mira", "rpg-fmcw-35", "rpg-fmcw-94", "copernicus"],
+                fallback=["mira-35", "rpg-fmcw-35", "rpg-fmcw-94", "copernicus"],
             )
         ),
         "lidar": (
