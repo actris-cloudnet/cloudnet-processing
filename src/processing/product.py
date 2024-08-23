@@ -28,15 +28,9 @@ def process_me(processor: Processor, params: ModelParams, directory: Path):
         existing_file = processor.storage_api.download_product(
             existing_product, directory
         )
-        logging.info(
-            "Found existing product for %s with UUID %s",
-            filename,
-            existing_product["uuid"],
-        )
     else:
         filename = _generate_filename(params)
         existing_file = None
-        logging.info("No existing product found for %s", filename)
 
     try:
         new_file = _process_l3(processor, params, uuid, directory)
