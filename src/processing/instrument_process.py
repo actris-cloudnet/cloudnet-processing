@@ -765,6 +765,7 @@ def _doppy_wind_to_nc(
             dimensions=("time", "height"),
             units="m s-1",
             data=wind.zonal_wind,
+            mask=wind.mask_zonal_wind,
             dtype="f4",
             long_name="Non-screened zonal wind",
         )
@@ -773,7 +774,7 @@ def _doppy_wind_to_nc(
             dimensions=("time", "height"),
             units="m s-1",
             data=wind.zonal_wind,
-            mask=wind.mask,
+            mask=wind.mask | wind.mask_zonal_wind,
             dtype="f4",
             long_name="Zonal wind",
         )
@@ -782,6 +783,7 @@ def _doppy_wind_to_nc(
             dimensions=("time", "height"),
             units="m s-1",
             data=wind.meridional_wind,
+            mask=wind.mask_meridional_wind,
             dtype="f4",
             long_name="Non-screened meridional wind",
         )
@@ -790,7 +792,7 @@ def _doppy_wind_to_nc(
             dimensions=("time", "height"),
             units="m s-1",
             data=wind.meridional_wind,
-            mask=wind.mask,
+            mask=wind.mask | wind.mask_meridional_wind,
             dtype="f4",
             long_name="Meridional wind",
         )
