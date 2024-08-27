@@ -538,6 +538,7 @@ class ProcessDisdrometer(ProcessInstrument):
     def process_thies_lnm(self):
         full_paths, self.uuid.raw = self.download_instrument()
         full_paths.sort()
+        full_paths = _unzip_gz_files(full_paths)
         _concatenate_text_files(full_paths, self.daily_path)
         site_meta = self.site_meta.copy()
         if self.params.site.id == "leipzig-lim":
