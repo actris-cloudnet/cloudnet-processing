@@ -56,7 +56,8 @@ def process_instrument(processor: Processor, params: InstrumentParams, directory
     )
     processor.update_statuses(uuid.raw, "processed")
     _print_info(uuid, create_new_version, qc_result)
-    _process_housekeeping(processor, params)
+    if processor.md_api.config.is_production:
+        _process_housekeeping(processor, params)
 
 
 def _generate_filename(params: InstrumentParams) -> str:
