@@ -193,17 +193,18 @@ class ProcessDopplerLidarWind(ProcessInstrument):
 
     def process_wls200s(self):
         file_groups = defaultdict(list)
+        # TODO: downloads files that may not be used...
         full_paths, self.uuid.raw = self.download_instrument(
             include_pattern=r".*vad.*\.nc.*",
         )
         group_pattern = re.compile(r".*_vad_(.*)\.nc\.*")
-        for path in full_paths:
+        for path, uuid in zip(full_paths, self.uuid.raw):
             if match := group_pattern.match(path.name):
-                file_groups[match.group(1)].append(path)
+                file_groups[match.group(1)].append((path, uuid))
         if not file_groups:
             raise RawDataMissingError("No valid files found in the download.")
         group_with_most_files = max(file_groups, key=lambda k: len(file_groups[k]))
-        full_paths = file_groups[group_with_most_files]
+        full_paths, self.uuid.raw = zip(*file_groups[group_with_most_files])  # type: ignore
         full_paths = _unzip_gz_files(full_paths)
         try:
             options = self._calibration_options()
