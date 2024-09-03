@@ -3,6 +3,7 @@ import gzip
 import logging
 import re
 import shutil
+from collections import defaultdict
 from os import PathLike
 from pathlib import Path
 from uuid import UUID
@@ -191,9 +192,18 @@ class ProcessDopplerLidarWind(ProcessInstrument):
         raise NotImplementedError()
 
     def process_wls200s(self):
+        file_groups = defaultdict(list)
         full_paths, self.uuid.raw = self.download_instrument(
             include_pattern=r".*vad.*\.nc.*",
         )
+        group_pattern = re.compile(r".*_vad_(.*)\.nc\.*")
+        for path in full_paths:
+            if match := group_pattern.match(path.name):
+                file_groups[match.group(1)].append(path)
+        if not file_groups:
+            raise RawDataMissingError("No valid files found in the download.")
+        group_with_most_files = max(file_groups, key=lambda k: len(file_groups[k]))
+        full_paths = file_groups[group_with_most_files]
         full_paths = _unzip_gz_files(full_paths)
         try:
             options = self._calibration_options()
