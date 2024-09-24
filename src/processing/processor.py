@@ -514,6 +514,8 @@ def _get_fields_for_plot(cloudnet_file_type: str) -> tuple[list, int]:
                 "Tw",
                 "radar_gas_atten",
                 "radar_liquid_atten",
+                "radar_rain_atten",
+                "radar_melting_atten",
                 "rainfall_rate",
                 "Z_error",
             ]
