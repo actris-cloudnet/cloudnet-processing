@@ -6,7 +6,6 @@ from os import PathLike
 from pathlib import Path
 from typing import Literal
 
-import netCDF4
 import requests
 
 from processing import utils
@@ -21,9 +20,10 @@ class StorageApi:
         self._url = config.storage_service_url
         self._auth = config.storage_service_auth
 
-    def upload_product(self, full_path: PathLike | str, s3key: str) -> dict:
+    def upload_product(
+        self, full_path: PathLike | str, s3key: str, volatile: bool
+    ) -> dict:
         """Upload a processed Cloudnet file."""
-        volatile = _is_volatile_file(full_path)
         bucket = _get_product_bucket(volatile)
         headers = self._get_headers(full_path)
         url = f"{self._url}/{bucket}/{s3key}"
@@ -113,9 +113,3 @@ class StorageApi:
 
 def _get_product_bucket(volatile: bool = False) -> str:
     return "cloudnet-product-volatile" if volatile else "cloudnet-product"
-
-
-def _is_volatile_file(filename: str | PathLike) -> bool:
-    with netCDF4.Dataset(filename) as nc:
-        is_missing_pid = not hasattr(nc, "pid")
-    return is_missing_pid

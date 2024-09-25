@@ -45,7 +45,7 @@ def process_me(processor: Processor, params: ModelParams, directory: Path):
     if existing_file and are_identical_nc_files(existing_file, new_file):
         raise SkipTaskError("Skipping PUT to data portal, file has not changed")
 
-    processor.upload_file(params, new_file, filename)
+    processor.upload_file(params, new_file, filename, volatile=not create_new_version)
     processor.create_and_upload_l3_images(
         new_file,
         params.product.id,
@@ -86,8 +86,12 @@ def process_product(processor: Processor, params: ProductParams, directory: Path
     except CloudnetException as err:
         raise utils.SkipTaskError(str(err)) from err
 
-    if create_new_version:
-        processor.pid_utils.add_pid_to_file(new_file)
+    if create_new_version or existing_product is None:
+        volatile_pid = None
+    else:
+        volatile_pid = existing_product["pid"]
+    processor.pid_utils.add_pid_to_file(new_file, pid=volatile_pid)
+
     utils.add_global_attributes(
         new_file, instrument_pid=params.instrument.pid if params.instrument else None
     )
@@ -95,7 +99,7 @@ def process_product(processor: Processor, params: ProductParams, directory: Path
     if existing_file and are_identical_nc_files(existing_file, new_file):
         raise SkipTaskError("Skipping PUT to data portal, file has not changed")
 
-    processor.upload_file(params, new_file, filename)
+    processor.upload_file(params, new_file, filename, volatile=not create_new_version)
     processor.create_and_upload_images(
         new_file,
         params.product.id,

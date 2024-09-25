@@ -45,18 +45,24 @@ def update_qc(processor: Processor, params: ProcessParams, directory: Path) -> N
 
 def freeze(processor: Processor, params: ProcessParams, directory: Path) -> None:
     metadata, full_path = _fetch_data(processor, params, directory)
-    if metadata["pid"]:
-        raise utils.SkipTaskError("Product already frozen")
     logging.info(f"Freezing product: {metadata['uuid']}")
     s3key = (
         f"legacy/{metadata['filename']}" if metadata["legacy"] else metadata["filename"]
     )
-    file_uuid, pid, url = processor.pid_utils.add_pid_to_file(full_path)
+    if metadata["pid"]:
+        existing_pid = metadata["pid"]
+    else:
+        existing_pid = None
+    file_uuid, pid, url = processor.pid_utils.add_pid_to_file(
+        full_path, pid=existing_pid
+    )
     if uuid.UUID(file_uuid) != uuid.UUID(metadata["uuid"]):
         msg = f"File {s3key} UUID mismatch (DB: {metadata['uuid']}, File: {file_uuid})"
         raise ValueError(msg)
     logging.info(f'Minting PID "{pid}" to URL "{url}')
-    response_data = processor.storage_api.upload_product(full_path, s3key)
+    response_data = processor.storage_api.upload_product(
+        full_path, s3key, volatile=False
+    )
     payload = {
         "uuid": file_uuid,
         "checksum": utils.sha256sum(full_path),

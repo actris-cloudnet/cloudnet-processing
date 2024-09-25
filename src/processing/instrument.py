@@ -40,14 +40,18 @@ def process_instrument(processor: Processor, params: InstrumentParams, directory
     except CloudnetException as err:
         raise utils.SkipTaskError(str(err)) from err
 
-    if create_new_version:
-        processor.pid_utils.add_pid_to_file(new_file)
+    if create_new_version or existing_product is None:
+        volatile_pid = None
+    else:
+        volatile_pid = existing_product["pid"]
+    processor.pid_utils.add_pid_to_file(new_file, pid=volatile_pid)
+
     utils.add_global_attributes(new_file, instrument_pid=params.instrument.pid)
 
     if existing_file and are_identical_nc_files(existing_file, new_file):
         raise utils.SkipTaskError("Skipping PUT to data portal, file has not changed")
 
-    processor.upload_file(params, new_file, filename)
+    processor.upload_file(params, new_file, filename, volatile=not create_new_version)
     processor.create_and_upload_images(
         new_file, params.product.id, std_uuid.UUID(uuid.product), filename, directory
     )
