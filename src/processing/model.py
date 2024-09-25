@@ -16,9 +16,11 @@ def process_model(processor: Processor, params: ModelParams, directory: Path):
         raise ValueError(f"Found {n_files} files")
     full_path = full_paths[0]
 
+    volatile = True
     if file_meta := processor.get_model_file(params):
         if not file_meta["volatile"]:
             logging.warning("Stable model file found. Replacing...")
+            volatile = False
         product_uuid = uuid.UUID(file_meta["uuid"])
         filename = file_meta["filename"]
     else:
@@ -28,7 +30,14 @@ def process_model(processor: Processor, params: ModelParams, directory: Path):
     try:
         output_path = directory / "output.nc"
         _harmonize_model(params, full_path, output_path, product_uuid)
-        processor.upload_file(params, output_path, filename)
+
+        if not file_meta or not file_meta["pid"]:
+            volatile_pid = None
+        else:
+            volatile_pid = file_meta["pid"]
+        processor.pid_utils.add_pid_to_file(output_path, pid=volatile_pid)
+
+        processor.upload_file(params, output_path, filename, volatile)
         if "hidden" in params.site.types:
             logging.info("Skipping plotting for hidden site")
         else:
