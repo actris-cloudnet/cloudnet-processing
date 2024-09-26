@@ -45,7 +45,7 @@ def process_me(processor: Processor, params: ModelParams, directory: Path):
     if existing_file and are_identical_nc_files(existing_file, new_file):
         raise SkipTaskError("Skipping PUT to data portal, file has not changed")
 
-    processor.upload_file(params, new_file, filename)
+    processor.upload_file(params, new_file, filename, volatile=not create_new_version)
     processor.create_and_upload_l3_images(
         new_file,
         params.product.id,
@@ -86,8 +86,17 @@ def process_product(processor: Processor, params: ProductParams, directory: Path
     except CloudnetException as err:
         raise utils.SkipTaskError(str(err)) from err
 
-    if create_new_version:
-        processor.pid_utils.add_pid_to_file(new_file)
+    if create_new_version or existing_product is None or not existing_product["pid"]:
+        volatile_pid = None
+    else:
+        volatile_pid = existing_product["pid"]
+    if (
+        create_new_version
+        or (existing_product and existing_product["pid"])
+        or not params.product.experimental
+    ):
+        processor.pid_utils.add_pid_to_file(new_file, pid=volatile_pid)
+
     utils.add_global_attributes(
         new_file, instrument_pid=params.instrument.pid if params.instrument else None
     )
@@ -95,7 +104,7 @@ def process_product(processor: Processor, params: ProductParams, directory: Path
     if existing_file and are_identical_nc_files(existing_file, new_file):
         raise SkipTaskError("Skipping PUT to data portal, file has not changed")
 
-    processor.upload_file(params, new_file, filename)
+    processor.upload_file(params, new_file, filename, volatile=not create_new_version)
     processor.create_and_upload_images(
         new_file,
         params.product.id,
@@ -107,7 +116,7 @@ def process_product(processor: Processor, params: ProductParams, directory: Path
         new_file, std_uuid.UUID(uuid.product), params.product.id
     )
     _print_info(uuid, create_new_version, qc_result)
-    if create_new_version:
+    if processor.md_api.config.is_production:
         _update_dvas_metadata(processor, params)
 
 
@@ -431,14 +440,12 @@ def _update_dvas_metadata(processor: Processor, params: ProductParams):
         "site": params.site.id,
         "product": params.product.id,
         "date": params.date.isoformat(),
-        "allVersions": "true",
     }
     if params.instrument:
         payload["instrumentPid"] = params.instrument.pid
     metadata = processor.md_api.get("api/files", payload)
-    latest_version = metadata[0]
-    if any(row["dvasId"] is not None for row in metadata):
-        processor.dvas.upload(latest_version)
+    if metadata:
+        processor.dvas.upload(metadata[0])
 
 
 def _check_response(metadata: list[dict], product: str) -> None:

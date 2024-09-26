@@ -45,29 +45,48 @@ def update_qc(processor: Processor, params: ProcessParams, directory: Path) -> N
 
 def freeze(processor: Processor, params: ProcessParams, directory: Path) -> None:
     metadata, full_path = _fetch_data(processor, params, directory)
-    if metadata["pid"]:
+    if metadata["pid"] and not metadata["volatile"]:
         raise utils.SkipTaskError("Product already frozen")
     logging.info(f"Freezing product: {metadata['uuid']}")
     s3key = (
         f"legacy/{metadata['filename']}" if metadata["legacy"] else metadata["filename"]
     )
-    file_uuid, pid, url = processor.pid_utils.add_pid_to_file(full_path)
+    if metadata["pid"]:
+        existing_pid = metadata["pid"]
+        volatile = False
+    else:
+        existing_pid = None
+        volatile = True
+    file_uuid, pid, url = processor.pid_utils.add_pid_to_file(
+        full_path, pid=existing_pid
+    )
     if uuid.UUID(file_uuid) != uuid.UUID(metadata["uuid"]):
         msg = f"File {s3key} UUID mismatch (DB: {metadata['uuid']}, File: {file_uuid})"
         raise ValueError(msg)
-    logging.info(f'Minting PID "{pid}" to URL "{url}')
-    response_data = processor.storage_api.upload_product(full_path, s3key)
+    if metadata["volatile"] and metadata["pid"]:
+        msg = f"Removing volatile status of {url}"
+    elif metadata["volatile"] and not metadata["pid"]:
+        msg = f"Minting PID {pid} to URL {url} and keeping volatile status"
+    else:
+        msg = f"Minting PID {pid} to URL {url}"
+    logging.info(msg)
+
+    response_data = processor.storage_api.upload_product(
+        full_path, s3key, volatile=volatile
+    )
     payload = {
         "uuid": file_uuid,
         "checksum": utils.sha256sum(full_path),
-        "volatile": False,
+        "volatile": volatile,
         "pid": pid,
         **response_data,
     }
     processor.md_api.post("files", payload)
-    processor.storage_api.delete_volatile_product(s3key)
+    if volatile is False:
+        processor.storage_api.delete_volatile_product(s3key)
     metadata = processor.md_api.get(f"api/files/{metadata['uuid']}")
-    processor.dvas.upload(metadata)
+    if processor.md_api.config.is_production:
+        processor.dvas.upload(metadata)
 
 
 def upload_to_dvas(processor: Processor, params: ProcessParams) -> None:

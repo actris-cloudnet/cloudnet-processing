@@ -98,6 +98,7 @@ def utcnow() -> datetime.datetime:
 def create_product_put_payload(
     full_path: str | os.PathLike,
     storage_service_response: dict,
+    volatile: bool,
     product: str | None = None,
     site: str | None = None,
     date_str: str | None = None,
@@ -111,7 +112,7 @@ def create_product_put_payload(
             "measurementDate": date_str or f"{nc.year}-{nc.month}-{nc.day}",
             "format": _get_file_format(nc),
             "checksum": sha256sum(full_path),
-            "volatile": not hasattr(nc, "pid"),
+            "volatile": volatile,
             "uuid": getattr(nc, "file_uuid", ""),
             "pid": getattr(nc, "pid", ""),
             "software": {"cloudnet-processing": get_data_processing_version()},

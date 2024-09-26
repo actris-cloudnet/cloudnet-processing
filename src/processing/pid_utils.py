@@ -20,12 +20,16 @@ class PidUtils:
             session = make_session()
         self.session = session
 
-    def add_pid_to_file(self, filepath: PathLike | str) -> tuple[str, str, str]:
+    def add_pid_to_file(
+        self, filepath: PathLike | str, pid: str | None = None
+    ) -> tuple[str, str, str]:
         """Queries PID service and adds the PID to NC file metadata."""
         with netCDF4.Dataset(filepath, "r+") as rootgrp:
             uuid = getattr(rootgrp, "file_uuid")
             url = build_file_landing_page_url(uuid)
-            if self._is_production:
+            if pid is not None:
+                pid_to_file = pid
+            elif self._is_production:
                 payload = {
                     "type": "file",
                     "uuid": uuid,
@@ -38,12 +42,12 @@ class PidUtils:
                     raise MiscError(
                         f'PID service failed with status {res.status_code}:\n{res.json()["detail"]}'
                     ) from exc
-                pid = res.json()["pid"]
+                pid_to_file = res.json()["pid"]
             else:
-                pid = f"https://www.example.pid/{_random_string(5)}"
-            rootgrp.pid = pid
+                pid_to_file = f"https://www.example.pid/{_random_string(5)}"
+            rootgrp.pid = pid_to_file
 
-        return uuid, pid, url
+        return uuid, pid_to_file, url
 
 
 def _random_string(n: int = 10) -> str:

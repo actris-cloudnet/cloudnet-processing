@@ -294,10 +294,15 @@ class Processor:
             payload["filenameSuffix"] = filename_suffix
         return payload
 
-    def upload_file(self, params: ProcessParams, full_path: Path, s3key: str):
-        file_info = self.storage_api.upload_product(full_path, s3key)
+    def upload_file(
+        self, params: ProcessParams, full_path: Path, s3key: str, volatile: bool
+    ):
+        file_info = self.storage_api.upload_product(full_path, s3key, volatile)
         payload = utils.create_product_put_payload(
-            full_path, file_info, site=params.site.id
+            full_path,
+            file_info,
+            volatile,
+            site=params.site.id,
         )
         if isinstance(params, ModelParams) and "evaluation" not in params.product.type:
             payload["model"] = params.model_id
