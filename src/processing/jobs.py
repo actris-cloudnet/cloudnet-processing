@@ -76,7 +76,8 @@ def freeze(processor: Processor, params: ProcessParams, directory: Path) -> None
     if volatile is False:
         processor.storage_api.delete_volatile_product(s3key)
     metadata = processor.md_api.get(f"api/files/{metadata['uuid']}")
-    processor.dvas.upload(metadata)
+    if processor.md_api.config.is_production:
+        processor.dvas.upload(metadata)
 
 
 def upload_to_dvas(processor: Processor, params: ProcessParams) -> None:

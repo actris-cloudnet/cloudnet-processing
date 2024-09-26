@@ -111,7 +111,7 @@ def process_product(processor: Processor, params: ProductParams, directory: Path
         new_file, std_uuid.UUID(uuid.product), params.product.id
     )
     _print_info(uuid, create_new_version, qc_result)
-    if create_new_version:
+    if create_new_version and processor.md_api.config.is_production:
         _update_dvas_metadata(processor, params)
 
 
