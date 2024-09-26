@@ -90,7 +90,12 @@ def process_product(processor: Processor, params: ProductParams, directory: Path
         volatile_pid = None
     else:
         volatile_pid = existing_product["pid"]
-    processor.pid_utils.add_pid_to_file(new_file, pid=volatile_pid)
+    if (
+        create_new_version
+        or (existing_product and existing_product["pid"])
+        or not params.product.experimental
+    ):
+        processor.pid_utils.add_pid_to_file(new_file, pid=volatile_pid)
 
     utils.add_global_attributes(
         new_file, instrument_pid=params.instrument.pid if params.instrument else None
