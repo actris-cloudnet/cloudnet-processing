@@ -51,8 +51,10 @@ def freeze(processor: Processor, params: ProcessParams, directory: Path) -> None
     )
     if metadata["pid"]:
         existing_pid = metadata["pid"]
+        volatile = False
     else:
         existing_pid = None
+        volatile = True
     file_uuid, pid, url = processor.pid_utils.add_pid_to_file(
         full_path, pid=existing_pid
     )
@@ -61,17 +63,18 @@ def freeze(processor: Processor, params: ProcessParams, directory: Path) -> None
         raise ValueError(msg)
     logging.info(f'Minting PID "{pid}" to URL "{url}')
     response_data = processor.storage_api.upload_product(
-        full_path, s3key, volatile=False
+        full_path, s3key, volatile=volatile
     )
     payload = {
         "uuid": file_uuid,
         "checksum": utils.sha256sum(full_path),
-        "volatile": False,
+        "volatile": volatile,
         "pid": pid,
         **response_data,
     }
     processor.md_api.post("files", payload)
-    processor.storage_api.delete_volatile_product(s3key)
+    if volatile is False:
+        processor.storage_api.delete_volatile_product(s3key)
     metadata = processor.md_api.get(f"api/files/{metadata['uuid']}")
     processor.dvas.upload(metadata)
 
