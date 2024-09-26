@@ -63,7 +63,14 @@ def freeze(processor: Processor, params: ProcessParams, directory: Path) -> None
     if uuid.UUID(file_uuid) != uuid.UUID(metadata["uuid"]):
         msg = f"File {s3key} UUID mismatch (DB: {metadata['uuid']}, File: {file_uuid})"
         raise ValueError(msg)
-    logging.info(f'Minting PID "{pid}" to URL "{url}')
+    if metadata["volatile"] and metadata["pid"]:
+        msg = f"Removing volatile status of {url}"
+    elif metadata["volatile"] and not metadata["pid"]:
+        msg = f"Minting PID {pid} to URL {url} and keeping volatile status"
+    else:
+        msg = f"Minting PID {pid} to URL {url}"
+    logging.info(msg)
+
     response_data = processor.storage_api.upload_product(
         full_path, s3key, volatile=volatile
     )
