@@ -116,7 +116,7 @@ def process_product(processor: Processor, params: ProductParams, directory: Path
         new_file, std_uuid.UUID(uuid.product), params.product.id
     )
     _print_info(uuid, create_new_version, qc_result)
-    if create_new_version and processor.md_api.config.is_production:
+    if processor.md_api.config.is_production:
         _update_dvas_metadata(processor, params)
 
 
@@ -440,14 +440,12 @@ def _update_dvas_metadata(processor: Processor, params: ProductParams):
         "site": params.site.id,
         "product": params.product.id,
         "date": params.date.isoformat(),
-        "allVersions": "true",
     }
     if params.instrument:
         payload["instrumentPid"] = params.instrument.pid
     metadata = processor.md_api.get("api/files", payload)
-    latest_version = metadata[0]
-    if any(row["dvasId"] is not None for row in metadata):
-        processor.dvas.upload(latest_version)
+    if metadata:
+        processor.dvas.upload(metadata[0])
 
 
 def _check_response(metadata: list[dict], product: str) -> None:
