@@ -45,6 +45,8 @@ def update_qc(processor: Processor, params: ProcessParams, directory: Path) -> N
 
 def freeze(processor: Processor, params: ProcessParams, directory: Path) -> None:
     metadata, full_path = _fetch_data(processor, params, directory)
+    if metadata["pid"] and not metadata["volatile"]:
+        raise utils.SkipTaskError("Product already frozen")
     logging.info(f"Freezing product: {metadata['uuid']}")
     s3key = (
         f"legacy/{metadata['filename']}" if metadata["legacy"] else metadata["filename"]
