@@ -86,7 +86,7 @@ def process_product(processor: Processor, params: ProductParams, directory: Path
     except CloudnetException as err:
         raise utils.SkipTaskError(str(err)) from err
 
-    if create_new_version or existing_product is None:
+    if create_new_version or existing_product is None or not existing_product["pid"]:
         volatile_pid = None
     else:
         volatile_pid = existing_product["pid"]
