@@ -310,10 +310,18 @@ def _process_file(
             }
             metadata = processor.md_api.get("api/raw-files", payload)
             # Need to get instrument again because derivedProductIds is missing from raw-files response...
-            instruments = {
-                processor.get_instrument(meta["instrumentInfo"]["uuid"])
-                for meta in metadata
-            }
+            if metadata:
+                instruments = {
+                    processor.get_instrument(meta["instrumentInfo"]["uuid"])
+                    for meta in metadata
+                }
+            else:
+                # No raw data, but we can still have fetched products
+                metadata = processor.md_api.get("api/files", payload)
+                instruments = {
+                    processor.get_instrument(meta["instrumentInfoUuid"])
+                    for meta in metadata
+                }
 
         for instrument in instruments:
             _print_header(
