@@ -13,8 +13,9 @@ jobs:
 
       - name: Checkout fixtures
         uses: actions/checkout@v4
-        repository: actris-cloudnet/dataportal-fixtures
-        path: dataportal-fixtures
+        with:
+          repository: actris-cloudnet/dataportal-fixtures
+          path: dataportal-fixtures
 
       - name: Start dataportal
         run: docker compose -f .github/docker-compose.yml up --wait dataportal-backend
