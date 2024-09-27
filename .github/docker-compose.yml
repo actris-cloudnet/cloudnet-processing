@@ -1,0 +1,85 @@
+services:
+  dataportal-backend:
+    image: ghcr.io/actris-cloudnet/dataportal-backend
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+      #citation-service:
+      #  condition: service_started
+    volumes:
+      - ../dataportal-fixtures:/dataportal-fixtures
+    env_file:
+      - test.env
+    environment:
+      - SS_MODE
+    command:
+      [
+        "sh",
+        "-c",
+        "node build/fixtures.js /dataportal-fixtures TRUNCATE && npm run start",
+      ]
+  db:
+    image: "postgres:16"
+    volumes:
+      - ./initdb.d:/docker-entrypoint-initdb.d
+    ports:
+      - "54321:5432"
+    environment:
+      TZ: "Europe/Helsinki"
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      PGUSER: admin
+    healthcheck:
+      test: ["CMD", "psql", "-c", "select 1"]
+      interval: 1s
+      retries: 120
+  #moto-server:
+  #  image: "motoserver/moto:3.0.1"
+  #storage-service:
+  #  image: ghcr.io/actris-cloudnet/storage-service
+  #  ports:
+  #    - "5900:5900"
+  #  depends_on:
+  #    db:
+  #      condition: service_healthy
+  #    moto-server:
+  #      condition: service_started
+  #  volumes:
+  #    - ../storage-service:/app
+  #  env_file:
+  #    - .env
+  #  environment:
+  #    - SS_MODE
+  #    - PGUSER=ss
+  #    - PGDATABASE=ss
+  #    - S3_ENDPOINT
+  #    - S3_ACCESSKEYID
+  #    - S3_SECRETACCESSKEY
+  #  command: ["npm", "run", "start-dev"]
+  #pid-service:
+  #  image: ghcr.io/actris-cloudnet/pid-service
+  #  ports:
+  #    - "5800:5800"
+  #  env_file:
+  #    - ../pid-service/.env
+  #  volumes:
+  #    - ../pid-service:/app
+  #citation-service:
+  #  image: ghcr.io/actris-cloudnet/citation-service
+  #  ports:
+  #    - "3005:8080"
+  #  volumes:
+  #    - ../citation-service:/app
+  #influxdb:
+  #  image: influxdb:2.3.0
+  #  ports:
+  #    - 8086:8086
+  #  environment:
+  #    DOCKER_INFLUXDB_INIT_MODE: setup
+  #    DOCKER_INFLUXDB_INIT_USERNAME: admin
+  #    DOCKER_INFLUXDB_INIT_PASSWORD: admin
+  #    DOCKER_INFLUXDB_INIT_ORG: cloudnet
+  #    DOCKER_INFLUXDB_INIT_BUCKET: housekeeping
+  #    DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: super-secret-token
