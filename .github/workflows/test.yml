@@ -11,6 +11,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Checkout fixtures
+        uses: actions/checkout@v4
+        repository: actris-cloudnet/dataportal-fixtures
+        path: dataportal-fixtures
+
+      - name: Start dataportal
+        run: docker compose -f .github/docker-compose.yml up --wait dataportal-backend
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -26,6 +34,14 @@ jobs:
 
       - name: Run unit tests
         run: docker run -v $PWD:/app test pytest
+
+      - name: Shutdown backend
+        if: always()
+        run: docker compose -f .github/docker-compose.yml down
+
+      - name: Print logs
+        if: always()
+        run: docker compose -f .github/docker-compose.yml logs
 
   lint:
     name: Lint
