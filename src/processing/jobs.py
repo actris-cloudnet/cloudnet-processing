@@ -47,6 +47,8 @@ def freeze(processor: Processor, params: ProcessParams, directory: Path) -> None
     metadata, full_path = _fetch_data(processor, params, directory)
     if metadata["pid"] and not metadata["volatile"]:
         raise utils.SkipTaskError("Product already frozen")
+    if params.product.experimental:
+        raise utils.SkipTaskError("Product is experimental")
     logging.info(f"Freezing product: {metadata['uuid']}")
     s3key = (
         f"legacy/{metadata['filename']}" if metadata["legacy"] else metadata["filename"]
