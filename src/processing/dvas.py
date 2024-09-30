@@ -32,6 +32,9 @@ class Dvas:
         if file["product"]["level"] != "2":
             logging.error("Skipping - only L2 products supported for now")
             return
+        if not file["site"]["dvasId"]:
+            logging.error("Skipping - not DVAS site")
+            return
         try:
             dvas_metadata = DvasMetadata(file, self.md_api)
             dvas_json = dvas_metadata.create_dvas_json()
