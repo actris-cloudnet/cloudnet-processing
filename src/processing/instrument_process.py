@@ -374,7 +374,8 @@ class ProcessLidar(ProcessInstrument):
         self._call_ceilo2nc("cl31")
 
     def process_cl51(self):
-        if self.params.site.id == "norunda":
+        calibration = fetch_calibration(self.params.instrument.pid, self.params.date)
+        if calibration and calibration.get("data", {}).get("time_offset"):
             (
                 full_paths,
                 self.uuid.raw,
@@ -386,11 +387,9 @@ class ProcessLidar(ProcessInstrument):
             ) = self.download_instrument()
         full_paths.sort()
         _concatenate_text_files(full_paths, str(self.daily_path))
-        if self.params.site.id == "norunda" and self.params.date < datetime.date(
-            2021, 10, 18
-        ):
+        if calibration and calibration.get("data", {}).get("time_offset"):
             logging.info("Shifting timestamps to UTC")
-            offset_in_hours = -1
+            offset_in_hours = round(calibration["data"]["time_offset"] / 60)
             _fix_cl51_timestamps(str(self.daily_path), offset_in_hours)
         self._call_ceilo2nc("cl51")
 
@@ -581,7 +580,9 @@ class ProcessWeatherStation(ProcessInstrument):
         )
         if self.params.site.id not in supported_sites:
             raise NotImplementedError("Weather station not implemented for this site")
-        if self.params.site.id in ("kenttarova", "bucharest"):
+
+        calibration = fetch_calibration(self.params.instrument.pid, self.params.date)
+        if calibration and calibration.get("data", {}).get("time_offset"):
             (full_paths, self.uuid.raw) = self.processor.download_adjoining_daily_files(
                 self.params, self.raw_dir
             )
