@@ -113,7 +113,8 @@ class Worker:
                         )
                     elif task["type"] == "process":
                         process_model(self.processor, params, Path(directory))
-                        self.publish_followup_tasks(site, product, params)
+                        if task["options"]["derivedProducts"]:
+                            self.publish_followup_tasks(site, product, params)
                     else:
                         raise ValueError(f"Unknown task type: {task['type']}")
                 elif product.id in ("l3-cf", "l3-lwc", "l3-iwc"):
@@ -137,7 +138,8 @@ class Worker:
                         raise utils.SkipTaskError("DVAS not supported for L3 products")
                     elif task["type"] == "process":
                         process_me(self.processor, params, Path(directory))
-                        self.publish_followup_tasks(site, product, params)
+                        if task["options"]["derivedProducts"]:
+                            self.publish_followup_tasks(site, product, params)
                     else:
                         raise ValueError(f"Unknown task type: {task['type']}")
                 elif product.source_instrument_ids:
@@ -163,7 +165,8 @@ class Worker:
                         )
                     elif task["type"] == "process":
                         process_instrument(self.processor, params, Path(directory))
-                        self.publish_followup_tasks(site, product, params)
+                        if task["options"]["derivedProducts"]:
+                            self.publish_followup_tasks(site, product, params)
                     else:
                         raise ValueError(f"Unknown task type: {task['type']}")
                 else:
@@ -191,7 +194,8 @@ class Worker:
                         )
                     elif task["type"] == "process":
                         process_product(self.processor, params, Path(directory))
-                        self.publish_followup_tasks(site, product, params)
+                        if task["options"]["derivedProducts"]:
+                            self.publish_followup_tasks(site, product, params)
                     else:
                         raise ValueError(f"Unknown task type: {task['type']}")
             action = "complete"
