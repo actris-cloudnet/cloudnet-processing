@@ -14,7 +14,7 @@ from .utils import build_file_landing_page_url, make_session
 
 class PidUtils:
     def __init__(self, config: Config, session: requests.Session | None = None):
-        self._pid_service_url = config.pid_service_url
+        self._pid_service_url = f"{config.pid_service_url}/pid/"
         self._is_production = config.is_production
         if session is None:
             session = make_session()
