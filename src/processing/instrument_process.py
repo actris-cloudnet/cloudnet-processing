@@ -374,7 +374,8 @@ class ProcessLidar(ProcessInstrument):
         self._call_ceilo2nc("cl31")
 
     def process_cl51(self):
-        if self.params.site.id == "norunda":
+        calibration = fetch_calibration(self.params.instrument.pid, self.params.date)
+        if calibration and calibration.get("data", {}).get("time_offset"):
             (
                 full_paths,
                 self.uuid.raw,
@@ -386,12 +387,10 @@ class ProcessLidar(ProcessInstrument):
             ) = self.download_instrument()
         full_paths.sort()
         _concatenate_text_files(full_paths, str(self.daily_path))
-        if self.params.site.id == "norunda" and self.params.date < datetime.date(
-            2021, 10, 18
-        ):
-            logging.info("Shifting timestamps to UTC")
-            offset_in_hours = -1
-            _fix_cl51_timestamps(str(self.daily_path), offset_in_hours)
+        if calibration and (minutes := calibration.get("data", {}).get("time_offset")):
+            logging.info("Shifting timestamps to UTC by %d minutes", minutes)
+            offset = datetime.timedelta(minutes=minutes)
+            _fix_cl51_timestamps(str(self.daily_path), offset)
         self._call_ceilo2nc("cl51")
 
     def process_cl61d(self):
@@ -581,7 +580,9 @@ class ProcessWeatherStation(ProcessInstrument):
         )
         if self.params.site.id not in supported_sites:
             raise NotImplementedError("Weather station not implemented for this site")
-        if self.params.site.id in ("kenttarova", "bucharest"):
+
+        calibration = fetch_calibration(self.params.instrument.pid, self.params.date)
+        if calibration and calibration.get("data", {}).get("time_offset"):
             (full_paths, self.uuid.raw) = self.processor.download_adjoining_daily_files(
                 self.params, self.raw_dir
             )
@@ -635,13 +636,13 @@ def _unzip_gz_files(full_paths: list[Path]) -> list[Path]:
     return paths_out
 
 
-def _fix_cl51_timestamps(filename: str, hours: int) -> None:
+def _fix_cl51_timestamps(filename: str, offset: datetime.timedelta) -> None:
     with open(filename, "r") as file:
         lines = file.readlines()
     for ind, line in enumerate(lines):
         if is_timestamp(line):
             date_time = line.strip("-").strip("\n")
-            date_time_utc = _shift_datetime(date_time, hours)
+            date_time_utc = _shift_datetime(date_time, offset)
             lines[ind] = f"-{date_time_utc}\n"
     with open(filename, "w") as file:
         file.writelines(lines)
@@ -871,10 +872,10 @@ def _doppy_wls70_wind_to_nc(
             )
 
 
-def _shift_datetime(date_time: str, offset: int) -> str:
+def _shift_datetime(date_time: str, offset: datetime.timedelta) -> str:
     """Shifts datetime N hours."""
     dt = datetime.datetime.strptime(date_time, "%Y-%m-%d %H:%M:%S")
-    dt = dt + datetime.timedelta(hours=offset)
+    dt = dt - offset
     return dt.strftime("%Y-%m-%d %H:%M:%S")
 
 
