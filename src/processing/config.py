@@ -1,5 +1,4 @@
 import os
-import re
 
 
 class Config:
@@ -15,7 +14,7 @@ class Config:
             environ.get("DATA_SUBMISSION_USERNAME", "admin"),
             environ.get("DATA_SUBMISSION_PASSWORD", "admin"),
         )
-        self.pid_service_url = re.sub(r"(/pid)?/?$", "", environ["PID_SERVICE_URL"])
+        self.pid_service_url = environ["PID_SERVICE_URL"].rstrip("/")
         self.is_production = environ["PID_SERVICE_TEST_ENV"].lower() != "true"
         self.freeze_after_days = int(environ["FREEZE_AFTER_DAYS"])
         self.freeze_model_after_days = int(environ["FREEZE_MODEL_AFTER_DAYS"])
