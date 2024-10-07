@@ -134,6 +134,8 @@ def create_product_put_payload(
             payload["software"]["doppy"] = version
         if version := getattr(nc, "voodoonet_version", None):
             payload["software"]["voodoonet"] = version
+        if version := getattr(nc, "model_munger_version", None):
+            payload["software"]["model-munger"] = version
     return payload
 
 
