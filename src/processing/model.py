@@ -2,7 +2,7 @@ import logging
 import uuid
 from pathlib import Path
 
-from processing import nc_header_augmenter
+from processing import nc_header_augmenter, utils
 from processing.processor import ModelParams, Processor
 from processing.utils import MiscError, SkipTaskError
 
@@ -44,7 +44,8 @@ def process_model(processor: Processor, params: ModelParams, directory: Path):
             processor.create_and_upload_images(
                 output_path, "model", product_uuid, filename, directory
             )
-        processor.upload_quality_report(output_path, product_uuid)
+        qc_result = processor.upload_quality_report(output_path, product_uuid)
+        _print_info(product_uuid, qc_result)
         processor.update_statuses(raw_uuids, "processed")
     except MiscError as err:
         raise SkipTaskError(err.message) from err
@@ -76,3 +77,9 @@ def _harmonize_model(
         "instrument": None,
     }
     nc_header_augmenter.harmonize_model_file(data)
+
+
+def _print_info(file_uuid: uuid.UUID, qc_result: str | None = None) -> None:
+    link = utils.build_file_landing_page_url(str(file_uuid))
+    qc_str = f" QC: {qc_result.upper()}" if qc_result is not None else ""
+    logging.info(f"Updated model: {link}{qc_str}")
