@@ -487,13 +487,9 @@ class ModelNc(Level1Nc):
     def check_time_dimension(self):
         """Checks time dimension."""
         n_steps = len(self.nc.dimensions["time"])
-        n_steps_expected = 25
-        n_steps_expected_gdas1 = 9
-        if self.data["model"] == "gdas1" and n_steps == n_steps_expected_gdas1:
-            return
-        if self.data["model"] != "gdas1" and n_steps == n_steps_expected:
-            return
-        raise MiscError("Incomplete model file.")
+        n_steps_expected = {"gdas1": 9, "ecmwf-open": 9}
+        if n_steps != n_steps_expected.get(self.data["model"], 25):
+            raise MiscError("Incomplete model file.")
 
     def add_date(self):
         """Adds date in correct format."""
