@@ -155,7 +155,9 @@ class ProcessRadar(ProcessInstrument):
         out_paths = []
         for filename in full_paths:
             if filename.suffix != suffix:
-                filename = filename.rename(f"{filename.name}{suffix}")
+                filename = filename.rename(
+                    filename.with_name(f"{filename.name}{suffix}")
+                )
             out_paths.append(filename)
         return out_paths
 
