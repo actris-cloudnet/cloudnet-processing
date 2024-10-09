@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 from numpy import ma
 from processing import netcdf_comparer, utils
+from processing.netcdf_comparer import NCDiff
 from processing.storage_api import _get_product_bucket
 
 test_file_path = Path(__file__).parent.absolute()
@@ -34,22 +35,54 @@ def test_are_identical_nc_files_real_data():
     fname1 = "tests/data/20180703_granada_classification_old.nc"
     fname2 = "tests/data/20180703_granada_classification.nc"
     fname3 = "tests/data/20180703_granada_classification_reprocessed.nc"
-    assert netcdf_comparer.are_identical_nc_files(fname1, fname2) is False
-    assert netcdf_comparer.are_identical_nc_files(fname2, fname3) is True
+    assert netcdf_comparer.nc_difference(fname1, fname2) == NCDiff.MAJOR
+    assert netcdf_comparer.nc_difference(fname2, fname3) == NCDiff.NONE
 
 
 @pytest.mark.parametrize(
     "data1, kwargs1, ncattrs1, data2, kwargs2, ncattrs2, expected",
     [
-        (np.array([1, 2, 3]), {}, {}, np.array([1, 2, 3]), {}, {}, True),
-        (np.array([1, 2, 3]), {}, {}, np.array([1, 2, 4]), {}, {}, False),
-        (ma.masked_array([1, 2, 3]), {}, {}, ma.masked_array([1, 2, 3]), {}, {}, True),
-        (ma.masked_array([1, 2, 3]), {}, {}, ma.masked_array([1, 2, 4]), {}, {}, False),
-        (np.array([1.0]), {}, {}, np.array([1.1]), {}, {}, False),
-        (np.array([1.0]), {}, {}, np.array([1.0000001]), {}, {}, True),
-        (np.array([1]), {}, {}, np.array([1, 2]), {}, {}, False),
-        (np.array([1, 2]), {}, {}, np.array([1, 2]), {"fill_value": 2}, {}, False),
-        (np.array([1, 2]), {"fill_value": 2}, {}, np.array([1, 2]), {}, {}, False),
+        (np.array([1, 2, 3]), {}, {}, np.array([1, 2, 3]), {}, {}, NCDiff.NONE),
+        (np.array([1, 2, 3]), {}, {}, np.array([1, 2, 4]), {}, {}, NCDiff.MAJOR),
+        (
+            ma.masked_array([1, 2, 3]),
+            {},
+            {},
+            ma.masked_array([1, 2, 3]),
+            {},
+            {},
+            NCDiff.NONE,
+        ),
+        (
+            ma.masked_array([1, 2, 3]),
+            {},
+            {},
+            ma.masked_array([1, 2, 4]),
+            {},
+            {},
+            NCDiff.MAJOR,
+        ),
+        (np.array([1.0]), {}, {}, np.array([1.1]), {}, {}, NCDiff.MAJOR),
+        (np.array([1.0]), {}, {}, np.array([1.0000001]), {}, {}, NCDiff.NONE),
+        (np.array([1]), {}, {}, np.array([1, 2]), {}, {}, NCDiff.MAJOR),
+        (
+            np.array([1, 2]),
+            {},
+            {},
+            np.array([1, 2]),
+            {"fill_value": 2},
+            {},
+            NCDiff.MAJOR,
+        ),
+        (
+            np.array([1, 2]),
+            {"fill_value": 2},
+            {},
+            np.array([1, 2]),
+            {},
+            {},
+            NCDiff.MAJOR,
+        ),
         (
             np.array([1, 2]),
             {"fill_value": 2},
@@ -57,7 +90,7 @@ def test_are_identical_nc_files_real_data():
             np.array([1, 3]),
             {"fill_value": 3},
             {},
-            True,
+            NCDiff.NONE,
         ),
         (
             np.array([1, 99]),
@@ -66,7 +99,7 @@ def test_are_identical_nc_files_real_data():
             np.array([1, 99]),
             {"fill_value": 99},
             {},
-            True,
+            NCDiff.NONE,
         ),
         (
             np.array([1, 99]),
@@ -75,7 +108,7 @@ def test_are_identical_nc_files_real_data():
             np.array([2, 99]),
             {"fill_value": 99},
             {},
-            False,
+            NCDiff.MAJOR,
         ),
         (
             np.array([1, np.nan]),
@@ -84,7 +117,7 @@ def test_are_identical_nc_files_real_data():
             np.array([1, np.nan]),
             {"fill_value": np.nan},
             {},
-            True,
+            NCDiff.NONE,
         ),
         (
             ma.masked_array([1, 2], mask=[0, 1]),
@@ -93,7 +126,7 @@ def test_are_identical_nc_files_real_data():
             ma.masked_array([1, 3], mask=[0, 1]),
             {"fill_value": 999},
             {},
-            True,
+            NCDiff.NONE,
         ),
         (
             ma.masked_array([1, 2], mask=[1, 1]),
@@ -102,7 +135,7 @@ def test_are_identical_nc_files_real_data():
             ma.masked_array([1, 3], mask=[1, 1]),
             {"fill_value": 999},
             {},
-            True,
+            NCDiff.NONE,
         ),
         (
             ma.masked_array([23, 23], mask=[1, 1]),
@@ -111,7 +144,7 @@ def test_are_identical_nc_files_real_data():
             ma.masked_array([1, 3], mask=[1, 1]),
             {},
             {},
-            True,
+            NCDiff.NONE,
         ),
         (
             np.array([23, 23]),
@@ -120,7 +153,7 @@ def test_are_identical_nc_files_real_data():
             ma.masked_array([23, 23], mask=[1, 0]),
             {},
             {},
-            False,
+            NCDiff.MAJOR,
         ),
         (
             np.array([23, 23]),
@@ -129,7 +162,7 @@ def test_are_identical_nc_files_real_data():
             ma.masked_array([23, 23], mask=[0, 0]),
             {},
             {},
-            True,
+            NCDiff.NONE,
         ),
         (
             np.array([23, 23]),
@@ -138,9 +171,9 @@ def test_are_identical_nc_files_real_data():
             ma.masked_array([23, 23], mask=[1, 1]),
             {},
             {},
-            False,
+            NCDiff.MAJOR,
         ),
-        (np.array([1]), {}, {}, np.array([1.0]), {}, {}, False),
+        (np.array([1]), {}, {}, np.array([1.0]), {}, {}, NCDiff.MAJOR),
         (
             ma.masked_array([1.0, 2.0, 3.0], mask=[0, 0, 0]),
             {},
@@ -148,7 +181,7 @@ def test_are_identical_nc_files_real_data():
             ma.masked_array([1.0, 2.0, 3.0], mask=[0, 0, 0]),
             {},
             {},
-            True,
+            NCDiff.NONE,
         ),
         (
             ma.masked_array([1.0, 2.0, 3.0], mask=[0, 0, 1]),
@@ -157,7 +190,7 @@ def test_are_identical_nc_files_real_data():
             ma.masked_array([1.0, 2.0, 4.0], mask=[0, 0, 1]),
             {},
             {},
-            True,
+            NCDiff.NONE,
         ),
         (
             ma.masked_array([1.0, 2.0, 3.0], mask=[0, 0, 0]),
@@ -166,7 +199,7 @@ def test_are_identical_nc_files_real_data():
             ma.masked_array([1.0, 2.0, 3.0], mask=[0, 0, 1]),
             {},
             {},
-            False,
+            NCDiff.MAJOR,
         ),
         (
             ma.masked_array([1.0, 2.0, 3.0], mask=[0, 1, 0]),
@@ -175,9 +208,17 @@ def test_are_identical_nc_files_real_data():
             ma.masked_array([1.0, 2.0, 3.0], mask=[0, 0, 1]),
             {},
             {},
-            False,
+            NCDiff.MAJOR,
         ),
-        (np.array([1], dtype="i2"), {}, {}, np.array([1], dtype="i4"), {}, {}, False),
+        (
+            np.array([1], dtype="i2"),
+            {},
+            {},
+            np.array([1], dtype="i4"),
+            {},
+            {},
+            NCDiff.MAJOR,
+        ),
         (
             np.array([1.0]),
             {},
@@ -185,9 +226,9 @@ def test_are_identical_nc_files_real_data():
             np.array([1.0]),
             {},
             {"units": "cm"},
-            False,
+            NCDiff.MINOR,
         ),
-        (np.array([np.nan]), {}, {}, np.array([np.nan]), {}, {}, True),
+        (np.array([np.nan]), {}, {}, np.array([np.nan]), {}, {}, NCDiff.NONE),
     ],
 )
 def test_are_identical_nc_files_generated_data(
@@ -209,25 +250,33 @@ def test_are_identical_nc_files_generated_data(
                 fv1 = nc["time"]._FillValue
                 fv2 = kwargs["fill_value"]
                 assert fv1 == fv2 or (np.isnan(fv1) and np.isnan(fv2))
-    assert netcdf_comparer.are_identical_nc_files(fname1, fname2) == expected
+    assert netcdf_comparer.nc_difference(fname1, fname2) == expected
 
 
 @pytest.mark.parametrize(
     "attrs1, attrs2, expected",
     [
-        ({"file_uuid": "kissa"}, {"file_uuid": "koira"}, True),
+        ({"file_uuid": "kissa"}, {"file_uuid": "koira"}, NCDiff.NONE),
         (
             {"source_file_uuids": "kissa, hiiri"},
             {"source_file_uuids": "hiiri, kissa"},
-            True,
+            NCDiff.NONE,
         ),
         (
             {"source_file_uuids": "kissa, hiiri"},
             {"source_file_uuids": "kissa, koira"},
-            False,
+            NCDiff.MINOR,
         ),
-        ({"history": "processed yesterday"}, {"history": "processed today"}, True),
-        ({"hilavitkutin_version": "3.1"}, {"hilavitkutin_version": "3.14"}, True),
+        (
+            {"history": "processed yesterday"},
+            {"history": "processed today"},
+            NCDiff.NONE,
+        ),
+        (
+            {"hilavitkutin_version": "3.1"},
+            {"hilavitkutin_version": "3.14"},
+            NCDiff.NONE,
+        ),
     ],
 )
 def test_are_identical_nc_files_global_attributes(tmp_path, attrs1, attrs2, expected):
@@ -237,31 +286,31 @@ def test_are_identical_nc_files_global_attributes(tmp_path, attrs1, attrs2, expe
         with netCDF4.Dataset(fname, "w") as nc:
             for attr, value in attrs.items():
                 setattr(nc, attr, value)
-    assert netcdf_comparer.are_identical_nc_files(fname1, fname2) == expected
+    assert netcdf_comparer.nc_difference(fname1, fname2) == expected
 
 
 @pytest.mark.parametrize(
     "array1, array2, expected",
     [
-        ([1, 2, 3], [1, 2, 3], True),
-        ([1, 2, 3], [1, 2, 4], False),
-        (np.array([1, 2, 3]), np.array([1, 2, 3]), True),
-        (np.array([1, 2, 3]), np.array([1, 2, 4]), False),
-        (ma.masked_array([1, 2, 3]), ma.masked_array([1, 2, 3]), True),
-        (ma.masked_array([1, 2, 3]), ma.masked_array([1, 2, 4]), False),
+        ([1, 2, 3], [1, 2, 3], NCDiff.NONE),
+        ([1, 2, 3], [1, 2, 4], NCDiff.MAJOR),
+        (np.array([1, 2, 3]), np.array([1, 2, 3]), NCDiff.NONE),
+        (np.array([1, 2, 3]), np.array([1, 2, 4]), NCDiff.MAJOR),
+        (ma.masked_array([1, 2, 3]), ma.masked_array([1, 2, 3]), NCDiff.NONE),
+        (ma.masked_array([1, 2, 3]), ma.masked_array([1, 2, 4]), NCDiff.MAJOR),
         (
             ma.masked_array([1.0, 2.0, 3.0], mask=[0, 0, 0]),
             ma.masked_array([1.0, 2.0, 3.0], mask=[0, 0, 0]),
-            True,
+            NCDiff.NONE,
         ),
         (
             ma.masked_array([1.0, 2.0, 3.0], mask=[0, 0, 0]),
             ma.masked_array([1.0, 2.0, 3.0], mask=[0, 0, 1]),
-            False,
+            NCDiff.MAJOR,
         ),
     ],
 )
-def test_compare_variables(array1, array2, expected: bool, tmp_path):
+def test_compare_variables(array1, array2, expected: NCDiff, tmp_path):
     temp1 = tmp_path / "file1.nc"
     temp2 = tmp_path / "file2.nc"
     with (
@@ -274,8 +323,4 @@ def test_compare_variables(array1, array2, expected: bool, tmp_path):
         var2 = nc2.createVariable("time", "f8", ("time",))
         var1[:] = array1
         var2[:] = array2
-        if expected:
-            netcdf_comparer._compare_variables(nc1, nc2)
-        else:
-            with pytest.raises(Exception):
-                netcdf_comparer._compare_variables(nc1, nc2)
+        assert netcdf_comparer.nc_difference(temp1, temp2) == expected

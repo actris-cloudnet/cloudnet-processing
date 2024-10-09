@@ -8,7 +8,7 @@ import housekeeping
 from cloudnetpy.exceptions import CloudnetException
 
 from processing import instrument_process, utils
-from processing.netcdf_comparer import are_identical_nc_files
+from processing.netcdf_comparer import NCDiff, nc_difference
 from processing.processor import InstrumentParams, Processor
 from processing.utils import Uuid, utctoday
 
@@ -53,7 +53,7 @@ def process_instrument(processor: Processor, params: InstrumentParams, directory
 
     utils.add_global_attributes(new_file, instrument_pid=params.instrument.pid)
 
-    if existing_file and are_identical_nc_files(existing_file, new_file):
+    if existing_file and nc_difference(existing_file, new_file) == NCDiff.NONE:
         raise utils.SkipTaskError("Skipping PUT to data portal, file has not changed")
 
     processor.upload_file(params, new_file, filename, volatile=not create_new_version)

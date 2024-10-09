@@ -1,4 +1,5 @@
 import logging
+from enum import Enum
 from os import PathLike
 
 import netCDF4
@@ -6,19 +7,27 @@ import numpy as np
 import numpy.ma as ma
 
 
-def are_identical_nc_files(
-    filename1: PathLike | str, filename2: PathLike | str
-) -> bool:
+class NCDiff(Enum):
+    MAJOR = "major"  # new version
+    MINOR = "minor"  # batch old file
+    NONE = "none"  # do nothing
+
+
+def nc_difference(filename1: PathLike | str, filename2: PathLike | str) -> NCDiff:
     with netCDF4.Dataset(filename1, "r") as nc1, netCDF4.Dataset(filename2, "r") as nc2:
         try:
             _compare_dimensions(nc1, nc2)
-            _compare_global_attributes(nc1, nc2)
             _compare_variables(nc1, nc2, ignore=("beta_smooth",))
+        except AssertionError as err:
+            logging.debug(err)
+            return NCDiff.MAJOR
+        try:
+            _compare_global_attributes(nc1, nc2)
             _compare_variable_attributes(nc1, nc2)
         except AssertionError as err:
             logging.debug(err)
-            return False
-    return True
+            return NCDiff.MINOR
+    return NCDiff.NONE
 
 
 def _compare_dimensions(nc1: netCDF4.Dataset, nc2: netCDF4.Dataset):

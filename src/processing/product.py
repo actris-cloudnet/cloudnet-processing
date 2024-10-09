@@ -11,7 +11,7 @@ from cloudnetpy.products import generate_mwr_multi, generate_mwr_single
 from requests import HTTPError
 
 from processing import utils
-from processing.netcdf_comparer import are_identical_nc_files
+from processing.netcdf_comparer import NCDiff, nc_difference
 from processing.processor import ModelParams, Processor, ProductParams
 from processing.utils import SkipTaskError, Uuid
 
@@ -42,7 +42,7 @@ def process_me(processor: Processor, params: ModelParams, directory: Path):
 
     utils.add_global_attributes(new_file)
 
-    if existing_file and are_identical_nc_files(existing_file, new_file):
+    if existing_file and nc_difference(existing_file, new_file) == NCDiff.NONE:
         raise SkipTaskError("Skipping PUT to data portal, file has not changed")
 
     processor.upload_file(params, new_file, filename, volatile=not create_new_version)
@@ -101,7 +101,7 @@ def process_product(processor: Processor, params: ProductParams, directory: Path
         new_file, instrument_pid=params.instrument.pid if params.instrument else None
     )
 
-    if existing_file and are_identical_nc_files(existing_file, new_file):
+    if existing_file and nc_difference(existing_file, new_file) == NCDiff.NONE:
         raise SkipTaskError("Skipping PUT to data portal, file has not changed")
 
     processor.upload_file(params, new_file, filename, volatile=not create_new_version)
