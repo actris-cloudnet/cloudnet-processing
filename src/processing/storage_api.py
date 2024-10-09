@@ -1,4 +1,5 @@
 """Metadata API for Cloudnet files."""
+
 import hashlib
 import logging
 import uuid

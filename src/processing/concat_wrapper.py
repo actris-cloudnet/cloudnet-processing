@@ -1,4 +1,5 @@
 """Module containing helper functions for CH15k concatenation."""
+
 import logging
 import shutil
 
