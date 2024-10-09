@@ -9,7 +9,7 @@ import numpy.ma as ma
 
 class NCDiff(Enum):
     MAJOR = "major"  # new version
-    MINOR = "minor"  # batch old file
+    MINOR = "minor"  # patch old file
     NONE = "none"  # do nothing
 
 
