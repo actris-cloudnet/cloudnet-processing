@@ -5,10 +5,11 @@ from pathlib import Path
 from typing import Type
 
 import housekeeping
+import netCDF4
 from cloudnetpy.exceptions import CloudnetException
 
 from processing import instrument_process, utils
-from processing.netcdf_comparer import are_identical_nc_files
+from processing.netcdf_comparer import NCDiff, nc_difference
 from processing.processor import InstrumentParams, Processor
 from processing.utils import Uuid, utctoday
 
@@ -16,13 +17,12 @@ ProcessClass = Type[instrument_process.ProcessInstrument]
 
 
 def process_instrument(processor: Processor, params: InstrumentParams, directory: Path):
-    create_new_version = False
     uuid = Uuid()
+    pid_to_new_file = None
     if existing_product := processor.fetch_product(params):
         if existing_product["volatile"]:
             uuid.volatile = existing_product["uuid"]
-        else:
-            create_new_version = True
+            pid_to_new_file = existing_product["pid"]
         filename = existing_product["filename"]
         existing_file = processor.storage_api.download_product(
             existing_product, directory
@@ -30,6 +30,8 @@ def process_instrument(processor: Processor, params: InstrumentParams, directory
     else:
         filename = _generate_filename(params)
         existing_file = None
+
+    volatile = not existing_file or uuid.volatile is not None
 
     try:
         new_file = _process_file(processor, params, uuid, directory)
@@ -40,23 +42,33 @@ def process_instrument(processor: Processor, params: InstrumentParams, directory
     except CloudnetException as err:
         raise utils.SkipTaskError(str(err)) from err
 
-    if create_new_version or existing_product is None or not existing_product["pid"]:
-        volatile_pid = None
-    else:
-        volatile_pid = existing_product["pid"]
-    if (
-        create_new_version
-        or (existing_product and existing_product["pid"])
-        or not params.product.experimental
-    ):
-        processor.pid_utils.add_pid_to_file(new_file, pid=volatile_pid)
+    if not params.product.experimental:
+        processor.pid_utils.add_pid_to_file(new_file, pid_to_new_file)
 
-    utils.add_global_attributes(new_file, instrument_pid=params.instrument.pid)
+    utils.add_global_attributes(new_file, params.instrument.pid)
 
-    if existing_file and are_identical_nc_files(existing_file, new_file):
-        raise utils.SkipTaskError("Skipping PUT to data portal, file has not changed")
+    patch = False
+    if existing_product and existing_file:
+        difference = nc_difference(existing_file, new_file)
+        if difference == NCDiff.NONE:
+            raise utils.SkipTaskError(
+                "Skipping PUT to data portal, file has not changed"
+            )
+        if difference == NCDiff.MINOR:
+            # Replace existing file
+            patch = True
+            processor.pid_utils.add_pid_to_file(new_file, existing_product["pid"])
+            with netCDF4.Dataset(new_file, "r+") as nc:
+                nc.file_uuid = existing_product["uuid"]
+            uuid.product = existing_product["uuid"]
 
-    processor.upload_file(params, new_file, filename, volatile=not create_new_version)
+    processor.upload_file(
+        params,
+        new_file,
+        filename,
+        volatile,
+        patch,
+    )
     processor.create_and_upload_images(
         new_file, params.product.id, std_uuid.UUID(uuid.product), filename, directory
     )
@@ -64,7 +76,7 @@ def process_instrument(processor: Processor, params: InstrumentParams, directory
         new_file, std_uuid.UUID(uuid.product), params.product.id
     )
     processor.update_statuses(uuid.raw, "processed")
-    _print_info(uuid, create_new_version, qc_result)
+    utils.print_info(uuid, volatile, patch, qc_result)
     if processor.md_api.config.is_production:
         _process_housekeeping(processor, params)
 
@@ -84,19 +96,6 @@ def _generate_filename(params: InstrumentParams) -> str:
         params.instrument.uuid[:8],
     ]
     return "_".join(parts) + ".nc"
-
-
-def _print_info(
-    uuid: Uuid, create_new_version: bool, qc_result: str | None = None
-) -> None:
-    action = (
-        "Created new version"
-        if create_new_version
-        else ("Replaced volatile file" if uuid.volatile else "Created volatile file")
-    )
-    link = utils.build_file_landing_page_url(uuid.product)
-    qc_str = f" QC: {qc_result.upper()}" if qc_result is not None else ""
-    logging.info(f"{action}: {link}{qc_str}")
 
 
 def _process_file(

@@ -339,3 +339,21 @@ class RawApi:
     def get_raw_file(self, uuid: str, fname: str) -> bytes:
         url = f"{self.base_url}/api/download/raw/{uuid}/{fname}"
         return self.session.get(url).content
+
+
+def print_info(
+    uuid: Uuid,
+    volatile: bool,
+    patch: bool,
+    qc_result: str | None = None,
+) -> None:
+    if patch:
+        action = "Patched existing file"
+    elif not volatile:
+        action = "Created new version"
+    else:
+        action = "Replaced volatile file" if uuid.volatile else "Created volatile file"
+
+    link = build_file_landing_page_url(uuid.product)
+    qc_str = f" QC: {qc_result.upper()}" if qc_result else ""
+    logging.info(f"{action}: {link}{qc_str}")
