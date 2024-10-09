@@ -197,9 +197,13 @@ class ProcessDopplerLidarWind(ProcessInstrument):
         file_groups = defaultdict(list)
         # TODO: downloads files that may not be used...
         full_paths, self.uuid.raw = self.download_instrument(
-            include_pattern=r".*vad.*\.nc.*",
+            include_pattern=r".*(vad)|(dbs).*\.nc.*",
         )
-        group_pattern = re.compile(r".*_vad_(.*)\.nc\.*")
+        vad_paths = [p for p in full_paths if re.match(r".*_vad_(.*)\.nc\.*", p.name)]
+        if vad_paths:
+            group_pattern = re.compile(r".*_vad_(.*)\.nc\.*")
+        else:
+            group_pattern = re.compile(r".*_dbs_(.*)\.nc\.*")
         for path, uuid in zip(full_paths, self.uuid.raw):
             if match := group_pattern.match(path.name):
                 file_groups[match.group(1)].append((path, uuid))

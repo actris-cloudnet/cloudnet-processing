@@ -1,5 +1,6 @@
 import datetime
 import logging
+import re
 import shutil
 from tempfile import NamedTemporaryFile
 
@@ -199,6 +200,7 @@ def harmonize_doppler_lidar_wind_file(
         wind.add_global_attributes("doppler-lidar-wind", instrument)
         uuid = wind.add_uuid()
         wind.add_history("doppler-lidar-wind")
+        wind.harmonise_serial_number()
         if "azimuth_offset_deg" in data:
             wind.nc.history += "\nAzimuthal correction applied."
     if "output_path" not in data:
@@ -520,6 +522,12 @@ class DopplerLidarWindNc(Level1Nc):
         self.nc.variables["height"][:] += self.nc.variables["altitude"][:]
         self.nc.variables["height"].standard_name = "height_above_mean_sea_level"
         self.nc.variables["height"].long_name = "Height above mean sea level"
+
+    def harmonise_serial_number(self):
+        if "serial_number" in self.nc.ncattrs() and (
+            match_ := re.match(r"wls\d+s?-(.+)", self.nc.serial_number, re.IGNORECASE)
+        ):
+            self.nc.serial_number = match_.group(1)
 
 
 class HaloNc(Level1Nc):
