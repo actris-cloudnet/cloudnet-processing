@@ -20,10 +20,10 @@ def nc_difference(old_file: PathLike | str, new_file: PathLike | str) -> NCDiff:
             _compare_dimensions(old, new)
             _check_old_variables_exist(old, new)
             _check_old_global_attributes_exist(old, new)
-            _check_variable_shapes(old, new)
-            _check_variable_values(old, new, ignore=ignore)
-            _check_variable_masks(old, new, ignore=ignore)
-            _check_critical_variable_attributes(old, new, ignore=ignore)
+            _compare_variable_shapes(old, new)
+            _compare_variable_values(old, new, ignore=ignore)
+            _compare_variable_masks(old, new, ignore=ignore)
+            _compare_critical_variable_attributes(old, new, ignore=ignore)
         except AssertionError as err:
             logging.debug(err)
             return NCDiff.MAJOR
@@ -86,7 +86,7 @@ def _check_for_new_variables(old: netCDF4.Dataset, new: netCDF4.Dataset):
         assert var in old.variables, f"new variable: {var}"
 
 
-def _check_variable_shapes(old: netCDF4.Dataset, new: netCDF4.Dataset):
+def _compare_variable_shapes(old: netCDF4.Dataset, new: netCDF4.Dataset):
     for name in old.variables:
         value1 = old.variables[name][:]
         value2 = new.variables[name][:]
@@ -95,7 +95,7 @@ def _check_variable_shapes(old: netCDF4.Dataset, new: netCDF4.Dataset):
         )
 
 
-def _check_variable_values(
+def _compare_variable_values(
     old: netCDF4.Dataset, new: netCDF4.Dataset, ignore: tuple = ()
 ):
     for name in old.variables:
@@ -110,7 +110,7 @@ def _check_variable_values(
         )
 
 
-def _check_variable_masks(
+def _compare_variable_masks(
     old: netCDF4.Dataset, new: netCDF4.Dataset, ignore: tuple = ()
 ):
     for name in old.variables:
@@ -136,13 +136,13 @@ def _is_all_masked(value1: np.ndarray, value2: np.ndarray) -> bool:
     )
 
 
-def _check_critical_variable_attributes(
+def _compare_critical_variable_attributes(
     old: netCDF4.Dataset, new: netCDF4.Dataset, ignore: tuple = ()
 ):
     for name in old.variables:
         if name in ignore:
             continue
-        for attr in ("dtype", "dimensions"):
+        for attr in ("dimensions", "dtype"):
             value1 = getattr(old.variables[name], attr)
             value2 = getattr(new.variables[name], attr)
             assert value1 == value2, _log(f"variable {attr}", name, value1, value2)
