@@ -17,6 +17,7 @@ def nc_difference(old_file: PathLike | str, new_file: PathLike | str) -> NCDiff:
     with netCDF4.Dataset(old_file, "r") as old, netCDF4.Dataset(new_file, "r") as new:
         try:
             _compare_dimensions(old, new)
+            _check_old_variables_exist(old, new)
             _compare_variables(old, new, ignore=("beta_smooth",))
         except AssertionError as err:
             logging.debug(err)
@@ -24,6 +25,7 @@ def nc_difference(old_file: PathLike | str, new_file: PathLike | str) -> NCDiff:
         try:
             _compare_global_attributes(old, new)
             _compare_variable_attributes(old, new)
+            _check_for_new_variables(old, new)
         except AssertionError as err:
             logging.debug(err)
             return NCDiff.MINOR
@@ -61,13 +63,18 @@ def _skip_compare_global_attribute(name: str) -> bool:
     return name in ("history", "file_uuid", "pid") or name.endswith("_version")
 
 
+def _check_old_variables_exist(old: netCDF4.Dataset, new: netCDF4.Dataset):
+    for var in old.variables:
+        assert var in new.variables, f"missing variable: {var}"
+
+
+def _check_for_new_variables(old: netCDF4.Dataset, new: netCDF4.Dataset):
+    for var in new.variables:
+        assert var in old.variables, f"new variable: {var}"
+
+
 def _compare_variables(old: netCDF4.Dataset, new: netCDF4.Dataset, ignore: tuple = ()):
-    vars1 = old.variables.keys()
-    vars2 = new.variables.keys()
-    assert (
-        len(set(vars1) ^ set(vars2)) == 0
-    ), f"different variables: {vars1} vs. {vars2}"
-    for name in vars1:
+    for name in old.variables:
         if name in ignore:
             continue
         value1 = old.variables[name][:]

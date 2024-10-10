@@ -324,3 +324,33 @@ def test_compare_variables(array1, array2, expected: NCDiff, tmp_path):
         var1[:] = array1
         var2[:] = array2
         assert netcdf_comparer.nc_difference(temp1, temp2) == expected
+
+
+def test_missing_variable_in_new_file(tmp_path):
+    old_file = tmp_path / "file1.nc"
+    new_file = tmp_path / "file2.nc"
+    with (
+        netCDF4.Dataset(old_file, "w", format="NETCDF4_CLASSIC") as nc1,
+        netCDF4.Dataset(new_file, "w", format="NETCDF4_CLASSIC") as nc2,
+    ):
+        nc1.createDimension("time", 3)
+        nc2.createDimension("time", 3)
+        nc1.createVariable("time", "f8", ("time",))
+        nc1.createVariable("kissa", "f8", ("time",))
+        nc2.createVariable("time", "f8", ("time",))
+        assert netcdf_comparer.nc_difference(old_file, new_file) == NCDiff.MAJOR
+
+
+def test_missing_variable_in_old_file(tmp_path):
+    old_file = tmp_path / "file1.nc"
+    new_file = tmp_path / "file2.nc"
+    with (
+        netCDF4.Dataset(old_file, "w", format="NETCDF4_CLASSIC") as nc1,
+        netCDF4.Dataset(new_file, "w", format="NETCDF4_CLASSIC") as nc2,
+    ):
+        nc1.createDimension("time", 3)
+        nc2.createDimension("time", 3)
+        nc1.createVariable("time", "f8", ("time",))
+        nc2.createVariable("kissa", "f8", ("time",))
+        nc2.createVariable("time", "f8", ("time",))
+        assert netcdf_comparer.nc_difference(old_file, new_file) == NCDiff.MINOR
