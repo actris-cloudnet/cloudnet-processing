@@ -47,7 +47,10 @@ def _compare_dimensions(old: netCDF4.Dataset, new: netCDF4.Dataset):
 
 
 def _compare_global_attributes(old: netCDF4.Dataset, new: netCDF4.Dataset):
-    old_attributes = [a for a in old.ncattrs() if not _skip_compare_global_attribute(a)]
+    def _skip_attribute(name: str) -> bool:
+        return name in ("history", "file_uuid", "pid") or name.endswith("_version")
+
+    old_attributes = [a for a in old.ncattrs() if not _skip_attribute(a)]
     for name in old_attributes:
         value1 = getattr(old, name)
         value2 = getattr(new, name)
@@ -57,10 +60,6 @@ def _compare_global_attributes(old: netCDF4.Dataset, new: netCDF4.Dataset):
             value1.sort()
             value2.sort()
         assert value1 == value2, _log("global attributes", name, value1, value2)
-
-
-def _skip_compare_global_attribute(name: str) -> bool:
-    return name in ("history", "file_uuid", "pid") or name.endswith("_version")
 
 
 def _check_old_global_attributes_exist(old: netCDF4.Dataset, new: netCDF4.Dataset):
