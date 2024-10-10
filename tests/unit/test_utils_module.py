@@ -277,6 +277,16 @@ def test_are_identical_nc_files_generated_data(
             {"hilavitkutin_version": "3.14"},
             NCDiff.NONE,
         ),
+        (
+            {"kissa1": "kaneli", "kissa2": "jaffa"},
+            {"kissa1": "kaneli"},
+            NCDiff.MAJOR,
+        ),
+        (
+            {"kissa1": "kaneli"},
+            {"kissa1": "kaneli", "kissa2": "jaffa"},
+            NCDiff.MINOR,
+        ),
     ],
 )
 def test_are_identical_nc_files_global_attributes(tmp_path, attrs1, attrs2, expected):

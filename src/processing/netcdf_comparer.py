@@ -18,6 +18,7 @@ def nc_difference(old_file: PathLike | str, new_file: PathLike | str) -> NCDiff:
         try:
             _compare_dimensions(old, new)
             _check_old_variables_exist(old, new)
+            _check_old_global_attributes_exist(old, new)
             _compare_variables(old, new, ignore=("beta_smooth",))
         except AssertionError as err:
             logging.debug(err)
@@ -26,6 +27,7 @@ def nc_difference(old_file: PathLike | str, new_file: PathLike | str) -> NCDiff:
             _compare_global_attributes(old, new)
             _compare_variable_attributes(old, new)
             _check_for_new_variables(old, new)
+            _check_for_new_global_attributes(old, new)
         except AssertionError as err:
             logging.debug(err)
             return NCDiff.MINOR
@@ -45,10 +47,8 @@ def _compare_dimensions(old: netCDF4.Dataset, new: netCDF4.Dataset):
 
 
 def _compare_global_attributes(old: netCDF4.Dataset, new: netCDF4.Dataset):
-    l1 = [a for a in old.ncattrs() if not _skip_compare_global_attribute(a)]
-    l2 = [a for a in new.ncattrs() if not _skip_compare_global_attribute(a)]
-    assert len(set(l1) ^ set(l2)) == 0, f"different global attributes: {l1} vs. {l2}"
-    for name in l1:
+    old_attributes = [a for a in old.ncattrs() if not _skip_compare_global_attribute(a)]
+    for name in old_attributes:
         value1 = getattr(old, name)
         value2 = getattr(new, name)
         if name == "source_file_uuids":
@@ -61,6 +61,16 @@ def _compare_global_attributes(old: netCDF4.Dataset, new: netCDF4.Dataset):
 
 def _skip_compare_global_attribute(name: str) -> bool:
     return name in ("history", "file_uuid", "pid") or name.endswith("_version")
+
+
+def _check_old_global_attributes_exist(old: netCDF4.Dataset, new: netCDF4.Dataset):
+    for attr in old.ncattrs():
+        assert attr in new.ncattrs(), f"missing global attribute: {attr}"
+
+
+def _check_for_new_global_attributes(old: netCDF4.Dataset, new: netCDF4.Dataset):
+    for attr in new.ncattrs():
+        assert attr in old.ncattrs(), f"new global attribute: {attr}"
 
 
 def _check_old_variables_exist(old: netCDF4.Dataset, new: netCDF4.Dataset):
