@@ -30,6 +30,7 @@ def nc_difference(old_file: PathLike | str, new_file: PathLike | str) -> NCDiff:
         try:
             _compare_global_attributes(old, new)
             _compare_variable_attributes(old, new)
+            _compare_variable_dtypes(old, new)
             _check_for_new_variables(old, new)
             _check_for_new_global_attributes(old, new)
         except AssertionError as err:
@@ -142,10 +143,23 @@ def _compare_critical_variable_attributes(
     for name in old.variables:
         if name in ignore:
             continue
-        for attr in ("dimensions", "dtype"):
+        # These attributes must be set and the same.
+        for attr in ("dimensions",):
             value1 = getattr(old.variables[name], attr)
             value2 = getattr(new.variables[name], attr)
             assert value1 == value2, _log(f"variable {attr}", name, value1, value2)
+        # Make new version if units exist and differ.
+        if "units" in old.variables[name].ncattrs():
+            value1 = getattr(old.variables[name], "units")
+            value2 = getattr(new.variables[name], "units")
+            assert value1 == value2, _log("variable units", name, value1, value2)
+
+
+def _compare_variable_dtypes(old: netCDF4.Dataset, new: netCDF4.Dataset):
+    for name in old.variables:
+        value1 = getattr(old.variables[name], "dtype")
+        value2 = getattr(new.variables[name], "dtype")
+        assert value1 == value2, _log("variable dtype", name, value1, value2)
 
 
 def _compare_variable_attributes(old: netCDF4.Dataset, new: netCDF4.Dataset):

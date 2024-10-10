@@ -173,7 +173,6 @@ def test_are_identical_nc_files_real_data():
             {},
             NCDiff.MAJOR,
         ),
-        (np.array([1]), {}, {}, np.array([1.0]), {}, {}, NCDiff.MAJOR),
         (
             ma.masked_array([1.0, 2.0, 3.0], mask=[0, 0, 0]),
             {},
@@ -211,22 +210,13 @@ def test_are_identical_nc_files_real_data():
             NCDiff.MAJOR,
         ),
         (
-            np.array([1], dtype="i2"),
-            {},
-            {},
-            np.array([1], dtype="i4"),
-            {},
-            {},
-            NCDiff.MAJOR,
-        ),
-        (
             np.array([1.0]),
             {},
             {"units": "m"},
             np.array([1.0]),
             {},
             {"units": "cm"},
-            NCDiff.MINOR,
+            NCDiff.MAJOR,
         ),
         (np.array([np.nan]), {}, {}, np.array([np.nan]), {}, {}, NCDiff.NONE),
     ],
@@ -364,3 +354,28 @@ def test_missing_variable_in_old_file(tmp_path):
         nc2.createVariable("kissa", "f8", ("time",))
         nc2.createVariable("time", "f8", ("time",))
         assert netcdf_comparer.nc_difference(old_file, new_file) == NCDiff.MINOR
+
+
+@pytest.mark.parametrize(
+    "dtype_old, dtype_new, expected",
+    [
+        ("f8", "f4", NCDiff.MINOR),
+        ("f8", "f8", NCDiff.NONE),
+        ("i4", "i2", NCDiff.MINOR),
+        ("f4", "i4", NCDiff.MINOR),
+    ],
+)
+def test_compare_variable_dtypes(dtype_old, dtype_new, expected, tmp_path):
+    old_file = tmp_path / "file1.nc"
+    new_file = tmp_path / "file2.nc"
+    with (
+        netCDF4.Dataset(old_file, "w", format="NETCDF4_CLASSIC") as nc1,
+        netCDF4.Dataset(new_file, "w", format="NETCDF4_CLASSIC") as nc2,
+    ):
+        nc1.createDimension("time", 3)
+        nc2.createDimension("time", 3)
+        nc1.createVariable("time", "f8", ("time",))
+        nc2.createVariable("time", "f8", ("time",))
+        nc1.createVariable("kissa", dtype_old, ("time",))
+        nc2.createVariable("kissa", dtype_new, ("time",))
+        assert netcdf_comparer.nc_difference(old_file, new_file) == expected
