@@ -14,12 +14,16 @@ class NCDiff(Enum):
 
 
 def nc_difference(old_file: PathLike | str, new_file: PathLike | str) -> NCDiff:
+    ignore = ("beta_smooth",)
     with netCDF4.Dataset(old_file, "r") as old, netCDF4.Dataset(new_file, "r") as new:
         try:
             _compare_dimensions(old, new)
             _check_old_variables_exist(old, new)
             _check_old_global_attributes_exist(old, new)
-            _compare_variables(old, new, ignore=("beta_smooth",))
+            _check_variable_shapes(old, new)
+            _check_variable_values(old, new, ignore=ignore)
+            _check_variable_masks(old, new, ignore=ignore)
+            _check_critical_variable_attributes(old, new, ignore=ignore)
         except AssertionError as err:
             logging.debug(err)
             return NCDiff.MAJOR
@@ -82,31 +86,62 @@ def _check_for_new_variables(old: netCDF4.Dataset, new: netCDF4.Dataset):
         assert var in old.variables, f"new variable: {var}"
 
 
-def _compare_variables(old: netCDF4.Dataset, new: netCDF4.Dataset, ignore: tuple = ()):
+def _check_variable_shapes(old: netCDF4.Dataset, new: netCDF4.Dataset):
+    for name in old.variables:
+        value1 = old.variables[name][:]
+        value2 = new.variables[name][:]
+        assert value1.shape == value2.shape, _log(
+            "variable shapes", name, value1.shape, value2.shape
+        )
+
+
+def _check_variable_values(
+    old: netCDF4.Dataset, new: netCDF4.Dataset, ignore: tuple = ()
+):
     for name in old.variables:
         if name in ignore:
             continue
         value1 = old.variables[name][:]
         value2 = new.variables[name][:]
-        # np.allclose does not seem to work if all values are masked
-        if (
-            isinstance(value1, ma.MaskedArray)
-            and isinstance(value2, ma.MaskedArray)
-            and value1.mask.all()
-            and value2.mask.all()
-        ):
-            return
-        assert value1.shape == value2.shape, _log(
-            "shapes", name, value1.shape, value2.shape
-        )
+        if _is_all_masked(value1, value2):
+            continue
         assert np.allclose(value1, value2, rtol=1e-4, equal_nan=True), _log(
             "variable values", name, value1, value2
         )
+
+
+def _check_variable_masks(
+    old: netCDF4.Dataset, new: netCDF4.Dataset, ignore: tuple = ()
+):
+    for name in old.variables:
+        if name in ignore:
+            continue
+        value1 = old.variables[name][:]
+        value2 = new.variables[name][:]
+        if _is_all_masked(value1, value2):
+            continue
         if isinstance(value1, ma.MaskedArray) and isinstance(value2, ma.MaskedArray):
             assert np.array_equal(
                 value1.mask,
                 value2.mask,
             ), _log("variable masks", name, value1.mask, value2.mask)
+
+
+def _is_all_masked(value1: np.ndarray, value2: np.ndarray) -> bool:
+    return (
+        isinstance(value1, ma.MaskedArray)
+        and isinstance(value2, ma.MaskedArray)
+        and value1.mask.all()
+        and value2.mask.all()
+    )
+
+
+def _check_critical_variable_attributes(
+    old: netCDF4.Dataset, new: netCDF4.Dataset, ignore: tuple = ()
+):
+    for name in old.variables:
+        if name in ignore:
+            continue
         for attr in ("dtype", "dimensions"):
             value1 = getattr(old.variables[name], attr)
             value2 = getattr(new.variables[name], attr)
