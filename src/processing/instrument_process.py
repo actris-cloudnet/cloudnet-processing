@@ -608,6 +608,7 @@ class ProcessWeatherStation(ProcessInstrument):
 class ProcessRainRadar(ProcessInstrument):
     def process_mrr_pro(self):
         full_paths, self.uuid.raw = self.download_instrument()
+        full_paths = _unzip_gz_files(full_paths)
         self.uuid.product = mrr2nc(full_paths, *self._args, **self._kwargs)
 
 
