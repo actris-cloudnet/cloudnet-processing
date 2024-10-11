@@ -267,7 +267,7 @@ def test_are_identical_nc_files_generated_data(
         (
             {"hilavitkutin_version": "3.1"},
             {"hilavitkutin_version": "3.14"},
-            NCDiff.NONE,
+            NCDiff.MINOR,
         ),
         (
             {"kissa1": "kaneli", "kissa2": "jaffa"},

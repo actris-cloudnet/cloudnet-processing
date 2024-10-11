@@ -1,6 +1,7 @@
 import logging
 from enum import Enum
 from os import PathLike
+from typing import Tuple
 
 import netCDF4
 import numpy as np
@@ -13,193 +14,254 @@ class NCDiff(Enum):
     NONE = "none"  # do nothing
 
 
-def nc_difference(old_file: PathLike | str, new_file: PathLike | str) -> NCDiff:
-    ignore = ("beta_smooth",)
-    with netCDF4.Dataset(old_file, "r") as old, netCDF4.Dataset(new_file, "r") as new:
-        try:
-            _compare_dimensions(old, new)
-            _check_old_variables_exist(old, new)
-            _check_old_global_attributes_exist(old, new)
-            _compare_variable_shapes(old, new)
-            _compare_variable_masks(old, new, ignore=ignore)
-            _compare_critical_variable_attributes(old, new, ignore=ignore)
-        except AssertionError as err:
-            logging.debug(err)
-            return NCDiff.MAJOR
-        variable_difference = _compare_variable_values(old, new, ignore=ignore)
-        if variable_difference in (NCDiff.MAJOR, NCDiff.MINOR):
-            return variable_difference
-        try:
-            _compare_global_attributes(old, new)
-            _compare_variable_attributes(old, new)
-            _compare_variable_dtypes(old, new)
-            _check_for_new_variables(old, new)
-            _check_for_new_global_attributes(old, new)
-        except AssertionError as err:
-            logging.debug(err)
-            return NCDiff.MINOR
-    return NCDiff.NONE
+class NetCDFComparator:
+    def __init__(
+        self,
+        old_file: PathLike | str,
+        new_file: PathLike | str,
+        ignore_vars: Tuple[str] = ("beta_smooth",),
+    ):
+        self.old_file = old_file
+        self.new_file = new_file
+        self.ignore_vars = ignore_vars
 
+    def compare(self) -> NCDiff:
+        with netCDF4.Dataset(self.old_file, "r") as old, netCDF4.Dataset(
+            self.new_file, "r"
+        ) as new:
+            self.old = old
+            self.new = new
 
-def _compare_dimensions(old: netCDF4.Dataset, new: netCDF4.Dataset):
-    dims1 = old.dimensions.keys()
-    dims2 = new.dimensions.keys()
-    assert (
-        len(set(dims1) ^ set(dims2)) == 0
-    ), f"different dimensions: {dims1} vs {dims2}"
-    for dim in old.dimensions:
-        value1 = len(old.dimensions[dim])
-        value2 = len(new.dimensions[dim])
-        assert value1 == value2, _log("dimensions", dim, value1, value2)
+            major_checks = [
+                self._compare_dimensions,
+                self._check_old_variables_exist,
+                self._check_old_global_attributes_exist,
+                self._compare_variable_shapes,
+                self._compare_variable_masks,
+                self._compare_critical_variable_attributes,
+            ]
 
+            for check in major_checks:
+                if not check():
+                    return NCDiff.MAJOR
 
-def _compare_global_attributes(old: netCDF4.Dataset, new: netCDF4.Dataset):
-    def _skip_attribute(name: str) -> bool:
-        return name in ("history", "file_uuid", "pid") or name.endswith("_version")
+            variable_difference = self._compare_variable_values()
+            if variable_difference in (NCDiff.MAJOR, NCDiff.MINOR):
+                return variable_difference
 
-    old_attributes = [a for a in old.ncattrs() if not _skip_attribute(a)]
-    for name in old_attributes:
-        value1 = getattr(old, name)
-        value2 = getattr(new, name)
-        if name == "source_file_uuids":
-            value1 = value1.split(", ")
-            value2 = value2.split(", ")
-            value1.sort()
-            value2.sort()
-        assert value1 == value2, _log("global attributes", name, value1, value2)
+            minor_checks = [
+                self._compare_global_attributes,
+                self._compare_variable_attributes,
+                self._compare_variable_dtypes,
+                self._check_for_new_variables,
+                self._check_for_new_global_attributes,
+            ]
 
+            for check in minor_checks:
+                if not check():
+                    return NCDiff.MINOR
 
-def _check_old_global_attributes_exist(old: netCDF4.Dataset, new: netCDF4.Dataset):
-    for attr in old.ncattrs():
-        assert attr in new.ncattrs(), f"missing global attribute: {attr}"
+        return NCDiff.NONE
 
+    def _compare_dimensions(self) -> bool:
+        dims_old = set(self.old.dimensions.keys())
+        dims_new = set(self.new.dimensions.keys())
+        if dims_old != dims_new:
+            logging.info(f"Different dimensions: {dims_old} vs {dims_new}")
+            return False
 
-def _check_for_new_global_attributes(old: netCDF4.Dataset, new: netCDF4.Dataset):
-    for attr in new.ncattrs():
-        assert attr in old.ncattrs(), f"new global attribute: {attr}"
-
-
-def _check_old_variables_exist(old: netCDF4.Dataset, new: netCDF4.Dataset):
-    for var in old.variables:
-        assert var in new.variables, f"missing variable: {var}"
-
-
-def _check_for_new_variables(old: netCDF4.Dataset, new: netCDF4.Dataset):
-    for var in new.variables:
-        assert var in old.variables, f"new variable: {var}"
-
-
-def _compare_variable_shapes(old: netCDF4.Dataset, new: netCDF4.Dataset):
-    for name in old.variables:
-        value1 = old.variables[name][:]
-        value2 = new.variables[name][:]
-        assert value1.shape == value2.shape, _log(
-            "variable shapes", name, value1.shape, value2.shape
-        )
-
-
-def _compare_variable_values(
-    old: netCDF4.Dataset, new: netCDF4.Dataset, ignore: tuple = ()
-) -> NCDiff:
-    for name in old.variables:
-        if name in ignore:
-            continue
-        value1 = ma.masked_invalid(old.variables[name][:])
-        value2 = ma.masked_invalid(new.variables[name][:])
-        if _is_all_masked(value1, value2):
-            continue
-
-        rmse = np.sqrt(ma.mean((value1 - value2) ** 2))
-
-        if rmse < 1e-12:
-            continue
-        elif rmse < 0.1:
-            return NCDiff.MINOR
-        else:
-            return NCDiff.MAJOR
-    return NCDiff.NONE
-
-
-def _compare_variable_masks(
-    old: netCDF4.Dataset, new: netCDF4.Dataset, ignore: tuple = ()
-):
-    for name in old.variables:
-        if name in ignore:
-            continue
-        value1 = old.variables[name][:]
-        value2 = new.variables[name][:]
-        if _is_all_masked(value1, value2):
-            continue
-        if isinstance(value1, ma.MaskedArray) and isinstance(value2, ma.MaskedArray):
-            assert np.array_equal(
-                value1.mask,
-                value2.mask,
-            ), _log("variable masks", name, value1.mask, value2.mask)
-
-
-def _is_all_masked(value1: np.ndarray, value2: np.ndarray) -> bool:
-    return (
-        isinstance(value1, ma.MaskedArray)
-        and isinstance(value2, ma.MaskedArray)
-        and value1.mask.all()
-        and value2.mask.all()
-    )
-
-
-def _compare_critical_variable_attributes(
-    old: netCDF4.Dataset, new: netCDF4.Dataset, ignore: tuple = ()
-):
-    for name in old.variables:
-        if name in ignore:
-            continue
-        # These attributes must be set and the same.
-        for attr in ("dimensions",):
-            value1 = getattr(old.variables[name], attr)
-            value2 = getattr(new.variables[name], attr)
-            assert value1 == value2, _log(f"variable {attr}", name, value1, value2)
-        # Make new version if units exist and differ.
-        if "units" in old.variables[name].ncattrs():
-            value1 = getattr(old.variables[name], "units")
-            value2 = getattr(new.variables[name], "units")
-            assert value1 == value2, _log("variable units", name, value1, value2)
-
-
-def _compare_variable_dtypes(old: netCDF4.Dataset, new: netCDF4.Dataset):
-    for name in old.variables:
-        value1 = getattr(old.variables[name], "dtype")
-        value2 = getattr(new.variables[name], "dtype")
-        assert value1 == value2, _log("variable dtype", name, value1, value2)
-
-
-def _compare_variable_attributes(old: netCDF4.Dataset, new: netCDF4.Dataset):
-    for name in old.variables:
-        attrs1 = set(old.variables[name].ncattrs())
-        attrs2 = set(new.variables[name].ncattrs())
-        assert len(attrs1 ^ attrs2) == 0, _log(
-            "variable attributes", name, attrs1, attrs2
-        )
-        for attr in attrs1:
-            value1 = getattr(old.variables[name], attr)
-            value2 = getattr(new.variables[name], attr)
-            assert type(value1) == type(value2), _log(
-                "variable attribute types",
-                f"{name} - {attr}",
-                type(value1),
-                type(value2),
-            )
-            # Allow the value of fill value to change.
-            if attr == "_FillValue":
-                continue
-            if isinstance(value1, np.ndarray):
-                assert np.array_equal(
-                    value1,
-                    value2,
-                ), _log("variable attribute values", f"{name} - {attr}", value1, value2)
-            else:
-                assert value1 == value2, _log(
-                    "variable attribute values", f"{name} - {attr}", value1, value2
+        for dim in dims_old:
+            len_old = len(self.old.dimensions[dim])
+            len_new = len(self.new.dimensions[dim])
+            if len_old != len_new:
+                logging.info(
+                    f"Dimension '{dim}' lengths differ: {len_old} vs {len_new}"
                 )
+                return False
+        return True
+
+    def _compare_global_attributes(self) -> bool:
+        skip_attrs = ("history", "file_uuid", "pid")
+        old_attrs = {
+            a: getattr(self.old, a) for a in self.old.ncattrs() if a not in skip_attrs
+        }
+        new_attrs = {
+            a: getattr(self.new, a) for a in self.new.ncattrs() if a not in skip_attrs
+        }
+
+        if old_attrs.keys() != new_attrs.keys():
+            logging.info(
+                f"Global attributes differ: {old_attrs.keys()} vs {new_attrs.keys()}"
+            )
+            return False
+
+        for attr in old_attrs:
+            val_old = old_attrs[attr]
+            val_new = new_attrs[attr]
+            if attr == "source_file_uuids":
+                val_old = sorted(val_old.split(", "))
+                val_new = sorted(val_new.split(", "))
+            if val_old != val_new:
+                logging.info(
+                    f"Global attribute '{attr}' differs: {val_old} vs {val_new}"
+                )
+                return False
+        return True
+
+    def _check_old_global_attributes_exist(self) -> bool:
+        old_attrs = set(self.old.ncattrs())
+        new_attrs = set(self.new.ncattrs())
+        missing_attrs = old_attrs - new_attrs
+        if missing_attrs:
+            logging.info(f"Missing global attributes in new file: {missing_attrs}")
+            return False
+        return True
+
+    def _check_for_new_global_attributes(self) -> bool:
+        old_attrs = set(self.old.ncattrs())
+        new_attrs = set(self.new.ncattrs())
+        new_attrs_found = new_attrs - old_attrs
+        if new_attrs_found:
+            logging.info(f"New global attributes in new file: {new_attrs_found}")
+            return False
+        return True
+
+    def _check_old_variables_exist(self) -> bool:
+        old_vars = set(self.old.variables.keys())
+        new_vars = set(self.new.variables.keys())
+        missing_vars = old_vars - new_vars
+        if missing_vars:
+            logging.info(f"Missing variables in new file: {missing_vars}")
+            return False
+        return True
+
+    def _check_for_new_variables(self) -> bool:
+        old_vars = set(self.old.variables.keys())
+        new_vars = set(self.new.variables.keys())
+        new_vars_found = new_vars - old_vars
+        if new_vars_found:
+            logging.info(f"New variables in new file: {new_vars_found}")
+            return False
+        return True
+
+    def _compare_variable_shapes(self) -> bool:
+        for var in self.old.variables:
+            shape_old = self.old.variables[var][:].shape
+            shape_new = self.new.variables[var][:].shape
+            if shape_old != shape_new:
+                logging.info(
+                    f"Variable '{var}' shapes differ: {shape_old} vs {shape_new}"
+                )
+                return False
+        return True
+
+    def _compare_variable_values(self) -> NCDiff:
+        for var in self.old.variables:
+            if var in self.ignore_vars:
+                continue
+            val_old = ma.masked_invalid(self.old.variables[var][:])
+            val_new = ma.masked_invalid(self.new.variables[var][:])
+
+            if self._is_all_masked(val_old, val_new):
+                continue
+
+            rmse = np.sqrt(ma.mean((val_old - val_new) ** 2))
+
+            if rmse >= 0.1:
+                logging.info(f"Variable '{var}' has major differences (RMSE={rmse})")
+                return NCDiff.MAJOR
+            elif rmse >= 1e-12:
+                logging.info(f"Variable '{var}' has minor differences (RMSE={rmse})")
+                return NCDiff.MINOR
+        return NCDiff.NONE
+
+    def _compare_variable_masks(self) -> bool:
+        for var in self.old.variables:
+            if var in self.ignore_vars:
+                continue
+            val_old = self.old.variables[var][:]
+            val_new = self.new.variables[var][:]
+            if self._is_all_masked(val_old, val_new):
+                continue
+            if isinstance(val_old, ma.MaskedArray) and isinstance(
+                val_new, ma.MaskedArray
+            ):
+                if not np.array_equal(val_old.mask, val_new.mask):
+                    logging.info(f"Variable '{var}' masks differ")
+                    return False
+        return True
+
+    def _compare_critical_variable_attributes(self) -> bool:
+        for var in self.old.variables:
+            if var in self.ignore_vars:
+                continue
+            # Compare dimensions
+            dims_old = self.old.variables[var].dimensions
+            dims_new = self.new.variables[var].dimensions
+            if dims_old != dims_new:
+                logging.info(
+                    f"Variable '{var}' dimensions differ: {dims_old} vs {dims_new}"
+                )
+                return False
+            # Compare units if present
+            if "units" in self.old.variables[var].ncattrs():
+                units_old = getattr(self.old.variables[var], "units")
+                units_new = getattr(self.new.variables[var], "units")
+                if units_old != units_new:
+                    logging.info(
+                        f"Variable '{var}' units differ: {units_old} vs {units_new}"
+                    )
+                    return False
+        return True
+
+    def _compare_variable_dtypes(self) -> bool:
+        for var in self.old.variables:
+            dtype_old = self.old.variables[var].dtype
+            dtype_new = self.new.variables[var].dtype
+            if dtype_old != dtype_new:
+                logging.info(
+                    f"Variable '{var}' data types differ: {dtype_old} vs {dtype_new}"
+                )
+                return False
+        return True
+
+    def _compare_variable_attributes(self) -> bool:
+        for var in self.old.variables:
+            attrs_old = set(self.old.variables[var].ncattrs())
+            attrs_new = set(self.new.variables[var].ncattrs())
+            if attrs_old != attrs_new:
+                logging.info(
+                    f"Variable '{var}' attributes differ: {attrs_old} vs {attrs_new}"
+                )
+                return False
+            for attr in attrs_old:
+                val_old = getattr(self.old.variables[var], attr)
+                val_new = getattr(self.new.variables[var], attr)
+                if attr == "_FillValue":
+                    continue
+                if isinstance(val_old, np.ndarray):
+                    if not np.array_equal(val_old, val_new):
+                        logging.info(
+                            f"Variable '{var}' attribute '{attr}' values differ"
+                        )
+                        return False
+                else:
+                    if val_old != val_new:
+                        logging.info(
+                            f"Variable '{var}' attribute '{attr}' values differ: {val_old} vs {val_new}"
+                        )
+                        return False
+        return True
+
+    def _is_all_masked(self, val_old: np.ndarray, val_new: np.ndarray) -> bool:
+        return (
+            isinstance(val_old, ma.MaskedArray)
+            and isinstance(val_new, ma.MaskedArray)
+            and val_old.mask.all()
+            and val_new.mask.all()
+        )
 
 
-def _log(text: str, var_name: str, value1, value2) -> str:
-    return f"{text} differ in {var_name}: {value1} vs. {value2}"
+def nc_difference(old_file: PathLike | str, new_file: PathLike | str) -> NCDiff:
+    comparator = NetCDFComparator(old_file, new_file)
+    return comparator.compare()
