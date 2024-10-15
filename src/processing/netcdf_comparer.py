@@ -84,12 +84,15 @@ class NetCDFComparator:
         return True
 
     def _compare_global_attributes(self) -> bool:
-        skip_attrs = ("history", "file_uuid", "pid")
         old_attrs = {
-            a: getattr(self.old, a) for a in self.old.ncattrs() if a not in skip_attrs
+            a: getattr(self.old, a)
+            for a in self.old.ncattrs()
+            if not self._skip_compare_global_attribute(a)
         }
         new_attrs = {
-            a: getattr(self.new, a) for a in self.new.ncattrs() if a not in skip_attrs
+            a: getattr(self.new, a)
+            for a in self.new.ncattrs()
+            if not self._skip_compare_global_attribute(a)
         }
 
         if old_attrs.keys() != new_attrs.keys():
@@ -110,6 +113,10 @@ class NetCDFComparator:
                 )
                 return False
         return True
+
+    @staticmethod
+    def _skip_compare_global_attribute(name: str) -> bool:
+        return name in ("history", "file_uuid", "pid") or name.endswith("_version")
 
     def _check_old_global_attributes_exist(self) -> bool:
         old_attrs = set(self.old.ncattrs())
