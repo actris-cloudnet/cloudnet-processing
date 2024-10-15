@@ -161,12 +161,12 @@ class NetCDFComparator:
                 continue
             val_old = ma.masked_invalid(self.old.variables[var][:])
             val_new = ma.masked_invalid(self.new.variables[var][:])
-            rmse = np.mean(np.abs(val_old - val_new))
-            if rmse >= 0.1:
-                logging.info(f"Variable '{var}' has major differences (RMSE={rmse})")
+            mae = np.mean(np.abs(val_old - val_new))
+            if mae >= 0.1:
+                logging.info(f"Variable '{var}' has major differences (MAE={mae})")
                 return NCDiff.MAJOR
-            elif rmse >= 1e-12:
-                logging.info(f"Variable '{var}' has minor differences (RMSE={rmse})")
+            elif mae >= 1e-12:
+                logging.info(f"Variable '{var}' has minor differences (MAE={mae})")
                 return NCDiff.MINOR
         return NCDiff.NONE
 
