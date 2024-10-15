@@ -463,3 +463,32 @@ def test_missing_units_in_new_variable(tmp_path):
         var.units = "s"
         nc2.createVariable("time", "f8", ("time",))
     assert netcdf_comparer.nc_difference(old_file, new_file) == NCDiff.MAJOR
+
+
+@pytest.mark.parametrize(
+    "n_masked, expected",
+    [
+        (0, NCDiff.NONE),
+        (1, NCDiff.MINOR),
+        (10, NCDiff.MAJOR),
+        (50, NCDiff.MAJOR),
+        (100, NCDiff.MAJOR),
+    ],
+)
+def test_compare_masks(n_masked: int, expected: NCDiff, tmp_path):
+    temp1 = tmp_path / "file1.nc"
+    temp2 = tmp_path / "file2.nc"
+    with (
+        netCDF4.Dataset(temp1, "w", format="NETCDF4_CLASSIC") as nc1,
+        netCDF4.Dataset(temp2, "w", format="NETCDF4_CLASSIC") as nc2,
+    ):
+        array1 = np.zeros(100)
+        array2 = ma.array(array1)
+        array2[:n_masked] = ma.masked
+        nc1.createDimension("time", len(array1))
+        nc2.createDimension("time", len(array2))
+        var1 = nc1.createVariable("time", "f8", ("time",))
+        var2 = nc2.createVariable("time", "f8", ("time",))
+        var1[:] = array1
+        var2[:] = array2
+    assert netcdf_comparer.nc_difference(temp1, temp2) == expected

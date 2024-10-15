@@ -37,7 +37,6 @@ class NetCDFComparator:
                 self._check_old_variables_exist,
                 self._check_old_global_attributes_exist,
                 self._compare_variable_shapes,
-                self._compare_variable_masks,
                 self._compare_critical_variable_attributes,
             ]
 
@@ -45,9 +44,13 @@ class NetCDFComparator:
                 if not check():
                     return NCDiff.MAJOR
 
-            variable_difference = self._compare_variable_values()
-            if variable_difference in (NCDiff.MAJOR, NCDiff.MINOR):
-                return variable_difference
+            mask_diff = self._compare_variable_masks()
+            if mask_diff in (NCDiff.MAJOR, NCDiff.MINOR):
+                return mask_diff
+
+            var_diff = self._compare_variable_values()
+            if var_diff in (NCDiff.MAJOR, NCDiff.MINOR):
+                return var_diff
 
             minor_checks = [
                 self._compare_global_attributes,
@@ -170,7 +173,7 @@ class NetCDFComparator:
                 return NCDiff.MINOR
         return NCDiff.NONE
 
-    def _compare_variable_masks(self) -> bool:
+    def _compare_variable_masks(self) -> NCDiff:
         for var in self.old.variables:
             if var in self.ignore_vars:
                 continue
@@ -178,10 +181,20 @@ class NetCDFComparator:
             val_new = self.new.variables[var][:]
             mask_old = ma.getmaskarray(val_old)
             mask_new = ma.getmaskarray(val_new)
-            if not np.array_equal(mask_old, mask_new):
-                logging.info(f"Variable '{var}' masks differ")
-                return False
-        return True
+            same_percentage = (
+                100 * np.count_nonzero(mask_old == mask_new) / mask_old.size
+            )
+            if same_percentage <= 95:
+                logging.info(
+                    f"Variable '{var}' masks have major differences ({same_percentage}%)"
+                )
+                return NCDiff.MAJOR
+            if same_percentage <= 99:
+                logging.info(
+                    f"Variable '{var}' masks have minor differences ({same_percentage}%)"
+                )
+                return NCDiff.MINOR
+        return NCDiff.NONE
 
     def _compare_critical_variable_attributes(self) -> bool:
         for var in self.old.variables:
