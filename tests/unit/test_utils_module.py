@@ -388,13 +388,14 @@ def test_compare_variable_dtypes(dtype_old, dtype_new, expected, tmp_path):
     [
         (1e-10, NCDiff.NONE),
         (20, NCDiff.MINOR),
-        (50, NCDiff.MAJOR),
+        (50, NCDiff.MINOR),
+        (10000, NCDiff.MAJOR),
     ],
 )
-def test_compare_variable_values(change, expected, tmp_path):
+def test_compare_variable_values_added(change, expected, tmp_path):
     old_file = tmp_path / "file1.nc"
     new_file = tmp_path / "file2.nc"
-    len_data = 100000
+    len_data = 100_000
     data = np.random.rand(len_data)
     data[0] = 0.1
     with (
@@ -412,6 +413,39 @@ def test_compare_variable_values(change, expected, tmp_path):
         data2 = data.copy()
         data2[0] = data2[0] + change
         nc2["time"][:] = data2
+
+    assert netcdf_comparer.nc_difference(old_file, new_file) == expected
+
+
+@pytest.mark.parametrize(
+    "change, expected",
+    [
+        (0.1, NCDiff.MAJOR),
+        (0.999, NCDiff.MINOR),
+        (0.999999999999, NCDiff.NONE),
+        (1.0, NCDiff.NONE),
+        (1.000000000001, NCDiff.NONE),
+        (1.001, NCDiff.MINOR),
+        (2, NCDiff.MAJOR),
+    ],
+)
+def test_compare_variable_values_multiplied(change, expected, tmp_path):
+    old_file = tmp_path / "file1.nc"
+    new_file = tmp_path / "file2.nc"
+    len_data = 10_000
+    data = np.random.rand(len_data)
+    with (
+        netCDF4.Dataset(old_file, "w", format="NETCDF4_CLASSIC") as nc1,
+        netCDF4.Dataset(new_file, "w", format="NETCDF4_CLASSIC") as nc2,
+    ):
+        nc1.createDimension("time", len_data)
+        nc2.createDimension("time", len_data)
+        nc1.createVariable("time", "f8", ("time",))
+        nc2.createVariable("time", "f8", ("time",))
+        nc1.createVariable("kissa", "f4", ("time",))
+        nc2.createVariable("kissa", "f4", ("time",))
+        nc1["time"][:] = data
+        nc2["time"][:] = change * data
 
     assert netcdf_comparer.nc_difference(old_file, new_file) == expected
 
