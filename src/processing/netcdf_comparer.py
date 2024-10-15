@@ -173,10 +173,10 @@ class NetCDFComparator:
             val_new = ma.masked_invalid(self.new.variables[var][:])
             mae = np.mean(np.abs(val_old - val_new))
             if mae >= 0.1:
-                logging.info(f"Variable '{var}' has major differences (MAE={mae})")
+                logging.info(f"Variable '{var}' has major differences (MAE={mae:g})")
                 return NCDiff.MAJOR
             elif mae >= 1e-12:
-                logging.info(f"Variable '{var}' has minor differences (MAE={mae})")
+                logging.info(f"Variable '{var}' has minor differences (MAE={mae:g})")
                 return NCDiff.MINOR
         return NCDiff.NONE
 
@@ -193,12 +193,12 @@ class NetCDFComparator:
             )
             if same_percentage <= 99.9:
                 logging.info(
-                    f"Variable '{var}' masks have major differences ({same_percentage:.2f}%)"
+                    f"Variable '{var}' masks have major differences (matches {same_percentage:.2f} %)"
                 )
                 return NCDiff.MAJOR
             if same_percentage <= 99.9999:
                 logging.info(
-                    f"Variable '{var}' masks have minor differences ({same_percentage:.2f}%)"
+                    f"Variable '{var}' masks have minor differences (matches {same_percentage:.2f} %)"
                 )
                 return NCDiff.MINOR
         return NCDiff.NONE
