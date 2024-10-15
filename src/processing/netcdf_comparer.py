@@ -184,14 +184,14 @@ class NetCDFComparator:
             same_percentage = (
                 100 * np.count_nonzero(mask_old == mask_new) / mask_old.size
             )
-            if same_percentage <= 95:
+            if same_percentage <= 99.9:
                 logging.info(
-                    f"Variable '{var}' masks have major differences ({same_percentage}%)"
+                    f"Variable '{var}' masks have major differences ({same_percentage:.2f}%)"
                 )
                 return NCDiff.MAJOR
-            if same_percentage <= 99:
+            if same_percentage <= 99.9999:
                 logging.info(
-                    f"Variable '{var}' masks have minor differences ({same_percentage}%)"
+                    f"Variable '{var}' masks have minor differences ({same_percentage:.2f}%)"
                 )
                 return NCDiff.MINOR
         return NCDiff.NONE
