@@ -146,8 +146,8 @@ class NetCDFComparator:
 
     def _compare_variable_shapes(self) -> bool:
         for var in self.old.variables:
-            shape_old = self.old.variables[var][:].shape
-            shape_new = self.new.variables[var][:].shape
+            shape_old = self.old.variables[var].shape
+            shape_new = self.new.variables[var].shape
             if shape_old != shape_new:
                 logging.info(
                     f"Variable '{var}' shapes differ: {shape_old} vs {shape_new}"
@@ -161,12 +161,7 @@ class NetCDFComparator:
                 continue
             val_old = ma.masked_invalid(self.old.variables[var][:])
             val_new = ma.masked_invalid(self.new.variables[var][:])
-
-            if self._is_all_masked(val_old, val_new):
-                continue
-
-            rmse = np.sqrt(ma.mean((val_old - val_new) ** 2))
-
+            rmse = np.sqrt(np.mean((val_old - val_new) ** 2))
             if rmse >= 0.1:
                 logging.info(f"Variable '{var}' has major differences (RMSE={rmse})")
                 return NCDiff.MAJOR
@@ -181,14 +176,11 @@ class NetCDFComparator:
                 continue
             val_old = self.old.variables[var][:]
             val_new = self.new.variables[var][:]
-            if self._is_all_masked(val_old, val_new):
-                continue
-            if isinstance(val_old, ma.MaskedArray) and isinstance(
-                val_new, ma.MaskedArray
-            ):
-                if not np.array_equal(val_old.mask, val_new.mask):
-                    logging.info(f"Variable '{var}' masks differ")
-                    return False
+            mask_old = ma.getmaskarray(val_old)
+            mask_new = ma.getmaskarray(val_new)
+            if not np.array_equal(mask_old, mask_new):
+                logging.info(f"Variable '{var}' masks differ")
+                return False
         return True
 
     def _compare_critical_variable_attributes(self) -> bool:
@@ -204,14 +196,13 @@ class NetCDFComparator:
                 )
                 return False
             # Compare units if present
-            if "units" in self.old.variables[var].ncattrs():
-                units_old = getattr(self.old.variables[var], "units")
-                units_new = getattr(self.new.variables[var], "units")
-                if units_old != units_new:
-                    logging.info(
-                        f"Variable '{var}' units differ: {units_old} vs {units_new}"
-                    )
-                    return False
+            units_old = getattr(self.old.variables[var], "units", None)
+            units_new = getattr(self.new.variables[var], "units", None)
+            if units_old != units_new:
+                logging.info(
+                    f"Variable '{var}' units differ: {units_old} vs {units_new}"
+                )
+                return False
         return True
 
     def _compare_variable_dtypes(self) -> bool:
@@ -252,14 +243,6 @@ class NetCDFComparator:
                         )
                         return False
         return True
-
-    def _is_all_masked(self, val_old: np.ndarray, val_new: np.ndarray) -> bool:
-        return (
-            isinstance(val_old, ma.MaskedArray)
-            and isinstance(val_new, ma.MaskedArray)
-            and val_old.mask.all()
-            and val_new.mask.all()
-        )
 
 
 def nc_difference(old_file: PathLike | str, new_file: PathLike | str) -> NCDiff:

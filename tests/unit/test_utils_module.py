@@ -414,3 +414,18 @@ def test_compare_variable_values(change, expected, tmp_path):
         nc2["time"][:] = data2
 
     assert netcdf_comparer.nc_difference(old_file, new_file) == expected
+
+
+def test_missing_units_in_new_variable(tmp_path):
+    old_file = tmp_path / "file1.nc"
+    new_file = tmp_path / "file2.nc"
+    with (
+        netCDF4.Dataset(old_file, "w", format="NETCDF4_CLASSIC") as nc1,
+        netCDF4.Dataset(new_file, "w", format="NETCDF4_CLASSIC") as nc2,
+    ):
+        nc1.createDimension("time", 3)
+        nc2.createDimension("time", 3)
+        var = nc1.createVariable("time", "f8", ("time",))
+        var.units = "s"
+        nc2.createVariable("time", "f8", ("time",))
+    assert netcdf_comparer.nc_difference(old_file, new_file) == NCDiff.MAJOR
