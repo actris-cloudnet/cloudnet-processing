@@ -1,11 +1,13 @@
 """Metadata API for Cloudnet files."""
 
+import concurrent
+import concurrent.futures
 import hashlib
 import logging
+import re
 import uuid
 from os import PathLike
 from pathlib import Path
-from typing import Literal
 
 import requests
 
@@ -13,11 +15,16 @@ from processing import utils
 from processing.config import Config
 
 
+class StorageApiError(Exception):
+    pass
+
+
 class StorageApi:
     """Class for uploading and downloading files from the Cloudnet S3 data archive."""
 
     def __init__(self, config: Config, session: requests.Session):
         self.session = session
+        self.config = config
         self._url = config.storage_service_url
         self._auth = config.storage_service_auth
 
@@ -35,10 +42,9 @@ class StorageApi:
         self, metadata: list, dir_name: PathLike | str
     ) -> tuple[list[Path], list[uuid.UUID]]:
         """Download raw instrument or model files."""
-        urls = [f"{self._url}/cloudnet-upload/{row['s3key']}" for row in metadata]
-        full_paths = [Path(dir_name) / row["filename"] for row in metadata]
-        for row, url, full_path in zip(metadata, urls, full_paths):
-            self._get(url, full_path, int(row["size"]), row["checksum"], "md5")
+        full_paths = self._download_parallel(
+            metadata, checksum_algorithm="md5", output_directory=Path(dir_name)
+        )
         uuids = [uuid.UUID(row["uuid"]) for row in metadata]
         instrument_pids = [
             row["instrumentPid"] for row in metadata if "instrumentPid" in row
@@ -50,13 +56,15 @@ class StorageApi:
     def download_product(self, metadata: dict, dir_name: PathLike | str) -> Path:
         """Download a product."""
         filename = metadata["filename"]
-        s3key = (
-            f"legacy/{filename}" if metadata.get("legacy", False) is True else filename
-        )
-        bucket = _get_product_bucket(metadata["volatile"])
-        url = f"{self._url}/{bucket}/{s3key}"
         full_path = Path(dir_name) / filename
-        self._get(url, full_path, int(metadata["size"]), metadata["checksum"], "sha256")
+        _download_url(
+            url=self._get_download_url(metadata),
+            size=int(metadata["size"]),
+            checksum=metadata["checksum"],
+            checksum_algorithm="sha256",
+            output_path=full_path,
+            auth=self._auth,
+        )
         return full_path
 
     def delete_volatile_product(self, s3key: str) -> requests.Response:
@@ -80,37 +88,73 @@ class StorageApi:
         res.raise_for_status()
         return res
 
-    def _get(
-        self,
-        url: str,
-        full_path: str | PathLike,
-        size: int,
-        checksum: str,
-        checksum_algorithm: Literal["md5", "sha256"],
-    ):
-        res_size = 0
-        hash_sum = getattr(hashlib, checksum_algorithm)()
-        with open(full_path, "wb") as output:
-            with self.session.get(url, auth=self._auth, stream=True) as res:
-                res.raise_for_status()
-                for chunk in res.iter_content(chunk_size=8192):
-                    output.write(chunk)
-                    hash_sum.update(chunk)
-                    res_size += len(chunk)
-        if res_size != size:
-            logging.warning(
-                "Invalid size: expected %d bytes, got %d bytes", size, res_size
-            )
-        if (res_checksum := hash_sum.hexdigest()) != checksum:
-            logging.warning(
-                "Invalid checksum: expected %s, got %s", checksum, res_checksum
-            )
-
     @staticmethod
     def _get_headers(full_path: str | PathLike) -> dict:
         checksum = utils.md5sum(full_path, is_base64=True)
         return {"content-md5": checksum}
 
+    def _download_parallel(
+        self, metadata: list[dict], checksum_algorithm: str, output_directory: Path
+    ) -> list[Path]:
+        executor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
+        try:
+            futures = []
+            paths = []
+            for meta in metadata:
+                filename = meta["filename"]
+                path = output_directory / filename
+                paths.append(path)
+                futures.append(
+                    executor.submit(
+                        _download_url,
+                        url=self._get_download_url(meta),
+                        size=int(meta["size"]),
+                        checksum=meta["checksum"],
+                        checksum_algorithm=checksum_algorithm,
+                        output_path=path,
+                        auth=self._auth,
+                    )
+                )
+            done, not_done = concurrent.futures.wait(
+                futures, timeout=60 * 60, return_when=concurrent.futures.FIRST_EXCEPTION
+            )
+            for future in done:
+                if exc := future.exception():
+                    raise StorageApiError("Failed to download all files") from exc
+            return paths
+        finally:
+            executor.shutdown(cancel_futures=True)
+
+    def _get_download_url(self, metadata: dict) -> str:
+        return re.sub(
+            r".*/api/download/",
+            self.config.dataportal_url + "/api/download/",
+            metadata["downloadUrl"],
+        )
+
 
 def _get_product_bucket(volatile: bool = False) -> str:
     return "cloudnet-product-volatile" if volatile else "cloudnet-product"
+
+
+def _download_url(
+    url: str,
+    size: int,
+    checksum: str,
+    checksum_algorithm: str,
+    output_path: Path,
+    auth: tuple[str, str],
+):
+    res_size = 0
+    hash_sum = hashlib.new(checksum_algorithm)
+    with output_path.open("wb") as output_file:
+        with requests.get(url, auth=auth, timeout=2 * 60, stream=True) as res:
+            res.raise_for_status()
+            for chunk in res.iter_content(chunk_size=8192):
+                output_file.write(chunk)
+                hash_sum.update(chunk)
+                res_size += len(chunk)
+    if res_size != size:
+        logging.warning("Invalid size: expected %d bytes, got %d bytes", size, res_size)
+    if (res_checksum := hash_sum.hexdigest()) != checksum:
+        logging.warning("Invalid checksum: expected %s, got %s", checksum, res_checksum)
