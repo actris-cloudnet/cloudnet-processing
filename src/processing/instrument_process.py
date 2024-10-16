@@ -1,5 +1,6 @@
 import datetime
 import gzip
+import itertools
 import logging
 import re
 import shutil
@@ -199,6 +200,7 @@ class ProcessDopplerLidarWind(ProcessInstrument):
         full_paths, self.uuid.raw = self.download_instrument(
             include_pattern=r".*(vad)|(dbs).*\.nc.*",
         )
+        full_paths = _unzip_gz_files(full_paths)
         vad_paths = [p for p in full_paths if re.match(r".*_vad_(.*)\.nc\.*", p.name)]
         if vad_paths:
             group_pattern = re.compile(r".*_vad_(.*)\.nc\.*")
@@ -209,14 +211,24 @@ class ProcessDopplerLidarWind(ProcessInstrument):
                 file_groups[match.group(1)].append((path, uuid))
         if not file_groups:
             raise RawDataMissingError("No valid files found in the download.")
-        group_with_most_files = max(file_groups, key=lambda k: len(file_groups[k]))
-        full_paths, self.uuid.raw = zip(*file_groups[group_with_most_files])  # type: ignore
-        full_paths = _unzip_gz_files(full_paths)
+
         try:
             options = self._calibration_options()
-            wind = doppy.product.Wind.from_windcube_data(
-                data=full_paths, options=options
-            )
+            try:
+                # try first with files with all subgroups
+                all_grouped_files = list(itertools.chain(*file_groups.values()))
+                all_paths, self.uuid.raw = zip(*all_grouped_files)  # type: ignore
+                wind = doppy.product.Wind.from_windcube_data(
+                    data=all_paths, options=options
+                )
+            except ValueError:
+                group_with_most_files = max(
+                    file_groups, key=lambda k: len(file_groups[k])
+                )
+                full_paths, self.uuid.raw = zip(*file_groups[group_with_most_files])  # type: ignore
+                wind = doppy.product.Wind.from_windcube_data(
+                    data=full_paths, options=options
+                )
         except doppy.exceptions.NoDataError:
             raise RawDataMissingError()
         _doppy_wind_to_nc(wind, str(self.daily_path), options)
