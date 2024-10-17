@@ -5,6 +5,7 @@ import concurrent.futures
 import hashlib
 import logging
 import re
+import threading
 import uuid
 from os import PathLike
 from pathlib import Path
@@ -153,6 +154,9 @@ def _get_product_bucket(volatile: bool = False) -> str:
     return "cloudnet-product-volatile" if volatile else "cloudnet-product"
 
 
+thread_local = threading.local()
+
+
 def _download_url(
     url: str,
     size: int,
@@ -161,10 +165,14 @@ def _download_url(
     output_path: Path,
     auth: tuple[str, str],
 ):
+    if not hasattr(thread_local, "session"):
+        thread_local.session = requests.Session()
     res_size = 0
     hash_sum = hashlib.new(checksum_algorithm)
     with output_path.open("wb") as output_file:
-        with requests.get(url, auth=auth, timeout=2 * 60, stream=True) as res:
+        with thread_local.session.get(
+            url, auth=auth, timeout=2 * 60, stream=True
+        ) as res:
             res.raise_for_status()
             for chunk in res.iter_content(chunk_size=8192):
                 output_file.write(chunk)
