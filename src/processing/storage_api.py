@@ -8,6 +8,7 @@ import re
 import uuid
 from os import PathLike
 from pathlib import Path
+from typing import Iterable
 
 import requests
 
@@ -67,6 +68,14 @@ class StorageApi:
         )
         return full_path
 
+    def download_products(
+        self, meta_records: Iterable[dict], dir_name: PathLike | str
+    ) -> list[Path]:
+        """Download multiple products."""
+        return self._download_parallel(
+            meta_records, checksum_algorithm="sha256", output_directory=Path(dir_name)
+        )
+
     def delete_volatile_product(self, s3key: str) -> requests.Response:
         """Delete a volatile product."""
         bucket = _get_product_bucket(volatile=True)
@@ -94,27 +103,34 @@ class StorageApi:
         return {"content-md5": checksum}
 
     def _download_parallel(
-        self, metadata: list[dict], checksum_algorithm: str, output_directory: Path
+        self,
+        meta_records: Iterable[dict],
+        checksum_algorithm: str,
+        output_directory: Path,
     ) -> list[Path]:
         executor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
         try:
             futures = []
             paths = []
-            for meta in metadata:
+            unique_urls = set()
+            for meta in meta_records:
                 filename = meta["filename"]
                 path = output_directory / filename
                 paths.append(path)
-                futures.append(
-                    executor.submit(
-                        _download_url,
-                        url=self._get_download_url(meta),
-                        size=int(meta["size"]),
-                        checksum=meta["checksum"],
-                        checksum_algorithm=checksum_algorithm,
-                        output_path=path,
-                        auth=self._auth,
-                    )
+                url = self._get_download_url(meta)
+                if url in unique_urls:
+                    continue
+                unique_urls.add(url)
+                future = executor.submit(
+                    _download_url,
+                    url=url,
+                    size=int(meta["size"]),
+                    checksum=meta["checksum"],
+                    checksum_algorithm=checksum_algorithm,
+                    output_path=path,
+                    auth=self._auth,
                 )
+                futures.append(future)
             done, not_done = concurrent.futures.wait(
                 futures, timeout=60 * 60, return_when=concurrent.futures.FIRST_EXCEPTION
             )

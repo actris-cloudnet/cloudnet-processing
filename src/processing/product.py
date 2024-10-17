@@ -188,10 +188,9 @@ def _process_categorize(
     options = _get_categorize_options(params)
     is_voodoo = params.product.id == "categorize-voodoo"
     meta_records = _get_level1b_metadata_for_categorize(processor, params, is_voodoo)
+    paths = processor.storage_api.download_products(meta_records.values(), directory)
     input_files: dict[str, str | list[str]] = {
-        product: str(processor.storage_api.download_product(metadata, directory))
-        for product, metadata in meta_records.items()
-        if metadata is not None
+        product: str(path) for product, path in zip(meta_records.keys(), paths)
     }
     if is_voodoo:
         input_files["lv0_files"], lv0_uuid = _get_input_files_for_voodoo(
@@ -328,7 +327,7 @@ def _get_level1b_metadata_for_categorize(
     for product, metadata in meta_records.items():
         if product not in optional_products and metadata is None:
             raise SkipTaskError(f"Missing required input product: {product}")
-    return meta_records
+    return {key: value for key, value in meta_records.items() if value is not None}
 
 
 def _find_model_product(processor: Processor, params: ProductParams) -> dict | None:
