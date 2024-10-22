@@ -13,7 +13,7 @@ from influxdb_client import InfluxDBClient, Point, WritePrecision
 from influxdb_client.client.write_api import SYNCHRONOUS
 from netCDF4 import Dataset
 from numpy import ma
-from processing.utils import RawApi
+from processing.utils import RawApi, unzip_gz_file
 from rpgpy import read_rpg
 from rpgpy.utils import decode_rpg_status_flags, rpg_seconds2datetime64
 
@@ -58,9 +58,13 @@ def _handle_hatpro_nc(src: bytes, metadata: dict) -> list[Point]:
 
 
 def _handle_rpg_lv1(src: bytes, metadata: dict) -> list[Point]:
-    with tempfile.NamedTemporaryFile() as f:
-        f.write(src)
-        _, data = read_rpg(f.name)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        filepath = Path(tmpdir) / metadata["filename"]
+        filepath.write_bytes(src)
+        if metadata["filename"].lower().endswith(".gz"):
+            filepath = unzip_gz_file(filepath)
+        _, data = read_rpg(filepath)
+
     time = rpg_seconds2datetime64(data["Time"])
     data |= decode_rpg_status_flags(data["Status"])._asdict()
     return _make_points(time, data, get_config("rpg-fmcw-94_lv1"), metadata)
@@ -84,7 +88,9 @@ def get_reader(metadata: dict) -> Callable[[bytes, dict], list[Point]] | None:
         if filename.endswith(".hkd"):
             return _handle_hatpro_hkd
 
-    if instrument_id in ("rpg-fmcw-35", "rpg-fmcw-94") and filename.endswith(".lv1"):
+    if instrument_id in ("rpg-fmcw-35", "rpg-fmcw-94") and filename.endswith(
+        (".lv1", ".lv1.gz")
+    ):
         return _handle_rpg_lv1
 
     if instrument_id == "chm15k" and filename.endswith(".nc"):

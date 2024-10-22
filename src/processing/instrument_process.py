@@ -33,7 +33,7 @@ from requests.exceptions import HTTPError
 
 from processing import concat_wrapper, nc_header_augmenter
 from processing.processor import InstrumentParams, Processor
-from processing.utils import RawDataMissingError, Uuid, fetch_calibration
+from processing.utils import RawDataMissingError, Uuid, fetch_calibration, unzip_gz_file
 
 
 class ProcessInstrument:
@@ -633,23 +633,11 @@ def _get_valid_uuids(
     ]
 
 
-def _unzip_gz_file(path_in: Path) -> Path:
-    if path_in.suffix != ".gz":
-        return path_in
-    path_out = path_in.parent / path_in.stem
-    logging.debug(f"Decompressing {path_in} to {path_out}")
-    with gzip.open(path_in, "rb") as file_in:
-        with open(path_out, "wb") as file_out:
-            shutil.copyfileobj(file_in, file_out)
-    path_in.unlink()
-    return path_out
-
-
 def _unzip_gz_files(full_paths: list[Path]) -> list[Path]:
     paths_out = []
     for path_in in full_paths:
         try:
-            paths_out.append(_unzip_gz_file(path_in))
+            paths_out.append(unzip_gz_file(path_in))
         except (EOFError, gzip.BadGzipFile) as err:
             logging.warning("Cannot unzip gz file %s: %s", path_in, err)
     return paths_out

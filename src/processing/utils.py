@@ -1,8 +1,10 @@
 import base64
 import datetime
+import gzip
 import hashlib
 import logging
 import os
+import shutil
 from pathlib import Path
 from typing import Literal
 
@@ -357,3 +359,15 @@ def print_info(
     link = build_file_landing_page_url(uuid.product)
     qc_str = f" QC: {qc_result.upper()}" if qc_result else ""
     logging.info(f"{action}: {link}{qc_str}")
+
+
+def unzip_gz_file(path_in: Path) -> Path:
+    if path_in.suffix != ".gz":
+        return path_in
+    path_out = path_in.parent / path_in.stem
+    logging.debug(f"Decompressing {path_in} to {path_out}")
+    with gzip.open(path_in, "rb") as file_in:
+        with open(path_out, "wb") as file_out:
+            shutil.copyfileobj(file_in, file_out)
+    path_in.unlink()
+    return path_out
