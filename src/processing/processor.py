@@ -344,6 +344,7 @@ class Processor:
         options.max_y = max_alt
         options.title = False
         options.subtitle = False
+        options.raise_on_empty = True
         valid_images = []
         for field in fields:
             try:
