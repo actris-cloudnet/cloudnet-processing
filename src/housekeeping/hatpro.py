@@ -102,9 +102,7 @@ class HatproHkd:
 
 
 class HatproHkdNc:
-    def __init__(self, filename: str | bytes | PathLike):
-        if isinstance(filename, bytes):
-            filename = filename.decode()
+    def __init__(self, filename: str | PathLike):
         with netCDF4.Dataset(filename) as nc:
             time_ref = nc.variables.get("time_reference")
             if time_ref and time_ref[0] != TIME_REF_UTC:
