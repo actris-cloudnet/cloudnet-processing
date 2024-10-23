@@ -327,8 +327,8 @@ class Level1Nc:
                 self.nc.createDimension(key, len(time_ind))
             else:
                 self.nc.createDimension(key, dimension.size)
-        keys = keys if keys is not None else self.nc_raw.variables.keys()
-        for key in keys:
+        keys_to_process = keys if keys is not None else self.nc_raw.variables.keys()
+        for key in keys_to_process:
             if skip is None or key not in skip:
                 self.copy_variable(key, time_ind)
         self._copy_global_attributes()
@@ -399,8 +399,8 @@ class Level1Nc:
 
     def harmonize_attribute(self, attribute: str, keys: tuple | None = None):
         """Harmonizes variable attributes."""
-        keys = keys if keys is not None else self.nc.variables.keys()
-        for key in keys:
+        keys_to_process = keys if keys is not None else self.nc.variables.keys()
+        for key in keys_to_process:
             value = getattr(COMMON_ATTRIBUTES.get(key), attribute, None)
             if value is not None and key in self.nc.variables:
                 setattr(self.nc.variables[key], attribute, value)
@@ -1096,7 +1096,7 @@ def temperature_to_k(data: np.ndarray) -> np.ndarray:
     return data
 
 
-def _get_fill_value(data: np.ndarray) -> str | None:
+def _get_fill_value(data: np.ndarray) -> int | float | str | None:
     if hasattr(data, "_FillValue"):
         return data._FillValue
     if isinstance(data, ma.MaskedArray):
