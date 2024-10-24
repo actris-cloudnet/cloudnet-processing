@@ -113,18 +113,16 @@ STATUS_CODES_V3 = [
 ]
 
 
+MS2S = 1e-3
+
+
 def read_chm15k(nc: netCDF4.Dataset) -> dict:
     measurements = {var: nc[var][:] for var in nc.variables.keys()}
     measurements["time"] = cftime2datetime64(nc["time"])
-    measurements["laser_pulses"] = (
-        measurements["laser_pulses"] / measurements["average_time"]
-    )
-    measurements["signal_baseline"] = (
-        measurements["base"] / measurements["average_time"]
-    )
-    measurements["signal_stddev"] = (
-        measurements["stddev"] / measurements["average_time"]
-    )
+    average_time = measurements["average_time"] * MS2S
+    measurements["laser_pulses"] = measurements["laser_pulses"] / average_time
+    measurements["signal_baseline"] = measurements["base"] / average_time
+    measurements["signal_stddev"] = measurements["stddev"] / average_time
 
     try:
         versions = nc.software_version.split()
