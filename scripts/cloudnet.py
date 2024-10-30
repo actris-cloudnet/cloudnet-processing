@@ -525,7 +525,7 @@ def _parse_date(value: str) -> datetime.date:
         return utils.utctoday()
     if value == "yesterday":
         return utils.utctoday() - datetime.timedelta(days=1)
-    if match := re.fullmatch("(\d+)d", value):
+    if match := re.fullmatch(r"(\d+)d", value):
         return utils.utctoday() - datetime.timedelta(days=int(match[1]))
     return datetime.date.fromisoformat(value)
 
