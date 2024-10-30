@@ -65,6 +65,7 @@ def process_instrument(processor: Processor, params: InstrumentParams, directory
     processor.upload_file(
         params,
         new_file,
+        std_uuid.UUID(uuid.product),
         filename,
         volatile,
         patch,

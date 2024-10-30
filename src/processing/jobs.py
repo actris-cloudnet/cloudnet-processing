@@ -50,7 +50,7 @@ def freeze(processor: Processor, params: ProcessParams, directory: Path) -> None
     if params.product.experimental:
         raise utils.SkipTaskError("Product is experimental")
     logging.info(f"Freezing product: {metadata['uuid']}")
-    s3key = (
+    filename = (
         f"legacy/{metadata['filename']}" if metadata["legacy"] else metadata["filename"]
     )
     if metadata["pid"]:
@@ -63,7 +63,9 @@ def freeze(processor: Processor, params: ProcessParams, directory: Path) -> None
         full_path, pid=existing_pid
     )
     if uuid.UUID(file_uuid) != uuid.UUID(metadata["uuid"]):
-        msg = f"File {s3key} UUID mismatch (DB: {metadata['uuid']}, File: {file_uuid})"
+        msg = (
+            f"File {filename} UUID mismatch (DB: {metadata['uuid']}, File: {file_uuid})"
+        )
         raise ValueError(msg)
     if metadata["volatile"] and metadata["pid"]:
         msg = f"Removing volatile status of {url}"
@@ -73,6 +75,7 @@ def freeze(processor: Processor, params: ProcessParams, directory: Path) -> None
         msg = f"Minting PID {pid} to URL {url}"
     logging.info(msg)
 
+    s3key = f"{file_uuid}/{filename}"
     response_data = processor.storage_api.upload_product(
         full_path, s3key, volatile=volatile
     )

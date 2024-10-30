@@ -38,7 +38,9 @@ def process_model(processor: Processor, params: ModelParams, directory: Path):
             volatile_pid = file_meta["pid"]
         processor.pid_utils.add_pid_to_file(output_path, pid=volatile_pid)
 
-        processor.upload_file(params, output_path, filename, volatile, patch=True)
+        processor.upload_file(
+            params, output_path, product_uuid, filename, volatile, patch=True
+        )
         if "hidden" in params.site.types:
             logging.info("Skipping plotting for hidden site")
         else:

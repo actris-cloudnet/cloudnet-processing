@@ -58,7 +58,9 @@ def process_me(processor: Processor, params: ModelParams, directory: Path):
                 nc.file_uuid = existing_product["uuid"]
             uuid.product = existing_product["uuid"]
 
-    processor.upload_file(params, new_file, filename, volatile, patch)
+    processor.upload_file(
+        params, new_file, std_uuid.UUID(uuid.product), filename, volatile, patch
+    )
     processor.create_and_upload_l3_images(
         new_file,
         params.product.id,
@@ -121,7 +123,9 @@ def process_product(processor: Processor, params: ProductParams, directory: Path
                 nc.file_uuid = existing_product["uuid"]
             uuid.product = existing_product["uuid"]
 
-    processor.upload_file(params, new_file, filename, volatile, patch)
+    processor.upload_file(
+        params, new_file, std_uuid.UUID(uuid.product), filename, volatile, patch
+    )
     processor.create_and_upload_images(
         new_file,
         params.product.id,
