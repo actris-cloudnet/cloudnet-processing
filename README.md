@@ -43,7 +43,8 @@ Arguments:
 |       | `--stop`        | current day   | Stopping date (included).                                                          |
 | `-d`  | `--date`        |               | Single date to be processed. Alternatively, `--start` and `--stop` can be defined. |
 | `-c`  | `--cmd`         | `process`     | Command to be executed.                                                            |
-|       | `--raw`         |               | Fetch raw data. Only applicable if the command is `fetch`.                         |
+|       | `--raw`         |               | Fetch raw data excluding .lv0 files. Only applicable if the command is `fetch`.    |
+|       | `--all`         |               | Fetch all raw data. Only applicable if the command is `fetch --raw`.               |
 
 Shortcut for the `--products` argument:
 
