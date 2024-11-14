@@ -149,6 +149,11 @@ def _parse_args():
         action="store_true",
         help="Fetch raw data. Only applicable if the command is 'fetch'.",
     )
+    group.add_argument(
+        "--all",
+        action="store_true",
+        help="Fetch ALL raw data including .LV0. Only applicable if the command is 'fetch --raw'.",
+    )
 
     args = parser.parse_args()
 

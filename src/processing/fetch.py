@@ -58,6 +58,8 @@ class Fetcher:
         res = requests.get(url=url, params=payload)
         res.raise_for_status()
         metadata = res.json()
+        if self.args.all:
+            return metadata
         return [m for m in metadata if not m["filename"].lower().endswith(".lv0")]
 
     def get_raw_model_metadata(self) -> list:
