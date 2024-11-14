@@ -27,7 +27,7 @@ The main wrapper for running all the processing steps.
 
     usage: cloudnet.py [-h] [-s SITES] [-p PRODUCTS] [-i INSTRUMENTS] [-m MODELS] [-u UUIDS]
                        [--start YYYY-MM-DD] [--stop YYYY-MM-DD] [-d YYYY-MM-DD]
-                       [-c {process,plot,qc,freeze,dvas,fetch,hkd}] [--raw]
+                       [-c {process,plot,qc,freeze,dvas,fetch,hkd}] [--raw] [--all]
 
 Arguments:
 
