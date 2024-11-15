@@ -29,8 +29,8 @@ class Dvas:
         if not file["pid"]:
             logging.error("Skipping - volatile file")
             return
-        if file["product"]["level"] != "2":
-            logging.error("Skipping - only L2 products supported for now")
+        if "geophysical" not in file["product"]["type"]:
+            logging.error("Skipping - only geophysical products supported for now")
             return
         if not file["site"]["dvasId"]:
             logging.error("Skipping - not DVAS site")
@@ -259,8 +259,6 @@ class DvasMetadata:
             "disdrometer": "particle size spectrometer",
             "doppler-lidar": "Doppler lidar",
         }
-        if self._product["level"] != "2":
-            raise DvasError(f"Product {self._product['id']} not implemented")
         instruments = self._find_instrument_types(self.file["uuid"])
         dvas_instruments = []
         for instrument in instruments:
@@ -272,7 +270,7 @@ class DvasMetadata:
         instruments = []
         json_data = utils.get_from_data_portal_api(f"api/files/{uuid}")
         assert isinstance(json_data, dict)
-        if json_data["product"]["level"] == "1b" and "instrument" in json_data:
+        if "instrument" in json_data:
             instruments.append(json_data["instrument"]["type"])
         source_ids = json_data.get("sourceFileIds", [])
         if source_ids:
