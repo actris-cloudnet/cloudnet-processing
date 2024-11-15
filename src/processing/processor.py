@@ -582,7 +582,15 @@ def _get_fields_for_plot(cloudnet_file_type: str) -> tuple[list, int]:
                 "vwind_raw",
             ]
         case "mwr":
-            fields = ["lwp", "iwv"]
+            max_alt = 6
+            fields = [
+                "lwp",
+                "iwv",
+                "temperature",
+                "absolute_humidity",
+                "relative_humidity",
+                "irt_0",
+            ]
         case "mwr-l1c":
             fields = [
                 "tb_0",
