@@ -308,7 +308,7 @@ def _fetch_data_portal_url() -> str:
 
 class MyAdapter(HTTPAdapter):
     def __init__(self):
-        retry_strategy = Retry(total=10, backoff_factor=0.1)
+        retry_strategy = Retry(total=10, backoff_factor=0.1, status_forcelist=[524])
         super().__init__(max_retries=retry_strategy)
 
     def send(
