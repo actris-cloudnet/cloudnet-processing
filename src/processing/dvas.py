@@ -270,7 +270,7 @@ class DvasMetadata:
         instruments = []
         json_data = utils.get_from_data_portal_api(f"api/files/{uuid}")
         assert isinstance(json_data, dict)
-        if "instrument" in json_data:
+        if "instrument" in json_data and json_data["instrument"] is not None:
             instruments.append(json_data["instrument"]["type"])
         source_ids = json_data.get("sourceFileIds", [])
         if source_ids:
