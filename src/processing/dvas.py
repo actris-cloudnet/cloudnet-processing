@@ -226,6 +226,8 @@ class DvasMetadata:
             "dq_data_quality_information": {
                 "level": "dataset",
                 "compliance": self._parse_compliance(),
+                "quality_control_extent": "full quality control applied",
+                "quality_control_outcome": self._parse_qc_outcome(),
             },
         }
 
@@ -292,7 +294,21 @@ class DvasMetadata:
         return f"{self._parse_timeliness()} data"
 
     def _parse_compliance(self) -> str:
-        return "ACTRIS legacy" if self.file["legacy"] else "ACTRIS compliant"
+        return (
+            "ACTRIS legacy"
+            if self.file["measurementDate"] < "2023-04-25"
+            else "ACTRIS associated"
+        )
+
+    def _parse_qc_outcome(self) -> str:
+        outcome_map = {
+            "pass": "1 - Good",
+            "info": "3 - Questionable/suspect",
+            "warning": "3 - Questionable/suspect",
+            "error": "4 - Bad",
+        }
+        unknown_outcome = "2 - Not evaluated, not available or unknown"
+        return outcome_map.get(self.file["errorLevel"], unknown_outcome)
 
     def _parse_netcdf_version(self) -> str:
         return self.file["format"]
