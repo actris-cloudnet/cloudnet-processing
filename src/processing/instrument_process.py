@@ -476,6 +476,7 @@ class ProcessMwrL1c(ProcessInstrument):
         data = self._get_calibration_data()
         full_paths, self.uuid.raw = self.download_instrument(
             include_pattern=r"\.(brt|hkd|met|irt|blb|bls)$",
+            exclude_pattern=r"2DSCAN",
         )
         output_filename, site_meta = self._args
 
