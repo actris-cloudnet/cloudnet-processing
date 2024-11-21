@@ -32,6 +32,9 @@ class Dvas:
         if "geophysical" not in file["product"]["type"]:
             logging.error("Skipping - only geophysical products supported for now")
             return
+        if "categorize" in file["product"]["id"]:
+            logging.error("Skipping - categorize file")
+            return
         if not file["site"]["dvasId"]:
             logging.error("Skipping - not DVAS site")
             return
