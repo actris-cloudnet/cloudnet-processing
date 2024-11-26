@@ -23,10 +23,11 @@ def process_model(processor: Processor, params: ModelParams, directory: Path):
             volatile = False
         product_uuid = uuid.UUID(file_meta["uuid"])
         filename = file_meta["filename"]
+        s3key = file_meta["s3key"]
     else:
         product_uuid = _generate_uuid()
-
         filename = _generate_filename(params)
+        s3key = f"{product_uuid}/{filename}"
 
     try:
         output_path = directory / "output.nc"
@@ -39,7 +40,7 @@ def process_model(processor: Processor, params: ModelParams, directory: Path):
         processor.pid_utils.add_pid_to_file(output_path, pid=volatile_pid)
 
         processor.upload_file(
-            params, output_path, product_uuid, filename, volatile, patch=True
+            params, output_path, s3key, filename, volatile, patch=True
         )
         if "hidden" in params.site.types:
             logging.info("Skipping plotting for hidden site")

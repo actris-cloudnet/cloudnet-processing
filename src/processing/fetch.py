@@ -240,7 +240,7 @@ def _submit_file(filename: Path, row: dict) -> str:
     bucket = "cloudnet-product-volatile" if row["volatile"] else "cloudnet-product"
     if row["legacy"]:
         bucket = f"{bucket}/legacy"
-    ss_url = f"{STORAGE_SERVICE_URL}/{bucket}/{row['uuid']}/{row['filename']}"
+    ss_url = f"{STORAGE_SERVICE_URL}/{bucket}/{row['s3key']}"
     ss_body = filename.read_bytes()
     ss_headers = {"Content-MD5": utils.md5sum(filename, is_base64=True)}
     ss_res = requests.put(
@@ -250,8 +250,7 @@ def _submit_file(filename: Path, row: dict) -> str:
     ss_data = ss_res.json()
     assert int(ss_data["size"]) == int(row["size"]), "Invalid size"
 
-    suffix = f"legacy/{row['filename']}" if row["legacy"] else f"{row['filename']}"
-    dp_url = f"{DATAPORTAL_URL}/files/{row['uuid']}/{suffix}"
+    dp_url = f"{DATAPORTAL_URL}/files/{row['s3key']}"
 
     dp_body = {
         **row,
