@@ -23,11 +23,13 @@ def process_instrument(processor: Processor, params: InstrumentParams, directory
             uuid.volatile = existing_product["uuid"]
             pid_to_new_file = existing_product["pid"]
         filename = existing_product["filename"]
+        s3key = existing_product["s3key"]
         existing_file = processor.storage_api.download_product(
             existing_product, directory
         )
     else:
         filename = _generate_filename(params)
+        s3key = None
         existing_file = None
 
     volatile = not existing_file or uuid.volatile is not None

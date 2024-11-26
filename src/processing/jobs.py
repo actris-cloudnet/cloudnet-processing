@@ -52,6 +52,7 @@ def freeze(processor: Processor, params: ProcessParams, directory: Path) -> None
     filename = (
         f"legacy/{metadata['filename']}" if metadata["legacy"] else metadata["filename"]
     )
+    s3key = metadata["s3key"]
     if metadata["pid"]:
         existing_pid = metadata["pid"]
         volatile = False
@@ -74,7 +75,6 @@ def freeze(processor: Processor, params: ProcessParams, directory: Path) -> None
         msg = f"Minting PID {pid} to URL {url}"
     logging.info(msg)
 
-    s3key = f"{file_uuid}/{filename}"
     response_data = processor.storage_api.upload_product(
         full_path, s3key, volatile=volatile
     )

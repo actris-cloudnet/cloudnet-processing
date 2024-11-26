@@ -64,6 +64,7 @@ def process_model(processor: Processor, params: ModelParams, directory: Path):
     else:
         product_uuid = _generate_uuid()
         filename = _generate_filename(params)
+        s3key = f"{product_uuid}/{filename}"
 
     try:
         tmp_path = _process_model(params, full_paths, directory / "temp.nc")
