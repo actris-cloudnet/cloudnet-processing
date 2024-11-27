@@ -6,8 +6,14 @@ from processing import nc_header_augmenter, utils
 from processing.processor import ModelParams, Processor
 from processing.utils import MiscError, SkipTaskError
 
+SKIP_MODELS = ("arpege",)
+
 
 def process_model(processor: Processor, params: ModelParams, directory: Path):
+    if params.model_id in SKIP_MODELS:
+        logging.warning("Processing %s not implemented yet", params.model_id)
+        return
+
     upload_meta = processor.get_model_upload(params)
     if not upload_meta:
         return
