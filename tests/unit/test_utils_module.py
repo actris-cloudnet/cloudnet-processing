@@ -63,8 +63,12 @@ def test_are_identical_nc_files_real_data():
             NCDiff.MAJOR,
         ),
         (np.array([1.0]), {}, {}, np.array([1.1]), {}, {}, NCDiff.MAJOR),
-        (np.array([1.0]), {}, {}, np.array([1.0000000001]), {}, {}, NCDiff.MINOR),
-        (np.array([1.0]), {}, {}, np.array([1.099]), {}, {}, NCDiff.MINOR),
+        (np.array([1.0]), {}, {}, np.array([0.9991]), {}, {}, NCDiff.NONE),
+        (np.array([-1.0]), {}, {}, np.array([-0.9991]), {}, {}, NCDiff.NONE),
+        (np.array([1.0]), {}, {}, np.array([1.05]), {}, {}, NCDiff.MAJOR),
+        (np.array([1.0]), {}, {}, np.array([1.04]), {}, {}, NCDiff.MINOR),
+        (np.array([-1.0]), {}, {}, np.array([-1.04]), {}, {}, NCDiff.MINOR),
+        (np.array([-1.0]), {}, {}, np.array([-1.05]), {}, {}, NCDiff.MAJOR),
         (np.array([1.0]), {}, {}, np.array([1.1]), {}, {}, NCDiff.MAJOR),
         (np.array([1]), {}, {}, np.array([1, 2]), {}, {}, NCDiff.MAJOR),
         (
@@ -425,7 +429,7 @@ def test_compare_variable_values_added(change, expected, tmp_path):
         (0.999999999999, NCDiff.NONE),
         (1.0, NCDiff.NONE),
         (1.000000000001, NCDiff.NONE),
-        (1.001, NCDiff.MINOR),
+        (1.002, NCDiff.MINOR),
         (2, NCDiff.MAJOR),
     ],
 )

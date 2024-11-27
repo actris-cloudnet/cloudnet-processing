@@ -171,12 +171,21 @@ class NetCDFComparator:
                 continue
             val_old = ma.masked_invalid(self.old.variables[var][:])
             val_new = ma.masked_invalid(self.new.variables[var][:])
-            mae = np.mean(np.abs(val_old - val_new))
-            if mae >= 0.1:
-                logging.info(f"Variable '{var}' has major differences (MAE={mae:g})")
+
+            epsilon = 1e-12
+            val_old_nonzero = ma.where(ma.abs(val_old) < epsilon, epsilon, val_old)
+            percentage_error = ((val_new - val_old) / val_old_nonzero) * 100.0
+            percentage_error = ma.masked_invalid(percentage_error)
+            mpe = ma.mean(percentage_error)
+
+            major_threshold = 5
+            minor_threshold = 0.1
+
+            if ma.abs(mpe) >= major_threshold:
+                logging.info(f"Variable '{var}' has major differences (MPE={mpe:g})")
                 return NCDiff.MAJOR
-            elif mae >= 1e-12:
-                logging.info(f"Variable '{var}' has minor differences (MAE={mae:g})")
+            elif ma.abs(mpe) >= minor_threshold:
+                logging.info(f"Variable '{var}' has minor differences (MPE={mpe:g})")
                 return NCDiff.MINOR
         return NCDiff.NONE
 
