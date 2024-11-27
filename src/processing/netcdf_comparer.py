@@ -174,18 +174,20 @@ class NetCDFComparator:
 
             epsilon = 1e-12
             val_old_nonzero = ma.where(ma.abs(val_old) < epsilon, epsilon, val_old)
-            percentage_error = ((val_new - val_old) / val_old_nonzero) * 100.0
+            percentage_error = (
+                ma.abs(val_new - val_old) / ma.abs(val_old_nonzero) * 100.0
+            )
             percentage_error = ma.masked_invalid(percentage_error)
-            mpe = ma.mean(percentage_error)
+            mape = ma.mean(percentage_error)
 
             major_threshold = 5
             minor_threshold = 0.1
 
-            if ma.abs(mpe) >= major_threshold:
-                logging.info(f"Variable '{var}' has major differences (MPE={mpe:g})")
+            if mape >= major_threshold:
+                logging.info(f"Variable '{var}' has major differences (MAPE={mape:g})")
                 return NCDiff.MAJOR
-            elif ma.abs(mpe) >= minor_threshold:
-                logging.info(f"Variable '{var}' has minor differences (MPE={mpe:g})")
+            elif mape >= minor_threshold:
+                logging.info(f"Variable '{var}' has minor differences (MAPE={mape:g})")
                 return NCDiff.MINOR
         return NCDiff.NONE
 

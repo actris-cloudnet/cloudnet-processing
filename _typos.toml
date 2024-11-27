@@ -1,5 +1,5 @@
 [default]
-extend-ignore-identifiers-re = ["MOR"]
+extend-ignore-identifiers-re = ["MAPE", "MOR", "mape"]
 
 [files]
 extend-exclude = ["tests/data/"]
