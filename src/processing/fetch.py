@@ -257,6 +257,8 @@ def _submit_file(filename: Path, row: dict) -> str:
 
     dp_body = {
         **row,
+        "site": row["site"]["id"],
+        "product": row["product"]["id"],
         "version": ss_data["version"] if "version" in ss_data else "",
         "sourceFileIds": [],
     }
