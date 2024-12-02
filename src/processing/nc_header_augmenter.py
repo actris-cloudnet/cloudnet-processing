@@ -108,41 +108,6 @@ def harmonize_hatpro_file(data: dict) -> str:
     return uuid
 
 
-def harmonize_halo_file(data: dict) -> str:
-    """Harmonizes HALO Doppler lidar netCDF file."""
-    if "output_path" not in data:
-        temp_file = NamedTemporaryFile()
-    with (
-        netCDF4.Dataset(data["full_path"], "r") as nc_raw,
-        netCDF4.Dataset(
-            data["output_path"] if "output_path" in data else temp_file.name,
-            "w",
-            format="NETCDF4_CLASSIC",
-        ) as nc,
-    ):
-        halo = HaloNc(nc_raw, nc, data)
-        valid_ind = halo.get_valid_time_indices()
-        halo.copy_file(valid_ind)
-        halo.clean_global_attributes()
-        halo.add_geolocation()
-        halo.add_date()
-        halo.add_global_attributes("doppler-lidar", instruments.HALO)
-        uuid = halo.add_uuid()
-        halo.add_zenith_angle()
-        halo.check_zenith_angle()
-        halo.add_range()
-        halo.clean_variable_attributes()
-        halo.fix_time_units()
-        halo.add_wavelength()
-        for attribute in ("units", "long_name", "standard_name"):
-            halo.harmonize_attribute(attribute)
-        halo.fix_long_names()
-        halo.add_history("lidar")
-    if "output_path" not in data:
-        shutil.copy(temp_file.name, data["full_path"])
-    return uuid
-
-
 def harmonize_halo_calibrated_file(data: dict) -> str:
     """Harmonizes calibrated HALO Doppler lidar netCDF file."""
     if "output_path" not in data:
@@ -203,6 +168,44 @@ def harmonize_doppler_lidar_wind_file(
         wind.harmonise_serial_number()
         if "azimuth_offset_deg" in data:
             wind.nc.history += "\nAzimuthal correction applied."
+    if "output_path" not in data:
+        shutil.copy(temp_file.name, data["full_path"])
+    return uuid
+
+
+def harmonise_doppler_lidar_stare_file(
+    data: dict, instrument: instruments.Instrument
+) -> str:
+    """Harmonizes Doppler lidar wind netCDF file."""
+    if "output_path" not in data:
+        temp_file = NamedTemporaryFile()
+    with (
+        netCDF4.Dataset(data["full_path"], "r") as nc_raw,
+        netCDF4.Dataset(
+            data["output_path"] if "output_path" in data else temp_file.name,
+            "w",
+            format="NETCDF4_CLASSIC",
+        ) as nc,
+    ):
+        stare = DopplerLidarStareNc(nc_raw, nc, data)
+        valid_ind = stare.get_valid_time_indices()
+        stare.copy_file(valid_ind)
+        stare.clean_global_attributes()
+        stare.add_geolocation()
+        stare.add_date()
+        stare.add_global_attributes("doppler-lidar", instrument)
+        uuid = stare.add_uuid()
+        stare.add_zenith_angle()
+        stare.check_zenith_angle()
+        stare.add_range()
+        stare.clean_variable_attributes()
+        stare.fix_time_units()
+        stare.add_wavelength()
+        for attribute in ("units", "long_name", "standard_name"):
+            stare.harmonize_attribute(attribute)
+        stare.fix_long_names()
+        stare.add_history("lidar")
+        stare.harmonise_serial_number()
     if "output_path" not in data:
         shutil.copy(temp_file.name, data["full_path"])
     return uuid
@@ -524,13 +527,13 @@ class DopplerLidarWindNc(Level1Nc):
         self.nc.variables["height"].long_name = "Height above mean sea level"
 
     def harmonise_serial_number(self):
-        if "serial_number" in self.nc.ncattrs() and (
-            match_ := re.match(r"wls\d+s?-(.+)", self.nc.serial_number, re.IGNORECASE)
-        ):
-            self.nc.serial_number = match_.group(1)
+        if "serial_number" in self.nc.ncattrs():
+            self.nc.serial_number = _harmonise_doppler_lidar_serial_number(
+                self.nc.serial_number
+            )
 
 
-class HaloNc(Level1Nc):
+class DopplerLidarStareNc(Level1Nc):
     def clean_global_attributes(self):
         for attr in self.nc.ncattrs():
             if attr == "filename":
@@ -613,6 +616,19 @@ class HaloNc(Level1Nc):
             ].long_name = (
                 "Attenuated backscatter coefficient for the cross-polarised signal"
             )
+
+    def harmonise_serial_number(self):
+        if "serial_number" in self.nc.ncattrs():
+            self.nc.serial_number = _harmonise_doppler_lidar_serial_number(
+                self.nc.serial_number
+            )
+
+
+def _harmonise_doppler_lidar_serial_number(serial_number: str) -> str:
+    if match_ := re.match(r"wls\d+s?-(.+)", serial_number, re.IGNORECASE):
+        return match_.group(1)
+    else:
+        return serial_number
 
 
 class HaloNcCalibrated(Level1Nc):
