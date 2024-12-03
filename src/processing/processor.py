@@ -345,6 +345,8 @@ class Processor:
         options.title = False
         options.subtitle = False
         options.raise_on_empty = True
+        options.plot_above_ground = True
+        options.minor_ticks = True
         valid_images = []
         for field in fields:
             try:
