@@ -204,16 +204,19 @@ class Worker:
             action = "complete"
         except Exception as err:
             logging.exception("Failed to process task")
-            send_slack_alert(
-                self.config,
-                err,
-                source="data",
-                log=self.logger.content,
-                site=task.get("siteId"),
-                date=task.get("measurementDate"),
-                model=task.get("modelId"),
-                product=task.get("productId"),
-            )
+            try:
+                send_slack_alert(
+                    self.config,
+                    err,
+                    source="data",
+                    log=self.logger.content,
+                    site=task.get("siteId"),
+                    date=task.get("measurementDate"),
+                    model=task.get("modelId"),
+                    product=task.get("productId"),
+                )
+            except Exception:
+                logging.exception("Failed to send Slack alert")
             action = "fail"
         res = self.session.put(f"{self.dataportal_url}/queue/{action}/{task['id']}")
         res.raise_for_status()
