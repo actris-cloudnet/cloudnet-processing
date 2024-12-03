@@ -308,6 +308,7 @@ def _get_level1b_metadata_for_categorize(
                 params,
                 "radar",
                 fallback=["mira-35", "rpg-fmcw-35", "rpg-fmcw-94", "copernicus"],
+                exclude=["mira-10"],
             )
         ),
         "lidar": (
@@ -343,7 +344,25 @@ def _find_instrument_product(
     product_id: str,
     fallback: list[str] = [],
     require: list[str] = [],
+    exclude: list[str] = [],
 ) -> dict | None:
+    """
+    Retrieve the most suitable instrument product based on specified parameters.
+
+    Args:
+        processor: Processor object used to interact with the metadata API.
+        params: Parameters containing site and date information for the query.
+        product_id: Identifier for the instrument product.
+        fallback: Prioritize instrument types in the specified order if multiple
+            products are available.
+        require: Same as `fallback` but instrument type must one of the
+            explicitly specified ones.
+        exclude: Never choose products with these instrument types.
+
+    Returns:
+        The metadata of the most suitable instrument product, or `None` if no
+        matching metadata is found.
+    """
     if require and fallback:
         raise ValueError("Use either require or fallback")
     if require:
@@ -364,6 +383,7 @@ def _find_instrument_product(
         instrument_id=require,
     )
     metadata = processor.md_api.get("api/files", payload)
+    metadata = [file for file in metadata if file["instrument"]["id"] not in exclude]
     if not metadata:
         return None
     nominal_instrument_pid = _get_nominal_instrument_pid(processor, params, product_id)

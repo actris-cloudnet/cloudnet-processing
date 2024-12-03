@@ -125,14 +125,29 @@ class ProcessRadar(ProcessInstrument):
         self.process_rpg_fmcw_94()
 
     def process_mira_10(self):
-        raise NotImplementedError()
+        full_paths, self.uuid.raw = self.download_instrument()
+        full_paths = _unzip_gz_files(full_paths)
+        full_paths = self._fix_suffices(full_paths, ".znc")
+        output_filename, site_meta = self._args
+        site_meta["model"] = "mira-10"
+        self.uuid.product = mira2nc(
+            [str(path) for path in full_paths],
+            str(output_filename),
+            site_meta,
+            **self._kwargs,
+        )
 
     def process_mira_35(self):
         full_paths, self.uuid.raw = self.download_instrument()
         full_paths = _unzip_gz_files(full_paths)
         full_paths = self._fix_suffices(full_paths, ".mmclx")
+        output_filename, site_meta = self._args
+        site_meta["model"] = "mira-35"
         self.uuid.product = mira2nc(
-            [str(path) for path in full_paths], *self._args, **self._kwargs
+            [str(path) for path in full_paths],
+            str(output_filename),
+            site_meta,
+            **self._kwargs,
         )
 
     def process_basta(self):
