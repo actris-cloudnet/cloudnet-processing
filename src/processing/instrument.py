@@ -114,7 +114,7 @@ def _process_file(
 
 
 def _process_housekeeping(processor: Processor, params: InstrumentParams) -> None:
-    if params.date < utctoday() - datetime.timedelta(days=3):
+    if params.date < utctoday() - datetime.timedelta(days=30):
         logging.info("Skipping housekeeping for old data")
         return
     logging.info("Processing housekeeping data")
