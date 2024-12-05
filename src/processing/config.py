@@ -1,3 +1,4 @@
+import datetime
 import os
 
 
@@ -25,3 +26,4 @@ class Config:
         self.dvas_username = environ["DVAS_USERNAME"]
         self.dvas_password = environ["DVAS_PASSWORD"]
         self.dvas_provider_id = "11"  # CLU
+        self.housekeeping_retention = datetime.timedelta(days=30)

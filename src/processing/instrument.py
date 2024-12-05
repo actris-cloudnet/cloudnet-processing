@@ -1,4 +1,3 @@
-import datetime
 import logging
 import uuid as std_uuid
 from pathlib import Path
@@ -114,7 +113,7 @@ def _process_file(
 
 
 def _process_housekeeping(processor: Processor, params: InstrumentParams) -> None:
-    if params.date < utctoday() - datetime.timedelta(days=30):
+    if params.date < utctoday() - processor.md_api.config.housekeeping_retention:
         logging.info("Skipping housekeeping for old data")
         return
     logging.info("Processing housekeeping data")

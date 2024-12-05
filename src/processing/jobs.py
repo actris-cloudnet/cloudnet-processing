@@ -1,4 +1,3 @@
-import datetime
 import logging
 import uuid
 from pathlib import Path
@@ -103,7 +102,7 @@ def upload_to_dvas(processor: Processor, params: ProcessParams) -> None:
 
 # TODO: copy-pasted from instrument.py
 def hkd(processor: Processor, params: InstrumentParams) -> None:
-    if params.date < utctoday() - datetime.timedelta(days=3):
+    if params.date < utctoday() - processor.md_api.config.housekeeping_retention:
         logging.info("Skipping housekeeping for old data")
         return
     logging.info("Processing housekeeping data")
