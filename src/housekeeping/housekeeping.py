@@ -17,6 +17,8 @@ from processing.utils import RawApi, unzip_gz_file
 from rpgpy import read_rpg
 from rpgpy.utils import decode_rpg_status_flags, rpg_seconds2datetime64
 
+from housekeeping.cl61 import read_cl61
+
 from .chm15k import read_chm15k
 from .exceptions import HousekeepingException, UnsupportedFile
 from .hatpro import HatproHkd, HatproHkdNc
@@ -78,6 +80,14 @@ def _handle_chm15k_nc(src: bytes, metadata: dict) -> list[Point]:
         )
 
 
+def _handle_cl61_nc(src: bytes, metadata: dict) -> list[Point]:
+    with Dataset("dataset.nc", memory=src) as nc:
+        measurements = read_cl61(nc)
+        return _make_points(
+            measurements["time"], measurements, get_config("cl61_nc"), metadata
+        )
+
+
 def get_reader(metadata: dict) -> Callable[[bytes, dict], list[Point]] | None:
     instrument_id = metadata["instrumentId"]
     filename = metadata["filename"].lower()
@@ -95,6 +105,9 @@ def get_reader(metadata: dict) -> Callable[[bytes, dict], list[Point]] | None:
 
     if instrument_id == "chm15k" and filename.endswith(".nc"):
         return _handle_chm15k_nc
+
+    if instrument_id == "cl61d" and filename.endswith(".nc"):
+        return _handle_cl61_nc
 
     return None
 

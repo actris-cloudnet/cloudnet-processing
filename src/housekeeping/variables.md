@@ -5,6 +5,7 @@
 - [chm15k](#chm15k)
 - [hatpro](#hatpro)
 - [rpg-fmcw-94](#rpg-fmcw-94)
+- [cl61](#cl61)
 
 ## chm15k
 
@@ -1449,6 +1450,147 @@ Transmitter power of current sample
 <td>
 
 Transmitter temperature of current sample
+
+</td>
+</tr>
+</table>
+
+## cl61
+
+<table>
+<tr>
+<th>Variable</th>
+<th>Unit</th>
+<th>Description</th>
+</tr>
+<tr>
+<td>
+
+`background_radiance`
+
+</td>
+<td></td>
+<td>
+
+</td>
+</tr>
+<tr>
+<td>
+
+`internal_heater_status`
+
+</td>
+<td></td>
+<td>
+
+on/off (1/0)
+
+</td>
+</tr>
+<tr>
+<td>
+
+`internal_humidity`
+
+</td>
+<td>percent</td>
+<td>
+
+relative humidity
+
+</td>
+</tr>
+<tr>
+<td>
+
+`internal_pressure`
+
+</td>
+<td>Pa</td>
+<td>
+
+</td>
+</tr>
+<tr>
+<td>
+
+`internal_temperature`
+
+</td>
+<td>K</td>
+<td>
+
+</td>
+</tr>
+<tr>
+<td>
+
+`laser_power`
+
+</td>
+<td>percent</td>
+<td>
+
+</td>
+</tr>
+<tr>
+<td>
+
+`laser_temperature`
+
+</td>
+<td>K</td>
+<td>
+
+</td>
+</tr>
+<tr>
+<td>
+
+`transmitter_enclosure_temperature`
+
+</td>
+<td>K</td>
+<td>
+
+</td>
+</tr>
+<tr>
+<td>
+
+`window_blower_heater_status`
+
+</td>
+<td></td>
+<td>
+
+on/off (1/0)
+
+</td>
+</tr>
+<tr>
+<td>
+
+`window_blower_status`
+
+</td>
+<td></td>
+<td>
+
+on/off (1/0)
+
+</td>
+</tr>
+<tr>
+<td>
+
+`window_condition`
+
+</td>
+<td>percent</td>
+<td>
+
+100 for a clean, 0 for a totally dirty window
 
 </td>
 </tr>
