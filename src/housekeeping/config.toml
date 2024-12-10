@@ -55,6 +55,14 @@ vars.internal_heater = "internal_heater_status"
 vars.window_blower_heater = "window_blower_heater_status"
 vars.transmitter_enclosure_temperature = "transmitter_enclosure_temperature"
 
+[format.halo-doppler-lidar_doppy]
+vars.internal_temperature = "internal_temperature"
+vars.internal_relative_humidity = "internal_relative_humidity"
+vars.supply_voltage = "supply_voltage"
+vars.acquisition_card_temperature = "acquisition_card_temperature"
+vars.pitch = "pitch"
+vars.roll = "roll"
+
 [format.hatpro_hkd]
 vars.Alarm = "alarm_status"
 vars.T0 = "ambient_target_sensor1_temperature"
@@ -236,6 +244,20 @@ vars.window_blower_heater_status.description = "on/off (1/0)"
 vars.window_blower_status.description = "on/off (1/0)"
 vars.window_condition.description = "100 for a clean, 0 for a totally dirty window"
 vars.window_condition.unit = "percent"
+
+[metadata.halo-doppler-lidar]
+vars.acquisition_card_temperature.description = "Acquisition card temperature"
+vars.acquisition_card_temperature.unit = "K"
+vars.internal_relative_humidity.description = "Internal relative humidity"
+vars.internal_relative_humidity.unit = "percent"
+vars.internal_temperature.description = "Internal temperature"
+vars.internal_temperature.unit = "K"
+vars.pitch.description = "Pitch"
+vars.pitch.unit = "degrees"
+vars.roll.description = "Roll"
+vars.roll.unit = "degrees"
+vars.supply_voltage.description = "Supply voltage"
+vars.supply_voltage.unit = "V"
 
 [metadata.hatpro]
 vars."*_profiler_channel*_status".description = "When a bit is set ‘1’, the corresponding channel is ok, otherwise the channel has a malfunction."

@@ -21,6 +21,7 @@ from housekeeping.cl61 import read_cl61
 
 from .chm15k import read_chm15k
 from .exceptions import HousekeepingException, UnsupportedFile
+from .halo_doppler_lidar import read_halo_doppler_lidar
 from .hatpro import HatproHkd, HatproHkdNc
 
 
@@ -88,6 +89,16 @@ def _handle_cl61_nc(src: bytes, metadata: dict) -> list[Point]:
         )
 
 
+def _handle_halo_doppler_lidar(src: bytes, metadata: dict) -> list[Point]:
+    measurements = read_halo_doppler_lidar(src)
+    return _make_points(
+        measurements["time"],
+        measurements,
+        get_config("halo-doppler-lidar_doppy"),
+        metadata,
+    )
+
+
 def get_reader(metadata: dict) -> Callable[[bytes, dict], list[Point]] | None:
     instrument_id = metadata["instrumentId"]
     filename = metadata["filename"].lower()
@@ -108,6 +119,11 @@ def get_reader(metadata: dict) -> Callable[[bytes, dict], list[Point]] | None:
 
     if instrument_id == "cl61d" and filename.endswith(".nc"):
         return _handle_cl61_nc
+
+    if instrument_id == "halo-doppler-lidar" and filename.startswith(
+        "system_parameters"
+    ):
+        return _handle_halo_doppler_lidar
 
     return None
 
