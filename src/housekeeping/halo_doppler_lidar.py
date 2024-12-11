@@ -11,6 +11,6 @@ def read_halo_doppler_lidar(src: bytes) -> dict:
         "internal_relative_humidity": sp.internal_relative_humidity,
         "supply_voltage": sp.supply_voltage,
         "acquisition_card_temperature": sp.acquisition_card_temperature + C_TO_K,
-        "pitch": sp.pitch,
-        "roll": sp.roll,
+        "platform_pitch_angle": sp.platform_pitch_angle,
+        "platform_roll_angle": sp.platform_roll_angle,
     }

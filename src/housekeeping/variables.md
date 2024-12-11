@@ -745,26 +745,26 @@ Internal temperature
 <tr>
 <td>
 
-`pitch`
+`platform_pitch_angle`
 
 </td>
-<td>degrees</td>
+<td>degree</td>
 <td>
 
-Pitch
+Platform pitch angle
 
 </td>
 </tr>
 <tr>
 <td>
 
-`roll`
+`platform_roll_angle`
 
 </td>
-<td>degrees</td>
+<td>degree</td>
 <td>
 
-Roll
+Platform roll angle
 
 </td>
 </tr>
