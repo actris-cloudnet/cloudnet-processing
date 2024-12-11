@@ -2,11 +2,11 @@ import logging
 import uuid
 from pathlib import Path
 
-import housekeeping
-
 from processing import utils
-from processing.processor import InstrumentParams, ModelParams, Processor, ProcessParams
-from processing.utils import utctoday
+from processing.housekeeping_utils import process_housekeeping as hkd
+from processing.processor import ModelParams, Processor, ProcessParams
+
+__all__ = ["freeze", "hkd", "update_plots", "update_qc", "upload_to_dvas"]
 
 
 def update_plots(processor: Processor, params: ProcessParams, directory: Path) -> None:
@@ -98,25 +98,6 @@ def upload_to_dvas(processor: Processor, params: ProcessParams) -> None:
         raise utils.SkipTaskError("Already uploaded to DVAS")
     processor.dvas.upload(metadata)
     logging.info("Uploaded to DVAS")
-
-
-# TODO: copy-pasted from instrument.py
-def hkd(processor: Processor, params: InstrumentParams) -> None:
-    if params.date < utctoday() - processor.md_api.config.housekeeping_retention:
-        logging.info("Skipping housekeeping for old data")
-        return
-    logging.info("Processing housekeeping data")
-    raw_api = utils.RawApi(processor.md_api.config, processor.md_api.session)
-    payload = processor._get_payload(
-        site=params.site.id, date=params.date, instrument_pid=params.instrument.pid
-    )
-    records = processor.md_api.get("api/raw-files", payload)
-    try:
-        with housekeeping.Database() as db:
-            for record in records:
-                housekeeping.process_record(record, raw_api=raw_api, db=db)
-    except housekeeping.HousekeepingException:
-        logging.exception("Housekeeping failed")
 
 
 def _fetch_data(
