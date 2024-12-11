@@ -1,16 +1,15 @@
-import logging
 import uuid as std_uuid
 from pathlib import Path
 from typing import Type
 
-import housekeeping
 import netCDF4
 from cloudnetpy.exceptions import CloudnetException
 
 from processing import instrument_process, utils
+from processing.housekeeping_utils import process_housekeeping
 from processing.netcdf_comparer import NCDiff, nc_difference
 from processing.processor import InstrumentParams, Processor
-from processing.utils import Uuid, utctoday
+from processing.utils import Uuid
 
 ProcessClass = Type[instrument_process.ProcessInstrument]
 
@@ -77,7 +76,7 @@ def process_instrument(processor: Processor, params: InstrumentParams, directory
     processor.update_statuses(uuid.raw, "processed")
     utils.print_info(uuid, volatile, patch, qc_result)
     if processor.md_api.config.is_production:
-        _process_housekeeping(processor, params)
+        process_housekeeping(processor, params)
 
 
 def _generate_filename(params: InstrumentParams) -> str:
@@ -110,52 +109,3 @@ def _process_file(
     process = process_class(directory, params, uuid, processor)
     getattr(process, f"process_{instrument_snake_case}")()
     return process.output_path
-
-
-def _process_housekeeping(processor: Processor, params: InstrumentParams) -> None:
-    if params.date < utctoday() - processor.md_api.config.housekeeping_retention:
-        logging.info("Skipping housekeeping for old data")
-        return
-    logging.info("Processing housekeeping data")
-    raw_api = utils.RawApi(processor.md_api.config, processor.md_api.session)
-    records = _get_housekeeping_records(processor, params)
-    try:
-        with housekeeping.Database() as db:
-            for record in records:
-                housekeeping.process_record(record, raw_api=raw_api, db=db)
-    except housekeeping.HousekeepingException:
-        logging.exception("Housekeeping failed")
-
-
-def _get_housekeeping_records(
-    processor: Processor, params: InstrumentParams
-) -> list[dict]:
-    if params.instrument.type == "halo-doppler-lidar":
-        first_day_of_month = params.date.replace(day=1)
-        payload = processor._get_payload(
-            site=params.site.id,
-            date=(first_day_of_month, params.date),
-            instrument_pid=params.instrument.pid,
-            filename_prefix="system_parameters",
-        )
-        records = processor.md_api.get("api/raw-files", payload)
-        return _select_halo_doppler_lidar_hkd_records(records)
-
-    payload = processor._get_payload(
-        site=params.site.id, date=params.date, instrument_pid=params.instrument.pid
-    )
-    return processor.md_api.get("api/raw-files", payload)
-
-
-def _select_halo_doppler_lidar_hkd_records(records: list[dict]) -> list[dict]:
-    return [
-        max(
-            records,
-            key=lambda x: (
-                x.get("measurementDate"),
-                x.get("createdAt"),
-                x.get("updatedAt"),
-                x.get("size"),
-            ),
-        )
-    ]
