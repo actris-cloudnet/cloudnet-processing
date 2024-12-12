@@ -589,24 +589,24 @@ on/off (1/0)
 <tr>
 <td>
 
-`internal_humidity`
+`internal_pressure`
 
 </td>
-<td>percent</td>
+<td>Pa</td>
 <td>
-
-relative humidity
 
 </td>
 </tr>
 <tr>
 <td>
 
-`internal_pressure`
+`internal_relative_humidity`
 
 </td>
-<td>Pa</td>
+<td>percent</td>
 <td>
+
+relative humidity
 
 </td>
 </tr>
