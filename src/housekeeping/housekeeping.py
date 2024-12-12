@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import os
 import tempfile
+from enum import Enum
 from pathlib import Path
 from typing import Callable, Iterable
 
@@ -23,6 +24,11 @@ from .chm15k import read_chm15k
 from .exceptions import HousekeepingException, UnsupportedFile
 from .halo_doppler_lidar import read_halo_doppler_lidar
 from .hatpro import HatproHkd, HatproHkdNc
+
+
+class ValidDateRange(Enum):
+    DAY = "day"
+    MONTH = "month"
 
 
 def process_record(record: dict, raw_api: RawApi, db: Database):
@@ -50,14 +56,22 @@ def _handle_hatpro_hkd(src: bytes, metadata: dict) -> list[Point]:
         f.write(src)
         hkd = HatproHkd(f.name)
     time = hkd.data["T"]
-    return _make_points(time, hkd.data, get_config("hatpro_hkd"), metadata)
+    return _make_points(
+        time, hkd.data, get_config("hatpro_hkd"), metadata, ValidDateRange.DAY
+    )
 
 
 def _handle_hatpro_nc(src: bytes, metadata: dict) -> list[Point]:
     with tempfile.NamedTemporaryFile() as f:
         f.write(src)
         hkd = HatproHkdNc(f.name)
-    return _make_points(hkd.data["time"], hkd.data, get_config("hatpro_nc"), metadata)
+    return _make_points(
+        hkd.data["time"],
+        hkd.data,
+        get_config("hatpro_nc"),
+        metadata,
+        ValidDateRange.DAY,
+    )
 
 
 def _handle_rpg_lv1(src: bytes, metadata: dict) -> list[Point]:
@@ -70,14 +84,20 @@ def _handle_rpg_lv1(src: bytes, metadata: dict) -> list[Point]:
 
     time = rpg_seconds2datetime64(data["Time"])
     data |= decode_rpg_status_flags(data["Status"])._asdict()
-    return _make_points(time, data, get_config("rpg-fmcw-94_lv1"), metadata)
+    return _make_points(
+        time, data, get_config("rpg-fmcw-94_lv1"), metadata, ValidDateRange.DAY
+    )
 
 
 def _handle_chm15k_nc(src: bytes, metadata: dict) -> list[Point]:
     with Dataset("dataset.nc", memory=src) as nc:
         measurements = read_chm15k(nc)
         return _make_points(
-            measurements["time"], measurements, get_config("chm15k_nc"), metadata
+            measurements["time"],
+            measurements,
+            get_config("chm15k_nc"),
+            metadata,
+            ValidDateRange.DAY,
         )
 
 
@@ -85,7 +105,11 @@ def _handle_cl61_nc(src: bytes, metadata: dict) -> list[Point]:
     with Dataset("dataset.nc", memory=src) as nc:
         measurements = read_cl61(nc)
         return _make_points(
-            measurements["time"], measurements, get_config("cl61_nc"), metadata
+            measurements["time"],
+            measurements,
+            get_config("cl61_nc"),
+            metadata,
+            ValidDateRange.DAY,
         )
 
 
@@ -96,6 +120,7 @@ def _handle_halo_doppler_lidar(src: bytes, metadata: dict) -> list[Point]:
         measurements,
         get_config("halo-doppler-lidar_doppy"),
         metadata,
+        ValidDateRange.MONTH,
     )
 
 
@@ -155,6 +180,7 @@ def _make_points(
     measurements: dict[str, npt.NDArray],
     variables: dict[str, str],
     metadata: dict,
+    valid_date_range: ValidDateRange,
 ) -> list[Point]:
     data = {}
     missing_variables = []
@@ -172,11 +198,24 @@ def _make_points(
         logging.warning(msg)
 
     timestamps = time.astype("datetime64[s]")
-    date = np.datetime64(metadata["measurementDate"], "s")
-    pad_hours = 1
-    lower_limit = date - np.timedelta64(pad_hours, "h")
-    upper_limit = date + np.timedelta64(24 + pad_hours, "h")
-    valid_timestamps = (timestamps >= lower_limit) & (timestamps < upper_limit)
+
+    match valid_date_range:
+        case ValidDateRange.DAY:
+            date = np.datetime64(metadata["measurementDate"], "s")
+            pad_hours = 1
+            lower_limit = date - np.timedelta64(pad_hours, "h")
+            upper_limit = date + np.timedelta64(24 + pad_hours, "h")
+            valid_timestamps = (timestamps >= lower_limit) & (timestamps < upper_limit)
+        case ValidDateRange.MONTH:
+            month = np.datetime64(metadata["measurementDate"], "M")
+            next_month = month + 1
+            first_day = month.astype("datetime64[s]")
+            last_day = (next_month - np.timedelta64(1, "D")).astype("datetime64[s]")
+            pad_hours = 12
+            lower_limit = first_day - np.timedelta64(pad_hours, "h")
+            upper_limit = last_day + np.timedelta64(24 + pad_hours, "h")
+            valid_timestamps = (timestamps >= lower_limit) & (timestamps < upper_limit)
+
     if np.count_nonzero(valid_timestamps) == 0:
         raise UnsupportedFile("No housekeeping data found")
 
@@ -205,7 +244,6 @@ def _make_points(
             WritePrecision.S,
         )
         points.append(point)
-
     return points
 
 
