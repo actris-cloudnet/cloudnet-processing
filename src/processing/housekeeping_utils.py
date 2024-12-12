@@ -43,6 +43,8 @@ def _get_housekeeping_records(
 
 
 def _select_halo_doppler_lidar_hkd_records(records: list[dict]) -> list[dict]:
+    if not records:
+        return []
     return [
         max(
             records,
