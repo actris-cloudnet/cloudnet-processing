@@ -11,12 +11,14 @@ SKIP_MODELS = ("arpege",)
 
 def process_model(processor: Processor, params: ModelParams, directory: Path):
     if params.model_id in SKIP_MODELS:
-        logging.warning("Processing %s not implemented yet", params.model_id)
-        return
+        msg = f"Processing {params.model_id} not implemented yet"
+        raise SkipTaskError(msg)
 
     upload_meta = processor.get_model_upload(params)
     if not upload_meta:
-        return
+        msg = "No valid model upload found"
+        raise SkipTaskError(msg)
+
     full_paths, raw_uuids = processor.download_raw_data([upload_meta], directory)
     if n_files := len(full_paths) != 1:
         raise ValueError(f"Found {n_files} files")
