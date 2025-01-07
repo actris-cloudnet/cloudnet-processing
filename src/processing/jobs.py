@@ -49,9 +49,7 @@ def freeze(processor: Processor, params: ProcessParams, directory: Path) -> None
     if params.product.experimental:
         raise utils.SkipTaskError("Product is experimental")
     logging.info(f"Freezing product: {metadata['uuid']}")
-    s3key = (
-        f"legacy/{metadata['filename']}" if metadata["legacy"] else metadata["filename"]
-    )
+    s3key = metadata["s3key"]
     if metadata["pid"]:
         existing_pid = metadata["pid"]
         volatile = False
