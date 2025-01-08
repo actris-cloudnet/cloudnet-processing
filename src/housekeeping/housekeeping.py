@@ -20,6 +20,7 @@ from rpgpy.utils import decode_rpg_status_flags, rpg_seconds2datetime64
 
 from housekeeping.cl61 import read_cl61
 
+from .basta import read_basta
 from .chm15k import read_chm15k
 from .exceptions import HousekeepingException, UnsupportedFile
 from .halo_doppler_lidar import read_halo_doppler_lidar
@@ -101,6 +102,18 @@ def _handle_chm15k_nc(src: bytes, metadata: dict) -> list[Point]:
         )
 
 
+def _handle_basta_nc(src: bytes, metadata: dict) -> list[Point]:
+    with Dataset("dataset.nc", memory=src) as nc:
+        measurements = read_basta(nc)
+        return _make_points(
+            measurements["time"],
+            measurements,
+            get_config("basta_nc"),
+            metadata,
+            ValidDateRange.DAY,
+        )
+
+
 def _handle_cl61_nc(src: bytes, metadata: dict) -> list[Point]:
     with Dataset("dataset.nc", memory=src) as nc:
         measurements = read_cl61(nc)
@@ -144,6 +157,9 @@ def get_reader(metadata: dict) -> Callable[[bytes, dict], list[Point]] | None:
 
     if instrument_id == "cl61d" and filename.endswith(".nc"):
         return _handle_cl61_nc
+
+    if instrument_id == "basta" and filename.endswith(".nc"):
+        return _handle_basta_nc
 
     if instrument_id == "halo-doppler-lidar" and filename.startswith(
         "system_parameters"
