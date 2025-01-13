@@ -291,7 +291,7 @@ def _process_file(
                 site=site,
                 date=date,
                 product=product,
-                model_id=model_id,
+                model=processor.get_model(model_id),
             )
             with TemporaryDirectory() as directory:
                 if args.cmd == "plot":
@@ -417,7 +417,7 @@ def _process_file(
             site=site,
             date=date,
             product=product,
-            model_id=model_id,
+            model=processor.get_model(model_id),
         )
         with TemporaryDirectory() as directory:
             if args.cmd == "plot":

@@ -30,6 +30,14 @@ class Instrument:
 
 
 @dataclass(frozen=True)
+class Model:
+    id: str
+    source_model_id: str | None
+    forecast_start: int | None
+    forecast_end: int | None
+
+
+@dataclass(frozen=True)
 class Site:
     id: str
     name: str
@@ -58,7 +66,7 @@ class ProcessParams:
 
 @dataclass(frozen=True)
 class ModelParams(ProcessParams):
-    model_id: str
+    model: Model
 
 
 @dataclass(frozen=True)
@@ -121,36 +129,45 @@ class Processor:
         instrument = self.md_api.get(f"api/instruments/{instrument_id}")
         return frozenset(p["id"] for p in instrument["derivedProducts"])
 
+    def get_model(self, model_id: str) -> Model:
+        models = self.md_api.get("api/models")
+        model = next(model for model in models if model["id"] == model_id)
+        return Model(
+            id=model["id"],
+            source_model_id=model["sourceModelId"],
+            forecast_start=model["forecastStart"],
+            forecast_end=model["forecastEnd"],
+        )
+
     def download_raw_data(
         self, upload_metadata: list[dict], directory: Path
     ) -> tuple[list, list]:
         return self.storage_api.download_raw_data(upload_metadata, directory)
 
-    def get_model_upload(self, params: ModelParams) -> dict | None:
+    def get_model_upload(
+        self, params: ModelParams, start_date: datetime.date, end_date: datetime.date
+    ) -> list[dict]:
         payload = {
             "site": params.site.id,
-            "date": params.date.isoformat(),
-            "model": params.model_id,
+            "dateFrom": start_date.isoformat(),
+            "dateTo": end_date.isoformat(),
+            "model": params.model.source_model_id or params.model.id,
         }
         rows = self.md_api.get("api/raw-model-files", payload)
         rows = [row for row in rows if int(row["size"]) > MIN_MODEL_FILESIZE]
-        if len(rows) == 0:
-            return None
-        if len(rows) > 1:
-            raise ValueError("Multiple model files found")
-        return rows[0]
+        return rows
 
     def get_model_file(self, params: ModelParams) -> dict | None:
         payload = {
             "site": params.site.id,
             "date": params.date.isoformat(),
-            "model": params.model_id,
+            "model": params.model.id,
         }
         metadata = self.md_api.get("api/model-files", payload)
         if len(metadata) == 0:
             return None
         if len(metadata) > 1:
-            raise RuntimeError(f"Multiple {params.model_id} files found")
+            raise RuntimeError(f"Multiple {params.model.id} files found")
         return metadata[0]
 
     def fetch_product(self, params: ProcessParams) -> dict | None:
@@ -310,7 +327,7 @@ class Processor:
             site=params.site.id,
         )
         if isinstance(params, ModelParams) and "evaluation" not in params.product.type:
-            payload["model"] = params.model_id
+            payload["model"] = params.model.id
         elif isinstance(params, InstrumentParams):
             payload["instrument"] = params.instrument.type
         elif isinstance(params, ProductParams) and params.instrument:
