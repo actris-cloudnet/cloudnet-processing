@@ -126,7 +126,7 @@ class Processor:
     ) -> tuple[list, list]:
         return self.storage_api.download_raw_data(upload_metadata, directory)
 
-    def get_model_upload(self, params: ModelParams) -> dict | None:
+    def get_model_upload(self, params: ModelParams) -> list[dict]:
         payload = {
             "site": params.site.id,
             "date": params.date.isoformat(),
@@ -134,11 +134,7 @@ class Processor:
         }
         rows = self.md_api.get("api/raw-model-files", payload)
         rows = [row for row in rows if int(row["size"]) > MIN_MODEL_FILESIZE]
-        if len(rows) == 0:
-            return None
-        if len(rows) > 1:
-            raise ValueError("Multiple model files found")
-        return rows[0]
+        return rows
 
     def get_model_file(self, params: ModelParams) -> dict | None:
         payload = {
