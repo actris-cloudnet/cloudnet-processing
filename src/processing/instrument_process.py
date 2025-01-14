@@ -31,7 +31,7 @@ from cloudnetpy.instruments import (
 from cloudnetpy.utils import is_timestamp
 from requests.exceptions import HTTPError
 
-from processing import concat_wrapper, nc_header_augmenter
+from processing import concat_wrapper, harmonizer
 from processing.processor import InstrumentParams, Processor
 from processing.utils import RawDataMissingError, Uuid, fetch_calibration, unzip_gz_file
 
@@ -202,7 +202,7 @@ class ProcessDopplerLidarWind(ProcessInstrument):
         data = self._get_payload_for_nc_file_augmenter(str(self.daily_path))
         if options is not None and options.azimuth_offset_deg is not None:
             data["azimuth_offset_deg"] = options.azimuth_offset_deg
-        self.uuid.product = nc_header_augmenter.harmonize_doppler_lidar_wind_file(
+        self.uuid.product = harmonizer.harmonize_doppler_lidar_wind_file(
             data, instruments.HALO
         )
 
@@ -250,7 +250,7 @@ class ProcessDopplerLidarWind(ProcessInstrument):
         data = self._get_payload_for_nc_file_augmenter(str(self.daily_path))
         if options is not None and options.azimuth_offset_deg is not None:
             data["azimuth_offset_deg"] = options.azimuth_offset_deg
-        self.uuid.product = nc_header_augmenter.harmonize_doppler_lidar_wind_file(
+        self.uuid.product = harmonizer.harmonize_doppler_lidar_wind_file(
             data, instruments.WINDCUBE_WLS200S
         )
 
@@ -268,7 +268,7 @@ class ProcessDopplerLidarWind(ProcessInstrument):
         data = self._get_payload_for_nc_file_augmenter(str(self.daily_path))
         if options is not None and options.azimuth_offset_deg is not None:
             data["azimuth_offset_deg"] = options.azimuth_offset_deg
-        self.uuid.product = nc_header_augmenter.harmonize_doppler_lidar_wind_file(
+        self.uuid.product = harmonizer.harmonize_doppler_lidar_wind_file(
             data, instruments.WINDCUBE_WLS70
         )
 
@@ -333,7 +333,7 @@ class ProcessDopplerLidar(ProcessInstrument):
 
         _doppy_stare_to_nc(stare, str(self.daily_path))
         data = self._get_payload_for_nc_file_augmenter(str(self.daily_path))
-        self.uuid.product = nc_header_augmenter.harmonise_doppler_lidar_stare_file(
+        self.uuid.product = harmonizer.harmonize_doppler_lidar_stare_file(
             data, instruments.HALO
         )
 
@@ -368,7 +368,7 @@ class ProcessDopplerLidar(ProcessInstrument):
 
         _doppy_stare_to_nc(stare, str(self.daily_path))
         data = self._get_payload_for_nc_file_augmenter(str(self.daily_path))
-        self.uuid.product = nc_header_augmenter.harmonise_doppler_lidar_stare_file(
+        self.uuid.product = harmonizer.harmonize_doppler_lidar_stare_file(
             data, instruments.WINDCUBE_WLS200S
         )
 
@@ -414,7 +414,7 @@ class ProcessLidar(ProcessInstrument):
     def process_halo_doppler_lidar_calibrated(self):
         full_path, self.uuid.raw = self.download_instrument(largest_only=True)
         data = self._get_payload_for_nc_file_augmenter(full_path)
-        self.uuid.product = nc_header_augmenter.harmonize_halo_calibrated_file(data)
+        self.uuid.product = harmonizer.harmonize_halo_calibrated_file(data)
 
     def process_pollyxt(self):
         full_paths, self.uuid.raw = self.download_instrument()
@@ -572,7 +572,7 @@ class ProcessMwr(ProcessInstrument):
                 full_paths, self.params.date.isoformat(), str(self.daily_path)
             )
             data = self._get_payload_for_nc_file_augmenter(str(self.daily_path))
-            self.uuid.product = nc_header_augmenter.harmonize_hatpro_file(data)
+            self.uuid.product = harmonizer.harmonize_hatpro_file(data)
         self.uuid.raw = _get_valid_uuids(raw_uuids, full_paths, valid_full_paths)
 
     def process_radiometrics(self):
@@ -588,7 +588,7 @@ class ProcessDisdrometer(ProcessInstrument):
         try:
             full_paths, self.uuid.raw = self.download_instrument(largest_only=True)
             data = self._get_payload_for_nc_file_augmenter(full_paths)
-            self.uuid.product = nc_header_augmenter.harmonize_parsivel_file(data)
+            self.uuid.product = harmonizer.harmonize_parsivel_file(data)
         except OSError:
             full_paths, self.uuid.raw = self.download_instrument()
             calibration = self._fetch_parsivel_calibration()
@@ -632,6 +632,13 @@ class ProcessDisdrometer(ProcessInstrument):
         return output
 
 
+class ProcessRainGauge(ProcessInstrument):
+    def process_pluvio(self):
+        full_path, self.uuid.raw = self.download_instrument(largest_only=True)
+        data = self._get_payload_for_nc_file_augmenter(full_path)
+        self.uuid.product = harmonizer.harmonize_rain_gauge_file(data)
+
+
 class ProcessWeatherStation(ProcessInstrument):
     def process_weather_station(self):
         supported_sites = (
@@ -659,7 +666,7 @@ class ProcessWeatherStation(ProcessInstrument):
             full_path, self.uuid.raw = self.download_instrument(largest_only=True)
             if self.params.site.id == "lindenberg":
                 data = self._get_payload_for_nc_file_augmenter(full_path)
-                self.uuid.product = nc_header_augmenter.harmonize_ws_file(data)
+                self.uuid.product = harmonizer.harmonize_ws_file(data)
             else:
                 self.uuid.product = ws2nc(str(full_path), *self._args, **self._kwargs)
 
