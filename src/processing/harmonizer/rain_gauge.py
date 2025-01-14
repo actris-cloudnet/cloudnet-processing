@@ -9,6 +9,42 @@ from numpy import ma
 from processing.harmonizer import core
 
 
+def harmonize_thies_pt_nc(data: dict) -> str:
+    if "output_path" not in data:
+        temp_file = NamedTemporaryFile()
+    with (
+        netCDF4.Dataset(data["full_path"], "r") as nc_raw,
+        netCDF4.Dataset(
+            data["output_path"] if "output_path" in data else temp_file.name,
+            "w",
+            format="NETCDF4_CLASSIC",
+        ) as nc,
+    ):
+        gauge = RainGaugeNc(nc_raw, nc, data)
+        ind = gauge.get_valid_time_indices()
+        gauge.nc.createDimension("time", len(ind))
+        gauge.copy_data(("time", "int_m", "am_tot"), ind)
+        gauge.mask_bad_data_values()
+        gauge.fix_variable_names()
+        gauge.clean_global_attributes()
+        gauge.convert_units()
+        for key in (
+            "rainfall_rate",
+            "rainfall_amount",
+        ):
+            gauge.harmonize_standard_attributes(key)
+        gauge.fix_long_names()
+        uuid = gauge.add_uuid()
+        gauge.add_global_attributes("rain-gauge", instruments.THIES_PT)
+        gauge.add_date()
+        gauge.convert_time()
+        gauge.add_geolocation()
+        gauge.add_history("rain-gauge")
+    if "output_path" not in data:
+        shutil.copy(temp_file.name, data["full_path"])
+    return uuid
+
+
 def harmonize_pluvio_nc(data: dict) -> str:
     if "output_path" not in data:
         temp_file = NamedTemporaryFile()
@@ -30,9 +66,6 @@ def harmonize_pluvio_nc(data: dict) -> str:
         gauge.fix_variable_names()
         gauge.convert_units()
         for key in (
-            "latitude",
-            "longitude",
-            "altitude",
             "rainfall_rate",
             "rainfall_amount",
         ):
@@ -69,7 +102,7 @@ class RainGaugeNc(core.Level1Nc):
             return
 
         variable = self.nc_raw.variables[key]
-        dtype = "f8" if key == "time" and "int64" in str(variable.dtype) else "f4"
+        dtype = "f8" if key == "time" and "int" in str(variable.dtype) else "f4"
         fill_value = netCDF4.default_fillvals[dtype] if key != "time" else None
         var_out = self.nc.createVariable(
             key, dtype, "time", zlib=True, fill_value=fill_value
@@ -88,7 +121,9 @@ class RainGaugeNc(core.Level1Nc):
     def fix_variable_names(self):
         keymap = {
             "rain_rate": "rainfall_rate",
+            "int_m": "rainfall_rate",
             "total_accum_NRT": "rainfall_amount",
+            "am_tot": "rainfall_amount",
         }
         self.fix_name(keymap)
 
@@ -108,5 +143,7 @@ class RainGaugeNc(core.Level1Nc):
             0
         ]
         for key in ("r_accum_RT", "r_accum_NRT", "rainfall_amount"):
+            if key not in self.nc.variables:
+                continue
             self.nc.variables[key].units = "m"
             self.nc.variables[key][:] *= mm_to_m
