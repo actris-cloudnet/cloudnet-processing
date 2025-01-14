@@ -2,7 +2,8 @@ import logging
 import uuid
 from pathlib import Path
 
-from processing import nc_header_augmenter, utils
+from processing import utils
+from processing.harmonizer.model import harmonize_model_file
 from processing.processor import ModelParams, Processor
 from processing.utils import MiscError, SkipTaskError
 
@@ -85,7 +86,7 @@ def _harmonize_model(
         "model": params.model_id,
         "instrument": None,
     }
-    nc_header_augmenter.harmonize_model_file(data)
+    harmonize_model_file(data)
 
 
 def _print_info(file_uuid: uuid.UUID, qc_result: str | None = None) -> None:

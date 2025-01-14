@@ -513,6 +513,8 @@ def _get_fields_for_plot(cloudnet_file_type: str) -> tuple[list, int]:
     """
     max_alt = 12
     match cloudnet_file_type:
+        case "rain-gauge":
+            fields = ["rainfall_rate", ""]
         case "categorize-voodoo":
             fields = ["v", "liquid_prob"]
         case "categorize":
