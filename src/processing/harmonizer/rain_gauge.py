@@ -1,13 +1,15 @@
+import logging
 import shutil
 from tempfile import NamedTemporaryFile
 
 import netCDF4
 from cloudnetpy.instruments import instruments
+from numpy import ma
 
 from processing.harmonizer import core
 
 
-def harmonize_rain_gauge_file(data: dict) -> str:
+def harmonize_pluvio_nc(data: dict) -> str:
     if "output_path" not in data:
         temp_file = NamedTemporaryFile()
     with (
@@ -18,17 +20,26 @@ def harmonize_rain_gauge_file(data: dict) -> str:
             format="NETCDF4_CLASSIC",
         ) as nc,
     ):
-        gauge = core.Level1Nc(nc_raw, nc, data)
+        gauge = RainGaugeNc(nc_raw, nc, data)
         ind = gauge.get_valid_time_indices()
-        gauge.copy_file_contents(
-            keys=("time", "rain_rate", "r_accum_RT", "r_accum_NRT", "total_accum_NRT"),
-            time_ind=ind,
+        gauge.nc.createDimension("time", len(ind))
+        gauge.copy_data(
+            ("time", "rain_rate", "r_accum_RT", "r_accum_NRT", "total_accum_NRT"), ind
         )
         gauge.mask_bad_data_values()
-        gauge.harmonize_attribute("units", ("latitude", "longitude", "altitude"))
-        gauge.fix_name({"rain_rate": "rainfall_rate"})
+        gauge.fix_variable_names()
+        gauge.convert_units()
+        for key in (
+            "latitude",
+            "longitude",
+            "altitude",
+            "rainfall_rate",
+            "rainfall_amount",
+        ):
+            gauge.harmonize_standard_attributes(key)
+        gauge.fix_long_names()
         uuid = gauge.add_uuid()
-        gauge.add_global_attributes("rain-gauge", instruments.PLUVIO)
+        gauge.add_global_attributes("rain-gauge", instruments.PLUVIO2)
         gauge.add_date()
         gauge.convert_time()
         gauge.add_geolocation()
@@ -36,3 +47,66 @@ def harmonize_rain_gauge_file(data: dict) -> str:
     if "output_path" not in data:
         shutil.copy(temp_file.name, data["full_path"])
     return uuid
+
+
+class RainGaugeNc(core.Level1Nc):
+    def mask_bad_data_values(self):
+        for _, variable in self.nc.variables.items():
+            variable[:] = ma.masked_invalid(variable[:])
+
+    def copy_data(
+        self,
+        keys: tuple,
+        time_ind: list,
+    ):
+        for key in keys:
+            self._copy_variable(key, time_ind)
+        self._copy_global_attributes()
+
+    def _copy_variable(self, key: str, time_ind: list):
+        if key not in self.nc_raw.variables.keys():
+            logging.warning(f"Key {key} not found from the source file.")
+            return
+
+        variable = self.nc_raw.variables[key]
+        dtype = "f8" if key == "time" and "int64" in str(variable.dtype) else "f4"
+        fill_value = netCDF4.default_fillvals[dtype] if key != "time" else None
+        var_out = self.nc.createVariable(
+            key, dtype, "time", zlib=True, fill_value=fill_value
+        )
+        self._copy_variable_attributes(variable, var_out)
+        screened_data = self._screen_data(variable, time_ind)
+        var_out[:] = screened_data
+
+    @staticmethod
+    def _copy_variable_attributes(var_in: netCDF4.Variable, var_out: netCDF4.Variable):
+        skip = ("_FillValue", "_Fill_Value", "description")
+        for attr in var_in.ncattrs():
+            if attr not in skip:
+                setattr(var_out, attr, getattr(var_in, attr))
+
+    def fix_variable_names(self):
+        keymap = {
+            "rain_rate": "rainfall_rate",
+            "total_accum_NRT": "rainfall_amount",
+        }
+        self.fix_name(keymap)
+
+    def fix_long_names(self):
+        keymap = {
+            "r_accum_RT": "Real time accumulated rainfall",
+            "r_accum_NRT": "Near real time accumulated rainfall",
+        }
+        self.fix_attribute(keymap, "long_name")
+
+    def convert_units(self):
+        mm_to_m = 0.001
+        mmh_to_ms = mm_to_m / 3600
+        self.nc.variables["rainfall_rate"].units = "m s-1"
+        self.nc.variables["rainfall_rate"][:] *= mmh_to_ms
+        self.nc.variables["rainfall_amount"][:] -= self.nc.variables["rainfall_amount"][
+            0
+        ]
+        for key in ("r_accum_RT", "r_accum_NRT", "rainfall_amount"):
+            self.nc.variables[key].units = "m"
+            self.nc.variables[key][:] *= mm_to_m

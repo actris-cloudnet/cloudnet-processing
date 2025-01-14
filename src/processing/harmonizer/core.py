@@ -7,7 +7,6 @@ import cloudnetpy.output
 import cloudnetpy.utils
 import netCDF4
 import numpy as np
-import numpy.ma as ma
 
 import processing.utils
 
@@ -17,11 +16,6 @@ class Level1Nc:
         self.nc_raw = nc_raw
         self.nc = nc
         self.data = data
-
-    def mask_bad_data_values(self):
-        # mask nan values etc
-        for _, variable in self.nc.variables.items():
-            variable[:] = ma.masked_invalid(variable[:])
 
     def convert_time(self):
         """Converts time to decimal hour."""
@@ -48,7 +42,6 @@ class Level1Nc:
         Optionally copies only certain keys and / or uses certain time indices only.
         """
         for key, dimension in self.nc_raw.dimensions.items():
-            print(key, dimension)
             if key == "time" and time_ind is not None:
                 self.nc.createDimension(key, len(time_ind))
             else:
@@ -207,7 +200,7 @@ class Level1Nc:
         if (
             variable.ndim > 0
             and time_ind is not None
-            and variable.dimensions[0] == "time"
+            and variable.dimensions[0] in ("time", "dim")
         ):
             if variable.ndim == 1:
                 return variable[time_ind]
