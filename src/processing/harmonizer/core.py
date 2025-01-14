@@ -59,13 +59,10 @@ class Level1Nc:
         if key not in self.nc_raw.variables.keys():
             logging.warning(f"Key {key} not found from the source file.")
             return
-
         variable = self.nc_raw.variables[key]
-        dtype = variable.dtype
-
-        if key == "time" and "int64" in str(dtype):
-            dtype = "f8"
-
+        dtype = (
+            "f8" if key == "time" and "int" in str(variable.dtype) else variable.dtype
+        )
         var_out = self.nc.createVariable(
             key,
             dtype,
@@ -173,6 +170,7 @@ class Level1Nc:
 
         if "seconds since" in time.units:
             time_stamps = np.array(cloudnetpy.utils.seconds2hours(time_stamps))
+
         max_time = 1440 if "minutes" in time.units else 24
         valid_ind: list[int] = []
         for ind, t in enumerate(time_stamps):
