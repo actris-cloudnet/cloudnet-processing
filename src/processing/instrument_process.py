@@ -636,7 +636,7 @@ class ProcessRainGauge(ProcessInstrument):
     def process_pluvio(self):
         full_path, self.uuid.raw = self.download_instrument(largest_only=True)
         data = self._get_payload_for_nc_file_augmenter(full_path)
-        self.uuid.product = harmonizer.harmonize_rain_gauge_file(data)
+        self.uuid.product = harmonizer.harmonize_pluvio_nc(data)
 
 
 class ProcessWeatherStation(ProcessInstrument):
