@@ -24,6 +24,7 @@ from cloudnetpy.instruments import (
     parsivel2nc,
     pollyxt2nc,
     radiometrics2nc,
+    rain_e_h32nc,
     rpg2nc,
     thies2nc,
     ws2nc,
@@ -642,6 +643,10 @@ class ProcessRainGauge(ProcessInstrument):
         full_path, self.uuid.raw = self.download_instrument(largest_only=True)
         data = self._get_payload_for_nc_file_augmenter(full_path)
         self.uuid.product = harmonizer.harmonize_thies_pt_nc(data)
+
+    def process_rain_e_h3(self):
+        full_path, self.uuid.raw = self.download_instrument(largest_only=True)
+        self.uuid.product = rain_e_h32nc(full_path, *self._args, **self._kwargs)
 
 
 class ProcessWeatherStation(ProcessInstrument):
