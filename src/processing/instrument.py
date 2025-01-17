@@ -55,7 +55,8 @@ def process_instrument(processor: Processor, params: InstrumentParams, directory
         if difference == NCDiff.MINOR:
             # Replace existing file
             patch = True
-            processor.pid_utils.add_pid_to_file(new_file, existing_product["pid"])
+            if not params.product.experimental:
+                processor.pid_utils.add_pid_to_file(new_file, existing_product["pid"])
             with netCDF4.Dataset(new_file, "r+") as nc:
                 nc.file_uuid = existing_product["uuid"]
             uuid.product = existing_product["uuid"]
