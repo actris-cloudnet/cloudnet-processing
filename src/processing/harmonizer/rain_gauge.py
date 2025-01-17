@@ -33,6 +33,7 @@ def harmonize_thies_pt_nc(data: dict) -> str:
             "rainfall_amount",
         ):
             gauge.harmonize_standard_attributes(key)
+        gauge.harmonize_attribute("comment", ("rainfall_amount",))
         gauge.fix_long_names()
         uuid = gauge.add_uuid()
         gauge.add_global_attributes("rain-gauge", instruments.THIES_PT)
@@ -70,6 +71,7 @@ def harmonize_pluvio_nc(data: dict) -> str:
             "rainfall_amount",
         ):
             gauge.harmonize_standard_attributes(key)
+        gauge.harmonize_attribute("comment", ("rainfall_amount",))
         gauge.fix_long_names()
         uuid = gauge.add_uuid()
         gauge.add_global_attributes("rain-gauge", instruments.PLUVIO2)
