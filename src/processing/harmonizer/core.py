@@ -167,6 +167,7 @@ class Level1Nc:
         """Finds valid time indices."""
         time = self.nc_raw.variables["time"]
         time_stamps = time[:]
+        raw_time_stamps = time_stamps.copy()
 
         if "seconds since" in time.units:
             time_stamps = np.array(cloudnetpy.utils.seconds2hours(time_stamps))
@@ -175,12 +176,13 @@ class Level1Nc:
         valid_ind: list[int] = []
         for ind, t in enumerate(time_stamps):
             if 0 <= t < max_time:
-                if t < 0:
+                if t < 0 or raw_time_stamps[ind] < 0:
                     continue
-                if len(valid_ind) > 1 and t <= time_stamps[valid_ind[-1]]:
+                if len(valid_ind) > 0 and t <= time_stamps[valid_ind[-1]]:
                     continue
                 valid_ind.append(ind)
-        if not valid_ind:
+        # Skip files with only one valid time stamp
+        if len(valid_ind) < 2:
             raise cloudnetpy.exceptions.ValidTimeStampError
         return valid_ind
 

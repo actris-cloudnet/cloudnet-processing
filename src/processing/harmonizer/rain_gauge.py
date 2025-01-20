@@ -112,16 +112,8 @@ class RainGaugeNc(core.Level1Nc):
         var_out = self.nc.createVariable(
             key, dtype, "time", zlib=True, fill_value=fill_value
         )
-        self._copy_variable_attributes(variable, var_out)
         screened_data = self._screen_data(variable, time_ind)
         var_out[:] = screened_data
-
-    @staticmethod
-    def _copy_variable_attributes(var_in: netCDF4.Variable, var_out: netCDF4.Variable):
-        skip = ("_FillValue", "_Fill_Value", "description", "comment")
-        for attr in var_in.ncattrs():
-            if attr not in skip:
-                setattr(var_out, attr, getattr(var_in, attr))
 
     def fix_variable_names(self):
         keymap = {
