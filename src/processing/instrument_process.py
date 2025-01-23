@@ -659,6 +659,7 @@ class ProcessWeatherStation(ProcessInstrument):
             "hyytiala",
             "bucharest",
             "galati",
+            "munich",
         )
         if self.params.site.id not in supported_sites:
             raise NotImplementedError("Weather station not implemented for this site")
@@ -674,7 +675,7 @@ class ProcessWeatherStation(ProcessInstrument):
             )
         else:
             full_path, self.uuid.raw = self.download_instrument(largest_only=True)
-            if self.params.site.id == "lindenberg":
+            if self.params.site.id in ("lindenberg", "munich"):
                 data = self._get_payload_for_nc_file_augmenter(full_path)
                 self.uuid.product = harmonizer.harmonize_ws_file(data)
             else:

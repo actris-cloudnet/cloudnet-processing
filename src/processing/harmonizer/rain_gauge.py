@@ -41,8 +41,8 @@ def _harmonize(vars: tuple, data: dict, instrument: Instrument):
         gauge.mask_bad_data_values()
         gauge.fix_variable_names()
         gauge.fix_variable_attributes()
-        gauge.convert_rainfall_rate()
-        gauge.convert_rainfall_amount()
+        gauge.to_ms1(RATE)
+        gauge.to_m(AMOUNT)
         if instrument == instruments.THIES_PT:
             gauge.fix_pt_jumps()
         gauge.normalize_rainfall_amount()
@@ -99,38 +99,6 @@ class RainGaugeNc(core.Level1Nc):
             "am_tot": AMOUNT,
         }
         self.fix_name(keymap)
-
-    def convert_rainfall_rate(self):
-        """Converts rainfall rate to m s-1."""
-        units = self.nc.variables[RATE].units.lower()
-        match units:
-            case "m/s" | "m s-1" | "m / s":
-                factor = 1.0
-            case "mm/h" | "mm/hour" | "mm h-1" | "mm / h" | "mm / hour":
-                factor = 1e-3 / 3600
-            case "mm/min" | "mm min-1" | "mm / min":
-                factor = 1e-3 / 60
-            case "mm/s" | "mm s-1" | "mm / s":
-                factor = 1e-3
-            case _:
-                raise ValueError(f"Unknown units: {units}")
-        self.nc.variables[RATE][:] *= factor
-        self.nc.variables[RATE].units = "m s-1"
-        logging.info(f"Converted {RATE} from {units} to m s-1.")
-
-    def convert_rainfall_amount(self):
-        """Converts rainfall amount to m."""
-        units = self.nc.variables[AMOUNT].units.lower()
-        match units:
-            case "m":
-                factor = 1.0
-            case "mm":
-                factor = 1e-3
-            case _:
-                raise ValueError(f"Unknown units: {units}")
-        self.nc.variables[AMOUNT][:] *= factor
-        self.nc.variables[AMOUNT].units = "m"
-        logging.info(f"Converted {AMOUNT} from {units} to m.")
 
     def fix_pt_jumps(self):
         """Fixes suspicious jumps from a valid value to single 0-value and back in Thies PT data."""
