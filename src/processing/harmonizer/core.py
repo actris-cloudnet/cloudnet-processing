@@ -41,11 +41,13 @@ class Level1Nc:
         """Copies all variables and global attributes from one file to another.
         Optionally copies only certain keys and / or uses certain time indices only.
         """
-        for key, dimension in self.nc_raw.dimensions.items():
-            if key == "time" and time_ind is not None:
-                self.nc.createDimension(key, len(time_ind))
-            else:
-                self.nc.createDimension(key, dimension.size)
+        for name, dimension in self.nc_raw.dimensions.items():
+            n = (
+                len(time_ind)
+                if name == "time" and time_ind is not None
+                else dimension.size
+            )
+            self.nc.createDimension(name, n)
         keys_to_process = keys if keys is not None else self.nc_raw.variables.keys()
         for key in keys_to_process:
             if skip is None or key not in skip:
