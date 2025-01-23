@@ -1,3 +1,4 @@
+import logging
 import shutil
 from tempfile import NamedTemporaryFile
 
@@ -7,6 +8,40 @@ import numpy.ma as ma
 from cloudnetpy.instruments import instruments
 
 from processing.harmonizer import core
+
+DIMENSION_MAP = {
+    "datetime": "time",
+}
+
+VARIABLE_MAP = {
+    # Lindenberg
+    "pa": "air_pressure",
+    "ta": "air_temperature",
+    "td": "dew_point_temperature",
+    "vis": "visibility",
+    "precip": "rainfall_rate",
+    "wdir": "wind_direction",
+    "wspeed_gust": "wind_speed_gust",
+    "hur": "relative_humidity",
+    "wspeed": "wind_speed",
+    "wdir_flag": "wind_direction_quality_flag",
+    "wspeed_gust_flag": "wind_speed_gust_quality_flag",
+    "pa_flag": "air_pressure_quality_flag",
+    "hur_flag": "relative_humidity_quality_flag",
+    "vis_flag": "visibility_quality_flag",
+    "wspeed_flag": "wind_speed_quality_flag",
+    "precip_flag": "rainfall_rate_quality_flag",
+    "ta_flag": "air_temperature_quality_flag",
+    "td_flag": "dew_point_temperature_quality_flag",
+    # Munich
+    "Regen": "rainfall_rate",
+    "Luftt._2m": "air_temperature",
+    "Luftdruck": "air_pressure",
+    "Rel.Feuchte_2m": "relative_humidity",
+    "Regensumme": "rainfall_amount",
+    "Richt_30m": "wind_direction",
+    "Wind_30m": "wind_speed",
+}
 
 
 def harmonize_ws_file(data: dict) -> str:
@@ -24,7 +59,7 @@ def harmonize_ws_file(data: dict) -> str:
         ws = Ws(nc_raw, nc, data)
         valid_ind = ws.get_valid_time_indices()
         ws.copy_ws_file_contents(time_ind=valid_ind)
-        ws.fix_variable_names()
+        ws.fix_name(VARIABLE_MAP)
         ws.clean_global_attributes()
         ws.add_global_attributes("weather-station", instruments.GENERIC_WEATHER_STATION)
         ws.add_geolocation()
@@ -33,14 +68,23 @@ def harmonize_ws_file(data: dict) -> str:
         ws.clean_variable_attributes(
             accepted_extra=("flag_values", "flag_meanings", "ancillary_variables")
         )
-        for attribute in ("units", "long_name", "standard_name"):
+        for attribute in ("long_name", "standard_name"):
             ws.harmonize_attribute(attribute)
         ws.add_history("weather-station")
         ws.nc.source = "Weather station"
         ws.fix_time()
-        ws.fix_rainfall_variables()
+        ws.convert_rainfall_rate()
+        if "rainfall_amount" not in ws.nc.variables:
+            ws.calculate_rainfall_amount()
+        ws.to_k("air_temperature")
+        ws.to_pa("air_pressure")
+        ws.to_ratio("relative_humidity")
+        ws.to_m("rainfall_amount")
+        ws.to_ms1("wind_speed")
+        ws.to_degree("wind_direction")
         ws.fix_standard_names()
         ws.fix_long_names()
+        ws.fix_comments()
         ws.fix_flag_attributes()
         ws.fix_ancillary_variable_names()
         ws.mask_bad_data()
@@ -52,19 +96,42 @@ def harmonize_ws_file(data: dict) -> str:
 class Ws(core.Level1Nc):
     def copy_ws_file_contents(self, time_ind: list):
         self.nc.createDimension("time", len(time_ind))
-        for name, var_in in self.nc_raw.variables.items():
-            dim = var_in.dimensions
-            dtype = var_in.dtype.str[1:]
-            if name == "time":
+        for key, variable in self.nc_raw.variables.items():
+            if key not in list(VARIABLE_MAP.keys()) + ["datetime", "time"]:
+                continue
+
+            key = "time" if key == "datetime" else key
+
+            dimensions: tuple[str, ...]
+
+            if len(variable[:]) == 1:
+                dimensions = ()
+            else:
+                dimensions = tuple(
+                    DIMENSION_MAP.get(dim, dim) for dim in variable.dimensions
+                )
+
+            if key == "time":
                 dtype = "f8"
-            elif len(var_in[:]) == 1:
-                dim = ()
-            data = var_in[time_ind] if "time" in var_in.dimensions else var_in[:]
+            elif "flag" in key and variable.dtype == "int8":
+                dtype = "i1"
+            elif np.issubdtype(variable.dtype, np.integer):
+                dtype = "i4"
+            elif np.issubdtype(variable.dtype, np.floating):
+                dtype = "f4"
+            else:
+                logging.warning(
+                    f"Skipping '{key}' - unsupported dtype {variable.dtype}"
+                )
+                return
+
+            data = variable[time_ind] if "time" in dimensions else variable[:]
             fill_value = _get_fill_value(data)
+
             var = self.nc.createVariable(
-                name, dtype, dim, zlib=True, fill_value=fill_value
+                key, dtype, dimensions, zlib=True, fill_value=fill_value
             )
-            self._copy_variable_attributes(var_in, var)
+            self._copy_variable_attributes(variable, var)
             var[:] = data
 
     def fix_time(self):
@@ -74,32 +141,6 @@ class Ws(core.Level1Nc):
         self.nc.variables["time"][ind] = time[ind] / 60
         self.nc.variables["time"].units = self._get_time_units()
         self.nc.variables["time"].calendar = "standard"
-
-    def fix_variable_names(self):
-        keymap = {
-            "lat": "latitude",
-            "lon": "longitude",
-            "pa": "air_pressure",
-            "ta": "air_temperature",
-            "td": "dew_point_temperature",
-            "vis": "visibility",
-            "precip": "precipitation",
-            "wspeed": "wind_speed",
-            "wdir": "wind_direction",
-            "wdir_flag": "wind_direction_quality_flag",
-            "wspeed_gust": "wind_speed_gust",
-            "wspeed_gust_flag": "wind_speed_gust_quality_flag",
-            "pa_flag": "air_pressure_quality_flag",
-            "ta_flag": "air_temperature_quality_flag",
-            "td_flag": "dew_point_temperature_quality_flag",
-            "hur": "relative_humidity",
-            "hur_flag": "relative_humidity_quality_flag",
-            "vis_flag": "visibility_quality_flag",
-            "wspeed_flag": "wind_speed_quality_flag",
-            "precipitation": "rainfall_rate",
-            "precip_flag": "rainfall_rate_quality_flag",
-        }
-        self.fix_name(keymap)
 
     def fix_long_names(self):
         keymap = {
@@ -134,17 +175,35 @@ class Ws(core.Level1Nc):
             if hasattr(var, "ancillary_variables") and name in self.nc.variables:
                 var.ancillary_variables = name
 
-    def fix_rainfall_variables(self):
+    def convert_rainfall_rate(self):
+        """Converts rainfall rate to correct units."""
         orig_data = self.nc["rainfall_rate"][:]
+        orig_units = self.nc["rainfall_rate"].units
         dt = np.median(np.diff(self.nc.variables["time"][:]))
-        rainfall_rate = core.to_ms1("rainfall_rate", orig_data / dt, "mm h-1")
-        self.nc["rainfall_rate"][:] = rainfall_rate
-        fill_value = _get_fill_value(rainfall_rate)
+        # In Lindenberg, "rate" is actually given as amount -> convert to true rainfall rate
+        if orig_units in ("kg m-2", "mm"):
+            self.nc["rainfall_rate"][:] = orig_data / dt  # mm -> mm h-1
+            self.nc["rainfall_rate"].units = "mm h-1"
+        self.to_ms1("rainfall_rate")
+
+    def calculate_rainfall_amount(self):
+        """Calculates rainfall amount from rainfall rate."""
+        dt = np.median(np.diff(self.nc.variables["time"][:]))
+        rate = self.nc["rainfall_rate"]
+        fill_value = _get_fill_value(rate)
         self.nc.createVariable(
             "rainfall_amount", "f4", ("time",), zlib=True, fill_value=fill_value
         )
-        self.nc["rainfall_amount"][:] = np.cumsum(orig_data) / 1e3  # mm -> m
+        if rate.units != "m s-1":
+            raise ValueError("Rainfall rate units are not m s-1.")
+        self.nc["rainfall_amount"][:] = np.cumsum(rate[:]) * dt * 3600
         self.nc["rainfall_amount"].units = "m"
+
+    def fix_comments(self):
+        if "rainfall_amount" in self.nc.variables:
+            self.nc[
+                "rainfall_amount"
+            ].comment = "Cumulated precipitation since 00:00 UTC"
 
     def fix_flag_attributes(self):
         for key, var in self.nc.variables.items():
@@ -156,6 +215,7 @@ class Ws(core.Level1Nc):
         for key, var in self.nc.variables.items():
             if flagvar := self.nc.variables.get(f"{key}_quality_flag"):
                 var[:] = ma.masked_where(flagvar[:] < 2, var[:])
+            var[:] = ma.masked_invalid(var[:])
 
 
 def _get_fill_value(data: np.ndarray) -> int | float | str | None:

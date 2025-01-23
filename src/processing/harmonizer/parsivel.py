@@ -45,6 +45,8 @@ def harmonize_parsivel_file(data: dict) -> str:
                 "T_sensor_housing",
                 "T_sensor_left",
                 "T_sensor_right",
+                "T_pcb",
+                "T_sensor",
                 "sample_interval",
                 "curr_heating",
                 "volt_sensor",
@@ -65,6 +67,8 @@ def harmonize_parsivel_file(data: dict) -> str:
         )
         parsivel.fix_variable_names()
         parsivel.convert_time()
+        parsivel.convert_precipitations()
+        parsivel.convert_diameters()
         parsivel.clean_global_attributes()
         parsivel.add_date()
         parsivel.add_geolocation()
@@ -103,10 +107,7 @@ class ParsivelNc(core.Level1Nc):
 
         if key == "time":
             dtype = "f8"
-        elif key in (
-            "T_sensor",
-            "diameter_bnds",
-        ):
+        elif key in ("diameter_bnds",):
             dtype = "f4"
         elif key in ("data_raw",):
             dtype = "i2"
@@ -134,33 +135,14 @@ class ParsivelNc(core.Level1Nc):
             fill_value=fill_value,
         )
         self._copy_variable_attributes(variable, var_out)
-        screened_data = self._screen_data(variable, time_ind)
-
-        if key in ("T_sensor", "T_pcb", "T_L_sensor_head", "T_R_sensor_head"):
-            screened_data = temperature_to_k(screened_data)
-
-        if key in (
-            "rainfall_rate",
-            "rain_intensity",
-            "snowfall_intensity",
-            "fieldV",
-        ):
-            screened_data = core.to_ms1(
-                key,
-                screened_data,
-                variable.units if hasattr(variable, "units") else "m s-1",
-            )
-
-        if key in ("diameter_center_classes", "diameter_spread"):
-            screened_data = to_m(key, screened_data, variable.units)
-
-        var_out[:] = screened_data
+        var_out[:] = self._screen_data(variable, time_ind)
 
     def fix_variable_names(self):
         keymap = {
             "V_sensor": "V_power_supply",
             "E_kin": "kinetic_energy",
             "Synop_WaWa": "synop_WaWa",
+            "wawa": "synop_WaWa",
             "rain_intensity": "rainfall_rate",
             "MOR": "visibility",
             "reflectivity": "radar_reflectivity",
@@ -189,7 +171,6 @@ class ParsivelNc(core.Level1Nc):
             "velocity_bnds": "Velocity bounds",
             "synop_WaWa": "Synop code WaWa",
             "synop_WW": "Synop code WW",
-            "T_sensor": "Temperature in the sensor housing",
             "sig_laser": "Signal amplitude of the laser strip",
             "rainfall_rate": "Rainfall rate",
             "V_power_supply": "Power supply voltage",
@@ -229,16 +210,7 @@ class ParsivelNc(core.Level1Nc):
             "sig_laser": "1",
             "state_sensor": "1",
             "synop_WaWa": "1",
-            "rainfall_rate": "m s-1",
-            "snowfall_rate": "m s-1",
-            "fall_velocity": "m s-1",
-            "T_sensor": "K",
-            "T_pcb": "K",
-            "T_L_sensor_head": "K",
-            "T_R_sensor_head": "K",
             "synop_WW": "1",
-            "diameter": "m",
-            "diameter_spread": "m",
             "error_code": "1",
         }
         self.fix_attribute(keymap, "units")
@@ -268,21 +240,16 @@ class ParsivelNc(core.Level1Nc):
             if (attr := ATTRIBUTES.get(key)) and attr.comment:
                 self.nc.variables[key].comment = attr.comment
 
+    def convert_precipitations(self):
+        for key in self.nc.variables:
+            if key in (
+                "rainfall_rate",
+                "snowfall_rate",
+                "fall_velocity",
+            ):
+                self.to_ms1(key)
 
-def temperature_to_k(data: np.ndarray) -> np.ndarray:
-    data = np.array(data, dtype="float32")
-    temperature_limit = 100
-    ind = np.where(data < temperature_limit)
-    if len(ind[0]) > 0:
-        logging.info('Converting temperature from "C" to "K".')
-        data[ind] += 273.15
-    return data
-
-
-def to_m(variable: str, data: np.ndarray, units: str) -> np.ndarray:
-    if units.lower() == "mm":
-        logging.info(f'Converting {variable} from "{units}" to "m".')
-        data /= 1000
-    elif units.lower() != "m":
-        raise ValueError(f"Unsupported unit {units} in variable {variable}")
-    return data
+    def convert_diameters(self):
+        for key in self.nc.variables:
+            if key in ("diameter", "diameter_spread"):
+                self.to_m(key)
