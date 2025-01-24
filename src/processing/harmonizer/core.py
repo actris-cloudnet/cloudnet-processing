@@ -1,5 +1,6 @@
 import logging
 
+import cftime
 import cloudnetpy.exceptions
 import cloudnetpy.instruments.instruments
 import cloudnetpy.metadata
@@ -18,19 +19,20 @@ class Level1Nc:
         self.data = data
 
     def convert_time(self):
-        """Converts time to decimal hour."""
+        """Converts time to decimal hours."""
         time = self.nc.variables["time"]
-        if max(time[:]) > 24:
-            fraction_hour = cloudnetpy.utils.seconds2hours(time[:])
-            time[:] = fraction_hour
+        calendar = getattr(time, "calendar", "standard")
+        dates = cftime.num2date(time[:], units=time.units, calendar=calendar)
+        time_units = self._get_time_units()
+        decimal_hours = cftime.date2num(dates, units=time_units, calendar="standard")
+        time[:] = decimal_hours
+        for attr in time.ncattrs():
+            delattr(time, attr)
+        time.calendar = "standard"
         time.long_name = "Time UTC"
-        time.units = self._get_time_units()
-        for key in ("comment", "bounds"):
-            if hasattr(time, key):
-                delattr(time, key)
         time.standard_name = "time"
         time.axis = "T"
-        time.calendar = "standard"
+        time.units = time_units
 
     def copy_file_contents(
         self,

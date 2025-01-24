@@ -72,7 +72,7 @@ def harmonize_ws_file(data: dict) -> str:
             ws.harmonize_attribute(attribute)
         ws.add_history("weather-station")
         ws.nc.source = "Weather station"
-        ws.fix_time()
+        ws.convert_time()
         ws.convert_rainfall_rate()
         if "rainfall_amount" not in ws.nc.variables:
             ws.calculate_rainfall_amount()
@@ -133,14 +133,6 @@ class Ws(core.Level1Nc):
             )
             self._copy_variable_attributes(variable, var)
             var[:] = data
-
-    def fix_time(self):
-        """Fixes time units."""
-        time = self.nc.variables["time"][:]
-        ind = time > 0
-        self.nc.variables["time"][ind] = time[ind] / 60
-        self.nc.variables["time"].units = self._get_time_units()
-        self.nc.variables["time"].calendar = "standard"
 
     def fix_long_names(self):
         keymap = {
