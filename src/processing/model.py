@@ -1,4 +1,6 @@
+import datetime
 import logging
+import math
 import uuid
 from pathlib import Path
 
@@ -12,14 +14,27 @@ from processing.processor import ModelParams, Processor
 from processing.utils import MiscError, SkipTaskError
 
 SKIP_MODELS = ()
+MODEL_READERS = {"arpege": read_arpege, "ecmwf-open": read_ecmwf_open}
 
 
 def process_model(processor: Processor, params: ModelParams, directory: Path):
-    if params.model_id in SKIP_MODELS:
-        msg = f"Processing {params.model_id} not implemented yet"
+    if params.model.id in SKIP_MODELS:
+        msg = f"Processing {params.model.id} not implemented yet"
         raise SkipTaskError(msg)
 
-    upload_meta = processor.get_model_upload(params)
+    if (
+        params.model.forecast_start is not None
+        and params.model.forecast_end is not None
+    ):
+        start_offset = math.floor(-params.model.forecast_end / 24)
+        end_offset = math.floor((24 - params.model.forecast_start) / 24)
+        start_date = params.date + datetime.timedelta(days=start_offset)
+        end_date = params.date + datetime.timedelta(days=end_offset)
+    else:
+        start_date = params.date
+        end_date = params.date
+
+    upload_meta = processor.get_model_upload(params, start_date, end_date)
     if not upload_meta:
         msg = "No valid model upload found"
         raise SkipTaskError(msg)
@@ -72,7 +87,7 @@ def _generate_filename(params: ModelParams) -> str:
     parts = [
         params.date.strftime("%Y%m%d"),
         params.site.id,
-        params.model_id,
+        params.model.id,
     ]
     return "_".join(parts) + ".nc"
 
@@ -80,16 +95,32 @@ def _generate_filename(params: ModelParams) -> str:
 def _process_model(
     params: ModelParams, input_paths: list[Path], output_path: Path
 ) -> Path:
-    readers = {"arpege": read_arpege, "ecmwf-open": read_ecmwf_open}
-    reader = readers.get(params.model_id)
-    if reader is None:
+    if params.model.source_model_id is None:
+        if params.model.id in MODEL_READERS:
+            msg = (
+                f"Model '{params.model.id}' should never be processed, "
+                "only used to upload model data! This check would be "
+                "redundant if 'model upload' and 'model product' types "
+                "were separated in the database."
+            )
+            raise ValueError(msg)
         if n_files := len(input_paths) != 1:
             raise ValueError(f"Expected a single file but found {n_files} files")
         return input_paths[0]
+    reader = MODEL_READERS[params.model.source_model_id]
     location = Location(id=params.site.id, name=params.site.name)
-    models = [reader(path, location) for path in input_paths]
+    models = []
+    for path in input_paths:
+        model = reader(path, location)
+        model.screen_time(params.date)
+        model.screen_forecast_time(
+            params.model.forecast_start, params.model.forecast_end
+        )
+        if len(model.data["time"]) > 0:
+            models.append(model)
+    if len(models) == 0:
+        raise SkipTaskError("No valid time steps found")
     merged = merge_models(models)
-    merged.screen_time(params.date)
     merged.write_netcdf(output_path)
     return output_path
 
@@ -103,7 +134,7 @@ def _harmonize_model(
         "uuid": str(uuid),
         "full_path": input_path,
         "output_path": output_path,
-        "model": params.model_id,
+        "model": params.model.id,
         "instrument": None,
     }
     harmonize_model_file(data)

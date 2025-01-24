@@ -95,7 +95,7 @@ class Worker:
                         site=site,
                         date=date,
                         product=product,
-                        model_id=task["modelId"],
+                        model=self.processor.get_model(task["modelId"]),
                     )
                     if task["type"] == "plot":
                         update_plots(self.processor, params, Path(directory))
@@ -122,7 +122,7 @@ class Worker:
                         site=site,
                         date=date,
                         product=product,
-                        model_id="ecmwf",  # hard coded for now
+                        model=self.processor.get_model("ecmwf"),  # hard coded for now
                     )
                     if task["type"] == "plot":
                         update_plots(self.processor, params, Path(directory))

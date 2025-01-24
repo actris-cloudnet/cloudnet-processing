@@ -35,10 +35,17 @@ def harmonize_model_file(data: dict) -> str:
 class ModelNc(core.Level1Nc):
     def check_time_dimension(self):
         """Checks time dimension."""
+        resolutions = {"gdas1": 24 // 3, "ecmwf-open": 24 // 3}
         n_steps = len(self.nc.dimensions["time"])
-        n_steps_expected = {"gdas1": 9, "ecmwf-open": 9}
-        if n_steps != n_steps_expected.get(self.data["model"], 25):
-            raise MiscError("Incomplete model file.")
+        n_steps_expected = resolutions.get(self.data["model"], 24)
+        if n_steps < n_steps_expected:
+            raise MiscError(
+                f"Incomplete model file: expected at least {n_steps_expected} but found {n_steps}"
+            )
+        if n_steps > n_steps_expected + 1:
+            raise MiscError(
+                f"Too many steps in model file: expected at most {n_steps_expected+1} but found {n_steps}"
+            )
 
     def add_date(self):
         """Adds date in correct format."""

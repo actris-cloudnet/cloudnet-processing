@@ -63,7 +63,7 @@ def process_me(processor: Processor, params: ModelParams, directory: Path):
     processor.create_and_upload_l3_images(
         new_file,
         params.product.id,
-        params.model_id,
+        params.model.id,
         std_uuid.UUID(uuid.product),
         filename,
         directory,
@@ -154,7 +154,7 @@ def _generate_filename(params: ProductParams | ModelParams) -> str:
     if isinstance(params, ProductParams) and params.instrument:
         parts.append(params.instrument.uuid[:8])
     elif isinstance(params, ModelParams):
-        parts.append(params.model_id)
+        parts.append(params.model.id)
     return "_".join(parts) + ".nc"
 
 
@@ -235,7 +235,7 @@ def _process_l3(
     processor: Processor, params: ModelParams, uuid: Uuid, directory: Path
 ) -> Path:
     payload = _get_payload(
-        site_id=params.site.id, date=params.date, model_id=params.model_id
+        site_id=params.site.id, date=params.date, model_id=params.model.id
     )
     model_meta = processor.md_api.get("api/model-files", payload)
     _check_response(model_meta, "model")
@@ -248,7 +248,7 @@ def _process_l3(
     product_file = processor.storage_api.download_product(product_meta[0], directory)
     output_file = directory / "output.nc"
     uuid.product = product_resampling.process_L3_day_product(
-        params.model_id,
+        params.model.id,
         l3_prod,
         [str(model_file)],
         str(product_file),
