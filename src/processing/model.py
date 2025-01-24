@@ -4,6 +4,7 @@ from pathlib import Path
 
 from processing import utils
 from processing.harmonizer.model import harmonize_model_file
+from processing.netcdf_comparer import NCDiff, nc_difference
 from processing.processor import ModelParams, Processor
 from processing.utils import MiscError, SkipTaskError
 
@@ -26,35 +27,42 @@ def process_model(processor: Processor, params: ModelParams, directory: Path):
     full_path = full_paths[0]
 
     volatile = True
-    if file_meta := processor.get_model_file(params):
-        if not file_meta["volatile"]:
-            logging.warning("Stable model file found. Replacing...")
+    if existing_meta := processor.get_model_file(params):
+        if not existing_meta["volatile"]:
+            logging.warning("Stable model file found.")
             volatile = False
-        product_uuid = uuid.UUID(file_meta["uuid"])
-        filename = file_meta["filename"]
+        product_uuid = uuid.UUID(existing_meta["uuid"])
+        filename = existing_meta["filename"]
+        existing_file = processor.storage_api.download_product(existing_meta, directory)
     else:
         product_uuid = _generate_uuid()
 
         filename = _generate_filename(params)
 
     try:
-        output_path = directory / "output.nc"
-        _harmonize_model(params, full_path, output_path, product_uuid)
+        new_file = directory / "output.nc"
+        _harmonize_model(params, full_path, new_file, product_uuid)
 
-        if not file_meta or not file_meta["pid"]:
+        if not existing_meta or not existing_meta["pid"]:
             volatile_pid = None
         else:
-            volatile_pid = file_meta["pid"]
-        processor.pid_utils.add_pid_to_file(output_path, pid=volatile_pid)
+            volatile_pid = existing_meta["pid"]
+        processor.pid_utils.add_pid_to_file(new_file, pid=volatile_pid)
 
-        processor.upload_file(params, output_path, filename, volatile, patch=True)
+        if existing_meta and existing_file:
+            difference = nc_difference(existing_file, new_file)
+            if difference == NCDiff.NONE:
+                raise SkipTaskError("Skipping PUT to data portal, file has not changed")
+
+        processor.upload_file(params, new_file, filename, volatile, patch=True)
         if "hidden" in params.site.types:
             logging.info("Skipping plotting for hidden site")
         else:
             processor.create_and_upload_images(
-                output_path, "model", product_uuid, filename, directory
+                new_file, "model", product_uuid, filename, directory
             )
-        qc_result = processor.upload_quality_report(output_path, product_uuid)
+
+        qc_result = processor.upload_quality_report(new_file, product_uuid)
         _print_info(product_uuid, qc_result)
         processor.update_statuses(raw_uuids, "processed")
     except MiscError as err:
