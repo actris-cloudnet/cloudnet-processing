@@ -75,6 +75,7 @@ class ProcessInstrument:
             "full_path": full_path,
             "output_path": self.output_path,
             "uuid": self.uuid.volatile,
+            "instrument": self.params.instrument,
         }
 
     def download_instrument(

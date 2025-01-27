@@ -12,6 +12,10 @@ from processing.harmonizer import core
 RATE: Final = "rainfall_rate"
 AMOUNT: Final = "rainfall_amount"
 
+CORRECT_UNITS = {
+    "49ca09de-ca9a-4e3e-9258-9c91ed5683f8": {"rain_rate": "mm/h"}  # juelich pluvio
+}
+
 
 def harmonize_thies_pt_nc(data: dict) -> str:
     vars = ("time", "int_h", "am_tot")
@@ -86,7 +90,14 @@ class RainGaugeNc(core.Level1Nc):
         var_out = self.nc.createVariable(
             key, dtype, "time", zlib=True, fill_value=fill_value
         )
-        var_out.units = getattr(variable, "units", "1")
+        instrument_uuid = self.data["instrument"].uuid
+        new_units = CORRECT_UNITS.get(instrument_uuid, {}).get(key)
+        if new_units is not None:
+            logging.info(f"Correcting units of '{key}' to {new_units}.")
+            var_out.units = new_units
+        else:
+            var_out.units = getattr(variable, "units", "1")
+
         screened_data = self._screen_data(variable, time_ind)
         var_out[:] = screened_data
 
