@@ -54,10 +54,7 @@ def harmonize_parsivel_file(data: dict) -> str:
                 "status_sensor",
                 "ved_class",
                 "rof_class",
-                "N",
                 "rain_accum",
-                "vclasses",
-                "dclasses",
                 "vwidth",
                 "dwidth",
                 "serial_no",
@@ -65,7 +62,6 @@ def harmonize_parsivel_file(data: dict) -> str:
                 "snow_intensity",
             ),
         )
-        parsivel.fix_variable_names()
         parsivel.convert_time()
         parsivel.convert_precipitations()
         parsivel.convert_diameters()
@@ -91,6 +87,8 @@ class ParsivelNc(core.Level1Nc):
             name = DIMENSION_MAP.get(name, name)
             n = len(time_ind) if name == "time" else dimension.size
             self.nc.createDimension(name, n)
+        if "nv" not in self.nc.dimensions:
+            self.nc.createDimension("nv", 2)
 
     def copy_file(
         self,
@@ -128,7 +126,7 @@ class ParsivelNc(core.Level1Nc):
         dimensions = tuple(DIMENSION_MAP.get(dim, dim) for dim in variable.dimensions)
 
         var_out = self.nc.createVariable(
-            key,
+            self._get_new_name(key),
             dtype,
             dimensions,
             zlib=True,
@@ -137,7 +135,7 @@ class ParsivelNc(core.Level1Nc):
         self._copy_variable_attributes(variable, var_out)
         var_out[:] = self._screen_data(variable, time_ind)
 
-    def fix_variable_names(self):
+    def _get_new_name(self, key) -> str:
         keymap = {
             "V_sensor": "V_power_supply",
             "E_kin": "kinetic_energy",
@@ -147,18 +145,21 @@ class ParsivelNc(core.Level1Nc):
             "MOR": "visibility",
             "reflectivity": "radar_reflectivity",
             "fieldN": "number_concentration",
+            "N": "number_concentration",
             "fieldV": "fall_velocity",
+            "v": "fall_velocity",
             "amplitude": "sig_laser",
             "time_interval": "interval",
             "snowfall_intensity": "snowfall_rate",
             "code_4680": "synop_WaWa",
             "code_4677": "synop_WW",
             "velocity_center_classes": "velocity",
-            "diameter_center_classes": "diameter",
+            "dclasses": "diameter",
+            "vclasses": "velocity",
             "rr": "rainfall_rate",
             "Ze": "radar_reflectivity",
         }
-        self.fix_name(keymap)
+        return keymap.get(key, key)
 
     def add_serial_number(self):
         for attr in ("Sensor_ID", "sensor_serial_number"):
@@ -187,7 +188,6 @@ class ParsivelNc(core.Level1Nc):
             "fall_velocity": "Average velocity of each diameter class",
             "diameter": "Center diameter of precipitation particles",
             "error_code": "Error code",
-            "v": "Doppler velocity",
             "interval": "Length of measurement interval",
             "velocity": "Center fall velocity of precipitation particles",
             "number_concentration": "Number of particles per diameter class",
