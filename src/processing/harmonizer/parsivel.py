@@ -13,6 +13,8 @@ from processing.harmonizer import core
 DIMENSION_MAP = {
     "ved_class": "velocity",
     "rof_class": "diameter",
+    "diameter_classes": "diameter",
+    "velocity_classes": "velocity",
 }
 
 
@@ -59,6 +61,13 @@ def harmonize_parsivel_file(data: dict) -> str:
                 "serial_no",
                 "dwidth",
                 "snow_intensity",
+                "velocity_upper_bounds",
+                "velocity_lower_bounds",
+                "diameter_upper_bounds",
+                "diameter_lower_bounds",
+                "absolute_rain_amount",
+                "T_L_sensor_head",
+                "T_R_sensor_head",
             ),
         )
         parsivel.convert_time()
@@ -156,6 +165,7 @@ class ParsivelNc(core.Level1Nc):
             "rr": "rainfall_rate",
             "Ze": "radar_reflectivity",
             "M": "data_raw",
+            "diameter_center_classes": "diameter",
         }
         return keymap.get(key, key)
 
