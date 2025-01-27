@@ -1,4 +1,5 @@
 import logging
+import re
 
 import cftime
 import cloudnetpy.exceptions
@@ -22,7 +23,8 @@ class Level1Nc:
         """Converts time to decimal hours."""
         time = self.nc.variables["time"]
         calendar = getattr(time, "calendar", "standard")
-        dates = cftime.num2date(time[:], units=time.units, calendar=calendar)
+        units = self._fix_units(time.units)
+        dates = cftime.num2date(time[:], units=units, calendar=calendar)
         time_units = self._get_time_units()
         decimal_hours = cftime.date2num(dates, units=time_units, calendar="standard")
         time[:] = decimal_hours
@@ -33,6 +35,20 @@ class Level1Nc:
         time.standard_name = "time"
         time.axis = "T"
         time.units = time_units
+
+    @staticmethod
+    def _fix_units(units: str) -> str:
+        """Converts units like "seconds since 1/1/1970 00:00:00 to standard form."""
+        pattern = r"(\w+) since (\d+)/(\d+)/(\d+) (\d+:\d+:\d+)"
+        match = re.match(pattern, units)
+        if match:
+            time_unit = match.group(1)
+            month = int(match.group(2))
+            day = int(match.group(3))
+            year = int(match.group(4))
+            hhmmss = match.group(5)
+            return f"{time_unit} since {year:04d}-{month:02d}-{day:02d} {hhmmss}"
+        return units
 
     def copy_file_contents(
         self,
