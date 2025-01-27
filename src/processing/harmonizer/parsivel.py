@@ -87,8 +87,6 @@ class ParsivelNc(core.Level1Nc):
             name = DIMENSION_MAP.get(name, name)
             n = len(time_ind) if name == "time" else dimension.size
             self.nc.createDimension(name, n)
-        if "nv" not in self.nc.dimensions:
-            self.nc.createDimension("nv", 2)
 
     def copy_file(
         self,
