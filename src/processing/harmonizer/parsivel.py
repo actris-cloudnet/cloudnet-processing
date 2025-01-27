@@ -50,7 +50,6 @@ def harmonize_parsivel_file(data: dict) -> str:
                 "sample_interval",
                 "curr_heating",
                 "volt_sensor",
-                "M",
                 "status_sensor",
                 "ved_class",
                 "rof_class",
@@ -105,7 +104,7 @@ class ParsivelNc(core.Level1Nc):
             dtype = "f8"
         elif key in ("diameter_bnds",):
             dtype = "f4"
-        elif key in ("data_raw",):
+        elif key in ("data_raw", "M"):
             dtype = "i2"
         elif np.issubdtype(variable.dtype, np.integer):
             dtype = "i4"
@@ -156,6 +155,7 @@ class ParsivelNc(core.Level1Nc):
             "vclasses": "velocity",
             "rr": "rainfall_rate",
             "Ze": "radar_reflectivity",
+            "M": "data_raw",
         }
         return keymap.get(key, key)
 
