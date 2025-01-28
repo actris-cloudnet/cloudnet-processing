@@ -82,6 +82,7 @@ def harmonize_parsivel_file(data: dict) -> str:
         parsivel.fix_units()
         parsivel.fix_standard_names()
         parsivel.fix_comments()
+        parsivel._mask_bad_values()
         uuid = parsivel.add_uuid()
         parsivel.add_serial_number()
     if "output_path" not in data:
@@ -123,12 +124,6 @@ class ParsivelNc(core.Level1Nc):
             logging.warning(f"Skipping '{key}' - unsupported dtype {variable.dtype}")
             return
 
-        fill_value = (
-            netCDF4.default_fillvals[dtype]
-            if isinstance(variable, ma.MaskedArray)
-            else None
-        )
-
         dimensions = tuple(DIMENSION_MAP.get(dim, dim) for dim in variable.dimensions)
 
         var_out = self.nc.createVariable(
@@ -136,10 +131,18 @@ class ParsivelNc(core.Level1Nc):
             dtype,
             dimensions,
             zlib=True,
-            fill_value=fill_value,
+            fill_value=self._fetch_fill_value(variable, dtype),
         )
         self._copy_variable_attributes(variable, var_out)
         var_out[:] = self._screen_data(variable, time_ind)
+
+    def _fetch_fill_value(
+        self, variable: netCDF4.Variable, dtype: str
+    ) -> int | float | str | None:
+        bad_values = self._find_bad_values(variable)
+        if isinstance(variable, ma.MaskedArray) or bad_values.any():
+            return netCDF4.default_fillvals[dtype]
+        return None
 
     def _get_new_name(self, key) -> str:
         keymap = {
@@ -261,3 +264,14 @@ class ParsivelNc(core.Level1Nc):
         for key in self.nc.variables:
             if key in ("diameter", "diameter_spread"):
                 self.to_m(key)
+
+    def _find_bad_values(self, variable: netCDF4.Variable) -> np.ndarray:
+        bad_values = (-9.999,)  # Extend this list if needed
+        threshold = 1e-3
+        data = variable[:][..., None]
+        return np.isclose(data, bad_values, atol=threshold).any(axis=-1)
+
+    def _mask_bad_values(self):
+        for variable in self.nc.variables.values():
+            mask = self._find_bad_values(variable)
+            variable[:] = ma.masked_array(variable[:], mask=mask)
