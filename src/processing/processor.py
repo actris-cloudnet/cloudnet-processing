@@ -152,6 +152,7 @@ class Processor:
             "dateFrom": start_date.isoformat(),
             "dateTo": end_date.isoformat(),
             "model": params.model.source_model_id or params.model.id,
+            "status": ["uploaded", "processed"],
         }
         rows = self.md_api.get("api/raw-model-files", payload)
         rows = [row for row in rows if int(row["size"]) > MIN_MODEL_FILESIZE]
