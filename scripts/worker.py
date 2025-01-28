@@ -265,7 +265,8 @@ class Worker:
         else:
             delay = datetime.timedelta(seconds=0)
         scheduled_at = utcnow() + delay
-        priority = min((utctoday() - params.date) / datetime.timedelta(days=1), 10)
+        diff_days = abs((utctoday() - params.date) / datetime.timedelta(days=1))
+        priority = min(diff_days, 10)
 
         task = {
             "type": "process",
