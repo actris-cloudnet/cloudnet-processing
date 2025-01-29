@@ -1,54 +1,33 @@
 import logging
 import shutil
 from tempfile import NamedTemporaryFile
+from typing import Final
 
 import netCDF4
-from cloudnetpy.instruments import instruments
+from cloudnetpy.instruments import Instrument, instruments
 from numpy import ma
 
 from processing.harmonizer import core
 
+RATE: Final = "rainfall_rate"
+AMOUNT: Final = "rainfall_amount"
+
+CORRECT_UNITS = {
+    "49ca09de-ca9a-4e3e-9258-9c91ed5683f8": {"rain_rate": "mm/h"}  # juelich pluvio
+}
+
 
 def harmonize_thies_pt_nc(data: dict) -> str:
-    if "output_path" not in data:
-        temp_file = NamedTemporaryFile()
-    with (
-        netCDF4.Dataset(data["full_path"], "r") as nc_raw,
-        netCDF4.Dataset(
-            data["output_path"] if "output_path" in data else temp_file.name,
-            "w",
-            format="NETCDF4_CLASSIC",
-        ) as nc,
-    ):
-        gauge = RainGaugeNc(nc_raw, nc, data)
-        ind = gauge.get_valid_time_indices()
-        gauge.nc.createDimension("time", len(ind))
-        gauge.copy_data(("time", "int_m", "am_tot", "am_red"), ind)
-        gauge.mask_bad_data_values()
-        gauge.fix_variable_names()
-        gauge.clean_global_attributes()
-        gauge.convert_units()
-        for key in (
-            "rainfall_rate",
-            "rainfall_amount",
-        ):
-            gauge.harmonize_standard_attributes(key)
-        gauge.harmonize_attribute("comment", ("rainfall_amount",))
-        gauge.fix_long_names()
-        uuid = gauge.add_uuid()
-        gauge.add_global_attributes("rain-gauge", instruments.THIES_PT)
-        gauge.add_date()
-        gauge.convert_time()
-        gauge.add_geolocation()
-        gauge.add_history("rain-gauge")
-        gauge.fix_jumps_in_pt()
-        gauge.normalize_rainfall_amount()
-    if "output_path" not in data:
-        shutil.copy(temp_file.name, data["full_path"])
-    return uuid
+    vars = ("time", "int_h", "am_tot")
+    return _harmonize(vars, data, instruments.THIES_PT)
 
 
 def harmonize_pluvio_nc(data: dict) -> str:
+    vars = ("time", "rain_rate", "total_accum_NRT")
+    return _harmonize(vars, data, instruments.PLUVIO2)
+
+
+def _harmonize(vars: tuple, data: dict, instrument: Instrument):
     if "output_path" not in data:
         temp_file = NamedTemporaryFile()
     with (
@@ -62,26 +41,21 @@ def harmonize_pluvio_nc(data: dict) -> str:
         gauge = RainGaugeNc(nc_raw, nc, data)
         ind = gauge.get_valid_time_indices()
         gauge.nc.createDimension("time", len(ind))
-        gauge.copy_data(
-            ("time", "rain_rate", "r_accum_RT", "r_accum_NRT", "total_accum_NRT"), ind
-        )
+        gauge.copy_data(vars, ind)
         gauge.mask_bad_data_values()
         gauge.fix_variable_names()
-        gauge.convert_units()
-        for key in (
-            "rainfall_rate",
-            "rainfall_amount",
-        ):
-            gauge.harmonize_standard_attributes(key)
-        gauge.harmonize_attribute("comment", ("rainfall_amount",))
-        gauge.fix_long_names()
+        gauge.fix_variable_attributes()
+        gauge.to_ms1(RATE)
+        gauge.to_m(AMOUNT)
+        if instrument == instruments.THIES_PT:
+            gauge.fix_pt_jumps()
+        gauge.normalize_rainfall_amount()
         uuid = gauge.add_uuid()
-        gauge.add_global_attributes("rain-gauge", instruments.PLUVIO2)
+        gauge.add_global_attributes("rain-gauge", instrument)
         gauge.add_date()
         gauge.convert_time()
         gauge.add_geolocation()
         gauge.add_history("rain-gauge")
-        gauge.normalize_rainfall_amount()
     if "output_path" not in data:
         shutil.copy(temp_file.name, data["full_path"])
     return uuid
@@ -92,6 +66,11 @@ class RainGaugeNc(core.Level1Nc):
         for _, variable in self.nc.variables.items():
             variable[:] = ma.masked_invalid(variable[:])
 
+    def fix_variable_attributes(self):
+        for key in (RATE, AMOUNT):
+            for attr in ("long_name", "standard_name", "comment"):
+                self.harmonize_attribute(attr, (key,))
+
     def copy_data(
         self,
         keys: tuple,
@@ -99,7 +78,6 @@ class RainGaugeNc(core.Level1Nc):
     ):
         for key in keys:
             self._copy_variable(key, time_ind)
-        self._copy_global_attributes()
 
     def _copy_variable(self, key: str, time_ind: list):
         if key not in self.nc_raw.variables.keys():
@@ -107,57 +85,47 @@ class RainGaugeNc(core.Level1Nc):
             return
 
         variable = self.nc_raw.variables[key]
-        dtype = "f8" if key == "time" and "int" in str(variable.dtype) else "f4"
+        dtype = "f8" if key == "time" else "f4"
         fill_value = netCDF4.default_fillvals[dtype] if key != "time" else None
         var_out = self.nc.createVariable(
             key, dtype, "time", zlib=True, fill_value=fill_value
         )
+        instrument_uuid = self.data["instrument"].uuid
+        new_units = CORRECT_UNITS.get(instrument_uuid, {}).get(key)
+        if new_units is not None:
+            logging.info(f"Correcting units of '{key}' to {new_units}.")
+            var_out.units = new_units
+        else:
+            var_out.units = getattr(variable, "units", "1")
+
         screened_data = self._screen_data(variable, time_ind)
         var_out[:] = screened_data
 
     def fix_variable_names(self):
         keymap = {
-            "rain_rate": "rainfall_rate",
-            "int_m": "rainfall_rate",
-            "total_accum_NRT": "rainfall_amount",
-            "am_tot": "rainfall_amount",
-            "am_red": "r_accum_RT",
+            "rain_rate": RATE,
+            "int_h": RATE,
+            "int_m": RATE,
+            "total_accum_NRT": AMOUNT,
+            "am_tot": AMOUNT,
         }
         self.fix_name(keymap)
 
-    def fix_long_names(self):
-        keymap = {
-            "r_accum_RT": "Real time accumulated rainfall",
-            "r_accum_NRT": "Near real time accumulated rainfall",
-        }
-        self.fix_attribute(keymap, "long_name")
-
-    def convert_units(self):
-        mm_to_m = 0.001
-        mmh_to_ms = mm_to_m / 3600
-        self.nc.variables["rainfall_rate"].units = "m s-1"
-        self.nc.variables["rainfall_rate"][:] *= mmh_to_ms
-        for key in ("r_accum_RT", "r_accum_NRT", "rainfall_amount"):
-            if key not in self.nc.variables:
-                continue
-            self.nc.variables[key].units = "m"
-            self.nc.variables[key][:] *= mm_to_m
-
-    def fix_jumps_in_pt(self):
+    def fix_pt_jumps(self):
         """Fixes suspicious jumps from a valid value to single 0-value and back in Thies PT data."""
-        data = self.nc.variables["rainfall_amount"][:]
+        data = self.nc.variables[AMOUNT][:]
         for i in range(1, len(data) - 1):
             if data[i] == 0 and data[i - 1] > 0 and data[i + 1] > 0:
                 data[i] = data[i + 1]
-        self.nc.variables["rainfall_amount"][:] = data
+        self.nc.variables[AMOUNT][:] = data
 
     def normalize_rainfall_amount(self) -> None:
         """Copied from Cloudnetpy."""
-        data = self.nc.variables["rainfall_amount"][:]
+        data = self.nc.variables[AMOUNT][:]
         offset = 0
         for i in range(1, len(data)):
             if data[i] + offset < data[i - 1]:
                 offset += data[i - 1]
             data[i] += offset
         data -= data[0]
-        self.nc.variables["rainfall_amount"][:] = data
+        self.nc.variables[AMOUNT][:] = data

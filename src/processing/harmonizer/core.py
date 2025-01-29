@@ -1,5 +1,7 @@
 import logging
+import re
 
+import cftime
 import cloudnetpy.exceptions
 import cloudnetpy.instruments.instruments
 import cloudnetpy.metadata
@@ -18,19 +20,35 @@ class Level1Nc:
         self.data = data
 
     def convert_time(self):
-        """Converts time to decimal hour."""
+        """Converts time to decimal hours."""
         time = self.nc.variables["time"]
-        if max(time[:]) > 24:
-            fraction_hour = cloudnetpy.utils.seconds2hours(time[:])
-            time[:] = fraction_hour
+        calendar = getattr(time, "calendar", "standard")
+        units = self._fix_units(time.units)
+        dates = cftime.num2date(time[:], units=units, calendar=calendar)
+        time_units = self._get_time_units()
+        decimal_hours = cftime.date2num(dates, units=time_units, calendar="standard")
+        time[:] = decimal_hours
+        for attr in time.ncattrs():
+            delattr(time, attr)
+        time.calendar = "standard"
         time.long_name = "Time UTC"
-        time.units = self._get_time_units()
-        for key in ("comment", "bounds"):
-            if hasattr(time, key):
-                delattr(time, key)
         time.standard_name = "time"
         time.axis = "T"
-        time.calendar = "standard"
+        time.units = time_units
+
+    @staticmethod
+    def _fix_units(units: str) -> str:
+        """Converts units like "seconds since 1/1/1970 00:00:00 to standard form."""
+        pattern = r"(\w+) since (\d+)/(\d+)/(\d+) (\d+:\d+:\d+)"
+        match = re.match(pattern, units)
+        if match:
+            time_unit = match.group(1)
+            month = int(match.group(2))
+            day = int(match.group(3))
+            year = int(match.group(4))
+            hhmmss = match.group(5)
+            return f"{time_unit} since {year:04d}-{month:02d}-{day:02d} {hhmmss}"
+        return units
 
     def copy_file_contents(
         self,
@@ -41,11 +59,13 @@ class Level1Nc:
         """Copies all variables and global attributes from one file to another.
         Optionally copies only certain keys and / or uses certain time indices only.
         """
-        for key, dimension in self.nc_raw.dimensions.items():
-            if key == "time" and time_ind is not None:
-                self.nc.createDimension(key, len(time_ind))
-            else:
-                self.nc.createDimension(key, dimension.size)
+        for name, dimension in self.nc_raw.dimensions.items():
+            n = (
+                len(time_ind)
+                if name == "time" and time_ind is not None
+                else dimension.size
+            )
+            self.nc.createDimension(name, n)
         keys_to_process = keys if keys is not None else self.nc_raw.variables.keys()
         for key in keys_to_process:
             if skip is None or key not in skip:
@@ -165,7 +185,13 @@ class Level1Nc:
 
     def get_valid_time_indices(self) -> list:
         """Finds valid time indices."""
-        time = self.nc_raw.variables["time"]
+        supported_time_vars = ("time", "datetime")
+        for time_var in supported_time_vars:
+            if time_var in self.nc_raw.variables:
+                time = self.nc_raw.variables[time_var]
+                break
+        else:
+            raise RuntimeError(f"Time variable not found from {supported_time_vars}")
         time_stamps = time[:]
         raw_time_stamps = time_stamps.copy()
 
@@ -185,6 +211,131 @@ class Level1Nc:
         if len(valid_ind) < 2:
             raise cloudnetpy.exceptions.ValidTimeStampError
         return valid_ind
+
+    def to_ms1(self, variable: str):
+        """Converts velocity to m s-1."""
+        target_unit = "m s-1"
+        if not hasattr(self.nc.variables[variable], "units"):
+            self._set_fallback_unit(variable, target_unit)
+            return
+        units = self.nc.variables[variable].units.lower()
+        match units:
+            case "m/s" | "m s-1" | "m / s":
+                factor = None
+            case "mm/h" | "mm/hour" | "mm h-1" | "mm / h" | "mm / hour":
+                factor = 1e-3 / 3600
+            case "mm/min" | "mm min-1" | "mm / min":
+                factor = 1e-3 / 60
+            case "mm/s" | "mm s-1" | "mm / s":
+                factor = 1e-3
+            case _:
+                raise ValueError(f"Unknown units: {units}")
+        if factor:
+            self.nc.variables[variable][:] *= factor
+            logging.info(f"Converting {variable} from {units} to {target_unit}.")
+        self.nc.variables[variable].units = target_unit
+
+    def to_m(self, variable: str):
+        """Converts length to m."""
+        target_unit = "m"
+        if not hasattr(self.nc.variables[variable], "units"):
+            self._set_fallback_unit(variable, target_unit)
+            return
+        units = self.nc.variables[variable].units.lower()
+        match units:
+            case "m":
+                factor = None
+            case "mm":
+                factor = 1e-3
+            case _:
+                raise ValueError(f"Unknown units: {units}")
+        if factor:
+            self.nc.variables[variable][:] *= factor
+            logging.info(f"Converting {variable} from {units} to {target_unit}.")
+        self.nc.variables[variable].units = target_unit
+
+    def to_ratio(self, variable: str):
+        """Converts percent to ratio."""
+        target_unit = "1"
+        if not hasattr(self.nc.variables[variable], "units"):
+            self._set_fallback_unit(variable, target_unit)
+            return
+        units = self.nc.variables[variable].units.lower()
+        match units:
+            case "1" | "":
+                factor = None
+            case "%" | "percent":
+                factor = 1e-2
+            case _:
+                raise ValueError(f"Unknown units: {units}")
+        if factor:
+            self.nc.variables[variable][:] *= factor
+            logging.info(f"Converting {variable} from {units} to {target_unit}.")
+        self.nc.variables[variable].units = target_unit
+
+    def to_pa(self, variable: str):
+        """Converts pressure to Pa."""
+        target_unit = "Pa"
+        if not hasattr(self.nc.variables[variable], "units"):
+            self._set_fallback_unit(variable, target_unit)
+            return
+        units = self.nc.variables[variable].units.lower()
+        match units:
+            case "pa":
+                factor = None
+            case "hpa":
+                factor = 100.0
+            case _:
+                raise ValueError(f"Unknown units: {units}")
+        if factor:
+            self.nc.variables[variable][:] *= factor
+            logging.info(f"Converting {variable} from {units} to {target_unit}.")
+        self.nc.variables[variable].units = target_unit
+
+    def to_degree(self, variable: str):
+        """Converts direction to degree."""
+        target_unit = "degree"
+        if not hasattr(self.nc.variables[variable], "units"):
+            self._set_fallback_unit(variable, target_unit)
+            return
+        units = self.nc.variables[variable].units.lower()
+        match units:
+            case "degrees" | "degree":
+                factor = None
+            case _:
+                raise ValueError(f"Unknown units: {units}")
+        if factor:
+            self.nc.variables[variable][:] *= factor
+            logging.info(f"Converting {variable} from {units} to {target_unit}.")
+        self.nc.variables[variable].units = target_unit
+
+    def to_k(self, variable: str):
+        target_unit = "K"
+        if not hasattr(self.nc.variables[variable], "units"):
+            self._set_fallback_unit(variable, target_unit)
+            return
+        units = self.nc.variables[variable].units.lower()
+        match units:
+            case "k":
+                pass
+            case (
+                "c"
+                | "celsius"
+                | "degc"
+                | "°c"
+                | "deg c"
+                | "degree celsius"
+                | "degrees celsius"
+            ):
+                self.nc.variables[variable][:] += 273.15
+                logging.info(f"Converting {variable} from {units} to {target_unit}.")
+            case _:
+                raise ValueError(f"Unknown units: {units}")
+        self.nc.variables[variable].units = target_unit
+
+    def _set_fallback_unit(self, variable: str, fallback: str):
+        logging.warning(f"No units attribute in '{variable}'! Assuming '{fallback}'.")
+        self.nc.variables[variable].units = fallback
 
     def _copy_global_attributes(self):
         for name in self.nc_raw.ncattrs():
@@ -214,12 +365,3 @@ class Level1Nc:
     def _copy_variable_attributes(source, target):
         attr = {k: source.getncattr(k) for k in source.ncattrs() if k != "_FillValue"}
         target.setncatts(attr)
-
-
-def to_ms1(variable: str, data: np.ndarray, units: str) -> np.ndarray:
-    if units.lower() in ("mm h", "mm h-1", "mm/h", "mm / h"):
-        logging.info(f'Converting {variable} from "{units}" to "m s-1".')
-        data /= 1000 * 3600
-    elif units.lower() not in ("m s-1", "m/s", "m / s"):
-        raise ValueError(f"Unsupported unit {units} in variable {variable}")
-    return data
