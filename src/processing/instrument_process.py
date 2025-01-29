@@ -7,6 +7,7 @@ import shutil
 from collections import defaultdict
 from os import PathLike
 from pathlib import Path
+from typing import Any
 from uuid import UUID
 
 import doppy
@@ -130,6 +131,8 @@ class ProcessRadar(ProcessInstrument):
         full_paths, self.uuid.raw = self.download_instrument()
         full_paths = _unzip_gz_files(full_paths)
         full_paths = self._fix_suffices(full_paths, ".znc")
+        self._add_calibration("azimuth_offset")
+        self._add_calibration("zenith_offset")
         output_filename, site_meta = self._args
         site_meta["model"] = "mira-10"
         self.uuid.product = mira2nc(
@@ -143,6 +146,8 @@ class ProcessRadar(ProcessInstrument):
         full_paths, self.uuid.raw = self.download_instrument()
         full_paths = _unzip_gz_files(full_paths)
         full_paths = self._fix_suffices(full_paths, ".mmclx")
+        self._add_calibration("azimuth_offset")
+        self._add_calibration("zenith_offset")
         output_filename, site_meta = self._args
         site_meta["model"] = "mira-35"
         self.uuid.product = mira2nc(
@@ -180,7 +185,7 @@ class ProcessRadar(ProcessInstrument):
         return out_paths
 
     def _add_calibration(
-        self, key: str, default_value: float, api_key: str | None = None
+        self, key: str, default_value: Any = None, api_key: str | None = None
     ) -> None:
         calibration = fetch_calibration(self.params.instrument.pid, self.params.date)
         if calibration is not None:
@@ -277,9 +282,7 @@ class ProcessDopplerLidarWind(ProcessInstrument):
     def _calibration_options(self) -> doppy.product.WindOptions | None:
         calibration = fetch_calibration(self.params.instrument.pid, self.params.date)
         azimuth_offset = (
-            calibration.get("data", {}).get("azimuth_offset_deg")
-            if calibration
-            else None
+            calibration.get("data", {}).get("azimuth_offset") if calibration else None
         )
         return (
             doppy.product.WindOptions(azimuth_offset_deg=float(azimuth_offset))
