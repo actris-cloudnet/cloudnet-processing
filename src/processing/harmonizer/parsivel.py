@@ -173,6 +173,8 @@ class ParsivelNc(core.Level1Nc):
         return keymap.get(key, key)
 
     def add_serial_number(self):
+        if "serial_no" in self.nc_raw.variables:
+            self.nc.serial_number = str(self.nc_raw["serial_no"][0])
         for attr in ("Sensor_ID", "sensor_serial_number"):
             if hasattr(self.nc_raw, attr):
                 self.nc.serial_number = getattr(self.nc_raw, attr)
