@@ -38,16 +38,19 @@ class Level1Nc:
 
     @staticmethod
     def _fix_units(units: str) -> str:
-        """Converts units like "seconds since 1/1/1970 00:00:00 to standard form."""
-        pattern = r"(\w+) since (\d+)/(\d+)/(\d+) (\d+:\d+:\d+)"
-        match = re.match(pattern, units)
-        if match:
-            time_unit = match.group(1)
-            month = int(match.group(2))
-            day = int(match.group(3))
-            year = int(match.group(4))
-            hhmmss = match.group(5)
-            return f"{time_unit} since {year:04d}-{month:02d}-{day:02d} {hhmmss}"
+        """Converts units to standard form."""
+        patterns = (
+            r"(\w+) since (\d+)/(\d+)/(\d+) (\d+:\d+:\d+)",  # seconds since M/D/YYYY HH:MM:SS
+            r"(\w+) since (\d+)\.(\d+)\.(\d+), (\d+:\d+:\d+)",  # seconds since M.D.YYYY, HH:MM:SS
+        )
+        for pattern in patterns:
+            if match := re.match(pattern, units):
+                time_unit = match.group(1)
+                month = int(match.group(2))
+                day = int(match.group(3))
+                year = int(match.group(4))
+                hhmmss = match.group(5)
+                return f"{time_unit} since {year:04d}-{month:02d}-{day:02d} {hhmmss}"
         return units
 
     def copy_file_contents(
