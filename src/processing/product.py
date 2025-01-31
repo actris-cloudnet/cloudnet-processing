@@ -1,5 +1,6 @@
 import datetime
 import importlib
+import logging
 import uuid as std_uuid
 from pathlib import Path
 
@@ -43,14 +44,14 @@ def process_me(processor: Processor, params: ModelParams, directory: Path):
 
     utils.add_global_attributes(new_file)
 
+    upload = True
     patch = False
     if existing_product and existing_file:
         difference = nc_difference(existing_file, new_file)
         if difference == NCDiff.NONE:
-            raise utils.SkipTaskError(
-                "Skipping PUT to data portal, file has not changed"
-            )
-        if difference == NCDiff.MINOR:
+            upload = False
+            new_file = existing_file
+        elif difference == NCDiff.MINOR:
             # Replace existing file
             patch = True
             if not params.product.experimental:
@@ -59,7 +60,11 @@ def process_me(processor: Processor, params: ModelParams, directory: Path):
                 nc.file_uuid = existing_product["uuid"]
             uuid.product = existing_product["uuid"]
 
-    processor.upload_file(params, new_file, filename, volatile, patch)
+    if upload:
+        processor.upload_file(params, new_file, filename, volatile, patch)
+    else:
+        logging.info("Skipping PUT to data portal, file has not changed")
+
     processor.create_and_upload_l3_images(
         new_file,
         params.product.id,
@@ -71,7 +76,7 @@ def process_me(processor: Processor, params: ModelParams, directory: Path):
     qc_result = processor.upload_quality_report(
         new_file, std_uuid.UUID(uuid.product), params.product.id
     )
-    utils.print_info(uuid, volatile, patch, qc_result)
+    utils.print_info(uuid, volatile, patch, upload, qc_result)
 
 
 def process_product(processor: Processor, params: ProductParams, directory: Path):
@@ -107,14 +112,14 @@ def process_product(processor: Processor, params: ProductParams, directory: Path
         new_file, instrument_pid=params.instrument.pid if params.instrument else None
     )
 
+    upload = True
     patch = False
     if existing_product and existing_file:
         difference = nc_difference(existing_file, new_file)
         if difference == NCDiff.NONE:
-            raise utils.SkipTaskError(
-                "Skipping PUT to data portal, file has not changed"
-            )
-        if difference == NCDiff.MINOR:
+            upload = False
+            new_file = existing_file
+        elif difference == NCDiff.MINOR:
             # Replace existing file
             patch = True
             if not params.product.experimental:
@@ -123,7 +128,10 @@ def process_product(processor: Processor, params: ProductParams, directory: Path
                 nc.file_uuid = existing_product["uuid"]
             uuid.product = existing_product["uuid"]
 
-    processor.upload_file(params, new_file, filename, volatile, patch)
+    if upload:
+        processor.upload_file(params, new_file, filename, volatile, patch)
+    else:
+        logging.info("Skipping PUT to data portal, file has not changed")
     processor.create_and_upload_images(
         new_file,
         params.product.id,
@@ -134,7 +142,7 @@ def process_product(processor: Processor, params: ProductParams, directory: Path
     qc_result = processor.upload_quality_report(
         new_file, std_uuid.UUID(uuid.product), params.product.id
     )
-    utils.print_info(uuid, volatile, patch, qc_result)
+    utils.print_info(uuid, volatile, patch, upload, qc_result)
     if processor.md_api.config.is_production:
         _update_dvas_metadata(processor, params)
 

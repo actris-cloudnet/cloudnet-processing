@@ -1,3 +1,4 @@
+import logging
 import uuid as std_uuid
 from pathlib import Path
 from typing import Type
@@ -45,14 +46,14 @@ def process_instrument(processor: Processor, params: InstrumentParams, directory
 
     utils.add_global_attributes(new_file, params.instrument.pid)
 
+    upload = True
     patch = False
     if existing_product and existing_file:
         difference = nc_difference(existing_file, new_file)
         if difference == NCDiff.NONE:
-            raise utils.SkipTaskError(
-                "Skipping PUT to data portal, file has not changed"
-            )
-        if difference == NCDiff.MINOR:
+            upload = False
+            new_file = existing_file
+        elif difference == NCDiff.MINOR:
             # Replace existing file
             patch = True
             if not params.product.experimental:
@@ -61,13 +62,10 @@ def process_instrument(processor: Processor, params: InstrumentParams, directory
                 nc.file_uuid = existing_product["uuid"]
             uuid.product = existing_product["uuid"]
 
-    processor.upload_file(
-        params,
-        new_file,
-        filename,
-        volatile,
-        patch,
-    )
+    if upload:
+        processor.upload_file(params, new_file, filename, volatile, patch)
+    else:
+        logging.info("Skipping PUT to data portal, file has not changed")
     processor.create_and_upload_images(
         new_file, params.product.id, std_uuid.UUID(uuid.product), filename, directory
     )
@@ -75,7 +73,7 @@ def process_instrument(processor: Processor, params: InstrumentParams, directory
         new_file, std_uuid.UUID(uuid.product), params.product.id
     )
     processor.update_statuses(uuid.raw, "processed")
-    utils.print_info(uuid, volatile, patch, qc_result)
+    utils.print_info(uuid, volatile, patch, upload, qc_result)
     if processor.md_api.config.is_production:
         process_housekeeping(processor, params)
 

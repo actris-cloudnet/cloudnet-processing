@@ -76,19 +76,23 @@ def process_model(processor: Processor, params: ModelParams, directory: Path):
             volatile_pid = existing_meta["pid"]
         processor.pid_utils.add_pid_to_file(new_file, pid=volatile_pid)
 
+        upload = True
         if existing_meta and existing_file:
             difference = nc_difference(existing_file, new_file)
             if difference == NCDiff.NONE:
-                raise SkipTaskError("Skipping PUT to data portal, file has not changed")
+                upload = False
+                new_file = existing_file
 
-        processor.upload_file(params, new_file, filename, volatile, patch=True)
+        if upload:
+            processor.upload_file(params, new_file, filename, volatile, patch=True)
+        else:
+            logging.info("Skipping PUT to data portal, file has not changed")
         if "hidden" in params.site.types:
             logging.info("Skipping plotting for hidden site")
         else:
             processor.create_and_upload_images(
                 new_file, "model", product_uuid, filename, directory
             )
-
         qc_result = processor.upload_quality_report(new_file, product_uuid)
         _print_info(product_uuid, qc_result)
         processor.update_statuses(raw_uuids, "processed")

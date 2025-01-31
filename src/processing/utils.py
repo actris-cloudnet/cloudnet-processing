@@ -347,9 +347,12 @@ def print_info(
     uuid: Uuid,
     volatile: bool,
     patch: bool,
+    upload: bool,
     qc_result: str | None = None,
 ) -> None:
-    if patch:
+    if not upload:
+        action = "Kept existing file"
+    elif patch:
         action = "Patched existing file"
     elif not volatile:
         action = "Created new version"
