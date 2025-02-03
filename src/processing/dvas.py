@@ -87,6 +87,7 @@ class Dvas:
             logging.debug(f"Deleting version {version['uuid']} of {file['filename']}")
             try:
                 self.delete(version)
+                self.md_api.clean_dvas_info(version["uuid"])
             except DvasError as err:
                 logging.error(f"Failed to delete {version['dvasId']} from DVAS")
                 logging.debug(err)
