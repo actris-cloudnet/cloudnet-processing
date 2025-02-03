@@ -53,6 +53,7 @@ def process_instrument(processor: Processor, params: InstrumentParams, directory
         if difference == NCDiff.NONE:
             upload = False
             new_file = existing_file
+            uuid.product = existing_product["uuid"]
         elif difference == NCDiff.MINOR:
             # Replace existing file
             patch = True

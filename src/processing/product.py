@@ -51,6 +51,7 @@ def process_me(processor: Processor, params: ModelParams, directory: Path):
         if difference == NCDiff.NONE:
             upload = False
             new_file = existing_file
+            uuid.product = existing_product["uuid"]
         elif difference == NCDiff.MINOR:
             # Replace existing file
             patch = True
@@ -119,6 +120,7 @@ def process_product(processor: Processor, params: ProductParams, directory: Path
         if difference == NCDiff.NONE:
             upload = False
             new_file = existing_file
+            uuid.product = existing_product["uuid"]
         elif difference == NCDiff.MINOR:
             # Replace existing file
             patch = True
