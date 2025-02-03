@@ -131,8 +131,8 @@ class ProcessRadar(ProcessInstrument):
         full_paths, self.uuid.raw = self.download_instrument()
         full_paths = _unzip_gz_files(full_paths)
         full_paths = self._fix_suffices(full_paths, ".znc")
-        self._add_calibration("azimuth_offset")
-        self._add_calibration("zenith_offset")
+        for key in ("azimuth_offset", "zenith_offset", "snr_limit"):
+            self._add_calibration(key)
         output_filename, site_meta = self._args
         site_meta["model"] = "mira-10"
         self.uuid.product = mira2nc(
@@ -146,8 +146,8 @@ class ProcessRadar(ProcessInstrument):
         full_paths, self.uuid.raw = self.download_instrument()
         full_paths = _unzip_gz_files(full_paths)
         full_paths = self._fix_suffices(full_paths, ".mmclx")
-        self._add_calibration("azimuth_offset")
-        self._add_calibration("zenith_offset")
+        for key in ("azimuth_offset", "zenith_offset", "snr_limit"):
+            self._add_calibration(key)
         output_filename, site_meta = self._args
         site_meta["model"] = "mira-35"
         self.uuid.product = mira2nc(
