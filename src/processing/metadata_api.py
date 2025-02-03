@@ -89,7 +89,7 @@ class MetadataApi:
             return
         self.put_file("upload/data", checksum, base.daily_file.name, self._auth)
 
-    def update_dvas_info(self, uuid: uuid.UUID, timestamp: str, dvas_id: int):
+    def update_dvas_info(self, uuid: uuid.UUID, timestamp: str, dvas_id: str):
         payload = {"uuid": uuid, "dvasUpdatedAt": timestamp, "dvasId": dvas_id}
         self.post("files", payload)
 

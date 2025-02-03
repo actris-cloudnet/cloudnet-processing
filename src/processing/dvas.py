@@ -49,21 +49,20 @@ class Dvas:
             self.md_api.update_dvas_info(
                 file["uuid"], dvas_json["md_metadata"]["datestamp"], dvas_id
             )
-        except DvasError as err:
-            logging.error(f"Failed to upload {file['filename']} to DVAS")
-            logging.debug(err)
+        except DvasError:
+            logging.exception(f"Failed to upload {file['filename']} to DVAS")
 
     def delete(self, file: dict):
         """Delete Cloudnet file metadata from DVAS API"""
         logging.warning(
             f"Deleting Cloudnet file {file['uuid']} with dvasId {file['dvasId']} from DVAS"
         )
-        url = f"{self.config.dvas_portal_url}/Metadata/delete/{file['dvasId']}"
+        url = f"{self.config.dvas_portal_url}/metadata/delete/{file['dvasId']}"
         self._delete(url)
 
     def delete_all(self):
         """Delete all Cloudnet file metadata from DVAS API"""
-        url = f"{self.config.dvas_portal_url}/Metadata/delete/all/{self.config.dvas_provider_id}"
+        url = f"{self.config.dvas_portal_url}/metadata/delete/all/{self.config.dvas_provider_id}"
         self._delete(url)
         logging.info("Done. All Cloudnet files deleted from DVAS")
 
@@ -92,15 +91,19 @@ class Dvas:
                 logging.error(f"Failed to delete {version['dvasId']} from DVAS")
                 logging.debug(err)
 
-    def _post(self, metadata: dict) -> int:
+    def _post(self, metadata: dict) -> str:
         res = self.session.post(
-            f"{self.config.dvas_portal_url}/Metadata/add", json=metadata
+            f"{self.config.dvas_portal_url}/metadata/add", json=metadata
         )
         if not res.ok:
             raise DvasError(f"POST to DVAS API failed: {res.status_code} {res.text}")
         logging.debug(f"POST to DVAS API successful: {res.status_code} {res.text}")
-        dvas_id = res.headers["Location"].rsplit("/", 1)[-1]
-        return int(dvas_id)
+        res = self.session.post(
+            f"{self.config.dvas_portal_url}/metadata/pid",
+            json={"pid": metadata["md_identification"]["identifier"]["pid"]},
+        )
+        dvas_id = res.json()[0]["id"]
+        return dvas_id
 
     def _init_session(self) -> requests.Session:
         s = utils.make_session()
