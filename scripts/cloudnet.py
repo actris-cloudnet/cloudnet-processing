@@ -509,6 +509,8 @@ def _validate_products(products: str) -> list[str]:
             case "l3":
                 product_types = ["l3-cf", "l3-iwc", "l3-lwc"]
                 accepted_products.extend(product_types)
+            case "cpr":
+                accepted_products.extend(["cpr-simulation"])
             case prod if prod in valid_products:
                 accepted_products.append(prod)
             case prod:

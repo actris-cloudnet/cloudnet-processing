@@ -19,7 +19,13 @@ class NetCDFComparator:
         self,
         old_file: PathLike | str,
         new_file: PathLike | str,
-        ignore_vars: Tuple[str] = ("beta_smooth",),
+        ignore_vars: Tuple[str, ...] = (
+            "beta_smooth",
+            "ze_sat_noise",
+            "vm_sat_noise",
+            "vm_sat_folded",
+            "folding_flag",
+        ),
     ):
         self.old_file = old_file
         self.new_file = new_file

@@ -530,6 +530,8 @@ def _get_fields_for_plot(cloudnet_file_type: str) -> tuple[list, int]:
     """
     max_alt = 12
     match cloudnet_file_type:
+        case "cpr-simulation":
+            fields = ["ze_sat", "vm_sat", "nubf"]
         case "rain-gauge":
             fields = ["rainfall_rate", "r_accum_RT", "r_accum_NRT", "rainfall_amount"]
         case "categorize-voodoo":
@@ -718,14 +720,6 @@ def _get_fields_for_l3_plot(product: str, model: str) -> list:
             return [f"{model}_cf", f"cf_V_{model}"]
         case unknown_product:
             raise NotImplementedError(f"Unknown product: {unknown_product}")
-
-
-def _order_metadata(metadata: list) -> list:
-    """Orders 2-element metadata according to measurementDate."""
-    key = "measurementDate"
-    if len(metadata) == 2 and metadata[0][key] > metadata[1][key]:
-        metadata.reverse()
-    return metadata
 
 
 def _dimensions2dict(dimensions: Dimensions) -> dict:

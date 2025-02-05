@@ -9,6 +9,7 @@ from cloudnetpy.categorize import generate_categorize
 from cloudnetpy.exceptions import CloudnetException, ModelDataError
 from cloudnetpy.model_evaluation.products import product_resampling
 from cloudnetpy.products import generate_mwr_multi, generate_mwr_single
+from orbital_radar import Suborbital
 from requests import HTTPError
 
 from processing import utils
@@ -101,6 +102,8 @@ def process_product(processor: Processor, params: ProductParams, directory: Path
             new_file = _process_mwrpy(processor, params, uuid, directory)
         elif params.product.id in ("categorize", "categorize-voodoo"):
             new_file = _process_categorize(processor, params, uuid, directory)
+        elif params.product.id == "cpr-simulation":
+            new_file = _process_cpr_simulation(processor, params, uuid, directory)
         else:
             new_file = _process_level2(processor, params, uuid, directory)
     except CloudnetException as err:
@@ -191,6 +194,31 @@ def _process_mwrpy(
         uuid.product = generate_mwr_multi(
             str(l1c_file), str(output_file), uuid.volatile
         )
+    return output_file
+
+
+def _process_cpr_simulation(
+    processor: Processor, params: ProductParams, uuid: Uuid, directory: Path
+):
+    earthcare_launch_date = datetime.date(2024, 5, 28)
+    if params.date < earthcare_launch_date:
+        raise SkipTaskError(
+            "CPR simulation is only feasible for dates before 2024-05-28"
+        )
+    orbital = Suborbital()
+    payload = _get_payload(
+        site_id=params.site.id,
+        date=params.date,
+        product_id="categorize",
+    )
+    metadata = processor.md_api.get("api/files", payload)
+    _check_response(metadata, "categorize")
+    categorize_file = processor.storage_api.download_product(metadata[0], directory)
+    output_file = directory / "output.nc"
+    uuid.product = orbital.simulate_cloudnet(
+        str(categorize_file), str(output_file), mean_wind=6, uuid=uuid.volatile
+    )
+    utils.add_global_attributes(output_file)
     return output_file
 
 
