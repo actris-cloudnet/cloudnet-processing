@@ -195,7 +195,11 @@ class Level1Nc:
                 break
         else:
             raise RuntimeError(f"Time variable not found from {supported_time_vars}")
+
         time_stamps = time[:]
+        if len(time_stamps) < 2:
+            raise cloudnetpy.exceptions.ValidTimeStampError
+
         raw_time_stamps = time_stamps.copy()
 
         if "seconds since" in time.units:
@@ -210,7 +214,6 @@ class Level1Nc:
                 if len(valid_ind) > 0 and t <= time_stamps[valid_ind[-1]]:
                     continue
                 valid_ind.append(ind)
-        # Skip files with only one valid time stamp
         if len(valid_ind) < 2:
             raise cloudnetpy.exceptions.ValidTimeStampError
         return valid_ind
