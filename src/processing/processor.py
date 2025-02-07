@@ -19,6 +19,7 @@ from processing.pid_utils import PidUtils
 from processing.storage_api import StorageApi
 
 MIN_MODEL_FILESIZE = 20200
+TIMEDELTA_ZERO = datetime.timedelta(0)
 
 
 @dataclass(frozen=True)
@@ -194,21 +195,37 @@ class Processor:
         site_id: str,
         instrument_id: str,
         directory: Path,
+        date: datetime.date | tuple[datetime.date, datetime.date],
         instrument_pid: str | None = None,
         include_pattern: str | None = None,
         largest_only: bool = False,
         exclude_pattern: str | None = None,
         include_tag_subset: set[str] | None = None,
         exclude_tag_subset: set[str] | None = None,
-        date: datetime.date | tuple[datetime.date, datetime.date] | None = None,
         allow_empty=False,
         filename_prefix: str | None = None,
         filename_suffix: str | None = None,
+        time_offset: datetime.timedelta | None = None,
     ):
         """Download raw files matching the given parameters."""
+        if isinstance(date, datetime.date):
+            start_date = date
+            end_date = date
+        else:
+            start_date, end_date = date
+        start_date_ext, end_date_ext = start_date, end_date
+        if time_offset is not None:
+            if largest_only:
+                raise ValueError("Cannot use both time_offset and largest_only")
+            if abs(time_offset / datetime.timedelta(hours=1)) >= 24:
+                raise ValueError("time_offset must be less than 24 hours")
+            if time_offset < TIMEDELTA_ZERO:
+                start_date_ext -= datetime.timedelta(days=1)
+            elif time_offset > TIMEDELTA_ZERO:
+                end_date_ext += datetime.timedelta(days=1)
         payload = self._get_payload(
             site=site_id,
-            date=date,
+            date=(start_date_ext, end_date_ext),
             instrument=instrument_id,
             instrument_pid=instrument_pid,
             skip_created=True,
@@ -246,35 +263,17 @@ class Processor:
         full_paths, uuids = self.storage_api.download_raw_data(
             upload_metadata, directory
         )
+        if time_offset is not None:
+            uuids = [
+                meta["uuid"]
+                for meta in upload_metadata
+                if start_date
+                <= datetime.date.fromisoformat(meta["measurementDate"])
+                <= end_date
+            ]
         if largest_only:
             return full_paths[0], uuids
         return full_paths, uuids
-
-    def download_adjoining_daily_files(
-        self,
-        params: InstrumentParams,
-        directory: Path,
-    ) -> tuple[list[Path], list[uuid.UUID]]:
-        """Download raw files from today and tomorrow to handle non-UTC timestamps."""
-        next_day = params.date + datetime.timedelta(days=1)
-        payload = self._get_payload(
-            site=params.site.id,
-            date=(params.date, next_day),
-            instrument_pid=params.instrument.pid,
-            skip_created=True,
-        )
-        upload_metadata = self.md_api.get("api/raw-files", payload)
-        upload_metadata = _order_metadata(upload_metadata)
-        if not upload_metadata:
-            raise utils.RawDataMissingError
-        full_paths, _ = self.storage_api.download_raw_data(upload_metadata, directory)
-        # Return all full paths but only current day UUIDs
-        uuids_of_current_day = [
-            meta["uuid"]
-            for meta in upload_metadata
-            if meta["measurementDate"] == params.date.isoformat()
-        ]
-        return full_paths, uuids_of_current_day
 
     def _get_payload(
         self,

@@ -91,6 +91,7 @@ class ProcessInstrument:
         filename_prefix: str | None = None,
         filename_suffix: str | None = None,
         subdir: str | None = None,
+        time_offset: datetime.timedelta | None = None,
     ):
         directory = self.raw_dir
         if subdir is not None:
@@ -110,6 +111,7 @@ class ProcessInstrument:
             allow_empty=allow_empty,
             filename_prefix=filename_prefix,
             filename_suffix=filename_suffix,
+            time_offset=time_offset,
         )
 
 
@@ -444,22 +446,20 @@ class ProcessLidar(ProcessInstrument):
 
     def process_cl51(self):
         calibration = fetch_calibration(self.params.instrument.pid, self.params.date)
-        if calibration and calibration.get("data", {}).get("time_offset"):
-            (
-                full_paths,
-                self.uuid.raw,
-            ) = self.processor.download_adjoining_daily_files(self.params, self.raw_dir)
-        else:
-            (
-                full_paths,
-                self.uuid.raw,
-            ) = self.download_instrument()
+        time_offset = (
+            datetime.timedelta(minutes=calibration["data"]["time_offset"])
+            if calibration is not None and "time_offset" in calibration["data"]
+            else None
+        )
+        full_paths, self.uuid.raw = self.download_instrument(time_offset=time_offset)
         full_paths.sort()
         _concatenate_text_files(full_paths, str(self.daily_path))
-        if calibration and (minutes := calibration.get("data", {}).get("time_offset")):
-            logging.info("Shifting timestamps to UTC by %d minutes", minutes)
-            offset = datetime.timedelta(minutes=minutes)
-            _fix_cl51_timestamps(str(self.daily_path), offset)
+        if time_offset is not None:
+            logging.info(
+                "Shifting timestamps to UTC by %d minutes",
+                time_offset / datetime.timedelta(minutes=1),
+            )
+            _fix_cl51_timestamps(str(self.daily_path), time_offset)
         self._call_ceilo2nc("cl51")
 
     def process_cl61d(self):
@@ -524,16 +524,17 @@ class ProcessLidar(ProcessInstrument):
 
 class ProcessMwrL1c(ProcessInstrument):
     def process_hatpro(self):
-        data = self._get_calibration_data()
+        calibration = self._get_calibration_data()
         full_paths, self.uuid.raw = self.download_instrument(
             include_pattern=r"\.(brt|hkd|met|irt|blb|bls)$",
             exclude_pattern=r"2DSCAN",
+            time_offset=calibration.get("time_offset"),
         )
         output_filename, site_meta = self._args
 
-        site_meta = {**site_meta, **data["data"]}
+        site_meta = {**site_meta, **calibration}
         coeff_paths = []
-        for link in data["data"]["coefficientLinks"]:
+        for link in calibration["coefficientLinks"]:
             filename = link.split("/")[-1]
             full_path = self.raw_dir / filename
             with open(full_path, "wb") as f:
@@ -553,9 +554,12 @@ class ProcessMwrL1c(ProcessInstrument):
             "instrumentPid": self.params.instrument.pid,
         }
         try:
-            data = self.processor.md_api.get("api/calibration", payload)
+            res = self.processor.md_api.get("api/calibration", payload)
         except HTTPError:
             raise RawDataMissingError("Skipping due to missing mwrpy coefficients")
+        data = res["data"]
+        if "time_offset" in data:
+            data["time_offset"] = datetime.timedelta(minutes=data["time_offset"])
         return data
 
 
@@ -671,8 +675,9 @@ class ProcessWeatherStation(ProcessInstrument):
 
         calibration = fetch_calibration(self.params.instrument.pid, self.params.date)
         if calibration and calibration.get("data", {}).get("time_offset"):
-            (full_paths, self.uuid.raw) = self.processor.download_adjoining_daily_files(
-                self.params, self.raw_dir
+            time_offset = datetime.timedelta(minutes=calibration["data"]["time_offset"])
+            full_paths, self.uuid.raw = self.download_instrument(
+                time_offset=time_offset
             )
             full_paths.sort()
             self.uuid.product = ws2nc(
