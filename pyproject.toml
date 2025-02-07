@@ -22,7 +22,7 @@ dependencies = [
   "cloudnetpy[extras]>=1.69.7",
   "doppy>=0.3.5",
   "influxdb-client",
-  "model-munger @ git+https://github.com/actris-cloudnet/model-munger.git@v0.1.2",
+  "model-munger @ git+https://github.com/actris-cloudnet/model-munger.git@v0.1.4",
   "requests",
   "rpgpy>=0.15.10",
   "toml",
