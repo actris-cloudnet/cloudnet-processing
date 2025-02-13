@@ -23,7 +23,7 @@ dependencies = [
   "doppy>=0.3.5",
   "influxdb-client",
   "model-munger @ git+https://github.com/actris-cloudnet/model-munger.git@v0.1.4",
-  "orbital-radar @ git+https://github.com/actris-cloudnet/orbital-radar.git@v0.0.2",
+  "orbital-radar @ git+https://github.com/actris-cloudnet/orbital-radar.git@v0.0.3",
   "requests",
   "rpgpy>=0.15.10",
   "toml",
