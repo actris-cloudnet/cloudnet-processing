@@ -176,8 +176,7 @@ def _process_mwrpy(
 ) -> Path:
     assert params.instrument is not None
     payload = _get_payload(
-        site_id=params.site.id,
-        date=params.date,
+        params,
         product_id="mwr-l1c",
         instrument_pid=params.instrument.pid,
     )
@@ -207,8 +206,7 @@ def _process_cpr_simulation(
         )
     orbital = Suborbital()
     payload = _get_payload(
-        site_id=params.site.id,
-        date=params.date,
+        params,
         product_id="categorize",
     )
     metadata = processor.md_api.get("api/files", payload)
@@ -245,9 +243,7 @@ def _process_categorize(
         )
         uuid.raw.extend(lv0_uuid)
     except ModelDataError as exc:
-        payload = _get_payload(
-            site_id=params.site.id, date=params.date, model_id="gdas1"
-        )
+        payload = _get_payload(params, model_id="gdas1")
         metadata = processor.md_api.get("api/model-files", payload)
         if not metadata:
             raise SkipTaskError("Bad model data and no gdas1") from exc
@@ -272,15 +268,13 @@ def _get_categorize_options(params: ProductParams) -> dict | None:
 def _process_l3(
     processor: Processor, params: ModelParams, uuid: Uuid, directory: Path
 ) -> Path:
-    payload = _get_payload(
-        site_id=params.site.id, date=params.date, model_id=params.model.id
-    )
+    payload = _get_payload(params, model_id=params.model.id)
     model_meta = processor.md_api.get("api/model-files", payload)
     _check_response(model_meta, "model")
     model_file = processor.storage_api.download_product(model_meta[0], directory)
     l3_prod = params.product.id.split("-")[1]
     source = "categorize" if l3_prod == "cf" else l3_prod
-    payload = _get_payload(site_id=params.site.id, date=params.date, product_id=source)
+    payload = _get_payload(params, product_id=source)
     product_meta = processor.md_api.get("api/files", payload)
     _check_response(product_meta, source)
     product_file = processor.storage_api.download_product(product_meta[0], directory)
@@ -306,9 +300,7 @@ def _process_level2(
     else:
         cat_file = "categorize"
         module_name = params.product.id
-    payload = _get_payload(
-        site_id=params.site.id, date=params.date, product_id=cat_file
-    )
+    payload = _get_payload(params, product_id=cat_file)
     metadata = processor.md_api.get("api/files", payload)
     _check_response(metadata, cat_file)
     categorize_file = processor.storage_api.download_product(metadata[0], directory)
@@ -372,7 +364,7 @@ def _get_level1b_metadata_for_categorize(
 
 
 def _find_model_product(processor: Processor, params: ProductParams) -> dict | None:
-    payload = _get_payload(site_id=params.site.id, date=params.date)
+    payload = _get_payload(params)
     metadata = processor.md_api.get("api/model-files", payload)
     _check_response(metadata, "model")
     return metadata[0]
@@ -417,8 +409,7 @@ def _find_instrument_product(
             return 999
 
     payload = _get_payload(
-        site_id=params.site.id,
-        date=params.date,
+        params,
         product_id=product_id,
         instrument_id=require,
     )
@@ -450,9 +441,7 @@ def _get_nominal_instrument_pid(
 def _get_input_files_for_voodoo(
     processor: Processor, params: ProductParams, directory: Path
 ) -> tuple[list[str], list[str]]:
-    payload = _get_payload(
-        site_id=params.site.id, date=params.date, instrument_id="rpg-fmcw-94"
-    )
+    payload = _get_payload(params, instrument_id="rpg-fmcw-94")
     metadata = processor.md_api.get("upload-metadata", payload)
     unique_pids = [row["instrumentPid"] for row in metadata]
     if unique_pids:
@@ -475,16 +464,15 @@ def _get_input_files_for_voodoo(
 
 
 def _get_payload(
-    site_id: str,
-    date: datetime.date,
+    params: ProductParams | ModelParams,
     product_id: str | list[str] | None = None,
     instrument_id: str | list[str] | None = None,
     instrument_pid: str | list[str] | None = None,
     model_id: str | None = None,
 ) -> dict:
     payload = {
-        "site": site_id,
-        "date": date.isoformat(),
+        "site": params.site.id,
+        "date": params.date.isoformat(),
         "developer": True,
     }
     if product_id is not None:
