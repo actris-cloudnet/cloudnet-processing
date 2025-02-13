@@ -240,15 +240,8 @@ class DvasMetadata:
 
     def _parse_variable_names(self) -> list[str]:
         # https://prod-actris-md.nilu.no/Vocabulary/ContentAttribute
-        variables = utils.get_from_data_portal_api("api/products/variables")
-        file_vars = list(
-            filter(lambda var: var["id"] == self._product["id"], variables)
-        )[0]
-        return [
-            v["actrisName"]
-            for v in file_vars["variables"]
-            if v["actrisName"] is not None
-        ]
+        file_vars = self.md_api.get(f"api/products/{self._product['id']}/variables")
+        return [v["actrisName"] for v in file_vars if v["actrisName"] is not None]
 
     def _parse_affiliation(self) -> list[str]:
         # https://prod-actris-md.nilu.no/vocabulary/networkprogram
