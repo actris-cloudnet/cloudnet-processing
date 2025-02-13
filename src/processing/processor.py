@@ -353,7 +353,7 @@ class Processor:
         visualizations = []
         product_s3key = f"legacy/{product_s3key}" if legacy is True else product_s3key
         try:
-            fields, max_alt = _get_fields_for_plot(product)
+            fields, max_alt = self._get_fields_for_plot(product)
         except NotImplementedError:
             logging.warning(f"Plotting for {product} not implemented")
             return
@@ -386,6 +386,20 @@ class Processor:
             )
         self.md_api.put_images(visualizations, product_uuid)
         self._delete_obsolete_images(product_uuid, product, valid_images)
+
+    def _get_fields_for_plot(self, product: str) -> tuple[list, int]:
+        variables = self.md_api.get(f"api/products/{product}/variables")
+        variable_ids = [var["id"] for var in variables]
+        match product:
+            case "lwc" | "der" | "mwr" | "mwr-single" | "mwr-multi":
+                max_alt = 6
+            case "drizzle":
+                max_alt = 4
+            case "rain-radar":
+                max_alt = 3
+            case _:
+                max_alt = 12
+        return variable_ids, max_alt
 
     def create_and_upload_l3_images(
         self,
@@ -515,191 +529,6 @@ class Processor:
 def _get_var_id(cloudnet_file_type: str, field: str) -> str:
     """Return identifier for variable / Cloudnet file combination."""
     return f"{cloudnet_file_type}-{field}"
-
-
-def _get_fields_for_plot(cloudnet_file_type: str) -> tuple[list, int]:
-    """Return list of variables and maximum altitude for Cloudnet quicklooks.
-
-    Args:
-        cloudnet_file_type (str): Name of Cloudnet file type, e.g., 'classification'.
-
-    Returns:
-        tuple: 2-element tuple containing feasible variables for plots
-        (list) and maximum altitude (int).
-
-    """
-    max_alt = 12
-    match cloudnet_file_type:
-        case "cpr-simulation":
-            fields = ["ze_sat", "vm_sat", "nubf"]
-        case "rain-gauge":
-            fields = ["rainfall_rate", "r_accum_RT", "r_accum_NRT", "rainfall_amount"]
-        case "categorize-voodoo":
-            fields = ["v", "liquid_prob"]
-        case "categorize":
-            fields = [
-                "Z",
-                "v",
-                "width",
-                "ldr",
-                "sldr",
-                "v_sigma",
-                "beta",
-                "lwp",
-                "Tw",
-                "radar_gas_atten",
-                "radar_liquid_atten",
-                "radar_rain_atten",
-                "radar_melting_atten",
-                "rainfall_rate",
-                "Z_error",
-            ]
-        case "classification":
-            fields = ["target_classification", "detection_status"]
-        case "classification-voodoo":
-            fields = ["target_classification", "detection_status"]
-        case "iwc":
-            fields = ["iwc", "iwc_error", "iwc_retrieval_status"]
-        case "lwc":
-            fields = ["lwc", "lwc_error", "lwc_retrieval_status"]
-            max_alt = 6
-        case "ier":
-            fields = ["ier", "ier_error", "ier_retrieval_status"]
-        case "der":
-            fields = ["der", "der_error", "der_retrieval_status"]
-            max_alt = 6
-        case "model":
-            fields = [
-                "cloud_fraction",
-                "uwind",
-                "vwind",
-                "temperature",
-                "q",
-                "pressure",
-            ]
-        case "lidar":
-            fields = [
-                "beta",
-                "beta_raw",
-                "depolarisation",
-                "depolarisation_raw",
-                "beta_1064",
-                "beta_532",
-                "beta_355",
-                "depolarisation_532",
-                "depolarisation_355",
-            ]
-        case "doppler-lidar":
-            fields = [
-                "beta",
-                "beta_raw",
-                "v",
-                "depolarisation",
-                "depolarisation_raw",
-            ]
-        case "doppler-lidar-wind":
-            fields = [
-                "uwind",
-                "uwind_raw",
-                "vwind",
-                "vwind_raw",
-            ]
-        case "mwr":
-            max_alt = 6
-            fields = [
-                "lwp",
-                "iwv",
-                "temperature",
-                "absolute_humidity",
-                "relative_humidity",
-                "irt_0",
-            ]
-        case "mwr-l1c":
-            fields = [
-                "tb_0",
-                "tb_01",
-                "tb_02",
-                "tb_03",
-                "tb_04",
-                "tb_05",
-                "tb_06",
-                "tb_07",
-                "tb_08",
-                "tb_09",
-                "tb_10",
-                "tb_11",
-                "tb_12",
-                "tb_13",
-                "irt_0",
-                "irt_01",
-            ]
-        case "mwr-single":
-            fields = [
-                "lwp",
-                "iwv",
-                "temperature",
-                "absolute_humidity",
-                "relative_humidity",
-                "potential_temperature",
-                "equivalent_potential_temperature",
-            ]
-            max_alt = 6
-        case "mwr-multi":
-            fields = [
-                "temperature",
-                "relative_humidity",
-                "potential_temperature",
-                "equivalent_potential_temperature",
-            ]
-            max_alt = 6
-        case "radar":
-            fields = [
-                "Zh",
-                "v",
-                "width",
-                "ldr",
-                "sldr",
-                "zdr",
-                "rho_hv",
-                "srho_hv",
-                "rho_cx",
-                "lwp",
-                "rainfall_rate",
-            ]
-        case "disdrometer":
-            fields = [
-                "rainfall_rate",
-                "snowfall_rate",
-                "n_particles",
-                "number_concentration",
-                "fall_velocity",
-            ]
-        case "drizzle":
-            fields = ["Do", "drizzle_N"]
-            max_alt = 4
-        case "weather-station":
-            fields = [
-                "air_temperature",
-                "wind_speed",
-                "wind_direction",
-                "air_pressure",
-                "relative_humidity",
-                "rainfall_rate",
-                "rainfall_amount",
-            ]
-        case "rain-radar":
-            fields = [
-                "Zh",
-                "lwc",
-                "pia",
-                "rainfall_rate",
-                "v",
-                "width",
-            ]
-            max_alt = 3
-        case _:
-            raise NotImplementedError(cloudnet_file_type)
-    return fields, max_alt
 
 
 def _get_fields_for_l3_plot(product: str, model: str) -> list:
