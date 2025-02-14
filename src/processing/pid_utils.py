@@ -39,8 +39,12 @@ class PidUtils:
                 try:
                     res.raise_for_status()
                 except HTTPError as exc:
+                    try:
+                        error = res.json()["detail"]
+                    except requests.JSONDecodeError:
+                        error = res.text[:100]
                     raise MiscError(
-                        f'PID service failed with status {res.status_code}:\n{res.json()["detail"]}'
+                        f"PID service failed with status {res.status_code}:\n{error}"
                     ) from exc
                 pid_to_file = res.json()["pid"]
             else:
