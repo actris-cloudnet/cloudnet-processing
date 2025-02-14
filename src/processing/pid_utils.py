@@ -41,7 +41,7 @@ class PidUtils:
                 except HTTPError as exc:
                     try:
                         error = res.json()["detail"]
-                    except requests.JSONDecodeError:
+                    except (requests.JSONDecodeError, KeyError):
                         error = res.text[:100]
                     raise MiscError(
                         f"PID service failed with status {res.status_code}:\n{error}"
