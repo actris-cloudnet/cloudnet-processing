@@ -10,6 +10,7 @@ from cloudnetpy.exceptions import CloudnetException, ModelDataError
 from cloudnetpy.model_evaluation.products import product_resampling
 from cloudnetpy.products import generate_mwr_multi, generate_mwr_single
 from orbital_radar import Suborbital
+from cloudnetpy.products.turbulence import generate_turbulence_from_lidar
 from requests import HTTPError
 
 from processing import utils
@@ -104,6 +105,8 @@ def process_product(processor: Processor, params: ProductParams, directory: Path
             new_file = _process_categorize(processor, params, uuid, directory)
         elif params.product.id == "cpr-simulation":
             new_file = _process_cpr_simulation(processor, params, uuid, directory)
+        elif params.product.id == "turbulence-from-lidar":
+            new_file = _process_turbulence(processor, params, uuid, directory)
         else:
             new_file = _process_level2(processor, params, uuid, directory)
     except CloudnetException as err:
@@ -217,6 +220,23 @@ def _process_cpr_simulation(
         str(categorize_file), str(output_file), mean_wind=6, uuid=uuid.volatile
     )
     utils.add_global_attributes(output_file)
+
+
+def _process_turbulence(
+    processor: Processor, params: ProductParams, uuid: Uuid, directory: Path
+) -> Path:
+    record_lidar = _find_instrument_product(processor, params, "doppler-lidar")
+    if record_lidar is None:
+        raise SkipTaskError("Missing required input product: doppler-lidar")
+    record_wind = _find_instrument_product(processor, params, "doppler-lidar-wind")
+    if record_wind is None:
+        raise SkipTaskError("Missing required input product: doppler-lidar-wind")
+
+    file_lidar, = processor.storage_api.download_products([record_lidar], directory)
+    file_wind, = processor.storage_api.download_products([record_wind], directory)
+
+    output_file = directory / "output.nc"
+    uuid.product = generate_turbulence_from_lidar(file_lidar, file_wind, str(output_file), uuid.volatile)
     return output_file
 
 
