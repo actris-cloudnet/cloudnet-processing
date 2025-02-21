@@ -357,14 +357,23 @@ def _process_file(
                         process_instrument(processor, instru_params, Path(directory))
                     except utils.SkipTaskError as err:
                         logging.warning("Skipped task: %s", err)
-    elif product.id in ("mwr-single", "mwr-multi"):
+    elif product.id in ("mwr-single", "mwr-multi", "epsilon-lidar"):
         if args.uuids:
             instruments = {processor.get_instrument(uuid) for uuid in args.uuids}
-        else:
+        elif product.id in ("mwr-single", "mwr-multi"):
             payload = {
                 "site": site.id,
                 "date": date.isoformat(),
                 "product": "mwr-l1c",
+            }
+            metadata = processor.md_api.get("api/files", payload)
+            instrument_uuids = {meta["instrumentInfoUuid"] for meta in metadata}
+            instruments = {processor.get_instrument(uuid) for uuid in instrument_uuids}
+        else:
+            payload = {
+                "site": site.id,
+                "date": date.isoformat(),
+                "product": "doppler-lidar",
             }
             metadata = processor.md_api.get("api/files", payload)
             instrument_uuids = {meta["instrumentInfoUuid"] for meta in metadata}

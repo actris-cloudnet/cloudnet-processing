@@ -9,6 +9,7 @@ from cloudnetpy.categorize import generate_categorize
 from cloudnetpy.exceptions import CloudnetException, ModelDataError
 from cloudnetpy.model_evaluation.products import product_resampling
 from cloudnetpy.products import generate_mwr_multi, generate_mwr_single
+from cloudnetpy.products.epsilon import generate_epsilon_from_lidar
 from orbital_radar import Suborbital
 from requests import HTTPError
 
@@ -104,6 +105,8 @@ def process_product(processor: Processor, params: ProductParams, directory: Path
             new_file = _process_categorize(processor, params, uuid, directory)
         elif params.product.id == "cpr-simulation":
             new_file = _process_cpr_simulation(processor, params, uuid, directory)
+        elif params.product.id == "epsilon-lidar":
+            new_file = _process_epsilon_from_lidar(processor, params, uuid, directory)
         else:
             new_file = _process_level2(processor, params, uuid, directory)
     except CloudnetException as err:
@@ -174,7 +177,8 @@ def _generate_filename(params: ProductParams | ModelParams) -> str:
 def _process_mwrpy(
     processor: Processor, params: ProductParams, uuid: Uuid, directory: Path
 ) -> Path:
-    assert params.instrument is not None
+    if params.instrument is None:
+        raise RuntimeError("Instrument is None")
     payload = _get_payload(
         params,
         product_id="mwr-l1c",
@@ -217,6 +221,37 @@ def _process_cpr_simulation(
         str(categorize_file), str(output_file), mean_wind=6, uuid=uuid.volatile
     )
     utils.add_global_attributes(output_file)
+
+
+def _process_epsilon_from_lidar(
+    processor: Processor, params: ProductParams, uuid: Uuid, directory: Path
+) -> Path:
+    if params.instrument is None:
+        raise RuntimeError("Instrument is None")
+    payload_stare = _get_payload(
+        params,
+        product_id="doppler-lidar",
+        instrument_pid=params.instrument.pid,
+    )
+    metadata_stare = processor.md_api.get("api/files", payload_stare)
+    _check_response(metadata_stare, "doppler-lidar")
+
+    payload_wind = _get_payload(
+        params,
+        product_id="doppler-lidar-wind",
+    )
+    metadata_wind = processor.md_api.get("api/files", payload_wind)
+
+    _check_response(metadata_wind, "doppler-lidar-wind")
+
+    file_lidar, file_wind = processor.storage_api.download_products(
+        [metadata_stare[0], metadata_wind[0]], directory
+    )
+
+    output_file = directory / "output.nc"
+    uuid.product = generate_epsilon_from_lidar(
+        file_lidar, file_wind, str(output_file), uuid.volatile
+    )
     return output_file
 
 

@@ -126,6 +126,8 @@ class DopplerLidarStareNc(core.Level1Nc):
             "time",
             "wavelength",
             "polariser_bleed_through",
+            "ray_accumulation_time",
+            "pulses_per_ray",
             "elevation",
             "range",
         )
@@ -175,6 +177,12 @@ class DopplerLidarStareNc(core.Level1Nc):
             self.nc.variables[
                 "polariser_bleed_through"
             ].long_name = "Polariser bleed-through"
+        if "pulses_per_ray" in self.nc.variables:
+            self.nc.variables["pulses_per_ray"].long_name = "Pulses per ray"
+        if "ray_accumulation_time" in self.nc.variables:
+            self.nc.variables[
+                "ray_accumulation_time"
+            ].long_name = "Ray accumulation time"
         if "beta_cross" in self.nc.variables:
             self.nc.variables[
                 "beta_cross"
