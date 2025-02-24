@@ -489,8 +489,8 @@ def _validate_products(products: str) -> list[str]:
     rejected_products = []
     for prod in product_list:
         match prod:
-            case "l1b" | "l1c" | "l2":
-                product_types = utils.get_product_types(prod[1:])
+            case "instrument" | "geophysical" | "evaluation":
+                product_types = utils.get_product_types(prod)
                 accepted_products.extend(product_types)
             case "voodoo":
                 product_types = ["categorize-voodoo", "classification-voodoo"]
@@ -498,16 +498,8 @@ def _validate_products(products: str) -> list[str]:
             case "mwrpy":
                 product_types = ["mwr-l1c", "mwr-single", "mwr-multi"]
                 accepted_products.extend(product_types)
-            case "standard":
-                product_types = _get_product_types_excluding_level3(
-                    ignore_experimental=True
-                )
-                accepted_products.extend(product_types)
             case "doppy":
                 product_types = ["doppler-lidar", "doppler-lidar-wind"]
-                accepted_products.extend(product_types)
-            case "l3":
-                product_types = ["l3-cf", "l3-iwc", "l3-lwc"]
                 accepted_products.extend(product_types)
             case "cpr":
                 accepted_products.extend(["cpr-simulation"])
@@ -551,17 +543,6 @@ def _print_fetch_header(args: Namespace):
     print(f"{BOLD}{msg}:{RESET}")
     if not args.raw:
         print()
-
-
-def _get_product_types_excluding_level3(ignore_experimental: bool = False) -> list:
-    """Returns Cloudnet processing types (other than level 3)."""
-    products = utils.get_from_data_portal_api("api/products")
-    if ignore_experimental:
-        products = [product for product in products if not product["experimental"]]
-    l1b = [product["id"] for product in products if product["level"] == "1b"]
-    l1c = [product["id"] for product in products if product["level"] == "1c"]
-    l2 = [product["id"] for product in products if product["level"] == "2"]
-    return l1b + l1c + l2
 
 
 def _get_all_but_hidden_sites() -> list:
