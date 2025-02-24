@@ -1,6 +1,6 @@
 # ACTRIS Cloudnet data processing
 
-![](https://github.com/actris-cloudnet/cloudnet-processing/workflows/Test%20and%20lint/badge.svg)
+[![Test and lint](https://github.com/actris-cloudnet/cloudnet-processing/actions/workflows/test.yml/badge.svg)](https://github.com/actris-cloudnet/cloudnet-processing/actions/workflows/test.yml)
 
 Cloudnet data processing glue code.
 
