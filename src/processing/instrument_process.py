@@ -758,7 +758,7 @@ def _doppy_stare_to_nc(
             units="degrees",
             data=stare.elevation,
             dtype="f4",
-            long_name="elevation from horizontal",
+            long_name="Elevation from horizontal",
         )
         nc.add_variable(
             name="beta_raw",
@@ -773,7 +773,7 @@ def _doppy_stare_to_nc(
             units="sr-1 m-1",
             data=stare.beta,
             dtype="f4",
-            mask=stare.mask,
+            mask=stare.mask_beta,
         )
         nc.add_variable(
             name="v",
@@ -782,7 +782,7 @@ def _doppy_stare_to_nc(
             long_name="Doppler velocity",
             data=stare.radial_velocity,
             dtype="f4",
-            mask=stare.mask,
+            mask=stare.mask_radial_velocity,
         )
         nc.add_scalar_variable(
             name="wavelength",
@@ -806,7 +806,7 @@ def _doppy_stare_to_nc(
                 units="1",
                 data=stare.depolarisation,
                 dtype="f4",
-                mask=stare.mask | stare.mask_depolarisation,
+                mask=stare.mask_beta | stare.mask_depolarisation,
             )
             nc.add_variable(
                 name="beta_cross_raw",
@@ -821,7 +821,7 @@ def _doppy_stare_to_nc(
                 dimensions=("time", "range"),
                 units="sr-1 m-1",
                 data=stare.beta_cross,
-                mask=stare.mask | stare.mask_beta_cross,
+                mask=stare.mask_beta | stare.mask_beta_cross,
                 dtype="f4",
             )
             nc.add_scalar_variable(
@@ -833,6 +833,23 @@ def _doppy_stare_to_nc(
             )
         nc.add_attribute("serial_number", stare.system_id)
         nc.add_attribute("doppy_version", doppy.__version__)
+        match stare.ray_info:
+            case doppy.product.stare.RayAccumulationTime(value):
+                nc.add_scalar_variable(
+                    name="ray_accumulation_time",
+                    units="s",
+                    long_name="Ray accumulation time",
+                    data=value,
+                    dtype="f4",
+                )
+            case doppy.product.stare.PulsesPerRay(value):
+                nc.add_scalar_variable(
+                    name="pulses_per_ray",
+                    units="1",
+                    long_name="Pulses per ray",
+                    data=value,
+                    dtype="i4",
+                )
 
 
 def _doppy_wind_to_nc(
