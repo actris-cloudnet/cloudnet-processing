@@ -13,11 +13,11 @@ def read_basta(nc: netCDF4.Dataset) -> dict:
     measurements = {var: nc[var][:] for var in nc.variables}
     measurements["time"] = cftime2datetime64(nc["time"])
     for var in measurements:
+        data = measurements[var]
         if var != "time":
-            data = measurements[var]
-            data = ma.masked_where(np.isclose(data, -999.0, atol=1e-6), data)
-
+            is_invalid = np.isclose(data, -999.0, atol=1e-6)
+            data = ma.masked_where(is_invalid, data)
         if "degree_celsius" in getattr(nc[var], "units", "").lower():
-            measurements[var] = c2k(measurements[var])
-
+            data = c2k(data)
+        measurements[var] = data
     return measurements
