@@ -567,7 +567,8 @@ class ProcessMwr(ProcessInstrument):
     def process_hatpro(self):
         try:
             full_paths, raw_uuids = self.download_instrument(
-                include_pattern=r"^(?!.*scan).*\.lwp$|^(?!.*scan).*\.iwv$",
+                include_pattern=r"\.(lwp|iwv)$",
+                exclude_pattern=r"2DSCAN",
             )
             self.uuid.product, valid_full_paths = hatpro2nc(
                 str(self.raw_dir), *self._args, **self._kwargs
