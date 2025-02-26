@@ -618,6 +618,27 @@ class ProcessDisdrometer(ProcessInstrument):
                         flags=re.MULTILINE,
                     )
                     path.write_bytes(new_text)
+            # Fix Jülich files.
+            if self.params.instrument.uuid == "27837d00-b6af-4e90-baa0-f670f31abcd0":
+                for path in full_paths:
+                    with open(path, "rb+") as f:
+                        lines = []
+                        for line in f:
+                            # Support timestamp within angle brackets.
+                            line = re.sub(rb"<(\d{14}\.\d{3})>", rb"\1;", line)
+
+                            # Line starts with timestamp but also contains
+                            # another timestamp at random location.
+                            m = re.match(rb"\d{8}\d{6}\.\d{3};", line)
+                            if m is not None:
+                                line = line[:8] + re.sub(
+                                    line[:8] + rb"\d{6}\.\d{3};", b"", line[8:]
+                                )
+                            lines.append(line)
+
+                        f.seek(0)
+                        f.truncate()
+                        f.writelines(lines)
             self.uuid.product = parsivel2nc(full_paths, *self._args, **kwargs)
 
     def process_thies_lnm(self):
