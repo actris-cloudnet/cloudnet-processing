@@ -2,6 +2,7 @@
 """A wrapper script for calling data processing functions."""
 
 import argparse
+import calendar
 import datetime
 import logging
 import os
@@ -119,13 +120,13 @@ def _parse_args():
     )
     group.add_argument(
         "--start",
-        type=_parse_date,
+        type=lambda value: _parse_date(value)[0],
         metavar="YYYY-MM-DD",
         help="Starting date. Default is five days ago.",
     )
     group.add_argument(
         "--stop",
-        type=_parse_date,
+        type=lambda value: _parse_date(value)[1],
         metavar="YYYY-MM-DD",
         help="Stopping date. Default is current day.",
     )
@@ -167,19 +168,15 @@ def _parse_args():
         sys.exit(1)
 
     if args.date and (args.start or args.stop):
-        print("Cannot use --date with --start and --stop", file=sys.stderr)
-        sys.exit(1)
+        parser.error("Cannot use --date with --start and --stop")
     if args.date:
-        args.start = args.date
-        args.stop = args.date
-    else:
-        if not args.start:
-            args.start = utils.utctoday() - datetime.timedelta(days=5)
-        if not args.stop:
-            args.stop = utils.utctoday()
-        if args.start > args.stop:
-            print("--start should be before --stop", file=sys.stderr)
-            sys.exit(1)
+        args.start, args.stop = args.date
+    elif args.start and args.stop and args.start > args.stop:
+        parser.error("--start should be before --stop")
+    if not args.start:
+        args.start = utils.utctoday() - datetime.timedelta(days=5)
+    if not args.stop:
+        args.stop = utils.utctoday()
     del args.date
 
     return args
@@ -519,14 +516,27 @@ def _list_parser(type: Callable[[str], T]) -> Callable[[str], list[T]]:
     return lambda value: [type(x) for x in value.split(",")]
 
 
-def _parse_date(value: str) -> datetime.date:
+def _parse_date(value: str) -> tuple[datetime.date, datetime.date]:
     if value == "today":
-        return utils.utctoday()
+        date = utils.utctoday()
+        return (date, date)
     if value == "yesterday":
-        return utils.utctoday() - datetime.timedelta(days=1)
+        date = utils.utctoday() - datetime.timedelta(days=1)
+        return (date, date)
     if match := re.fullmatch(r"(\d+)d", value):
-        return utils.utctoday() - datetime.timedelta(days=int(match[1]))
-    return datetime.date.fromisoformat(value)
+        date = utils.utctoday() - datetime.timedelta(days=int(match[1]))
+        return (date, date)
+    match list(map(int, value.split("-"))):
+        case [year, month, day]:
+            date = datetime.date(year, month, day)
+            return (date, date)
+        case [year, month]:
+            last_day = calendar.monthrange(year, month)[1]
+            return (datetime.date(year, month, 1), datetime.date(year, month, last_day))
+        case [year]:
+            return (datetime.date(year, 1, 1), datetime.date(year, 12, 31))
+        case invalid:
+            raise ValueError(f"Invalid date: {invalid}")
 
 
 def _print_header(data):
