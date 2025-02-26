@@ -61,6 +61,7 @@ def process_model(processor: Processor, params: ModelParams, directory: Path):
         product_uuid = uuid.UUID(existing_meta["uuid"])
         filename = existing_meta["filename"]
         existing_file = processor.storage_api.download_product(existing_meta, directory)
+        s3key = existing_meta["s3key"]
     else:
         product_uuid = _generate_uuid()
         filename = _generate_filename(params)
@@ -85,9 +86,12 @@ def process_model(processor: Processor, params: ModelParams, directory: Path):
                 new_file = existing_file
 
         if upload:
-            processor.upload_file(params, new_file, filename, volatile, patch=True)
+            processor.upload_file(
+                params, new_file, s3key, filename, volatile, patch=True
+            )
         else:
             logging.info("Skipping PUT to data portal, file has not changed")
+
         if "hidden" in params.site.types:
             logging.info("Skipping plotting for hidden site")
         else:

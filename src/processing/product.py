@@ -65,7 +65,9 @@ def process_me(processor: Processor, params: ModelParams, directory: Path):
             uuid.product = existing_product["uuid"]
 
     if upload:
-        processor.upload_file(params, new_file, filename, volatile, patch)
+        if not volatile:
+            s3key = f"{uuid.product}/{filename}"
+        processor.upload_file(params, new_file, s3key, filename, volatile, patch)
     else:
         logging.info("Skipping PUT to data portal, file has not changed")
 
@@ -137,17 +139,13 @@ def process_product(processor: Processor, params: ProductParams, directory: Path
                 nc.file_uuid = existing_product["uuid"]
             uuid.product = existing_product["uuid"]
 
-<<<<<<< HEAD
     if upload:
-        processor.upload_file(params, new_file, filename, volatile, patch)
+        if not volatile:
+            s3key = f"{uuid.product}/{filename}"
+        processor.upload_file(params, new_file, s3key, filename, volatile, patch)
     else:
         logging.info("Skipping PUT to data portal, file has not changed")
-=======
-    if not volatile:
-        s3key = f"{uuid.product}/{filename}"
 
-    processor.upload_file(params, new_file, s3key, filename, volatile, patch)
->>>>>>> bc8c801 (maybe fix)
     processor.create_and_upload_images(
         new_file,
         params.product.id,

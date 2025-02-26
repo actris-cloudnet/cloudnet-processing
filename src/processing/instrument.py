@@ -66,9 +66,12 @@ def process_instrument(processor: Processor, params: InstrumentParams, directory
             uuid.product = existing_product["uuid"]
 
     if upload:
-        processor.upload_file(params, new_file, filename, volatile, patch)
+        if not volatile:
+            s3key = f"{uuid.product}/{filename}"
+        processor.upload_file(params, new_file, s3key, filename, volatile, patch)
     else:
         logging.info("Skipping PUT to data portal, file has not changed")
+
     processor.create_and_upload_images(
         new_file, params.product.id, std_uuid.UUID(uuid.product), filename, directory
     )
