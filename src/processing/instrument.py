@@ -33,6 +33,7 @@ def process_instrument(processor: Processor, params: InstrumentParams, directory
         existing_file = None
 
     volatile = not existing_file or uuid.volatile is not None
+    new_version = not volatile
 
     try:
         new_file = _process_file(processor, params, uuid, directory)
@@ -66,7 +67,7 @@ def process_instrument(processor: Processor, params: InstrumentParams, directory
             uuid.product = existing_product["uuid"]
 
     if upload:
-        if not volatile:
+        if new_version or s3key is None:
             s3key = f"{uuid.product}/{filename}"
         processor.upload_file(params, new_file, s3key, filename, volatile, patch)
     else:

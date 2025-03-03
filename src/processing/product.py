@@ -36,6 +36,7 @@ def process_me(processor: Processor, params: ModelParams, directory: Path):
         s3key = None
 
     volatile = not existing_file or uuid.volatile is not None
+    new_version = not volatile
 
     try:
         new_file = _process_l3(processor, params, uuid, directory)
@@ -65,7 +66,7 @@ def process_me(processor: Processor, params: ModelParams, directory: Path):
             uuid.product = existing_product["uuid"]
 
     if upload:
-        if not volatile:
+        if new_version or s3key is None:
             s3key = f"{uuid.product}/{filename}"
         processor.upload_file(params, new_file, s3key, filename, volatile, patch)
     else:
@@ -102,6 +103,7 @@ def process_product(processor: Processor, params: ProductParams, directory: Path
         existing_file = None
 
     volatile = not existing_file or uuid.volatile is not None
+    new_version = not volatile
 
     try:
         if params.product.id in ("mwr-single", "mwr-multi"):
@@ -140,7 +142,7 @@ def process_product(processor: Processor, params: ProductParams, directory: Path
             uuid.product = existing_product["uuid"]
 
     if upload:
-        if not volatile:
+        if new_version or s3key is None:
             s3key = f"{uuid.product}/{filename}"
         processor.upload_file(params, new_file, s3key, filename, volatile, patch)
     else:
