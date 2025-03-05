@@ -1,5 +1,5 @@
 [format.basta_nc]
-var.wind_blower_state = "wind_blower_state"
+vars.wind_blower_state = "wind_blower_state"
 vars.power_v1 = "radar_power_supply_voltage"
 vars.power_v2 = "peltier_power_supply_voltage"
 vars.power_i1 = "radar_power_supply_current"
@@ -283,6 +283,7 @@ vars.radar_vco_frequency.unit = "MHz"
 vars.radar_yaw_angle.unit = "degree"
 vars.soft_thermal_cutoff_threshold.description = "Temperature limit of soft cutoff"
 vars.soft_thermal_cutoff_threshold.unit = "K"
+vars.wind_blower_state.description = "Unspecified code"
 
 [metadata.chm15k]
 vars.afd_warning.description = "1 = AFD problem, 0 = otherwise"

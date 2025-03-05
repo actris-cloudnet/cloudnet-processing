@@ -339,6 +339,19 @@ Temperature limit of soft cutoff
 
 </td>
 </tr>
+<tr>
+<td>
+
+`wind_blower_state`
+
+</td>
+<td></td>
+<td>
+
+Unspecified code
+
+</td>
+</tr>
 </table>
 
 ## chm15k
