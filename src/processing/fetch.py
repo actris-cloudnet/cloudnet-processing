@@ -37,7 +37,7 @@ else:
 
 
 class Fetcher:
-    api_url = "https://cloudnet.fmi.fi/api/"
+    api_url = "https://cloudnet.fmi.fi/api"
 
     def __init__(
         self, product: Product, site: Site, date: datetime.date, args: Namespace
@@ -90,7 +90,7 @@ class Fetcher:
         return res.json()
 
     def get_model_metadata(self) -> list:
-        url = f"{self.api_url}model-files"
+        url = f"{self.api_url}/model-files"
         payload = {
             **self.payload,
         }
