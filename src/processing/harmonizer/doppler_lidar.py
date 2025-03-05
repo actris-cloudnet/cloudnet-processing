@@ -72,7 +72,7 @@ def harmonize_doppler_lidar_stare_file(
         for attribute in ("units", "long_name", "standard_name"):
             stare.harmonize_attribute(attribute)
         stare.fix_long_names()
-        stare.add_history("lidar")
+        stare.add_history("doppler-lidar")
         stare.harmonise_serial_number()
     if "output_path" not in data:
         shutil.copy(temp_file.name, data["full_path"])
