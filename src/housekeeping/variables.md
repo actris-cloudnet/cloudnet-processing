@@ -909,6 +909,84 @@ standard deviation of raw signal
 <tr>
 <td>
 
+`data_generation_status`
+
+</td>
+<td></td>
+<td>
+
+0 = OK, 3 = Data generation failure.
+
+</td>
+</tr>
+<tr>
+<td>
+
+`datacom_overall_status`
+
+</td>
+<td></td>
+<td>
+
+0 = OK.
+
+</td>
+</tr>
+<tr>
+<td>
+
+`device_controller_electronics_status`
+
+</td>
+<td></td>
+<td>
+
+0 = OK, 3 = Temperature sensor failure. Restart device and if issue persists, replace device control module.
+
+</td>
+</tr>
+<tr>
+<td>
+
+`device_controller_overall_status`
+
+</td>
+<td></td>
+<td>
+
+0 = OK, 2 = At least one warning. Check device control module warnings, 3 = At least one alarm. Check device control module warnings and alarms.
+
+</td>
+</tr>
+<tr>
+<td>
+
+`device_controller_temperature_status`
+
+</td>
+<td></td>
+<td>
+
+0 = OK, 3 = Temperature sensor failure. Restart device and if issue persists, replace device control module.
+
+</td>
+</tr>
+<tr>
+<td>
+
+`device_overall_status`
+
+</td>
+<td></td>
+<td>
+
+0 = OK, 2 = At least one warning, 3 = At least one alarm.
+
+</td>
+</tr>
+<tr>
+<td>
+
 `internal_heater_status`
 
 </td>
@@ -916,6 +994,19 @@ standard deviation of raw signal
 <td>
 
 on/off (1/0)
+
+</td>
+</tr>
+<tr>
+<td>
+
+`internal_heater_warning`
+
+</td>
+<td></td>
+<td>
+
+0 = OK, 2 = Failure in inside heater.
 
 </td>
 </tr>
@@ -977,11 +1068,375 @@ on/off (1/0)
 <tr>
 <td>
 
+`maintenance_overall_status`
+
+</td>
+<td></td>
+<td>
+
+0 = OK, 1 = Prepare for maintenance, 2 = Maintenance recommended, 3 = Immediate maintenance needed.
+
+</td>
+</tr>
+<tr>
+<td>
+
+`measurement_data_destination_not_set_status`
+
+</td>
+<td></td>
+<td>
+
+0 = Reporting destination URL for output data set, 1 = Reporting destination URL for output data not set.
+
+</td>
+</tr>
+<tr>
+<td>
+
+`measurement_status`
+
+</td>
+<td></td>
+<td>
+
+0 = OK, 2 = Measurement failure, contact Vaisala.
+
+</td>
+</tr>
+<tr>
+<td>
+
+`optics_unit_accelerometer_status`
+
+</td>
+<td></td>
+<td>
+
+0 = OK, 3 = Tilt angle sensor failure. Restart device.
+
+</td>
+</tr>
+<tr>
+<td>
+
+`optics_unit_electronics_status`
+
+</td>
+<td></td>
+<td>
+
+0 = OK, 3 = Memory failure. Restart device and if issue persists, replace device control module.
+
+</td>
+</tr>
+<tr>
+<td>
+
+`optics_unit_memory_status`
+
+</td>
+<td></td>
+<td>
+
+0 = OK, 3 = Memory failure. Restart device and if issue persists, replace device control module.
+
+</td>
+</tr>
+<tr>
+<td>
+
+`optics_unit_overall_status`
+
+</td>
+<td></td>
+<td>
+
+0 = OK, 2 = At least one warning. Check optics warnings, 3 = At least one alarm. Check optics warnings and alarms.
+
+</td>
+</tr>
+<tr>
+<td>
+
+`optics_unit_tilt_angle_status`
+
+</td>
+<td></td>
+<td>
+
+0 = OK, 2 = Tilt angle too steep.
+
+</td>
+</tr>
+<tr>
+<td>
+
+`receiver_electronics_status`
+
+</td>
+<td></td>
+<td>
+
+0 = OK, 3 = Memory failure. Restart device and if issue persists, replace receiver.
+
+</td>
+</tr>
+<tr>
+<td>
+
+`receiver_memory_status`
+
+</td>
+<td></td>
+<td>
+
+0 = OK, 3 = Memory failure. Restart device and if issue persists, replace receiver.
+
+</td>
+</tr>
+<tr>
+<td>
+
+`receiver_overall_status`
+
+</td>
+<td></td>
+<td>
+
+0 = OK, 2 = At least one warning. Check receiver warnings, 3 = At least one alarm. Check receiver warnings and alarms.
+
+</td>
+</tr>
+<tr>
+<td>
+
+`receiver_sensitivity_status`
+
+</td>
+<td></td>
+<td>
+
+0 = OK, 2 = Receiver failure.
+
+</td>
+</tr>
+<tr>
+<td>
+
+`receiver_solar_saturation_status`
+
+</td>
+<td></td>
+<td>
+
+0 = OK, 3 = Receiver saturated by direct sunlight. Measurements are invalid.
+
+</td>
+</tr>
+<tr>
+<td>
+
+`receiver_voltage_status`
+
+</td>
+<td></td>
+<td>
+
+0 = OK, 3 = Receiver voltage limit exceeded.
+
+</td>
+</tr>
+<tr>
+<td>
+
+`recently_started_status`
+
+</td>
+<td></td>
+<td>
+
+0 = Normal operation, 1 = Device recently restarted.
+
+</td>
+</tr>
+<tr>
+<td>
+
+`servo_drive_control_status`
+
+</td>
+<td></td>
+<td>
+
+0 = OK, 3 = Polarizator servo control failure. Restart device and if issue persists, replace device control module.
+
+</td>
+</tr>
+<tr>
+<td>
+
+`servo_drive_electronics_status`
+
+</td>
+<td></td>
+<td>
+
+0 = OK, 1 = Polarizator not ready, 2 = Polarizator initialization failure, 3 = Polarizator failure. Restart device and if issue persists, replace device control module.
+
+</td>
+</tr>
+<tr>
+<td>
+
+`servo_drive_memory_status`
+
+</td>
+<td></td>
+<td>
+
+0 = OK, 3 = Memory failure. Restart device and if issue persists, replace device control module.
+
+</td>
+</tr>
+<tr>
+<td>
+
+`servo_drive_overall_status`
+
+</td>
+<td></td>
+<td>
+
+0 = OK, 2 = At least one warning. Check servo drive module warnings, 3 = At least one alarm. Check servo drive module warnings and alarms.
+
+</td>
+</tr>
+<tr>
+<td>
+
+`servo_drive_ready_status`
+
+</td>
+<td></td>
+<td>
+
+0 = OK, 2 = Recent restart, waiting servo to be ready, 3 = Polarizator servo is not ready, contact Vaisala.
+
+</td>
+</tr>
+<tr>
+<td>
+
+`transmitter_electronics_status`
+
+</td>
+<td></td>
+<td>
+
+0 = OK, 3 = Laser power failure and memory failure. Restart device and if issue persists, replace transmitter.
+
+</td>
+</tr>
+<tr>
+<td>
+
 `transmitter_enclosure_temperature`
 
 </td>
 <td>K</td>
 <td>
+
+</td>
+</tr>
+<tr>
+<td>
+
+`transmitter_light_source_power_status`
+
+</td>
+<td></td>
+<td>
+
+0 = OK, 2 = Transmitter laser power low, contact Vaisala, 3 = Transmitter laser power very low, contact Vaisala.
+
+</td>
+</tr>
+<tr>
+<td>
+
+`transmitter_light_source_safety_status`
+
+</td>
+<td></td>
+<td>
+
+0 = OK, 3 = Safety limit exceeded.
+
+</td>
+</tr>
+<tr>
+<td>
+
+`transmitter_light_source_status`
+
+</td>
+<td></td>
+<td>
+
+0 = OK, 2 = Warning, 3 = Transmitter laser power failure, contact Vaisala.
+
+</td>
+</tr>
+<tr>
+<td>
+
+`transmitter_memory_status`
+
+</td>
+<td></td>
+<td>
+
+0 = OK, 3 = Memory failure. Restart device and if issue persists, replace transmitter.
+
+</td>
+</tr>
+<tr>
+<td>
+
+`transmitter_overall_status`
+
+</td>
+<td></td>
+<td>
+
+0 = OK, 2 = At least one warning. Check transmitter warnings, 3 = At least one alarm. Check transmitter warnings and alarms.
+
+</td>
+</tr>
+<tr>
+<td>
+
+`window_blocking_status`
+
+</td>
+<td></td>
+<td>
+
+0 = OK, 2 = Device has detected temporary blockage during the previous 3 minutes, 3 = Device has detected window blockage. Check device.
+
+</td>
+</tr>
+<tr>
+<td>
+
+`window_blower_fan_status`
+
+</td>
+<td></td>
+<td>
+
+0 = OK, 2 = Blower fan failure.
 
 </td>
 </tr>
@@ -995,6 +1450,19 @@ on/off (1/0)
 <td>
 
 on/off (1/0)
+
+</td>
+</tr>
+<tr>
+<td>
+
+`window_blower_heater_warning`
+
+</td>
+<td></td>
+<td>
+
+0 = OK, 2 = Blower heater failure.
 
 </td>
 </tr>
@@ -1021,6 +1489,19 @@ on/off (1/0)
 <td>
 
 100 for a clean, 0 for a totally dirty window
+
+</td>
+</tr>
+<tr>
+<td>
+
+`window_condition_status`
+
+</td>
+<td></td>
+<td>
+
+0 = OK, 1 = Window slightly contaminated. Window cleaning recommended, 2 = Window moderately contaminated. Window cleaning required, 3 = Window dirty. Immediate window cleaning required.
 
 </td>
 </tr>
