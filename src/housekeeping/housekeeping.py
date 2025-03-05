@@ -211,7 +211,7 @@ def _make_points(
         msg = f"Variable '{src_name}' not found"
         if src_name != dest_name:
             msg += f" (would be mapped to '{dest_name}')"
-        logging.warning(msg)
+        logging.debug(msg)
 
     timestamps = time.astype("datetime64[s]")
 
