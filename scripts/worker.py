@@ -235,7 +235,10 @@ class Worker:
 
     def publish_followup_task(self, product_id: str, params: ProcessParams):
         product = self.processor.get_product(product_id)
-        if product.experimental:
+        if product.experimental and product.id not in (
+            "cpr-simulation",
+            "epsilon-lidar",
+        ):
             logging.info(
                 f"Will not publish task for experimental product: {product.id}"
             )
