@@ -221,6 +221,7 @@ def _process_cpr_simulation(
         str(categorize_file), str(output_file), mean_wind=6, uuid=uuid.volatile
     )
     utils.add_global_attributes(output_file)
+    return output_file
 
 
 def _process_epsilon_from_lidar(
