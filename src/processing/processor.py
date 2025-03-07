@@ -316,6 +316,7 @@ class Processor:
         params: ProcessParams,
         full_path: Path,
         s3key: str,
+        filename: str,
         volatile: bool,
         patch: bool,
     ):
@@ -326,6 +327,7 @@ class Processor:
             volatile,
             site=params.site.id,
         )
+        payload["filename"] = filename
         if isinstance(params, ModelParams) and "evaluation" not in params.product.type:
             payload["model"] = params.model.id
         elif isinstance(params, InstrumentParams):
@@ -345,13 +347,11 @@ class Processor:
         full_path: Path,
         product: str,
         product_uuid: uuid.UUID,
-        product_s3key: str,
+        product_filename: str,
         directory: Path,
-        legacy: bool = False,
     ) -> None:
         img_path = directory / "plot.png"
         visualizations = []
-        product_s3key = f"legacy/{product_s3key}" if legacy is True else product_s3key
         try:
             fields, max_alt = self._get_fields_for_plot(product)
         except NotImplementedError:
@@ -381,7 +381,7 @@ class Processor:
 
             visualizations.append(
                 self._upload_img(
-                    img_path, product_s3key, product_uuid, product, field, dimensions
+                    img_path, product_filename, product_uuid, product, field, dimensions
                 )
             )
         self.md_api.put_images(visualizations, product_uuid)
@@ -469,13 +469,15 @@ class Processor:
     def _upload_img(
         self,
         img_path: Path,
-        product_s3key: str,
+        product_filename: str,
         product_uuid: uuid.UUID,
         product: str,
         field: str,
         dimensions: Dimensions,
     ) -> dict:
-        img_s3key = product_s3key.replace(".nc", f"-{product_uuid.hex[:8]}-{field}.png")
+        img_s3key = product_filename.replace(
+            ".nc", f"-{product_uuid.hex[:8]}-{field}.png"
+        )
         self.storage_api.upload_image(full_path=img_path, s3key=img_s3key)
         return {
             "s3key": img_s3key,
