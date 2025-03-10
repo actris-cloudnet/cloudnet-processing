@@ -242,8 +242,13 @@ def _process_epsilon_from_lidar(
         product_id="doppler-lidar-wind",
     )
     metadata_wind = processor.md_api.get("api/files", payload_wind)
-
-    _check_response(metadata_wind, "doppler-lidar-wind")
+    if len(metadata_wind) == 0:
+        raise SkipTaskError("Missing required input product: doppler-lidar-wind")
+    prefer_pid = params.instrument.pid
+    metadata_wind = sorted(
+        metadata_wind,
+        key=lambda meta: -1 if meta["instrumentPid"] == prefer_pid else 1,
+    )
 
     file_lidar, file_wind = processor.storage_api.download_products(
         [metadata_stare[0], metadata_wind[0]], directory
