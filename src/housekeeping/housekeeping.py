@@ -21,6 +21,7 @@ from rpgpy.utils import decode_rpg_status_flags, rpg_seconds2datetime64
 from housekeeping.cl61 import read_cl61
 
 from .basta import read_basta
+from .ceilo import read_cl31_cl51, read_cs135, read_ct25k
 from .chm15k import read_chm15k
 from .exceptions import HousekeepingException, UnsupportedFile
 from .halo_doppler_lidar import read_halo_doppler_lidar
@@ -114,6 +115,54 @@ def _handle_basta_nc(src: bytes, metadata: dict) -> list[Point]:
         )
 
 
+def _handle_cs135(src: bytes, metadata: dict) -> list[Point]:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        filepath = Path(tmpdir) / metadata["filename"]
+        filepath.write_bytes(src)
+        if metadata["filename"].lower().endswith(".gz"):
+            filepath = unzip_gz_file(filepath)
+        measurements = read_cs135(filepath)
+    return _make_points(
+        measurements["time"],
+        measurements,
+        get_config("cs135_ascii"),
+        metadata,
+        ValidDateRange.DAY,
+    )
+
+
+def _handle_ct25k(src: bytes, metadata: dict) -> list[Point]:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        filepath = Path(tmpdir) / metadata["filename"]
+        filepath.write_bytes(src)
+        if metadata["filename"].lower().endswith(".gz"):
+            filepath = unzip_gz_file(filepath)
+        measurements = read_ct25k(filepath)
+    return _make_points(
+        measurements["time"],
+        measurements,
+        get_config("ct25k_ascii"),
+        metadata,
+        ValidDateRange.DAY,
+    )
+
+
+def _handle_cl31_cl51(src: bytes, metadata: dict) -> list[Point]:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        filepath = Path(tmpdir) / metadata["filename"]
+        filepath.write_bytes(src)
+        if metadata["filename"].lower().endswith(".gz"):
+            filepath = unzip_gz_file(filepath)
+        measurements = read_cl31_cl51(filepath)
+    return _make_points(
+        measurements["time"],
+        measurements,
+        get_config("cl31-cl51_ascii"),
+        metadata,
+        ValidDateRange.DAY,
+    )
+
+
 def _handle_cl61_nc(src: bytes, metadata: dict) -> list[Point]:
     with Dataset("dataset.nc", memory=src) as nc:
         measurements = read_cl61(nc)
@@ -154,6 +203,15 @@ def get_reader(metadata: dict) -> Callable[[bytes, dict], list[Point]] | None:
 
     if instrument_id == "chm15k" and filename.endswith(".nc"):
         return _handle_chm15k_nc
+
+    if instrument_id == "cs135":
+        return _handle_cs135
+
+    if instrument_id == "ct25k":
+        return _handle_ct25k
+
+    if instrument_id in ("cl31", "cl51"):
+        return _handle_cl31_cl51
 
     if instrument_id == "cl61d" and filename.endswith(".nc"):
         return _handle_cl61_nc
