@@ -138,6 +138,8 @@ def create_product_put_payload(
             payload["software"]["voodoonet"] = version
         if version := getattr(nc, "model_munger_version", None):
             payload["software"]["model-munger"] = version
+        if version := getattr(nc, "ceilopyter_version", None):
+            payload["software"]["ceilopyter"] = version
     return payload
 
 
