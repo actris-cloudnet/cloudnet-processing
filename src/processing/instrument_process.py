@@ -1,3 +1,4 @@
+import dataclasses
 import datetime
 import gzip
 import itertools
@@ -12,6 +13,7 @@ from uuid import UUID
 
 import doppy
 import netCDF4
+import numpy as np
 from cloudnetpy.instruments import (
     basta2nc,
     ceilo2nc,
@@ -197,17 +199,26 @@ class ProcessRadar(ProcessInstrument):
 
 class ProcessDopplerLidarWind(ProcessInstrument):
     def process_halo_doppler_lidar(self):
+        calibration = fetch_calibration(self.params.instrument.pid, self.params.date)
+        time_offset = (
+            datetime.timedelta(minutes=calibration["data"]["time_offset"])
+            if calibration is not None and "time_offset" in calibration["data"]
+            else None
+        )
         full_paths, self.uuid.raw = self.download_instrument(
             include_pattern=r".*\.hpl",
             exclude_pattern=r"Stare.*",
             exclude_tag_subset={"cross"},
+            time_offset=time_offset,
         )
         try:
             options = self._calibration_options()
             wind = doppy.product.Wind.from_halo_data(data=full_paths, options=options)
         except doppy.exceptions.NoDataError:
             raise RawDataMissingError()
-        _doppy_wind_to_nc(wind, str(self.daily_path), options)
+        _doppy_wind_to_nc(
+            wind, str(self.daily_path), self.params.date, options, time_offset
+        )
         data = self._get_payload_for_nc_file_augmenter(str(self.daily_path))
         if options is not None and options.azimuth_offset_deg is not None:
             data["azimuth_offset_deg"] = options.azimuth_offset_deg
@@ -220,7 +231,6 @@ class ProcessDopplerLidarWind(ProcessInstrument):
 
     def process_wls200s(self):
         file_groups = defaultdict(list)
-        # TODO: downloads files that may not be used...
         full_paths, self.uuid.raw = self.download_instrument(
             include_pattern=r".*(vad)|(dbs).*\.nc.*",
         )
@@ -255,7 +265,7 @@ class ProcessDopplerLidarWind(ProcessInstrument):
                 )
         except doppy.exceptions.NoDataError:
             raise RawDataMissingError()
-        _doppy_wind_to_nc(wind, str(self.daily_path), options)
+        _doppy_wind_to_nc(wind, str(self.daily_path), self.params.date, options)
         data = self._get_payload_for_nc_file_augmenter(str(self.daily_path))
         if options is not None and options.azimuth_offset_deg is not None:
             data["azimuth_offset_deg"] = options.azimuth_offset_deg
@@ -295,12 +305,19 @@ class ProcessDopplerLidarWind(ProcessInstrument):
 
 class ProcessDopplerLidar(ProcessInstrument):
     def process_halo_doppler_lidar(self):
+        calibration = fetch_calibration(self.params.instrument.pid, self.params.date)
+        time_offset = (
+            datetime.timedelta(minutes=calibration["data"]["time_offset"])
+            if calibration is not None and "time_offset" in calibration["data"]
+            else None
+        )
         # Co files either have "co" tag or no tags at all.
         full_paths_co, raw_uuids_co = self.download_instrument(
             filename_prefix="Stare",
             filename_suffix=".hpl",
             exclude_tag_subset={"cross"},
             subdir="co",
+            time_offset=time_offset,
         )
         # Cross files should always have "cross" tag.
         full_paths_cross, raw_uuids_cross = self.download_instrument(
@@ -309,6 +326,7 @@ class ProcessDopplerLidar(ProcessInstrument):
             include_tag_subset={"cross"},
             allow_empty=True,
             subdir="cross",
+            time_offset=time_offset,
         )
         # Background files usually have no tags or "co" tag. Sometimes they have
         # "co" and "cross" tags randomly because the instrument may save the
@@ -316,7 +334,10 @@ class ProcessDopplerLidar(ProcessInstrument):
         full_paths_bg, _ = self.download_instrument(
             filename_prefix="Background",
             filename_suffix=".txt",
-            date=(self.params.date - datetime.timedelta(days=1), self.params.date),
+            date=(
+                self.params.date - datetime.timedelta(days=1),
+                self.params.date + datetime.timedelta(days=1),
+            ),
             subdir="bg",
         )
         self.uuid.raw = raw_uuids_co + raw_uuids_cross
@@ -338,7 +359,7 @@ class ProcessDopplerLidar(ProcessInstrument):
         except doppy.exceptions.NoDataError:
             raise RawDataMissingError
 
-        _doppy_stare_to_nc(stare, str(self.daily_path))
+        _doppy_stare_to_nc(stare, str(self.daily_path), self.params.date, time_offset)
         data = self._get_payload_for_nc_file_augmenter(str(self.daily_path))
         self.uuid.product = harmonizer.harmonize_doppler_lidar_stare_file(
             data, instruments.HALO
@@ -373,7 +394,7 @@ class ProcessDopplerLidar(ProcessInstrument):
         except doppy.exceptions.NoDataError:
             raise RawDataMissingError
 
-        _doppy_stare_to_nc(stare, str(self.daily_path))
+        _doppy_stare_to_nc(stare, str(self.daily_path), self.params.date)
         data = self._get_payload_for_nc_file_augmenter(str(self.daily_path))
         self.uuid.product = harmonizer.harmonize_doppler_lidar_stare_file(
             data, instruments.WINDCUBE_WLS200S
@@ -754,8 +775,18 @@ def _fix_cl51_timestamps(filename: str, offset: datetime.timedelta) -> None:
 
 
 def _doppy_stare_to_nc(
-    stare: doppy.product.Stare | doppy.product.StareDepol, filename: str
+    stare: doppy.product.Stare | doppy.product.StareDepol,
+    filename: str,
+    date: datetime.date,
+    time_offset: datetime.timedelta | None = None,
 ) -> None:
+    n_time = len(stare.time)
+    if time_offset is not None:
+        stare.time -= np.timedelta64(time_offset)
+    is_valid = stare.time.astype("datetime64[D]") == np.datetime64(date)
+    for key, value in dataclasses.asdict(stare).items():
+        if isinstance(value, np.ndarray) and value.shape[:1] == (n_time,):
+            setattr(stare, key, value[is_valid])
     with doppy.netcdf.Dataset(filename, format="NETCDF4_CLASSIC") as nc:
         nc.add_dimension("time")
         nc.add_dimension("range", size=len(stare.radial_distance))
@@ -875,8 +906,19 @@ def _doppy_stare_to_nc(
 
 
 def _doppy_wind_to_nc(
-    wind: doppy.product.Wind, filename: str, options: doppy.product.WindOptions | None
+    wind: doppy.product.Wind,
+    filename: str,
+    date: datetime.date,
+    options: doppy.product.WindOptions | None,
+    time_offset: datetime.timedelta | None = None,
 ) -> None:
+    n_time = len(wind.time)
+    if time_offset is not None:
+        wind.time -= np.timedelta64(time_offset)
+    is_valid = wind.time.astype("datetime64[D]") == np.datetime64(date)
+    for key, value in dataclasses.asdict(wind).items():
+        if isinstance(value, np.ndarray) and value.shape[:1] == (n_time,):
+            setattr(wind, key, value[is_valid])
     with doppy.netcdf.Dataset(filename, format="NETCDF4_CLASSIC") as nc:
         nc.add_dimension("time")
         nc.add_dimension("height", size=len(wind.height))
