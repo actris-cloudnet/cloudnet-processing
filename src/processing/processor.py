@@ -486,13 +486,19 @@ class Processor:
         }
 
     def upload_quality_report(
-        self, full_path: Path, uuid: uuid.UUID, product: str | None = None
+        self, full_path: Path, uuid: uuid.UUID, site: Site, product: str | None = None
     ) -> str:
         try:
             # is_dev = self.config.get("PID_SERVICE_TEST_ENV", "").lower() == "true"
             # ignore_tests = ["TestInstrumentPid"] if is_dev else None
+            site_meta: quality.SiteMeta = {
+                "latitude": site.latitude,
+                "longitude": site.longitude,
+                "altitude": site.altitude,
+            }
             quality_report = quality.run_tests(
                 full_path,
+                site_meta,
                 product=product,  # ignore_tests=ignore_tests
             )
         except ValueError:

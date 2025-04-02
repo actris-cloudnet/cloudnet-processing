@@ -77,7 +77,7 @@ def process_me(processor: Processor, params: ModelParams, directory: Path):
         directory,
     )
     qc_result = processor.upload_quality_report(
-        new_file, std_uuid.UUID(uuid.product), params.product.id
+        new_file, std_uuid.UUID(uuid.product), params.site, params.product.id
     )
     utils.print_info(uuid, volatile, patch, upload, qc_result)
 
@@ -148,7 +148,7 @@ def process_product(processor: Processor, params: ProductParams, directory: Path
         directory,
     )
     qc_result = processor.upload_quality_report(
-        new_file, std_uuid.UUID(uuid.product), params.product.id
+        new_file, std_uuid.UUID(uuid.product), params.site, params.product.id
     )
     utils.print_info(uuid, volatile, patch, upload, qc_result)
     if processor.md_api.config.is_production:

@@ -37,7 +37,9 @@ def update_plots(processor: Processor, params: ProcessParams, directory: Path) -
 def update_qc(processor: Processor, params: ProcessParams, directory: Path) -> None:
     metadata, full_path = _fetch_data(processor, params, directory)
     file_uuid = uuid.UUID(metadata["uuid"])
-    result = processor.upload_quality_report(full_path, file_uuid, params.product.id)
+    result = processor.upload_quality_report(
+        full_path, file_uuid, params.site, params.product.id
+    )
     url = f"{utils.build_file_landing_page_url(str(file_uuid))}/quality"
     logging.info(f"Created quality report: {url} {result.upper()}")
 

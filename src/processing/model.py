@@ -93,7 +93,7 @@ def process_model(processor: Processor, params: ModelParams, directory: Path):
             processor.create_and_upload_images(
                 new_file, "model", product_uuid, filename, directory
             )
-        qc_result = processor.upload_quality_report(new_file, product_uuid)
+        qc_result = processor.upload_quality_report(new_file, product_uuid, params.site)
         _print_info(product_uuid, qc_result)
         processor.update_statuses(raw_uuids, "processed")
     except MiscError as err:
