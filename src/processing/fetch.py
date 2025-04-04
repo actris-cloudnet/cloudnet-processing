@@ -63,7 +63,7 @@ class Fetcher:
         return [m for m in metadata if not m["filename"].lower().endswith(".lv0")]
 
     def get_raw_model_metadata(self) -> list:
-        url = f"{self.api_url}raw-model-files"
+        url = f"{self.api_url}/raw-model-files"
         payload = {
             **self.payload,
             "status": ["uploaded", "processed"],
