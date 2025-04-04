@@ -6,7 +6,6 @@ import hashlib
 import logging
 import re
 import threading
-import uuid
 from os import PathLike
 from pathlib import Path
 from typing import Iterable
@@ -39,21 +38,6 @@ class StorageApi:
         url = f"{self._url}/{bucket}/{s3key}"
         res = self._put(url, full_path, headers).json()
         return {"version": res.get("version", ""), "size": int(res["size"])}
-
-    def download_raw_data(
-        self, metadata: list, dir_name: PathLike | str
-    ) -> tuple[list[Path], list[uuid.UUID]]:
-        """Download raw instrument or model files."""
-        full_paths = self._download_parallel(
-            metadata, checksum_algorithm="md5", output_directory=Path(dir_name)
-        )
-        uuids = [uuid.UUID(row["uuid"]) for row in metadata]
-        instrument_pids = [
-            row["instrument"]["pid"] for row in metadata if "instrument" in row
-        ]
-        if instrument_pids:
-            assert len(list(set(instrument_pids))) == 1
-        return full_paths, uuids
 
     def download_product(self, metadata: dict, dir_name: PathLike | str) -> Path:
         """Download a product."""
