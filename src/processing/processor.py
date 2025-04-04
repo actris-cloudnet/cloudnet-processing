@@ -188,11 +188,6 @@ class Processor:
             forecast_end=model["forecastEnd"],
         )
 
-    def download_raw_data(
-        self, upload_metadata: list[dict], directory: Path
-    ) -> tuple[list, list]:
-        return self.storage_api.download_raw_data(upload_metadata, directory)
-
     def get_model_upload(
         self, params: ModelParams, start_date: datetime.date, end_date: datetime.date
     ) -> list[dict]:
