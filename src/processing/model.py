@@ -49,14 +49,21 @@ def process_model(processor: Processor, params: ModelParams, directory: Path):
         start_date = params.date
         end_date = params.date
 
-    upload_meta = processor.get_model_upload(params, start_date, end_date)
+    upload_meta = processor.client.raw_model_metadata(
+        params.site.id,
+        model_id=params.model.id,
+        date_from=start_date,
+        date_to=end_date,
+    )
+
     if not upload_meta:
         msg = "No valid model upload found"
         raise SkipTaskError(msg)
 
     raw_dir = directory / "raw"
     raw_dir.mkdir()
-    full_paths, raw_uuids = processor.download_raw_data(upload_meta, raw_dir)
+    full_paths = processor.client.download(upload_meta, raw_dir, progress=False)
+    raw_uuids = [raw.uuid for raw in upload_meta]
 
     volatile = True
     if existing_meta := processor.get_model_file(params):
