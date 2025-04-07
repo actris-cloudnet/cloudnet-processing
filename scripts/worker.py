@@ -85,8 +85,8 @@ class Worker:
         self.logger.clear_memory()
         logging.info(f"Processing task: {task}")
         try:
-            site = self.processor.get_site(task["siteId"])
             date = datetime.date.fromisoformat(task["measurementDate"])
+            site = self.processor.get_site(task["siteId"], date)
             product = self.processor.get_product(task["productId"])
             params: ProcessParams
             with TemporaryDirectory() as directory:

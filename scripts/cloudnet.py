@@ -213,7 +213,7 @@ def process_main(args):
     date = args.start
     while date <= args.stop:
         for site_id in args.sites:
-            site = processor.get_site(site_id)
+            site = processor.get_site(site_id, date)
             for product_id in args.products:
                 product = processor.get_product(product_id)
                 try:
