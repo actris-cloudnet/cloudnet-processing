@@ -16,6 +16,7 @@ import netCDF4
 import numpy as np
 from cloudnetpy.instruments import (
     basta2nc,
+    bowtie2nc,
     ceilo2nc,
     copernicus2nc,
     galileo2nc,
@@ -119,14 +120,18 @@ class ProcessInstrument:
 
 class ProcessRadar(ProcessInstrument):
     def process_rpg_fmcw_94(self):
-        full_paths, raw_uuids = self.download_instrument(
-            include_pattern=r"zen.*\.lv1(\.gz)?$"
-        )
-        full_paths = _unzip_gz_files(full_paths)
-        self.uuid.product, valid_full_paths = rpg2nc(
-            str(self.raw_dir), *self._args, **self._kwargs
-        )
-        self.uuid.raw = _get_valid_uuids(raw_uuids, full_paths, valid_full_paths)
+        if self.params.site.id == "rv-meteor":
+            full_path, self.uuid.raw = self.download_instrument(largest_only=True)
+            self.uuid.product = bowtie2nc(full_path, *self._args, **self._kwargs)
+        else:
+            full_paths, raw_uuids = self.download_instrument(
+                include_pattern=r"zen.*\.lv1(\.gz)?$"
+            )
+            full_paths = _unzip_gz_files(full_paths)
+            self.uuid.product, valid_full_paths = rpg2nc(
+                str(self.raw_dir), *self._args, **self._kwargs
+            )
+            self.uuid.raw = _get_valid_uuids(raw_uuids, full_paths, valid_full_paths)
 
     def process_rpg_fmcw_35(self):
         self.process_rpg_fmcw_94()
