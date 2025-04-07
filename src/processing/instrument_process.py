@@ -214,8 +214,8 @@ class ProcessDopplerLidarWind(ProcessInstrument):
         try:
             options = self._calibration_options()
             wind = doppy.product.Wind.from_halo_data(data=full_paths, options=options)
-        except doppy.exceptions.NoDataError:
-            raise RawDataMissingError()
+        except doppy.exceptions.NoDataError as err:
+            raise RawDataMissingError(str(err))
         _doppy_wind_to_nc(
             wind, str(self.daily_path), self.params.date, options, time_offset
         )
@@ -263,8 +263,8 @@ class ProcessDopplerLidarWind(ProcessInstrument):
                 wind = doppy.product.Wind.from_windcube_data(
                     data=full_paths, options=options
                 )
-        except doppy.exceptions.NoDataError:
-            raise RawDataMissingError()
+        except doppy.exceptions.NoDataError as err:
+            raise RawDataMissingError(str(err))
         _doppy_wind_to_nc(wind, str(self.daily_path), self.params.date, options)
         data = self._get_payload_for_nc_file_augmenter(str(self.daily_path))
         if options is not None and options.azimuth_offset_deg is not None:
@@ -281,8 +281,8 @@ class ProcessDopplerLidarWind(ProcessInstrument):
         try:
             options = self._calibration_options()
             wind = doppy.product.Wind.from_wls70_data(data=full_paths, options=options)
-        except doppy.exceptions.NoDataError:
-            raise RawDataMissingError()
+        except doppy.exceptions.NoDataError as err:
+            raise RawDataMissingError(str(err))
         _doppy_wls70_wind_to_nc(wind, str(self.daily_path), options)
         data = self._get_payload_for_nc_file_augmenter(str(self.daily_path))
         if options is not None and options.azimuth_offset_deg is not None:
@@ -356,8 +356,8 @@ class ProcessDopplerLidar(ProcessInstrument):
                     bg_correction_method=doppy.options.BgCorrectionMethod.FIT,
                 )
                 stare = doppy.product.StareDepol(stare, stare_cross)
-        except doppy.exceptions.NoDataError:
-            raise RawDataMissingError
+        except doppy.exceptions.NoDataError as err:
+            raise RawDataMissingError(str(err))
 
         _doppy_stare_to_nc(stare, str(self.daily_path), self.params.date, time_offset)
         data = self._get_payload_for_nc_file_augmenter(str(self.daily_path))
@@ -391,8 +391,8 @@ class ProcessDopplerLidar(ProcessInstrument):
                 )
                 full_paths, self.uuid.raw = zip(*file_groups[group_with_most_files])  # type: ignore
                 stare = doppy.product.Stare.from_windcube_data(full_paths)
-        except doppy.exceptions.NoDataError:
-            raise RawDataMissingError
+        except doppy.exceptions.NoDataError as err:
+            raise RawDataMissingError(str(err))
 
         _doppy_stare_to_nc(stare, str(self.daily_path), self.params.date)
         data = self._get_payload_for_nc_file_augmenter(str(self.daily_path))
