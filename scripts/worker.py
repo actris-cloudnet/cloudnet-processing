@@ -9,6 +9,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from threading import Event
 
+from cloudnet_api_client import APIClient
 from processing import utils
 from processing.config import Config
 from processing.dvas import Dvas
@@ -68,8 +69,9 @@ class Worker:
         self.storage_api = StorageApi(self.config, self.session)
         self.pid_utils = PidUtils(self.config, self.session)
         self.dvas = Dvas(self.config, self.md_api)
+        self.client = APIClient(f"{config.dataportal_url}/api/", self.session)
         self.processor = Processor(
-            self.md_api, self.storage_api, self.pid_utils, self.dvas
+            self.md_api, self.storage_api, self.pid_utils, self.dvas, self.client
         )
         self.logger = MemoryLogger()
         self.n_processed_tasks = 0
