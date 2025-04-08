@@ -1,12 +1,12 @@
 import datetime
 import logging
-import re
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
 import numpy as np
+from cloudnet_api_client import APIClient
 from cloudnetpy.exceptions import PlottingError
 from cloudnetpy.model_evaluation.plotting.plotting import generate_L3_day_plots
 from cloudnetpy.plotting import Dimensions, PlotParameters, generate_figure
@@ -91,11 +91,13 @@ class Processor:
         storage_api: StorageApi,
         pid_utils: PidUtils,
         dvas: Dvas,
+        client: APIClient,
     ):
         self.md_api = md_api
         self.storage_api = storage_api
         self.pid_utils = pid_utils
         self.dvas = dvas
+        self.client = client
 
     def get_site(self, site_id: str, date: datetime.date) -> Site:
         site = self.md_api.get(f"api/sites/{site_id}")
@@ -269,53 +271,49 @@ class Processor:
                 start_date_ext -= datetime.timedelta(days=1)
             elif time_offset > TIMEDELTA_ZERO:
                 end_date_ext += datetime.timedelta(days=1)
-        payload = self._get_payload(
-            site=site_id,
-            date=(start_date_ext, end_date_ext),
-            instrument=instrument_id,
+        upload_metadata = self.client.raw_metadata(
+            site_id,
+            date_from=start_date_ext,
+            date_to=end_date_ext,
+            instrument_id=instrument_id,
             instrument_pid=instrument_pid,
-            skip_created=True,
             filename_prefix=filename_prefix,
             filename_suffix=filename_suffix,
+            status=["uploaded", "processed"],
         )
-        upload_metadata = self.md_api.get("api/raw-files", payload)
-        if include_pattern is not None:
-            upload_metadata = _include_records_with_pattern_in_filename(
-                upload_metadata, include_pattern
+        if include_pattern:
+            upload_metadata = self.client.filter(
+                upload_metadata, include_pattern=include_pattern
             )
-        if exclude_pattern is not None:
-            upload_metadata = _exclude_records_with_pattern_in_filename(
-                upload_metadata, exclude_pattern
+        if exclude_pattern:
+            upload_metadata = self.client.filter(
+                upload_metadata, exclude_pattern=exclude_pattern
             )
-        if include_tag_subset is not None:
-            upload_metadata = [
-                record
-                for record in upload_metadata
-                if include_tag_subset.issubset(set(record["tags"]))
-            ]
-        if exclude_tag_subset is not None:
-            upload_metadata = [
-                record
-                for record in upload_metadata
-                if not exclude_tag_subset.issubset(set(record["tags"]))
-            ]
+        if include_tag_subset:
+            upload_metadata = self.client.filter(
+                upload_metadata, include_tag_subset=include_tag_subset
+            )
+        if exclude_tag_subset:
+            upload_metadata = self.client.filter(
+                upload_metadata, exclude_tag_subset=exclude_tag_subset
+            )
+
         if not upload_metadata:
             if allow_empty:
                 return [], []
             else:
                 raise utils.RawDataMissingError
         if largest_only:
-            upload_metadata = [max(upload_metadata, key=lambda item: int(item["size"]))]
-        full_paths, uuids = self.storage_api.download_raw_data(
-            upload_metadata, directory
-        )
+            upload_metadata = [max(upload_metadata, key=lambda item: int(item.size))]
+
+        full_paths = self.client.download(upload_metadata, directory, progress=False)
+        uuids = [f.uuid for f in upload_metadata]
+
         if time_offset is not None:
             uuids = [
-                meta["uuid"]
+                meta.uuid
                 for meta in upload_metadata
-                if start_date
-                <= datetime.date.fromisoformat(meta["measurementDate"])
-                <= end_date
+                if start_date <= meta.measurement_date <= end_date
             ]
         if largest_only:
             return full_paths[0], uuids
@@ -618,24 +616,6 @@ def _dimensions2dict(dimensions: Dimensions) -> dict:
         "marginBottom": dimensions.margin_bottom,
         "marginRight": dimensions.margin_right,
     }
-
-
-def _include_records_with_pattern_in_filename(metadata: list, pattern: str) -> list:
-    """Includes only records with certain pattern."""
-    return [
-        row
-        for row in metadata
-        if re.search(pattern, row["filename"], flags=re.IGNORECASE)
-    ]
-
-
-def _exclude_records_with_pattern_in_filename(metadata: list, pattern: str) -> list:
-    """Excludes records with certain pattern."""
-    return [
-        row
-        for row in metadata
-        if not re.search(pattern, row["filename"], flags=re.IGNORECASE)
-    ]
 
 
 def _full_product_to_l3_product(full_product: str):

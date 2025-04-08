@@ -16,6 +16,7 @@ from tempfile import TemporaryDirectory
 from typing import TypeVar
 from uuid import UUID
 
+from cloudnet_api_client import APIClient
 from processing import utils
 from processing.dvas import Dvas
 from processing.fetch import fetch
@@ -181,7 +182,8 @@ def process_main(args):
     storage_api = StorageApi(config, session)
     pid_utils = PidUtils(config, session)
     dvas = Dvas(config, md_api)
-    processor = Processor(md_api, storage_api, pid_utils, dvas)
+    client = APIClient(f"{config.dataportal_url}/api/", session)
+    processor = Processor(md_api, storage_api, pid_utils, dvas, client)
 
     if args.cmd == "fetch":
         _print_fetch_header(args)
