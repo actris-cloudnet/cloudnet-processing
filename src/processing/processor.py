@@ -542,6 +542,9 @@ class Processor:
                 result = error_level.value
                 break
         self.md_api.put("quality", str(uuid), quality_dict)
+        if quality_report.data_coverage is not None:
+            payload = {"uuid": str(uuid), "coverage": quality_report.data_coverage}
+            self.md_api.post("files", payload)
         return result
 
 
