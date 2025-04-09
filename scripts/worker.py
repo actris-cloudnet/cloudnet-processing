@@ -304,7 +304,7 @@ def main():
 
     try:
         logging.info("Waiting for a task...")
-        while not exit.is_set() and worker.n_processed_tasks < 100:
+        while not exit.is_set() and worker.n_processed_tasks < 1000:
             if not worker.process_task():
                 exit.wait(10)
         logging.info("Terminate after processing the maximum number of tasks")
