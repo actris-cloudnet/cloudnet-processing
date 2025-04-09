@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
+import numpy as np
 import requests
 from cloudnetpy.exceptions import PlottingError
 from cloudnetpy.model_evaluation.plotting.plotting import generate_L3_day_plots
@@ -46,6 +47,9 @@ class Site:
     latitude: float
     longitude: float
     altitude: float
+    raw_time: np.ndarray | None
+    raw_latitude: np.ndarray | None
+    raw_longitude: np.ndarray | None
     types: set[str]
 
 
@@ -94,11 +98,9 @@ class Processor:
         self.pid_utils = pid_utils
         self.dvas = dvas
 
-    def get_site(self, site_id: str, date: datetime.date | None = None) -> Site:
+    def get_site(self, site_id: str, date: datetime.date) -> Site:
         site = self.md_api.get(f"api/sites/{site_id}")
         if site["latitude"] is None and site["longitude"] is None:
-            if date is None:
-                raise ValueError("Date and latitude/longitude not specified")
             try:
                 location = self.md_api.get(
                     f"api/sites/{site_id}/locations", {"date": date.isoformat()}
@@ -108,14 +110,50 @@ class Processor:
             except requests.exceptions.HTTPError as err:
                 if err.response.status_code != 404:
                     raise err
+
+            prev_date = date - datetime.timedelta(days=1)
+            next_date = date + datetime.timedelta(days=1)
+            raw_locations = np.array(
+                self._fetch_raw_locations(site_id, prev_date, -1)
+                + self._fetch_raw_locations(site_id, date)
+                + self._fetch_raw_locations(site_id, next_date, 0),
+            )
+            site["raw_time"] = raw_locations[:, 0]
+            site["raw_latitude"] = raw_locations[:, 1].astype(np.float32)
+            site["raw_longitude"] = raw_locations[:, 2].astype(np.float32)
         return Site(
             id=site["id"],
             name=site["humanReadableName"],
             latitude=site["latitude"],
             longitude=site["longitude"],
+            raw_time=site.get("raw_time"),
+            raw_latitude=site.get("raw_latitude"),
+            raw_longitude=site.get("raw_longitude"),
             altitude=site["altitude"],
             types=set(site["type"]),
         )
+
+    def _fetch_raw_locations(
+        self, site_id: str, date: datetime.date, index: int | None = None
+    ) -> list[tuple[datetime.datetime, float, float]]:
+        locations = self.md_api.get(
+            f"api/sites/{site_id}/locations",
+            {"date": date.isoformat(), "raw": "1"},
+        )
+        if index is not None:
+            if index < 0:
+                index += len(locations)
+            locations = locations[index : index + 1]
+        output = []
+        for location in locations:
+            output.append(
+                (
+                    datetime.datetime.fromisoformat(location["date"]),
+                    location["latitude"],
+                    location["longitude"],
+                )
+            )
+        return output
 
     def get_product(self, product_id: str) -> Product:
         product = self.md_api.get(f"api/products/{product_id}")
@@ -504,9 +542,11 @@ class Processor:
         try:
             # is_dev = self.config.get("PID_SERVICE_TEST_ENV", "").lower() == "true"
             # ignore_tests = ["TestInstrumentPid"] if is_dev else None
+            has_raw = site.raw_time is not None and site.raw_time.size > 0
             site_meta: quality.SiteMeta = {
-                "latitude": site.latitude,
-                "longitude": site.longitude,
+                "time": site.raw_time if has_raw else None,
+                "latitude": site.raw_latitude if has_raw else site.latitude,
+                "longitude": site.raw_longitude if has_raw else site.longitude,
                 "altitude": site.altitude,
             }
             quality_report = quality.run_tests(
