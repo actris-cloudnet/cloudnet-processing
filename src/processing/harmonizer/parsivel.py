@@ -268,10 +268,10 @@ class ParsivelNc(core.Level1Nc):
                 self.to_m(key)
 
     def _find_bad_values(self, variable: netCDF4.Variable) -> np.ndarray:
-        bad_values = (-9.999,)  # Extend this list if needed
+        bad_value = -9.999
         threshold = 1e-3
-        data = variable[:][..., None]
-        return np.isclose(data, bad_values, atol=threshold).any(axis=-1)
+        data = variable[:]
+        return np.isclose(data, bad_value, atol=threshold)
 
     def _mask_bad_values(self):
         for variable in self.nc.variables.values():

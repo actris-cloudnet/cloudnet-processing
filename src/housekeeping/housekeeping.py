@@ -282,7 +282,7 @@ def _make_points(
             valid_timestamps = (timestamps >= lower_limit) & (timestamps < upper_limit)
         case ValidDateRange.MONTH:
             month = np.datetime64(metadata["measurementDate"], "M")
-            next_month = month + 1
+            next_month: np.datetime64 = month + 1
             first_day = month.astype("datetime64[s]")
             last_day = (next_month - np.timedelta64(1, "D")).astype("datetime64[s]")
             pad_hours = 12
