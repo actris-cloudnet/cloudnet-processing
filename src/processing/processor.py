@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import Literal
 
 import numpy as np
-import requests
 from cloudnetpy.exceptions import PlottingError
 from cloudnetpy.model_evaluation.plotting.plotting import generate_L3_day_plots
 from cloudnetpy.plotting import Dimensions, PlotParameters, generate_figure
@@ -101,15 +100,11 @@ class Processor:
     def get_site(self, site_id: str, date: datetime.date) -> Site:
         site = self.md_api.get(f"api/sites/{site_id}")
         if site["latitude"] is None and site["longitude"] is None:
-            try:
-                location = self.md_api.get(
-                    f"api/sites/{site_id}/locations", {"date": date.isoformat()}
-                )
-                site["latitude"] = location["latitude"]
-                site["longitude"] = location["longitude"]
-            except requests.exceptions.HTTPError as err:
-                if err.response.status_code != 404:
-                    raise err
+            location = self.md_api.get(
+                f"api/sites/{site_id}/locations", {"date": date.isoformat()}
+            )
+            site["latitude"] = location["latitude"]
+            site["longitude"] = location["longitude"]
 
             prev_date = date - datetime.timedelta(days=1)
             next_date = date + datetime.timedelta(days=1)
