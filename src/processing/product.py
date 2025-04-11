@@ -247,7 +247,7 @@ def _process_epsilon_from_lidar(
     prefer_pid = params.instrument.pid
     metadata_wind = sorted(
         metadata_wind,
-        key=lambda meta: -1 if meta["instrumentPid"] == prefer_pid else 1,
+        key=lambda meta: -1 if meta["instrument"]["pid"] == prefer_pid else 1,
     )
 
     file_lidar, file_wind = processor.storage_api.download_products(
@@ -442,10 +442,13 @@ def _find_instrument_product(
         fallback = require
 
     def file_key(file):
-        if nominal_instrument_pid and file["instrumentPid"] == nominal_instrument_pid:
+        if (
+            nominal_instrument_pid
+            and file["instrument"]["pid"] == nominal_instrument_pid
+        ):
             return -1
         try:
-            return fallback.index(file["instrument"]["id"])
+            return fallback.index(file["instrument"]["instrumentId"])
         except ValueError:
             return 999
 
@@ -455,7 +458,9 @@ def _find_instrument_product(
         instrument_id=require,
     )
     metadata = processor.md_api.get("api/files", payload)
-    metadata = [file for file in metadata if file["instrument"]["id"] not in exclude]
+    metadata = [
+        file for file in metadata if file["instrument"]["instrumentId"] not in exclude
+    ]
     if not metadata:
         return None
     nominal_instrument_pid = _get_nominal_instrument_pid(processor, params, product_id)
@@ -484,7 +489,7 @@ def _get_input_files_for_voodoo(
 ) -> tuple[list[str], list[str]]:
     payload = _get_payload(params, instrument_id="rpg-fmcw-94")
     metadata = processor.md_api.get("upload-metadata", payload)
-    unique_pids = [row["instrumentPid"] for row in metadata]
+    unique_pids = [row["instrument"]["pid"] for row in metadata]
     if unique_pids:
         instrument_pid = unique_pids[0]
     else:

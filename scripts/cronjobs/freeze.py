@@ -77,8 +77,8 @@ def _publish_freeze_task(config: Config, session: Session, file: dict):
     }
     if "modelId" in file:
         task["modelId"] = file["modelId"]
-    if "instrumentInfoUuid" in file:
-        task["instrumentInfoUuid"] = file["instrumentInfoUuid"]
+    if "instrument" in file:
+        task["instrumentInfoUuid"] = file["instrument"]["uuid"]
     logging.info(f"Publish task: {task}")
     res = session.post(
         f"{config.dataportal_url}/api/queue/publish",
