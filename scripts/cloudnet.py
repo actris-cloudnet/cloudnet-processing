@@ -321,7 +321,7 @@ def _process_file(
                 # No raw data, but we can still have fetched products
                 metadata = processor.md_api.get("api/files", payload)
                 instruments = {
-                    processor.get_instrument(meta["instrumentInfoUuid"])
+                    processor.get_instrument(meta["instrument"]["uuid"])
                     for meta in metadata
                 }
 
@@ -367,7 +367,7 @@ def _process_file(
                 "product": "mwr-l1c",
             }
             metadata = processor.md_api.get("api/files", payload)
-            instrument_uuids = {meta["instrumentInfoUuid"] for meta in metadata}
+            instrument_uuids = {meta["instrument"]["uuid"] for meta in metadata}
             instruments = {processor.get_instrument(uuid) for uuid in instrument_uuids}
         else:
             payload = {
@@ -376,7 +376,7 @@ def _process_file(
                 "product": "doppler-lidar",
             }
             metadata = processor.md_api.get("api/files", payload)
-            instrument_uuids = {meta["instrumentInfoUuid"] for meta in metadata}
+            instrument_uuids = {meta["instrument"]["uuid"] for meta in metadata}
             instruments = {processor.get_instrument(uuid) for uuid in instrument_uuids}
         for instrument in instruments:
             _print_header(
