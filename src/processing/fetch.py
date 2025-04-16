@@ -259,7 +259,7 @@ def _submit_file(filename: Path, row: dict) -> str:
         "sourceFileIds": [],
     }
     if row.get("instrument") is not None:
-        dp_body["instrument"] = dp_body["instrument"]["id"]
+        dp_body["instrument"] = dp_body["instrument"]["instrumentId"]
     elif row.get("model") is not None:
         dp_body["model"] = dp_body["model"]["id"]
 
