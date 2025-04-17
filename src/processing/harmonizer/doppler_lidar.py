@@ -204,7 +204,9 @@ class DopplerLidarStareNc(core.Level1Nc):
 
 
 def _harmonise_doppler_lidar_serial_number(serial_number: str) -> str:
-    if match_ := re.match(r"wls\d+s?-(.+)", serial_number, re.IGNORECASE):
+    if match_ := re.match(r"wls\d+s?-(\d+)", serial_number, re.IGNORECASE):
+        return match_.group(1)
+    elif match_ := re.match(r"wcs0*(\d+)", serial_number, re.IGNORECASE):
         return match_.group(1)
     else:
         return serial_number

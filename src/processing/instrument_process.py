@@ -235,6 +235,27 @@ class ProcessDopplerLidarWind(ProcessInstrument):
         raise NotImplementedError()
 
     def process_wls200s(self):
+        self._process_windcube(instruments.WINDCUBE_WLS200S)
+
+    def process_wls400s(self):
+        self._process_windcube(instruments.WINDCUBE_WLS400S)
+
+    def process_wls70(self):
+        full_paths, self.uuid.raw = self.download_instrument(include_pattern=r".*\.rtd")
+        try:
+            options = self._calibration_options()
+            wind = doppy.product.Wind.from_wls70_data(data=full_paths, options=options)
+        except doppy.exceptions.NoDataError as err:
+            raise RawDataMissingError(str(err))
+        _doppy_wls70_wind_to_nc(wind, str(self.daily_path), options)
+        data = self._get_payload_for_nc_file_augmenter(str(self.daily_path))
+        if options is not None and options.azimuth_offset_deg is not None:
+            data["azimuth_offset_deg"] = options.azimuth_offset_deg
+        self.uuid.product = harmonizer.harmonize_doppler_lidar_wind_file(
+            data, instruments.WINDCUBE_WLS70
+        )
+
+    def _process_windcube(self, instrument: instruments.Instrument):
         file_groups = defaultdict(list)
         full_paths, self.uuid.raw = self.download_instrument(
             include_pattern=r".*(vad)|(dbs).*\.nc.*",
@@ -275,25 +296,7 @@ class ProcessDopplerLidarWind(ProcessInstrument):
         if options is not None and options.azimuth_offset_deg is not None:
             data["azimuth_offset_deg"] = options.azimuth_offset_deg
         self.uuid.product = harmonizer.harmonize_doppler_lidar_wind_file(
-            data, instruments.WINDCUBE_WLS200S
-        )
-
-    def process_wls400s(self):
-        raise NotImplementedError()
-
-    def process_wls70(self):
-        full_paths, self.uuid.raw = self.download_instrument(include_pattern=r".*\.rtd")
-        try:
-            options = self._calibration_options()
-            wind = doppy.product.Wind.from_wls70_data(data=full_paths, options=options)
-        except doppy.exceptions.NoDataError as err:
-            raise RawDataMissingError(str(err))
-        _doppy_wls70_wind_to_nc(wind, str(self.daily_path), options)
-        data = self._get_payload_for_nc_file_augmenter(str(self.daily_path))
-        if options is not None and options.azimuth_offset_deg is not None:
-            data["azimuth_offset_deg"] = options.azimuth_offset_deg
-        self.uuid.product = harmonizer.harmonize_doppler_lidar_wind_file(
-            data, instruments.WINDCUBE_WLS70
+            data, instrument
         )
 
     def _calibration_options(self) -> doppy.product.WindOptions | None:
@@ -374,42 +377,58 @@ class ProcessDopplerLidar(ProcessInstrument):
         raise NotImplementedError()
 
     def process_wls200s(self):
+        self._process_windcube(instruments.WINDCUBE_WLS200S)
+
+    def process_wls400s(self):
+        self._process_windcube(instruments.WINDCUBE_WLS400S)
+
+    def process_wls70(self):
+        raise NotImplementedError()
+
+    def _process_windcube(self, instrument: instruments.Instrument):
         file_groups = defaultdict(list)
         full_paths, self.uuid.raw = self.download_instrument(
             include_pattern=r".*fixed.*\.nc(\..+)?"
         )
         full_paths = _unzip_gz_files(full_paths)
 
-        group_pattern = re.compile(r".+_fixed_(.+)\.nc(?:\..+)?")
-        for path, uuid in zip(full_paths, self.uuid.raw):
-            if match := group_pattern.match(path.name):
-                file_groups[match.group(1)].append((path, uuid))
-
         try:
-            try:
-                all_grouped_files = list(itertools.chain(*file_groups.values()))
-                all_paths, self.uuid.raw = zip(*all_grouped_files)  # type: ignore
-                stare = doppy.product.Stare.from_windcube_data(all_paths)
-            except ValueError:
-                group_with_most_files = max(
-                    file_groups, key=lambda k: len(file_groups[k])
-                )
-                full_paths, self.uuid.raw = zip(*file_groups[group_with_most_files])  # type: ignore
-                stare = doppy.product.Stare.from_windcube_data(full_paths)
+            # Try to process all "fixed" files at once.
+            stare = doppy.product.Stare.from_windcube_data(full_paths)
         except doppy.exceptions.NoDataError as err:
             raise RawDataMissingError(str(err))
+        except ValueError:
+            # If processing all files fails, try to process individual groups
+            # (e.g. "fixed_1633_75m"), starting from the group with most files.
+            group_pattern = re.compile(r".+_fixed_(.+)\.nc(?:\..+)?")
+            for path, uuid in zip(full_paths, self.uuid.raw):
+                if match := group_pattern.match(path.name):
+                    file_groups[match.group(1)].append((path, uuid))
+            groups_by_size = sorted(
+                file_groups, key=lambda k: (len(file_groups[k]), k), reverse=True
+            )
+            for i, group in enumerate(groups_by_size):
+                is_last_group = i == len(groups_by_size) - 1
+                try:
+                    full_paths, self.uuid.raw = zip(*file_groups[group])  # type: ignore
+                    stare = doppy.product.Stare.from_windcube_data(full_paths)
+                    threshold = 15
+                    zenith_angle = 90 - np.median(stare.elevation)
+                    if zenith_angle > threshold:
+                        raise ValueError(f"Invalid zenith angle {zenith_angle}")
+                    break
+                except doppy.exceptions.NoDataError as err:
+                    if is_last_group:
+                        raise RawDataMissingError(str(err))
+                except ValueError:
+                    if is_last_group:
+                        raise
 
         _doppy_stare_to_nc(stare, str(self.daily_path), self.params.date)
         data = self._get_payload_for_nc_file_augmenter(str(self.daily_path))
         self.uuid.product = harmonizer.harmonize_doppler_lidar_stare_file(
-            data, instruments.WINDCUBE_WLS200S
+            data, instrument
         )
-
-    def process_wls400s(self):
-        raise NotImplementedError()
-
-    def process_wls70(self):
-        raise NotImplementedError()
 
 
 class ProcessLidar(ProcessInstrument):
