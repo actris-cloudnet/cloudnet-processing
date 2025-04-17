@@ -52,10 +52,10 @@ def _publish_qc_task(config: Config, session: Session, file: dict):
         "scheduledAt": utils.utcnow().isoformat(),
         "priority": 100,
     }
-    if "modelId" in file:
-        task["modelId"] = file["modelId"]
-    if "instrumentInfoUuid" in file:
-        task["instrumentInfoUuid"] = file["instrumentInfoUuid"]
+    if "model" in file:
+        task["modelId"] = file["model"]["id"]
+    if "instrument" in file:
+        task["instrumentInfoUuid"] = file["instrument"]["uuid"]
     logging.info(f"Publish task: {task}")
     res = session.post(
         f"{config.dataportal_url}/api/queue/publish",

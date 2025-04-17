@@ -75,8 +75,8 @@ def _publish_freeze_task(config: Config, session: Session, file: dict):
         "scheduledAt": utils.utcnow().isoformat(),
         "priority": 100,
     }
-    if "modelId" in file:
-        task["modelId"] = file["modelId"]
+    if "model" in file:
+        task["modelId"] = file["model"]["id"]
     if "instrument" in file:
         task["instrumentInfoUuid"] = file["instrument"]["uuid"]
     logging.info(f"Publish task: {task}")
