@@ -79,7 +79,7 @@ class Dvas:
     def _delete_old_versions(self, file: dict):
         """Delete all versions of the given file from DVAS API. To be used before posting new version."""
         versions = self.md_api.get(
-            f"api/files/{file['uuid']}/versions", {"properties": ["dvasId"]}
+            f"api/files/{file['uuid']}/versions", {"properties": ["dvasId", "pid"]}
         )
         for version in versions:
             if version["dvasId"] is None:
