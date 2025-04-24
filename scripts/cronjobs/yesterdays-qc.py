@@ -52,9 +52,9 @@ def _publish_qc_task(config: Config, session: Session, file: dict):
         "scheduledAt": utils.utcnow().isoformat(),
         "priority": 100,
     }
-    if "model" in file:
+    if file.get("model") is not None:
         task["modelId"] = file["model"]["id"]
-    if "instrument" in file:
+    if file.get("instrument") is not None:
         task["instrumentInfoUuid"] = file["instrument"]["uuid"]
     logging.info(f"Publish task: {task}")
     res = session.post(
