@@ -593,6 +593,12 @@ class ProcessMwrL1c(ProcessInstrument):
             str(self.raw_dir), str(output_filename), site_meta, **self._kwargs
         )
 
+    def process_lhatpro(self):
+        raise NotImplementedError("LHATPRO processing not implemented yet")
+
+    def process_lhumpro(self):
+        raise NotImplementedError("LHUMPRO processing not implemented yet")
+
     def _get_calibration_data(self) -> dict:
         payload = {
             "date": self.params.date.isoformat(),
@@ -636,6 +642,12 @@ class ProcessMwr(ProcessInstrument):
         self.uuid.product = radiometrics2nc(
             str(self.raw_dir), *self._args, **self._kwargs
         )
+
+    def process_lhatpro(self):
+        raise NotImplementedError("LHATPRO processing not implemented yet")
+
+    def process_lhumpro(self):
+        raise NotImplementedError("LHUMPRO processing not implemented yet")
 
 
 class ProcessDisdrometer(ProcessInstrument):
