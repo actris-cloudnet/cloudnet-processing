@@ -57,7 +57,7 @@ class Dvas:
         logging.warning(
             f"Deleting Cloudnet file {file['uuid']} with dvasId {file['dvasId']} from DVAS"
         )
-        url = f"{self.config.dvas_portal_url}/metadata/delete/{file['dvasId']}"
+        url = f"{self.config.dvas_portal_url}/metadata/delete/pid/{file['pid']}"
         self._delete(url)
 
     def delete_all(self):
