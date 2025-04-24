@@ -174,7 +174,7 @@ def _parse_args():
     elif args.start and args.stop and args.start > args.stop:
         parser.error("--start should be before --stop")
     if not args.start:
-        args.start = utils.utctoday() - datetime.timedelta(days=5)
+        args.start = utils.utctoday()
     if not args.stop:
         args.stop = utils.utctoday()
     del args.date
