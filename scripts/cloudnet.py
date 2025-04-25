@@ -51,14 +51,6 @@ warnings.filterwarnings(
     message="The input coordinates to pcolormesh are interpreted as cell centers",
 )
 
-# TODO: Investigate these warnings later:
-warnings.filterwarnings(
-    "ignore",
-    category=UserWarning,
-    message="Warning: 'partition' will ignore the 'mask' of the MaskedArray.",
-    module="numpy",
-)
-
 if sys.stdout.isatty() and not os.getenv("NO_COLOR"):
     GREEN = "\033[92m"
     BOLD = "\033[1m"
