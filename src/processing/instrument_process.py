@@ -821,6 +821,8 @@ def _doppy_stare_to_nc(
     if time_offset is not None:
         stare.time -= np.timedelta64(time_offset)
     is_valid = stare.time.astype("datetime64[D]") == np.datetime64(date)
+    if not np.any(is_valid):
+        raise RawDataMissingError("No valid timestamps found")
     for key, value in dataclasses.asdict(stare).items():
         if isinstance(value, np.ndarray) and value.shape[:1] == (n_time,):
             setattr(stare, key, value[is_valid])
@@ -953,6 +955,8 @@ def _doppy_wind_to_nc(
     if time_offset is not None:
         wind.time -= np.timedelta64(time_offset)
     is_valid = wind.time.astype("datetime64[D]") == np.datetime64(date)
+    if not np.any(is_valid):
+        raise RawDataMissingError("No valid timestamps found")
     for key, value in dataclasses.asdict(wind).items():
         if isinstance(value, np.ndarray) and value.shape[:1] == (n_time,):
             setattr(wind, key, value[is_valid])
