@@ -466,7 +466,7 @@ def _validate_types(types: str) -> list[str]:
 
 def _validate_sites(sites: str) -> list[str]:
     input_sites = sites.split(",")
-    valid_sites = set(_get_all_but_hidden_sites())
+    valid_sites = set(_get_all_sites())
     if invalid_sites := set(input_sites) - valid_sites:
         raise ArgumentTypeError("Invalid sites: " + ", ".join(invalid_sites))
     return input_sites
@@ -556,10 +556,10 @@ def _print_fetch_header(args: Namespace):
         print()
 
 
-def _get_all_but_hidden_sites() -> list:
-    """Returns all but hidden site identifiers."""
+def _get_all_sites() -> list:
+    """Returns all site identifiers."""
     sites = utils.get_from_data_portal_api("api/sites")
-    return [site["id"] for site in sites if "hidden" not in site["type"]]
+    return [site["id"] for site in sites]
 
 
 def _get_model_types() -> list:
