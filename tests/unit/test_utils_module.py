@@ -283,6 +283,36 @@ def test_are_identical_nc_files_generated_data(
             {"kissa1": "kaneli", "kissa2": "jaffa"},
             NCDiff.MINOR,
         ),
+        (
+            {"highscore": np.array([10, 22, 54])},
+            {"highscore": np.array([10, 22, 54])},
+            NCDiff.NONE,
+        ),
+        (
+            {"highscore": np.array([10, 22, 54])},
+            {"highscore": np.array([22, 54, 60])},
+            NCDiff.MINOR,
+        ),
+        (
+            {"highscore": np.array([22, 54])},
+            {"highscore": np.array([22, 54, 60])},
+            NCDiff.MINOR,
+        ),
+        (
+            {"highscore": np.array([10, 22, 54])},
+            {"highscore": np.array([54, 60])},
+            NCDiff.MINOR,
+        ),
+        (
+            {"highscore": 54},
+            {"highscore": np.array([22, 54, 60])},
+            NCDiff.MINOR,
+        ),
+        (
+            {"highscore": np.array([10, 22, 54])},
+            {"highscore": 60},
+            NCDiff.MINOR,
+        ),
     ],
 )
 def test_are_identical_nc_files_global_attributes(tmp_path, attrs1, attrs2, expected):

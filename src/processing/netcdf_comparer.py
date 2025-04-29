@@ -113,7 +113,12 @@ class NetCDFComparator:
             if attr == "source_file_uuids":
                 val_old = sorted(val_old.split(", "))
                 val_new = sorted(val_new.split(", "))
-            if val_old != val_new:
+            val_equal = (
+                np.array_equal(val_old, val_new)
+                if isinstance(val_old, np.ndarray) or isinstance(val_new, np.ndarray)
+                else val_old == val_new
+            )
+            if not val_equal:
                 logging.info(
                     f"Global attribute '{attr}' differs: {val_old} vs {val_new}"
                 )
