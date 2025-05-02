@@ -8,7 +8,7 @@ import shutil
 from collections import defaultdict
 from os import PathLike
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 import doppy
@@ -569,10 +569,21 @@ class ProcessLidar(ProcessInstrument):
 
 class ProcessMwrL1c(ProcessInstrument):
     def process_hatpro(self):
+        self._process_rpg("hatpro")
+
+    def process_lhatpro(self):
+        self._process_rpg("lhatpro")
+
+    def process_lhumpro(self):
+        self._process_rpg("lhumpro_u90")
+
+    def _process_rpg(
+        self, instrument_type: Literal["hatpro", "lhatpro", "lhumpro_u90"]
+    ):
         calibration = self._get_calibration_data()
         full_paths, self.uuid.raw = self.download_instrument(
             include_pattern=r"\.(brt|hkd|met|irt|blb|bls)$",
-            exclude_pattern=r"2DSCAN",
+            exclude_pattern=r"2DSCAN|elscan",
             time_offset=calibration.get("time_offset"),
         )
         output_filename, site_meta = self._args
@@ -590,14 +601,12 @@ class ProcessMwrL1c(ProcessInstrument):
         site_meta["coefficientFiles"] = coeff_paths
 
         self.uuid.product = hatpro2l1c(
-            str(self.raw_dir), str(output_filename), site_meta, **self._kwargs
+            str(self.raw_dir),
+            str(output_filename),
+            site_meta,
+            instrument_type=instrument_type,
+            **self._kwargs,
         )
-
-    def process_lhatpro(self):
-        raise NotImplementedError("LHATPRO processing not implemented yet")
-
-    def process_lhumpro(self):
-        raise NotImplementedError("LHUMPRO processing not implemented yet")
 
     def _get_calibration_data(self) -> dict:
         payload = {
@@ -616,13 +625,34 @@ class ProcessMwrL1c(ProcessInstrument):
 
 class ProcessMwr(ProcessInstrument):
     def process_hatpro(self):
+        self._process_rpg("hatpro")
+
+    def process_lhatpro(self):
+        self._process_rpg("lhatpro")
+
+    def process_lhumpro(self):
+        self._process_rpg("lhumpro_u90")
+
+    def process_radiometrics(self):
+        full_paths, self.uuid.raw = self.download_instrument()
+        _unzip_gz_files(full_paths)
+        self.uuid.product = radiometrics2nc(
+            str(self.raw_dir), *self._args, **self._kwargs
+        )
+
+    def _process_rpg(
+        self, instrument_type: Literal["hatpro", "lhatpro", "lhumpro_u90"]
+    ):
         try:
             full_paths, raw_uuids = self.download_instrument(
                 include_pattern=r"\.(lwp|iwv)$",
                 exclude_pattern=r"2DSCAN",
             )
+            kwargs = {**self._kwargs, "instrument_type": instrument_type}
             self.uuid.product, valid_full_paths = hatpro2nc(
-                str(self.raw_dir), *self._args, **self._kwargs
+                str(self.raw_dir),
+                *self._args,
+                **kwargs,
             )
 
         except RawDataMissingError:
@@ -635,19 +665,6 @@ class ProcessMwr(ProcessInstrument):
             data = self._get_payload_for_nc_file_augmenter(str(self.daily_path))
             self.uuid.product = harmonizer.harmonize_hatpro_file(data)
         self.uuid.raw = _get_valid_uuids(raw_uuids, full_paths, valid_full_paths)
-
-    def process_radiometrics(self):
-        full_paths, self.uuid.raw = self.download_instrument()
-        _unzip_gz_files(full_paths)
-        self.uuid.product = radiometrics2nc(
-            str(self.raw_dir), *self._args, **self._kwargs
-        )
-
-    def process_lhatpro(self):
-        raise NotImplementedError("LHATPRO processing not implemented yet")
-
-    def process_lhumpro(self):
-        raise NotImplementedError("LHUMPRO processing not implemented yet")
 
 
 class ProcessDisdrometer(ProcessInstrument):

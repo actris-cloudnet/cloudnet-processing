@@ -8,7 +8,11 @@ import netCDF4
 from cloudnetpy.categorize import generate_categorize
 from cloudnetpy.exceptions import CloudnetException, ModelDataError
 from cloudnetpy.model_evaluation.products import product_resampling
-from cloudnetpy.products import generate_mwr_multi, generate_mwr_single
+from cloudnetpy.products import (
+    generate_mwr_lhumpro,
+    generate_mwr_multi,
+    generate_mwr_single,
+)
 from cloudnetpy.products.epsilon import generate_epsilon_from_lidar
 from orbital_radar import Suborbital
 from requests import HTTPError
@@ -190,9 +194,12 @@ def _process_mwrpy(
 
     output_file = directory / "output.nc"
     if params.product.id == "mwr-single":
-        uuid.product = generate_mwr_single(
-            str(l1c_file), str(output_file), uuid.volatile
+        fun = (
+            generate_mwr_lhumpro
+            if params.instrument.type == "lhumpro"
+            else generate_mwr_single
         )
+        uuid.product = fun(str(l1c_file), str(output_file), uuid.volatile)
     else:
         uuid.product = generate_mwr_multi(
             str(l1c_file), str(output_file), uuid.volatile
