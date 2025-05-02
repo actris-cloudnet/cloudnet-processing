@@ -201,6 +201,8 @@ def _process_mwrpy(
         )
         uuid.product = fun(str(l1c_file), str(output_file), uuid.volatile)
     else:
+        if params.instrument.type == "lhumpro":
+            raise utils.SkipTaskError("Cannot generate mwr-multi from LHUMPRO")
         uuid.product = generate_mwr_multi(
             str(l1c_file), str(output_file), uuid.volatile
         )
