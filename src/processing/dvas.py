@@ -223,7 +223,7 @@ class DvasMetadata:
                 "product_type": "observation",
                 "matrix": "cloud phase",
                 "sub_matrix": None,
-                "instrument_type": self._find_instrument_types(self.file["uuid"]),
+                "instrument_type": list(self._find_instrument_types(self.file["uuid"])),
                 "program_affiliation": self._parse_affiliation(),
                 "variable_statistical_property": None,
                 "legacy_data": self.file["legacy"],
@@ -252,22 +252,22 @@ class DvasMetadata:
             affiliation.append("ACTRIS")
         return affiliation
 
-    def _find_instrument_types(self, uuid: str) -> list[str]:
+    def _find_instrument_types(self, uuid: str) -> set[str]:
         """Recursively find instrument types from source files.
 
         Links:
             https://vocabulary.actris.nilu.no/actris_vocab/instrumenttype
             https://prod-actris-md.nilu.no/vocabulary/instrumenttype
         """
-        instruments = []
+        instruments = set()
         json_data = utils.get_from_data_portal_api(f"api/files/{uuid}")
         assert isinstance(json_data, dict)
         if "instrument" in json_data and json_data["instrument"] is not None:
-            instruments.append(json_data["instrument"]["type"])
+            instruments.add(json_data["instrument"]["type"])
         source_ids = json_data.get("sourceFileIds", [])
         if source_ids:
             for source_uuid in source_ids:
-                instruments.extend(self._find_instrument_types(source_uuid))
+                instruments.update(self._find_instrument_types(source_uuid))
         return instruments
 
     def _parse_timeliness(self) -> str:
