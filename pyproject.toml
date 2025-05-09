@@ -20,7 +20,7 @@ classifiers = [
 dependencies = [
   "ceilopyter",
   "cftime",
-  "cloudnetpy[extras]>=1.75.0",
+  "cloudnetpy[extras]>=1.76.0",
   "cloudnetpy_qc>=1.25.7",
   "doppy>=0.3.5",
   "influxdb-client",

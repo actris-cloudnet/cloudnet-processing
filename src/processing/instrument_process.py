@@ -637,8 +637,6 @@ class ProcessMwr(ProcessInstrument):
         self._process_rpg("lhumpro_u90")
 
     def process_radiometrics(self):
-        if self.params.instrument.uuid == "c6f674c2-2f4f-4664-888c-edd3a5d68358":
-            raise NotImplementedError()
         full_paths, self.uuid.raw = self.download_instrument()
         _unzip_gz_files(full_paths)
         self.uuid.product = radiometrics2nc(
