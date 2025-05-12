@@ -206,7 +206,7 @@ class Ws(core.Level1Nc):
     def mask_bad_data(self):
         for key, var in self.nc.variables.items():
             if flagvar := self.nc.variables.get(f"{key}_quality_flag"):
-                var[:] = ma.masked_where(flagvar[:] < 2, var[:])
+                var[:] = ma.masked_where(flagvar[:] == 1, var[:])
             var[:] = ma.masked_invalid(var[:])
 
 
