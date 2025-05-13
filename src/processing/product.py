@@ -34,11 +34,14 @@ def process_me(processor: Processor, params: ModelParams, directory: Path):
         existing_file = processor.storage_api.download_product(
             existing_product, directory
         )
+        s3key = existing_product["s3key"]
     else:
         filename = _generate_filename(params)
         existing_file = None
+        s3key = None
 
     volatile = not existing_file or uuid.volatile is not None
+    new_version = not volatile
 
     try:
         new_file = _process_l3(processor, params, uuid, directory)
@@ -68,7 +71,9 @@ def process_me(processor: Processor, params: ModelParams, directory: Path):
             uuid.product = existing_product["uuid"]
 
     if upload:
-        processor.upload_file(params, new_file, filename, volatile, patch)
+        if new_version or s3key is None:
+            s3key = f"{uuid.product}/{filename}"
+        processor.upload_file(params, new_file, s3key, filename, volatile, patch)
     else:
         logging.info("Skipping PUT to data portal, file has not changed")
 
@@ -96,11 +101,14 @@ def process_product(processor: Processor, params: ProductParams, directory: Path
         existing_file = processor.storage_api.download_product(
             existing_product, directory
         )
+        s3key = existing_product["s3key"]
     else:
         filename = _generate_filename(params)
+        s3key = None
         existing_file = None
 
     volatile = not existing_file or uuid.volatile is not None
+    new_version = not volatile
 
     try:
         if params.product.id in ("mwr-single", "mwr-multi"):
@@ -141,9 +149,12 @@ def process_product(processor: Processor, params: ProductParams, directory: Path
             uuid.product = existing_product["uuid"]
 
     if upload:
-        processor.upload_file(params, new_file, filename, volatile, patch)
+        if new_version or s3key is None:
+            s3key = f"{uuid.product}/{filename}"
+        processor.upload_file(params, new_file, s3key, filename, volatile, patch)
     else:
         logging.info("Skipping PUT to data portal, file has not changed")
+
     processor.create_and_upload_images(
         new_file,
         params.product.id,
