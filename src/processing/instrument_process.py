@@ -19,6 +19,7 @@ from cloudnetpy.instruments import (
     bowtie2nc,
     ceilo2nc,
     copernicus2nc,
+    fd12p2nc,
     galileo2nc,
     hatpro2l1c,
     hatpro2nc,
@@ -791,6 +792,10 @@ class ProcessWeatherStation(ProcessInstrument):
                 self.uuid.product = harmonizer.harmonize_ws_file(data)
             else:
                 self.uuid.product = ws2nc(str(full_path), *self._args, **self._kwargs)
+
+    def process_fd12(self):
+        full_path, self.uuid.raw = self.download_instrument(largest_only=True)
+        self.uuid.product = fd12p2nc(full_path, *self._args, **self._kwargs)
 
 
 class ProcessRainRadar(ProcessInstrument):
