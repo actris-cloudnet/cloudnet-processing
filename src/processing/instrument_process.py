@@ -168,8 +168,11 @@ class ProcessRadar(ProcessInstrument):
         )
 
     def process_basta(self):
-        full_path, self.uuid.raw = self.download_instrument(largest_only=True)
-        self.uuid.product = basta2nc(full_path, *self._args, **self._kwargs)
+        full_paths, self.uuid.raw = self.download_instrument()
+        concat_wrapper.concat_netcdf_files(
+            full_paths, self.params.date.isoformat(), str(self.daily_path)
+        )
+        self.uuid.product = basta2nc(str(self.daily_path), *self._args, **self._kwargs)
 
     def process_copernicus(self):
         full_paths, self.uuid.raw = self.download_instrument()
