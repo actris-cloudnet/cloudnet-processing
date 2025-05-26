@@ -14,7 +14,6 @@ from uuid import UUID
 import doppy
 import netCDF4
 import numpy as np
-from cloudnetpy.exceptions import InconsistentDataError
 from cloudnetpy.instruments import (
     basta2nc,
     bowtie2nc,
@@ -123,17 +122,13 @@ class ProcessInstrument:
 class ProcessRadar(ProcessInstrument):
     def process_rpg_fmcw_94(self):
         if self.params.site.id == "rv-meteor":
-            try:
-                full_paths, self.uuid.raw = self.download_instrument()
-                concat_wrapper.concat_netcdf_files(
-                    full_paths, self.params.date.isoformat(), str(self.daily_path)
-                )
-                self.uuid.product = bowtie2nc(
-                    str(self.daily_path), *self._args, **self._kwargs
-                )
-            except InconsistentDataError:
-                full_path, self.uuid.raw = self.download_instrument(largest_only=True)
-                self.uuid.product = bowtie2nc(full_path, *self._args, **self._kwargs)
+            full_paths, self.uuid.raw = self.download_instrument()
+            concat_wrapper.concat_netcdf_files(
+                full_paths, self.params.date.isoformat(), str(self.daily_path)
+            )
+            self.uuid.product = bowtie2nc(
+                str(self.daily_path), *self._args, **self._kwargs
+            )
         else:
             full_paths, raw_uuids = self.download_instrument(
                 include_pattern=r"zen.*\.lv1(\.gz)?$"

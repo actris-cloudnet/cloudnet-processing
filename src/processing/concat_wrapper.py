@@ -50,18 +50,12 @@ def concat_netcdf_files(
             if seconds2date(timestamp, epoch)[:3] == date.split("-"):
                 valid_files.append(file)
                 break
+
     clib.concatenate_files(
         valid_files,
         output_file,
         concat_dimension=concat_dimension,
         variables=variables,
-        ignore=[
-            "minimum",
-            "maximum",
-            "number_integrated_samples",
-            "Min_LWP",
-            "Max_LWP",
-        ],
     )
     return valid_files
 
@@ -89,8 +83,6 @@ def concat_chm15k_files(files: list, date: str, output_file: str) -> list:
         valid_files,
         output_file,
         variables=variables,
-        new_attributes={"Conventions": "CF-1.8"},
-        allow_difference=["latitude", "longitude", "altitude", "cho"],
     )
     return valid_files
 
