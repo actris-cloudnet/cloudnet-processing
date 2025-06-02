@@ -25,6 +25,7 @@ class NetCDFComparator:
             "vm_sat_noise",
             "vm_sat_folded",
             "folding_flag",
+            "nyquist_velocity",
         ),
     ):
         self.old_file = old_file
@@ -167,6 +168,8 @@ class NetCDFComparator:
 
     def _compare_variable_shapes(self) -> bool:
         for var in self.old.variables:
+            if var in self.ignore_vars:
+                continue
             shape_old = self.old.variables[var].shape
             shape_new = self.new.variables[var].shape
             if shape_old != shape_new:
