@@ -45,7 +45,7 @@ class MetadataApi:
         res.raise_for_status()
         return res
 
-    def put_file(
+    def _put_file(
         self, end_point: str, resource: str, full_path: str, auth: tuple[str, str]
     ) -> requests.Response:
         """PUT file to Cloudnet data portal."""
@@ -87,7 +87,7 @@ class MetadataApi:
         except requests.exceptions.HTTPError as err:
             logging.info(err)
             return
-        self.put_file("upload/data", checksum, base.daily_file.name, self._auth)
+        self._put_file("upload/data", checksum, base.daily_file.name, self._auth)
 
     def update_dvas_info(self, uuid: uuid.UUID, timestamp: str, dvas_id: str):
         payload = {"uuid": uuid, "dvasUpdatedAt": timestamp, "dvasId": dvas_id}
