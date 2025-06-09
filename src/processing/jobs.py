@@ -29,6 +29,7 @@ def update_plots(processor: Processor, params: ProcessParams, directory: Path) -
             file_uuid,
             metadata["filename"],
             directory,
+            metadata.get("legacy", False),
         )
     url = utils.build_file_landing_page_url(str(file_uuid))
     logging.info(f"Plots updated: {url}/visualizations")
