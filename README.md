@@ -48,16 +48,15 @@ Arguments:
 
 Shortcut for the `--products` argument:
 
-| Shortcut   | Meaning                                                                             |
-| :--------- | :---------------------------------------------------------------------------------- |
-| `l1b`      | `disdrometer,doppler-lidar,lidar,mwr,radar,weather-station,model`                   |
-| `l1c`      | `categorize,categorize-voodoo,mwr-l1c,doppler-lidar-wind`                           |
-| `l2`       | `classification,iwc,lwc,drizzle,ier,der,mwr-single,mwr-multi,classification-voodoo` |
-| `l3`       | `l3-cf,l3-iwc,l3-lwc`                                                               |
-| `doppy`    | `doppler-lidar,doppler-lidar-wind`                                                  |
-| `voodoo`   | `categorize-voodoo,classification-voodoo`                                           |
-| `mwrpy`    | `mwr-l1c,mwr-single,mwr-multi`                                                      |
-| `standard` | All products except experimental and Level 3.                                       |
+| Shortcut      | Meaning                                                                                                                                         |
+| :------------ | :---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `instrument`  | `disdrometer,doppler-lidar,doppler-lidar-wind,epsilon-lidar,lidar,mwr,mwr-l1c,mwr-multi,mwr-single,radar,rain-gauge,rain-radar,weather-station` |
+| `geophysical` | `categorize,categorize-voodoo,classification,classification-voodoo,iwc,lwc,drizzle,ier,der`                                                     |
+| `evaluation`  | `cpr-simulation,l3-cf,l3-iwc,l3-lwc`                                                                                                            |
+| `doppy`       | `doppler-lidar,doppler-lidar-wind,epsilon-lidar`                                                                                                |
+| `voodoo`      | `categorize-voodoo,classification-voodoo`                                                                                                       |
+| `mwrpy`       | `mwr-l1c,mwr-single,mwr-multi`                                                                                                                  |
+| `cpr`         | `cpr-simulation`                                                                                                                                |
 
 Notes:
 
