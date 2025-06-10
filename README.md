@@ -31,20 +31,20 @@ The main wrapper for running all the processing steps.
 
 Arguments:
 
-| Short | Long            | Default       | Description                                                                        |
-| :---- | :-------------- | :------------ | :--------------------------------------------------------------------------------- |
-| `-h`  | `--help`        |               | Show help and exit.                                                                |
-| `-s`  | `--sites`       |               | E.g, `hyytiala,granada`.                                                           |
-| `-p`  | `--products`    |               | E.g. `lidar,classification,l3-cf`.                                                 |
-| `-i`  | `--instruments` |               | E.g. `mira-35,hatpro`.                                                             |
-| `-m`  | `--models`      |               | E.g. `ecmwf,gdas1`.                                                                |
-| `-u`  | `--uuids`       |               | Instrument UUIDs, e.g. `db58480f-58ca-49ad-995c-6c3b89e9a0fc`.                     |
-|       | `--start`       | five days ago | Starting date (included).                                                          |
-|       | `--stop`        | current day   | Stopping date (included).                                                          |
-| `-d`  | `--date`        |               | Single date to be processed. Alternatively, `--start` and `--stop` can be defined. |
-| `-c`  | `--cmd`         | `process`     | Command to be executed.                                                            |
-|       | `--raw`         |               | Fetch raw data excluding .lv0 files. Only applicable if the command is `fetch`.    |
-|       | `--all`         |               | Fetch all raw data. Only applicable if the command is `fetch --raw`.               |
+| Short | Long            | Default     | Description                                                                        |
+| :---- | :-------------- | :---------- | :--------------------------------------------------------------------------------- |
+| `-h`  | `--help`        |             | Show help and exit.                                                                |
+| `-s`  | `--sites`       |             | E.g, `hyytiala,granada`.                                                           |
+| `-p`  | `--products`    |             | E.g. `lidar,classification,l3-cf`.                                                 |
+| `-i`  | `--instruments` |             | E.g. `mira-35,hatpro`.                                                             |
+| `-m`  | `--models`      |             | E.g. `ecmwf,gdas1`.                                                                |
+| `-u`  | `--uuids`       |             | Instrument UUIDs, e.g. `db58480f-58ca-49ad-995c-6c3b89e9a0fc`.                     |
+|       | `--start`       |             | Starting date (included).                                                          |
+|       | `--stop`        | current day | Stopping date (included).                                                          |
+| `-d`  | `--date`        | current day | Single date to be processed. Alternatively, `--start` and `--stop` can be defined. |
+| `-c`  | `--cmd`         | `process`   | Command to be executed.                                                            |
+|       | `--raw`         |             | Fetch raw data excluding .lv0 files. Only applicable if the command is `fetch`.    |
+|       | `--all`         |             | Fetch all raw data. Only applicable if the command is `fetch --raw`.               |
 
 Shortcut for the `--products` argument:
 

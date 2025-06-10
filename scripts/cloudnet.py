@@ -497,7 +497,7 @@ def _validate_products(products: str) -> list[str]:
                 product_types = ["mwr-l1c", "mwr-single", "mwr-multi"]
                 accepted_products.extend(product_types)
             case "doppy":
-                product_types = ["doppler-lidar", "doppler-lidar-wind"]
+                product_types = ["doppler-lidar", "doppler-lidar-wind", "epsilon-lidar"]
                 accepted_products.extend(product_types)
             case "cpr":
                 accepted_products.extend(["cpr-simulation"])
