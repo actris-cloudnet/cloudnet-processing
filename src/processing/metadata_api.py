@@ -1,5 +1,6 @@
 """Metadata API for Cloudnet files."""
 
+import datetime
 import logging
 import uuid
 
@@ -89,8 +90,14 @@ class MetadataApi:
             return
         self.put_file("upload/data", checksum, base.daily_file.name, self._auth)
 
-    def update_dvas_info(self, uuid: uuid.UUID, timestamp: str, dvas_id: str):
-        payload = {"uuid": uuid, "dvasUpdatedAt": timestamp, "dvasId": dvas_id}
+    def update_dvas_info(
+        self, uuid: uuid.UUID, timestamp: datetime.datetime, dvas_id: str
+    ):
+        payload = {
+            "uuid": uuid,
+            "dvasUpdatedAt": timestamp.isoformat(),
+            "dvasId": dvas_id,
+        }
         self.post("files", payload)
 
     def clean_dvas_info(self, uuid: uuid.UUID):
