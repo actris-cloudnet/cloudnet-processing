@@ -1,6 +1,6 @@
 import base64
+import datetime
 import logging
-from datetime import datetime, timezone
 from typing import Literal
 
 import requests
@@ -40,15 +40,14 @@ class Dvas:
             return
         try:
             dvas_metadata = DvasMetadata(file, self.md_api)
-            dvas_json = dvas_metadata.create_dvas_json()
-            if len(dvas_json["md_content_information"]["attribute_descriptions"]) == 0:
+            dvas_timestamp = datetime.datetime.now(datetime.timezone.utc)
+            dvas_json = dvas_metadata.create_dvas_json(dvas_timestamp)
+            if not dvas_json["variables"]:
                 logging.error("Skipping - no ACTRIS variables")
                 return
             self._delete_old_versions(file)
             dvas_id = self._post(dvas_json)
-            self.md_api.update_dvas_info(
-                file["uuid"], dvas_json["md_metadata"]["datestamp"], dvas_id
-            )
+            self.md_api.update_dvas_info(file["uuid"], dvas_timestamp, dvas_id)
         except DvasError:
             logging.exception(f"Failed to upload {file['filename']} to DVAS")
 
@@ -121,7 +120,7 @@ class DvasMetadata:
         self._product = file["product"]
         self._site = file["site"]
 
-    def create_dvas_json(self) -> dict:
+    def create_dvas_json(self, timestamp: datetime.datetime) -> dict:
         time_begin = (
             self.file["startTime"]
             or f"{self.file['measurementDate']}T00:00:00.0000000Z"
@@ -129,112 +128,118 @@ class DvasMetadata:
         time_end = (
             self.file["stopTime"] or f"{self.file['measurementDate']}T23:59:59.9999999Z"
         )
+        timeliness = self._parse_timeliness()
+        instruments = list(self._find_instruments(self.file["uuid"]).values())
         return {
-            "md_metadata": {
-                "file_identifier": self.file["filename"],
-                "language": "en",
-                "hierarchy_level": "dataset",
-                "online_resource": {"linkage": "https://cloudnet.fmi.fi/"},
-                "datestamp": datetime.now(timezone.utc).isoformat(),
-                "contact": [
-                    {
-                        "first_name": "Ewan",
-                        "last_name": "O'Connor",
-                        "organisation_name": "Finnish Meteorological Institute (FMI)",
-                        "role_code": ["pointOfContact"],
-                        "country_code": "FI",
-                    }
-                ],
+            "dataset_metadata": {
+                "repository": {"repository_id": "CLU"},
+                "time_file_created": self.file["createdAt"],
+                "time_metadata_created": timestamp.isoformat(),
+                "time_content_revised": self.file["updatedAt"],
             },
-            "md_identification": {
-                "abstract": self._parse_title(),
+            "identification": {
+                "identifier": {"pid": self.file["pid"], "pid_type": "ePIC"},
                 "title": self._parse_title(),
-                "date_type": "creation",
-                "contact": [
+                "abstract": self._parse_title(),
+                "roles": [
                     {
-                        "first_name": "Simo",
-                        "last_name": "Tukiainen",
-                        "organisation_name": "Finnish Meteorological Institute (FMI)",
+                        "role_code": ["pointOfContact"],
+                        "person": {
+                            "first_name": "Ewan",
+                            "last_name": "O'Connor",
+                            "affiliation": {
+                                "name": "Finnish Meteorological Institute",
+                                "pid": "https://ror.org/05hppb561",
+                                "pid_type": "other PID",
+                                "country_code": "FI",
+                            },
+                            "orcid": "https://orcid.org/0000-0001-9834-5100",
+                        },
+                    },
+                    {
                         "role_code": ["processor"],
-                        "country_code": "FI",
-                    }
+                        "person": {
+                            "first_name": "Simo",
+                            "last_name": "Tukiainen",
+                            "affiliation": {
+                                "name": "Finnish Meteorological Institute",
+                                "pid": "https://ror.org/05hppb561",
+                                "pid_type": "other PID",
+                                "country_code": "FI",
+                            },
+                            "orcid": "https://orcid.org/0000-0002-0651-4622",
+                        },
+                    },
                 ],
-                "online_resource": {
-                    "linkage": f"https://cloudnet.fmi.fi/file/{self.file['uuid']}"
-                },
-                "identifier": {
-                    "pid": self.file["pid"],
-                    "type": "handle",
-                },
-                "date": time_begin,
             },
-            "md_constraints": {
-                "access_constraints": "license",
-                "use_constraints": "license",
-                "other_constraints": "N/A",
-                "data_licence": "CC-BY-4.0",
-                "metadata_licence": "CC-BY-4.0",
+            "usage_information": {
+                "data_license": "CC-BY-4.0",
+                "metadata_license": "CC0-1.0",
                 "citation": self._fetch_credits("citation"),
                 "acknowledgement": self._fetch_credits("acknowledgements"),
             },
-            "md_keywords": {
-                "keywords": [
-                    "FMI",
-                    "ACTRIS",
-                    self._product["humanReadableName"],
-                ]
+            "product_type": "observation",
+            "facility": {
+                "identifier": self._site["dvasId"],
             },
-            "md_data_identification": {
-                "language": "en",
-                "topic_category": "climatologyMeteorologyAtmosphere",
-                "description": "time series of profile measurements",
-                "facility_identifier": self._site["dvasId"],
-            },
-            "ex_geographic_bounding_box": {
+            "spatial_extent": {
                 "west_bound_longitude": self._site["longitude"],
                 "east_bound_longitude": self._site["longitude"],
                 "south_bound_latitude": self._site["latitude"],
                 "north_bound_latitude": self._site["latitude"],
+                "lower_altitude": self._site["altitude"],
+                "upper_altitude": self._site["altitude"],
             },
-            "ex_temporal_extent": {
+            "temporal_extent": {
                 "time_period_begin": time_begin,
                 "time_period_end": time_end,
             },
-            "md_content_information": {
-                "attribute_descriptions": self._parse_variable_names(),
-                "content_type": "physicalMeasurement",
-            },
-            "md_distribution_information": [
+            "variables": [
                 {
-                    "data_format": "netcdf",
-                    "version_data_format": self._parse_netcdf_version(),
+                    "variable_name": variable_name,
+                    "timeliness": timeliness,
+                    "instruments": instruments,
+                    "data_quality_control": [
+                        {
+                            "validtime_start": time_begin,
+                            "validtime_end": time_end,
+                            "compliance": self._parse_compliance(),
+                            "quality_control_extent": "full quality control applied",
+                            "quality_control_mechanism": "automatic quality control",
+                            "quality_control_outcome": self._parse_qc_outcome(),
+                        }
+                    ],
+                    "frameworks": [
+                        {
+                            "validtime_start": time_begin,
+                            "validtime_end": time_end,
+                            "framework": framework,
+                        }
+                        for framework in self._parse_frameworks()
+                    ],
+                    "temporal_resolution": "P30S",
+                }
+                for variable_name in self._parse_variable_names()
+            ],
+            "distribution_information": [
+                {
+                    "data_format": self._parse_netcdf_version(),
                     "dataset_url": self.file["downloadUrl"],
                     "protocol": "HTTP",
-                    "transfersize": self._calc_file_size(),
-                    "description": "Direct download of data file",
-                    "function": "download",
-                    "restriction": {
-                        "set": False,
+                    "access_restriction": {
+                        "restricted": False,
                     },
+                    "transfersize": {"size": int(self.file["size"]), "unit": "B"},
                 }
             ],
-            "md_actris_specific": {
-                "facility_type": "observation platform, fixed",
-                "product_type": "observation",
-                "matrix": "cloud phase",
-                "sub_matrix": None,
-                "instrument_type": list(self._find_instrument_types(self.file["uuid"])),
-                "program_affiliation": self._parse_affiliation(),
-                "variable_statistical_property": None,
-                "legacy_data": self.file["legacy"],
-                "observation_timeliness": self._parse_timeliness(),
-                "data_product": self._parse_data_product(),
-            },
-            "dq_data_quality_information": {
-                "level": "dataset",
-                "compliance": self._parse_compliance(),
-                "quality_control_extent": "full quality control applied",
-                "quality_control_outcome": self._parse_qc_outcome(),
+            "provenance": {
+                "software": [
+                    {
+                        "title": software["title"],
+                        "url": software["url"],
+                    }
+                    for software in self.file["software"]
+                ]
             },
         }
 
@@ -243,8 +248,7 @@ class DvasMetadata:
         file_vars = self.md_api.get(f"api/products/{self._product['id']}/variables")
         return [v["actrisName"] for v in file_vars if v["actrisName"] is not None]
 
-    def _parse_affiliation(self) -> list[str]:
-        # https://prod-actris-md.nilu.no/vocabulary/networkprogram
+    def _parse_frameworks(self) -> list[str]:
         affiliation = ["CLOUDNET"]
         if "arm" in self._site["type"]:
             affiliation.append("ARM")
@@ -252,22 +256,21 @@ class DvasMetadata:
             affiliation.append("ACTRIS")
         return affiliation
 
-    def _find_instrument_types(self, uuid: str) -> set[str]:
-        """Recursively find instrument types from source files.
-
-        Links:
-            https://vocabulary.actris.nilu.no/actris_vocab/instrumenttype
-            https://prod-actris-md.nilu.no/vocabulary/instrumenttype
-        """
-        instruments = set()
+    def _find_instruments(self, uuid: str) -> dict[str, dict]:
+        """Recursively find instruments from source files."""
+        instruments = {}
         json_data = utils.get_from_data_portal_api(f"api/files/{uuid}")
         assert isinstance(json_data, dict)
         if "instrument" in json_data and json_data["instrument"] is not None:
-            instruments.add(json_data["instrument"]["type"])
+            instruments[json_data["instrument"]["pid"]] = {
+                "instrument_pid": json_data["instrument"]["pid"],
+                "instrument_type": json_data["instrument"]["type"],
+                "instrument_name": json_data["instrument"]["name"],
+            }
         source_ids = json_data.get("sourceFileIds", [])
         if source_ids:
             for source_uuid in source_ids:
-                instruments.update(self._find_instrument_types(source_uuid))
+                instruments.update(self._find_instruments(source_uuid))
         return instruments
 
     def _parse_timeliness(self) -> str:
@@ -278,10 +281,6 @@ class DvasMetadata:
             "scheduled": "scheduled",
         }
         return clu_to_dvas_map[self.file["timeliness"]]
-
-    def _parse_data_product(self) -> str:
-        """Description of the data product"""
-        return f"{self._parse_timeliness()} data"
 
     def _parse_compliance(self) -> str:
         return (
@@ -309,10 +308,6 @@ class DvasMetadata:
             f"derived from cloud remote sensing measurements "
             f"at {self._site['humanReadableName']}"
         )
-
-    def _calc_file_size(self) -> float:
-        file_size = int(self.file["size"]) / 1000 / 1000  # MB
-        return round(file_size, 3)
 
     def _fetch_credits(self, type: Literal["citation", "acknowledgements"]) -> str:
         params = {"format": "txt"}
