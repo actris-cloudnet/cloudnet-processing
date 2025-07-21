@@ -627,9 +627,12 @@ class ProcessMwrL1c(ProcessInstrument):
         }
         try:
             res = self.processor.md_api.get("api/calibration", payload)
-        except HTTPError:
-            raise RawDataMissingError("Skipping due to missing mwrpy coefficients")
+        except HTTPError as e:
+            if e.response.status_code == 404:
+                raise RawDataMissingError("Skipping due to missing calibration")
         data = res["data"]
+        if not data.get("coefficientLinks"):
+            raise RawDataMissingError("Skipping due to missing retrieval coefficients")
         if "time_offset" in data:
             data["time_offset"] = datetime.timedelta(minutes=data["time_offset"])
         return data
