@@ -782,6 +782,7 @@ class ProcessWeatherStation(ProcessInstrument):
             "juelich",
             "lampedusa",
             "limassol",
+            "laquila",
         )
         if self.params.site.id not in supported_sites:
             raise NotImplementedError("Weather station not implemented for this site")
@@ -793,16 +794,15 @@ class ProcessWeatherStation(ProcessInstrument):
                 time_offset=time_offset
             )
             full_paths.sort()
-            self.uuid.product = ws2nc(
-                [str(path) for path in full_paths], *self._args, **self._kwargs
-            )
+            self.uuid.product = ws2nc(full_paths, *self._args, **self._kwargs)
         else:
-            full_path, self.uuid.raw = self.download_instrument(largest_only=True)
+            full_paths, self.uuid.raw = self.download_instrument()
+            full_paths.sort()
             if self.params.site.id in ("lindenberg", "munich"):
-                data = self._get_payload_for_nc_file_augmenter(full_path)
+                data = self._get_payload_for_nc_file_augmenter(full_paths[0])
                 self.uuid.product = harmonizer.harmonize_ws_file(data)
             else:
-                self.uuid.product = ws2nc(str(full_path), *self._args, **self._kwargs)
+                self.uuid.product = ws2nc(full_paths, *self._args, **self._kwargs)
 
     def process_fd12(self):
         full_path, self.uuid.raw = self.download_instrument(largest_only=True)
