@@ -173,8 +173,8 @@ class DvasMetadata:
                 ],
             },
             "usage_information": {
-                "data_license": "CC-BY-4.0",
-                "metadata_license": "CC0-1.0",
+                "data_licence": "CC-BY-4.0",
+                "metadata_licence": "CC0-1.0",
                 "citation": self._fetch_credits("citation"),
                 "acknowledgement": self._fetch_credits("acknowledgements"),
             },
@@ -183,12 +183,19 @@ class DvasMetadata:
                 "identifier": self._site["dvasId"],
             },
             "spatial_extent": {
-                "west_bound_longitude": self._site["longitude"],
-                "east_bound_longitude": self._site["longitude"],
-                "south_bound_latitude": self._site["latitude"],
-                "north_bound_latitude": self._site["latitude"],
-                "lower_altitude": self._site["altitude"],
-                "upper_altitude": self._site["altitude"],
+                "type": "LineString",
+                "coordinates": [
+                    [
+                        self._site["longitude"],
+                        self._site["latitude"],
+                        self._site["altitude"],
+                    ],
+                    [
+                        self._site["longitude"],
+                        self._site["latitude"],
+                        self._site["altitude"] + 12_000,
+                    ],
+                ],
             },
             "temporal_extent": {
                 "time_period_begin": time_begin,
@@ -197,24 +204,20 @@ class DvasMetadata:
             "variables": [
                 {
                     "variable_name": variable_name,
+                    "variable_matrix": "cloud phase",
+                    "variable_geometry": "atmospheric vertical profile",
                     "timeliness": timeliness,
-                    "instruments": instruments,
+                    "instrument": instruments,
                     "data_quality_control": [
                         {
-                            "validtime_start": time_begin,
-                            "validtime_end": time_end,
                             "compliance": self._parse_compliance(),
                             "quality_control_extent": "full quality control applied",
                             "quality_control_mechanism": "automatic quality control",
                             "quality_control_outcome": self._parse_qc_outcome(),
                         }
                     ],
-                    "frameworks": [
-                        {
-                            "validtime_start": time_begin,
-                            "validtime_end": time_end,
-                            "framework": framework,
-                        }
+                    "framework": [
+                        {"framework": framework}
                         for framework in self._parse_frameworks()
                     ],
                     "temporal_resolution": "P30S",
@@ -232,15 +235,13 @@ class DvasMetadata:
                     "transfersize": {"size": int(self.file["size"]), "unit": "B"},
                 }
             ],
-            "provenance": {
-                "software": [
-                    {
-                        "title": software["title"],
-                        "url": software["url"],
-                    }
-                    for software in self.file["software"]
-                ]
-            },
+            "provenance": [
+                {
+                    "title": software["title"],
+                    "url": software["url"],
+                }
+                for software in self.file["software"]
+            ],
         }
 
     def _parse_variable_names(self) -> list[str]:
