@@ -134,7 +134,7 @@ def _parse_args():
         "--cmd",
         required=False,
         default="process",
-        choices=["process", "plot", "qc", "freeze", "dvas", "fetch", "hkd"],
+        choices=["process", "plot", "qc", "freeze", "dvas", "fetch", "hkd", "monitor"],
         help="Command.",
     )
     group.add_argument(
