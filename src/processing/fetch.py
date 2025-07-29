@@ -3,6 +3,7 @@ import datetime
 import hashlib
 import logging
 import os
+import re
 import sys
 from argparse import Namespace
 from base64 import b64encode
@@ -71,6 +72,9 @@ class Fetcher:
         res = requests.get(url=url, params=payload)
         res.raise_for_status()
         metadata = res.json()
+        if self.args.include_pattern:
+            include_re = re.compile(self.args.include_pattern)
+            metadata = [m for m in metadata if include_re.match(m["filename"])]
         if self.args.all:
             return metadata
         return [m for m in metadata if not m["filename"].lower().endswith(".lv0")]
