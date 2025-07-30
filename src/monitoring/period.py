@@ -51,6 +51,12 @@ class Period(ABC):
     @abstractmethod
     def as_range(self) -> tuple[datetime.date, datetime.date]: ...
 
+    @abstractmethod
+    def start_date(self) -> datetime.date | None: ...
+
+    @abstractmethod
+    def __str__(self) -> str: ...
+
 
 class AllPeriod(Period):
     def __str__(self) -> str:
@@ -60,6 +66,9 @@ class AllPeriod(Period):
         start = datetime.date(1900, 1, 1)
         end = datetime.date.today()
         return (start, end)
+
+    def start_date(self) -> datetime.date | None:
+        return None
 
 
 class YearPeriod(Period):
@@ -72,6 +81,9 @@ class YearPeriod(Period):
 
     def as_range(self) -> tuple[datetime.date, datetime.date]:
         return (self.start, self.end)
+
+    def start_date(self) -> datetime.date | None:
+        return self.start
 
 
 class MonthPeriod(Period):
@@ -86,6 +98,9 @@ class MonthPeriod(Period):
     def as_range(self) -> tuple[datetime.date, datetime.date]:
         return (self.start, self.end)
 
+    def start_date(self) -> datetime.date | None:
+        return self.start
+
 
 class WeekPeriod(Period):
     def __init__(self, start: datetime.date):
@@ -99,6 +114,9 @@ class WeekPeriod(Period):
     def as_range(self) -> tuple[datetime.date, datetime.date]:
         return (self.start, self.end)
 
+    def start_date(self) -> datetime.date | None:
+        return self.start
+
 
 class DayPeriod(Period):
     def __init__(self, start: datetime.date):
@@ -110,3 +128,6 @@ class DayPeriod(Period):
 
     def as_range(self) -> tuple[datetime.date, datetime.date]:
         return (self.start, self.end)
+
+    def start_date(self) -> datetime.date | None:
+        return self.start
