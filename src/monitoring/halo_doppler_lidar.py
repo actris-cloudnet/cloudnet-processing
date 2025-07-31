@@ -1,3 +1,4 @@
+from collections.abc import Iterable
 from pathlib import Path
 import tempfile
 from monitoring.instrument import Instrument
@@ -44,14 +45,13 @@ def process_system_parameters(
     }
 
     resp = processor.md_api.session.put(
-        f"{processor.md_api._url}/api/monitoring-file", json=payload
+        f"{processor.md_api._url}/api/monitoring-files", json=payload
     )
-    print(resp.status_code)
     if not resp.ok:
-        return
+        raise ValueError("Failed to create a monitoring file")
 
     with tempfile.TemporaryDirectory() as tempdir:
-        paths, uuids = processor.download_instrument(
+        paths, _ = processor.download_instrument(
             site_id=site_id,
             instrument_id=instrument.id,
             directory=Path(tempdir),
@@ -59,6 +59,8 @@ def process_system_parameters(
             instrument_pid=instrument.pid,
             include_pattern=r"system_parameters_.*\.txt",
         )
+        if not isinstance(paths, Iterable):
+            raise TypeError
         sys_params_list = [doppy.raw.HaloSysParams.from_src(p) for p in paths]
         sys_params = (
             doppy.raw.HaloSysParams.merge(sys_params_list)
@@ -79,6 +81,21 @@ def process_system_parameters(
         plotname = _period_for_plotname(period)
         s3key = f"monitoring/{instrument.id}-{plotname}.png"
         processor.storage_api.upload_image(full_path=img_path, s3key=s3key)
+    payload = {
+            "s3key": s3key,
+            "sourceFile": monitoring_file_uuid,
+            "monitoringProductVariable": "internal-temperature",
+            "width": 100,
+            "height": 100,
+            "marginTop": 0,
+            "marginRight": 0,
+            "marginBottom": 0,
+            "marginLeft": 0,
+        }
+    resp = processor.md_api.session.put(
+        f"{processor.md_api._url}/api/monitoring-visualizations", json=payload
+    )
+    print(resp)
 
 
 def _period_for_plotname(period: Period) -> str:

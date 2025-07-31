@@ -65,7 +65,7 @@ filename = "src/processing/version.py"
 pattern = ["MAJOR = (?P<major>\\d+)", "MINOR = (?P<minor>\\d+)", "PATCH = (?P<patch>\\d+)"]
 
 [tool.ruff]
-extend-select = ["I"]
+lint.extend-select = ["I"]
 
 [tool.ruff.lint.extend-per-file-ignores]
 "__init__.py" = ["F401"]

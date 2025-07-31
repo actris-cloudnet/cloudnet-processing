@@ -4,7 +4,7 @@ import re
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 import numpy as np
 from cloudnetpy.exceptions import PlottingError
