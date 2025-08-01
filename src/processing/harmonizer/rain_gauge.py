@@ -13,21 +13,32 @@ RATE: Final = "rainfall_rate"
 AMOUNT: Final = "rainfall_amount"
 
 CORRECT_UNITS = {
-    "49ca09de-ca9a-4e3e-9258-9c91ed5683f8": {"rain_rate": "mm/h"}  # juelich pluvio
+    "49ca09de-ca9a-4e3e-9258-9c91ed5683f8": {"rain_rate": "mm/h"},  # juelich pluvio
+    "00a9fdae-6ac8-4028-97f5-d1dd5c171991": {
+        "time": "seconds since 01/01/1970 00:00:00 +00:00",
+        "rain_intensity": "mm/h",
+    },  # maido pluvio
 }
+
+VALID_KEYS = (
+    "time",
+    "int_h",
+    "am_tot",
+    "rain_rate",
+    "total_accum_NRT",
+    "rain_intensity",
+)
 
 
 def harmonize_thies_pt_nc(data: dict) -> str:
-    vars = ("time", "int_h", "am_tot")
-    return _harmonize(vars, data, instruments.THIES_PT)
+    return _harmonize(data, instruments.THIES_PT)
 
 
 def harmonize_pluvio_nc(data: dict) -> str:
-    vars = ("time", "rain_rate", "total_accum_NRT")
-    return _harmonize(vars, data, instruments.PLUVIO2)
+    return _harmonize(data, instruments.PLUVIO2)
 
 
-def _harmonize(vars: tuple, data: dict, instrument: Instrument):
+def _harmonize(data: dict, instrument: Instrument):
     if "output_path" not in data:
         temp_file = NamedTemporaryFile()
     with (
@@ -41,7 +52,7 @@ def _harmonize(vars: tuple, data: dict, instrument: Instrument):
         gauge = RainGaugeNc(nc_raw, nc, data)
         ind = gauge.get_valid_time_indices()
         gauge.nc.createDimension("time", len(ind))
-        gauge.copy_data(vars, ind)
+        gauge.copy_data(ind)
         gauge.mask_bad_data_values()
         gauge.fix_variable_names()
         gauge.fix_variable_attributes()
@@ -73,15 +84,14 @@ class RainGaugeNc(core.Level1Nc):
 
     def copy_data(
         self,
-        keys: tuple,
         time_ind: list,
     ):
-        for key in keys:
+        for key in VALID_KEYS:
             self._copy_variable(key, time_ind)
 
     def _copy_variable(self, key: str, time_ind: list):
         if key not in self.nc_raw.variables.keys():
-            logging.warning(f"Key {key} not found from the source file.")
+            logging.debug(f"Key {key} not found from the source file.")
             return
 
         variable = self.nc_raw.variables[key]
@@ -106,6 +116,7 @@ class RainGaugeNc(core.Level1Nc):
             "rain_rate": RATE,
             "int_h": RATE,
             "int_m": RATE,
+            "rain_intensity": RATE,
             "total_accum_NRT": AMOUNT,
             "am_tot": AMOUNT,
         }
