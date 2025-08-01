@@ -306,7 +306,7 @@ def _process_file(
             # Need to get instrument again because derivedProductIds is missing from raw-files response...
             if metadata:
                 instruments = {
-                    processor.get_instrument(meta["instrumentInfo"]["uuid"])
+                    processor.get_instrument(meta["instrument"]["uuid"])
                     for meta in metadata
                 }
             else:
