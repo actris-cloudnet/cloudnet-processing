@@ -43,5 +43,5 @@ def _sites_for_instrument_and_period(instrument: Instrument, period: Period):
         payload["dateFrom"] = str(period.start)
         payload["dateTo"] = str(period.end)
     records = utils.get_from_data_portal_api("/api/raw-files", payload)
-    sites = {r["siteId"] for r in records}
+    sites = {r["site"]["id"] for r in records}
     return list(sites)

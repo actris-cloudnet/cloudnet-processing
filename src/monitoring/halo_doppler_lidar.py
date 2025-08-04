@@ -1,21 +1,22 @@
+import datetime
+import tempfile
 from collections.abc import Iterable
 from pathlib import Path
-import tempfile
-from monitoring.instrument import Instrument
-from monitoring.period import (
-    AllPeriod,
-    DayPeriod,
-    MonthPeriod,
-    Period,
-    WeekPeriod,
-    YearPeriod,
-)
-from processing.processor import Processor
+
 import doppy
-import datetime
-import numpy as np
 import matplotlib.pyplot as plt
-from uuid import uuid4
+import numpy as np
+from processing.processor import Processor
+
+from monitoring.instrument import Instrument
+from monitoring.monitoring_file import (
+    Dimensions,
+    MonitoringFile,
+    MonitoringVisualization,
+)
+from monitoring.period import (
+    Period,
+)
 
 
 def process(processor: Processor, instrument: Instrument, site_id: str, period: Period):
@@ -25,30 +26,15 @@ def process(processor: Processor, instrument: Instrument, site_id: str, period: 
 def process_system_parameters(
     processor: Processor, instrument: Instrument, site_id: str, period: Period
 ):
+    monitoring_file = MonitoringFile(
+        instrument, site_id, period, "halo-doppler-lidar_housekeeping"
+    )
+    monitoring_file.put_file(processor.md_api)
+
     date_start, date_end = period.as_range()
     measurement_date_offset = datetime.timedelta(days=31)
     date_start_off = date_start - measurement_date_offset
     date_end_off = date_end + measurement_date_offset
-
-    monitoring_file_uuid = str(uuid4())
-
-    start_date = period.start_date()
-    start_date = str(start_date) if start_date else None
-
-    payload = {
-        "uuid": monitoring_file_uuid,
-        "startDate": start_date,
-        "periodType": str(period),
-        "site": site_id,
-        "monitoringProduct": "housekeeping",
-        "instrumentInfo": instrument.uuid,
-    }
-
-    resp = processor.md_api.session.put(
-        f"{processor.md_api._url}/api/monitoring-files", json=payload
-    )
-    if not resp.ok:
-        raise ValueError("Failed to create a monitoring file")
 
     with tempfile.TemporaryDirectory() as tempdir:
         paths, _ = processor.download_instrument(
@@ -62,59 +48,43 @@ def process_system_parameters(
         if not isinstance(paths, Iterable):
             raise TypeError
         sys_params_list = [doppy.raw.HaloSysParams.from_src(p) for p in paths]
-        sys_params = (
-            doppy.raw.HaloSysParams.merge(sys_params_list)
-            .sorted_by_time()
-            .non_strictly_increasing_timesteps_removed()
-        )
-
-        time_start = np.datetime64(date_start).astype(sys_params.time.dtype)
-        time_end = np.datetime64(date_end + datetime.timedelta(days=1)).astype(
-            sys_params.time.dtype
-        )
-        select = (time_start < sys_params.time) & (sys_params.time < time_end)
-        sys_params = sys_params[select]
-
-    with tempfile.TemporaryDirectory() as plotdir:
-        img_path = Path(plotdir) / "img.png"
-        _plot_internal_temperature(img_path, sys_params)
-        plotname = _period_for_plotname(period)
-        s3key = f"monitoring/{instrument.id}-{plotname}.png"
-        processor.storage_api.upload_image(full_path=img_path, s3key=s3key)
-    payload = {
-            "s3key": s3key,
-            "sourceFile": monitoring_file_uuid,
-            "monitoringProductVariable": "internal-temperature",
-            "width": 100,
-            "height": 100,
-            "marginTop": 0,
-            "marginRight": 0,
-            "marginBottom": 0,
-            "marginLeft": 0,
-        }
-    resp = processor.md_api.session.put(
-        f"{processor.md_api._url}/api/monitoring-visualizations", json=payload
+    sys_params = (
+        doppy.raw.HaloSysParams.merge(sys_params_list)
+        .sorted_by_time()
+        .non_strictly_increasing_timesteps_removed()
     )
-    print(resp)
+
+    time_start = np.datetime64(date_start).astype(sys_params.time.dtype)
+    time_end = np.datetime64(date_end + datetime.timedelta(days=1)).astype(
+        sys_params.time.dtype
+    )
+    select = (time_start < sys_params.time) & (sys_params.time < time_end)
+    sys_params = sys_params[select]
+
+    vars = [
+        ("acquisition_card_temperature", "acquisition-card-temperature"),
+        ("internal_relative_humidity", "internal-relative-humidity"),
+        ("internal_temperature", "internal-temperature"),
+        ("platform_pitch_angle", "platform-pitch-angle"),
+        ("platform_roll_angle", "platform-roll-angle"),
+        ("supply_voltage", "supply-voltage"),
+    ]
+    for var_name, var_id in vars:
+        with tempfile.TemporaryDirectory() as plotdir:
+            img_path = Path(plotdir) / "img.png"
+            vis = _plot_sys_params_var(var_name, sys_params, img_path, var_id)
+            monitoring_file.put_visualization(
+                processor.storage_api, processor.md_api, vis
+            )
 
 
-def _period_for_plotname(period: Period) -> str:
-    match period:
-        case AllPeriod():
-            return "All"
-        case YearPeriod(start=start, end=end):
-            return start.strftime("Year%Y")
-        case MonthPeriod(start=start, end=end):
-            return start.strftime("Month%Y%B")
-        case WeekPeriod(start=start, end=end):
-            return f"Week{start.isoformat()}-{end.isoformat()}"
-        case DayPeriod(start=start, end=end):
-            return f"Day{start.isoformat()}-{end.isoformat()}"
-        case _:
-            raise ValueError("Unsupported period")
-
-
-def _plot_internal_temperature(img_path: Path, sys_params: doppy.raw.HaloSysParams):
+def _plot_sys_params_var(
+    var: str, sys_params: doppy.raw.HaloSysParams, img_path: Path, variable_id: str
+) -> MonitoringVisualization:
     fig, ax = plt.subplots()
-    ax.scatter(sys_params.time, sys_params.internal_temperature)
+    y = getattr(sys_params, var)
+    ax.scatter(sys_params.time, y)
     fig.savefig(img_path)
+    return MonitoringVisualization(
+        img_path, variable_id, Dimensions(100, 100, 0, 0, 0, 0)
+    )
