@@ -191,8 +191,12 @@ def _download_file(row: dict) -> Path:
         subdir = "product-" + row["product"]["id"]
     elif "model" in row:
         subdir = "model-" + row["model"]["id"]
-    elif "instrumentPid" in row and row["instrumentPid"] is not None:
-        subdir = row["instrument"]["id"] + "-" + row["instrumentPid"].split(".")[-1][:8]
+    elif "instrument" in row:
+        subdir = (
+            row["instrument"]["instrumentId"]
+            + "-"
+            + row["instrument"]["pid"].split(".")[-1][:8]
+        )
         if row["tags"]:
             subdir += "-" + "-".join(sorted(row["tags"]))
     else:
@@ -214,8 +218,8 @@ def _submit_upload(filename: Path, row: dict) -> str:
     if "tags" in row:
         metadata["tags"] = row["tags"]
     if "instrument" in row:
-        metadata["instrument"] = row["instrument"]["id"]
-        metadata["instrumentPid"] = row["instrumentPid"]
+        metadata["instrument"] = row["instrument"]["instrumentId"]
+        metadata["instrumentPid"] = row["instrument"]["pid"]
         end_point = "upload"
     elif "model" in row:
         metadata["model"] = row["model"]["id"]
@@ -315,10 +319,13 @@ def _fetch_calibration(upload_metadata: list):
     first = True
     processed_pid_dates: set[tuple] = set()
     for upload in upload_metadata:
-        if (upload["instrumentPid"], upload["measurementDate"]) in processed_pid_dates:
+        if (
+            upload["instrument"]["pid"],
+            upload["measurementDate"],
+        ) in processed_pid_dates:
             continue
         params = {
-            "instrumentPid": upload["instrumentPid"],
+            "instrumentPid": upload["instrument"]["pid"],
             "date": upload["measurementDate"],
         }
         res = requests.get("https://cloudnet.fmi.fi/api/calibration", params=params)
@@ -327,7 +334,7 @@ def _fetch_calibration(upload_metadata: list):
         if first:
             print(f"\n{BOLD}Calibration:{RESET}\n")
             first = False
-        print(upload["instrumentPid"], upload["measurementDate"])
+        print(upload["instrument"]["pid"], upload["measurementDate"])
         res.raise_for_status()
         res = requests.put(
             f"{DATAPORTAL_URL}/api/calibration",
@@ -336,7 +343,9 @@ def _fetch_calibration(upload_metadata: list):
             auth=("admin", "admin"),
         )
         res.raise_for_status()
-        processed_pid_dates.add((upload["instrumentPid"], upload["measurementDate"]))
+        processed_pid_dates.add(
+            (upload["instrument"]["pid"], upload["measurementDate"])
+        )
 
 
 def _uuid2pid(uuid: str) -> str | None:

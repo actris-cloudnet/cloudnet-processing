@@ -49,7 +49,7 @@ class StorageApi:
         )
         uuids = [uuid.UUID(row["uuid"]) for row in metadata]
         instrument_pids = [
-            row["instrumentPid"] for row in metadata if "instrumentPid" in row
+            row["instrument"]["pid"] for row in metadata if "instrument" in row
         ]
         if instrument_pids:
             assert len(list(set(instrument_pids))) == 1

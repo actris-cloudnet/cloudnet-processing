@@ -50,10 +50,9 @@ def test_something(filename, instrument_id, measurement_date):
     path = Path(filename)
     metadata = {
         "filename": path.name,
-        "instrumentId": instrument_id,
-        "instrumentPid": None,
+        "instrument": {"pid": None, "instrumentId": instrument_id},
         "measurementDate": measurement_date,
-        "siteId": "hyytiala",
+        "site": {"id": "hyytiala"},
     }
     reader = get_reader(metadata)
     assert reader is not None

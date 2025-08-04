@@ -187,7 +187,7 @@ def _handle_halo_doppler_lidar(src: bytes, metadata: dict) -> list[Point]:
 
 
 def get_reader(metadata: dict) -> Callable[[bytes, dict], list[Point]] | None:
-    instrument_id = metadata["instrumentId"]
+    instrument_id = metadata["instrument"]["instrumentId"]
     filename = metadata["filename"].lower()
 
     if instrument_id == "hatpro":
@@ -308,9 +308,9 @@ def _make_points(
             {
                 "measurement": "housekeeping",
                 "tags": {
-                    "site_id": metadata["siteId"],
-                    "instrument_id": metadata["instrumentId"],
-                    "instrument_pid": metadata["instrumentPid"],
+                    "site_id": metadata["site"]["id"],
+                    "instrument_id": metadata["instrument"]["instrumentId"],
+                    "instrument_pid": metadata["instrument"]["pid"],
                 },
                 "fields": fields,
                 "time": timestamp.astype(int),
