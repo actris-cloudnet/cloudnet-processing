@@ -6,7 +6,7 @@ from pathlib import Path
 
 from model_munger.merge import merge_models
 from model_munger.model import Location
-from model_munger.readers import read_arpege, read_ecmwf_open
+from model_munger.readers import read_arpege, read_ecmwf_open, read_gdas1
 
 from processing import utils
 from processing.harmonizer.model import harmonize_model_file
@@ -15,7 +15,11 @@ from processing.processor import ModelParams, Processor
 from processing.utils import MiscError, SkipTaskError
 
 SKIP_MODELS = ()
-MODEL_READERS = {"arpege": read_arpege, "ecmwf-open": read_ecmwf_open}
+MODEL_READERS = {
+    "arpege": read_arpege,
+    "ecmwf-open": read_ecmwf_open,
+    "gdas1": read_gdas1,
+}
 
 
 def process_model(processor: Processor, params: ModelParams, directory: Path):
