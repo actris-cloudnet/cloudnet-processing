@@ -4,9 +4,10 @@ import math
 import uuid
 from pathlib import Path
 
+import netCDF4
 from model_munger.merge import merge_models
 from model_munger.model import Location
-from model_munger.readers import read_arpege, read_ecmwf_open
+from model_munger.readers import read_arpege, read_ecmwf_open, read_gdas1
 
 from processing import utils
 from processing.harmonizer.model import harmonize_model_file
@@ -15,7 +16,11 @@ from processing.processor import ModelParams, Processor
 from processing.utils import MiscError, SkipTaskError
 
 SKIP_MODELS = ()
-MODEL_READERS = {"arpege": read_arpege, "ecmwf-open": read_ecmwf_open}
+MODEL_READERS = {
+    "arpege": read_arpege,
+    "ecmwf-open": read_ecmwf_open,
+    "gdas1": read_gdas1,
+}
 
 
 def process_model(processor: Processor, params: ModelParams, directory: Path):
@@ -116,6 +121,21 @@ def _generate_filename(params: ModelParams) -> str:
 def _process_model(
     params: ModelParams, input_paths: list[Path], output_path: Path
 ) -> Path:
+    # Skip processing of legacy gdas1 files.
+    if params.model.id == "gdas1":
+        date_str = params.date.strftime("%Y%m%d")
+        munger_files = []
+        legacy_files = []
+        for input_path in input_paths:
+            with netCDF4.Dataset(input_path) as nc:
+                if hasattr(nc, "history") and "model-munger" in nc.history:
+                    munger_files.append(input_path)
+                elif input_path.name.startswith(date_str):
+                    legacy_files.append(input_path)
+        if legacy_files:
+            return legacy_files[0]
+        input_paths = munger_files
+    # Skip processing of other legacy files.
     if params.model.source_model_id is None:
         if n_files := len(input_paths) != 1:
             raise ValueError(f"Expected a single file but found {n_files} files")
