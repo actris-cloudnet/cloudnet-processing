@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates
 import numpy as np
 from processing.processor import Processor
+from processing.utils import RawDataMissingError
 
 from monitoring.instrument import Instrument
 from monitoring.monitoring_file import (
@@ -37,19 +38,30 @@ def process_system_parameters(
     date_start_off = date_start - measurement_date_offset
     date_end_off = date_end + measurement_date_offset
 
-    print(instrument)
-
     with tempfile.TemporaryDirectory() as tempdir:
-        paths, _ = processor.download_instrument(
-            site_id=site_id,
-            instrument_id=instrument.id,
-            directory=Path(tempdir),
-            date=(date_start_off, date_end_off),
-            instrument_pid=instrument.pid,
-            include_pattern=r"system_parameters_.*\.txt",
-        )
+
+        try:
+            paths, _ = processor.download_instrument(
+                site_id=site_id,
+                instrument_id=instrument.id,
+                directory=Path(tempdir),
+                date=(date_start_off, date_end_off),
+                instrument_pid=instrument.pid,
+                include_pattern=r"system_parameters_.*\.txt",
+            )
+        except RawDataMissingError:
+            print(
+                f"No system paramters files to monitor for site {site_id} [{date_start_off}, {date_end_off}]"
+            )
+            return
+
         if not isinstance(paths, Iterable):
             raise TypeError
+        if not paths:
+            print(
+                f"No system paramters files to monitor for site {site_id} [{date_start_off}, {date_end_off}]"
+            )
+            return
         sys_params_list = [doppy.raw.HaloSysParams.from_src(p) for p in paths]
     sys_params = (
         doppy.raw.HaloSysParams.merge(sys_params_list)
@@ -63,6 +75,11 @@ def process_system_parameters(
     )
     select = (time_start < sys_params.time) & (sys_params.time < time_end)
     sys_params = sys_params[select]
+    if len(sys_params.time) == 0:
+        print(
+            f"No timestamps System paramters  to monitor for site {site_id} [{time_start}, {time_end}]"
+        )
+        return
 
     vars = [
         ("acquisition_card_temperature", "acquisition-card-temperature"),
@@ -144,9 +161,8 @@ def _plot_sys_params_var(
     _format_time_axis(ax)
     _pretty_ax(ax)
     _pretty_fig(fig)
-    #width, height = _save_fig(fig, "/develop/figs/img.png")
+    # width, height = _save_fig(fig, "/develop/figs/img.png")
     width, height = _save_fig(fig, img_path)
-    fig.savefig(img_path)
     return MonitoringVisualization(
         img_path, variable_id, Dimensions(width, height, 0, 0, 0, 0)
     )
