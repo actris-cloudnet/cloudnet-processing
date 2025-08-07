@@ -188,24 +188,35 @@ class Level1Nc:
 
     def get_valid_time_indices(self) -> list:
         """Finds valid time indices."""
-        supported_time_vars = ("time", "datetime")
-        for time_var in supported_time_vars:
-            if time_var in self.nc_raw.variables:
-                time = self.nc_raw.variables[time_var]
-                break
-        else:
-            raise RuntimeError(f"Time variable not found from {supported_time_vars}")
-
-        time_stamps = time[:]
-        if len(time_stamps) < 2:
-            raise cloudnetpy.exceptions.ValidTimeStampError
-
-        raw_time_stamps = time_stamps.copy()
-
-        if "seconds since" in time.units:
+        # Handle old Leipzig Parsivel files
+        if "Meas_Time" in self.nc_raw.variables:
+            time = self.nc_raw.variables["Meas_Time"]
+            time_stamps = time[:]
+            if len(time_stamps) < 2:
+                raise cloudnetpy.exceptions.ValidTimeStampError
+            raw_time_stamps = time_stamps.copy()
             time_stamps = np.array(cloudnetpy.utils.seconds2hours(time_stamps))
+            max_time = 24
+        else:
+            supported_time_vars = ("time", "datetime")
+            for time_var in supported_time_vars:
+                if time_var in self.nc_raw.variables:
+                    time = self.nc_raw.variables[time_var]
+                    break
+            else:
+                raise RuntimeError(
+                    f"Time variable not found from {supported_time_vars}"
+                )
+            time_stamps = time[:]
+            if len(time_stamps) < 2:
+                raise cloudnetpy.exceptions.ValidTimeStampError
 
-        max_time = 1440 if "minutes" in time.units else 24
+            raw_time_stamps = time_stamps.copy()
+
+            if "seconds since" in time.units:
+                time_stamps = np.array(cloudnetpy.utils.seconds2hours(time_stamps))
+
+            max_time = 1440 if "minutes" in time.units else 24
         valid_ind: list[int] = []
         for ind, t in enumerate(time_stamps):
             if 0 <= t < max_time:
