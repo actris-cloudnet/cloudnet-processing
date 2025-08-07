@@ -170,7 +170,7 @@ def harmonize_parsivel_file(data: dict) -> str:
             variable.long_name = "Center diameter of precipitation particles"
             variable.units = "m"
         parsivel.convert_time()
-        parsivel.convert_velocity()
+        parsivel.convert_precipitations()
         parsivel.convert_diameters()
         parsivel.convert_temperatures()
         parsivel.clean_global_attributes()
@@ -371,15 +371,9 @@ class ParsivelNc(core.Level1Nc):
             if (attr := ATTRIBUTES.get(key)) and attr.comment:
                 self.nc.variables[key].comment = attr.comment
 
-    def convert_velocity(self):
+    def convert_precipitations(self):
         for key in self.nc.variables:
-            if key in (
-                "rainfall_rate",
-                "snowfall_rate",
-                "velocity",
-                "velocity_spread",
-                "fall_velocity",
-            ):
+            if key in ("rainfall_rate", "snowfall_rate"):
                 self.to_ms1(key)
 
     def convert_diameters(self):
