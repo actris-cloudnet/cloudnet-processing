@@ -1,11 +1,12 @@
 import datetime
 import tempfile
+from collections import Counter
 from collections.abc import Iterable
 from pathlib import Path
 
 import doppy
-import matplotlib.pyplot as plt
 import matplotlib.dates
+import matplotlib.pyplot as plt
 import numpy as np
 from processing.processor import Processor
 from processing.utils import RawDataMissingError
@@ -23,6 +24,56 @@ from monitoring.period import (
 
 def process(processor: Processor, instrument: Instrument, site_id: str, period: Period):
     process_system_parameters(processor, instrument, site_id, period)
+    process_background(processor, instrument, site_id, period)
+
+
+def process_background(
+    processor: Processor, instrument: Instrument, site_id: str, period: Period
+):
+    monitoring_file = MonitoringFile(
+        instrument, site_id, period, "halo-doppler-lidar_background"
+    )
+    monitoring_file.put_file(processor.md_api)
+    with tempfile.TemporaryDirectory() as tempdir:
+        try:
+            paths, _ = processor.download_instrument(
+                site_id=site_id,
+                instrument_id=instrument.id,
+                directory=Path(tempdir),
+                date=period.as_range(),
+                instrument_pid=instrument.pid,
+                include_pattern=r"Background_.*\.txt",
+                exclude_tag_subset={"cross"},
+            )
+        except RawDataMissingError:
+            print(
+                f"No system paramters files to monitor for site {site_id} [{period.as_range()}]"
+            )
+            return
+        if not isinstance(paths, list):
+            paths = [paths]
+        bgs = doppy.raw.HaloBg.from_srcs(paths)
+    counter = Counter((bg.signal.shape[1] for bg in bgs))
+    most_common_ngates = counter.most_common()[0][0]
+    bgs = [bg for bg in bgs if bg.signal.shape[1] == most_common_ngates]
+    bg = doppy.raw.HaloBg.merge(bgs)
+    bg = bg.sorted_by_time().non_strictly_increasing_timesteps_removed()
+    date_start, date_end = period.as_range()
+    time_start = np.datetime64(date_start).astype(bg.time.dtype)
+    time_end = np.datetime64(date_end + datetime.timedelta(days=1)).astype(
+        bg.time.dtype
+    )
+    select = (time_start < bg.time) & (bg.time < time_end)
+    bg = bg[select]
+    if len(bg.time) == 0:
+        print(
+            f"No timestamps Background to monitor for site {site_id} [{time_start}, {time_end}]"
+        )
+        return
+    with tempfile.TemporaryDirectory() as plotdir:
+        img_path = Path(plotdir) / "img.png"
+        vis = _plot_bg(bg, img_path, "background-profile")
+        monitoring_file.put_visualization(processor.storage_api, processor.md_api, vis)
 
 
 def process_system_parameters(
@@ -39,7 +90,6 @@ def process_system_parameters(
     date_end_off = date_end + measurement_date_offset
 
     with tempfile.TemporaryDirectory() as tempdir:
-
         try:
             paths, _ = processor.download_instrument(
                 site_id=site_id,
@@ -124,11 +174,20 @@ def _pretty_ax(ax):
     ax.spines["bottom"].set_visible(False)
 
 
-def _pretty_fig(fig):
-    width_px = 800
-    height_px = 600
-    dpi = 100
-    fig.set_size_inches(width_px / dpi, height_px / dpi)
+def _pretty_ax_2d(ax):
+    ax.tick_params(
+        axis="both",
+        length=8,
+        width=2,
+        direction="out",
+        pad=10,
+    )
+    ax.spines["left"].set_position(("outward", 15))
+    ax.spines["bottom"].set_position(("outward", 15))
+    ax.spines["left"].set_visible(False)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["bottom"].set_visible(False)
 
 
 def _save_fig(fig, path: Path) -> tuple[int, int]:
@@ -152,6 +211,25 @@ def _save_fig(fig, path: Path) -> tuple[int, int]:
     return int(width_px), int(height_px)
 
 
+def _plot_bg(
+    bg: doppy.raw.HaloBg, img_path: Path, variable_id: str
+) -> MonitoringVisualization:
+    fig, ax = plt.subplots()
+    vmin, vmax = np.percentile(bg.signal.ravel(), [5, 95])
+    cax = ax.pcolormesh(
+        bg.time, np.arange(bg.signal.shape[1]), bg.signal.T, vmin=vmin, vmax=vmax
+    )
+    fig.colorbar(
+        cax, ax=ax, orientation="horizontal", shrink=0.5, pad=0.1, aspect=30
+    ).outline.set_visible(False)  # type: ignore
+    _format_time_axis(ax)
+    _pretty_ax_2d(ax)
+    width, height = _save_fig(fig, img_path)
+    return MonitoringVisualization(
+        img_path, variable_id, Dimensions(width, height, 0, 0, 0, 0)
+    )
+
+
 def _plot_sys_params_var(
     var: str, sys_params: doppy.raw.HaloSysParams, img_path: Path, variable_id: str
 ) -> MonitoringVisualization:
@@ -160,8 +238,6 @@ def _plot_sys_params_var(
     ax.scatter(sys_params.time, y)
     _format_time_axis(ax)
     _pretty_ax(ax)
-    _pretty_fig(fig)
-    # width, height = _save_fig(fig, "/develop/figs/img.png")
     width, height = _save_fig(fig, img_path)
     return MonitoringVisualization(
         img_path, variable_id, Dimensions(width, height, 0, 0, 0, 0)

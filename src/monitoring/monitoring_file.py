@@ -78,7 +78,7 @@ class MonitoringFile:
             "startDate": start_date,
             "periodType": str(self.period),
             "site": self.site_id,
-            "monitoringProduct": "halo-doppler-lidar_housekeeping",
+            "monitoringProduct": self.product_id,
             "instrumentInfo": self.instrument.uuid,
         }
 
