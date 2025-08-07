@@ -246,7 +246,9 @@ class Level1Nc:
             case "mm/s" | "mm s-1" | "mm / s":
                 factor = 1e-3
             case _:
-                raise ValueError(f"Unknown units: {units}")
+                raise ValueError(
+                    f"Variable '{variable}' has unsupported units: {units}"
+                )
         if factor:
             self.nc.variables[variable][:] *= factor
             logging.info(f"Converting {variable} from {units} to {target_unit}.")
@@ -265,7 +267,9 @@ class Level1Nc:
             case "mm":
                 factor = 1e-3
             case _:
-                raise ValueError(f"Unknown units: {units}")
+                raise ValueError(
+                    f"Variable '{variable}' has unsupported units: {units}"
+                )
         if factor:
             self.nc.variables[variable][:] *= factor
             logging.info(f"Converting {variable} from {units} to {target_unit}.")
@@ -284,7 +288,9 @@ class Level1Nc:
             case "%" | "percent":
                 factor = 1e-2
             case _:
-                raise ValueError(f"Unknown units: {units}")
+                raise ValueError(
+                    f"Variable '{variable}' has unsupported units: {units}"
+                )
         if factor:
             self.nc.variables[variable][:] *= factor
             logging.info(f"Converting {variable} from {units} to {target_unit}.")
@@ -303,7 +309,9 @@ class Level1Nc:
             case "hpa":
                 factor = 100.0
             case _:
-                raise ValueError(f"Unknown units: {units}")
+                raise ValueError(
+                    f"Variable '{variable}' has unsupported units: {units}"
+                )
         if factor:
             self.nc.variables[variable][:] *= factor
             logging.info(f"Converting {variable} from {units} to {target_unit}.")
@@ -320,7 +328,9 @@ class Level1Nc:
             case "degrees" | "degree":
                 factor = None
             case _:
-                raise ValueError(f"Unknown units: {units}")
+                raise ValueError(
+                    f"Variable '{variable}' has unsupported units: {units}"
+                )
         if factor:
             self.nc.variables[variable][:] *= factor
             logging.info(f"Converting {variable} from {units} to {target_unit}.")
@@ -347,7 +357,9 @@ class Level1Nc:
                 self.nc.variables[variable][:] += 273.15
                 logging.info(f"Converting {variable} from {units} to {target_unit}.")
             case _:
-                raise ValueError(f"Unknown units: {units}")
+                raise ValueError(
+                    f"Variable '{variable}' has unsupported units: {units}"
+                )
         self.nc.variables[variable].units = target_unit
 
     def _set_fallback_unit(self, variable: str, fallback: str):
