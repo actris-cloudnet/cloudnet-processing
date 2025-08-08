@@ -373,7 +373,7 @@ class ParsivelNc(core.Level1Nc):
 
     def convert_precipitations(self):
         for key in self.nc.variables:
-            if key in ("rainfall_rate", "snowfall_rate"):
+            if key in ("rainfall_rate", "snowfall_rate", "fall_velocity"):
                 self.to_ms1(key)
 
     def convert_diameters(self):
