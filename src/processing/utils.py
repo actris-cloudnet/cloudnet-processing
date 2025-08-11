@@ -173,11 +173,7 @@ def _get_datetime(nc: netCDF4.Dataset, ind: int) -> datetime.datetime:
     except IndexError:
         msg = "Abort PUT to data portal: time vector not an array"
         raise MiscError(msg)
-    model_types = get_product_types("evaluation") + ["model"]
-    is_model_or_l3 = file_type in model_types
-    delta_seconds = 1 if (is_model_or_l3 and ind != 0) else 0
-    delta = datetime.timedelta(seconds=delta_seconds)
-    return base + datetime.timedelta(hours=fraction_hour) - delta
+    return base + datetime.timedelta(hours=fraction_hour)
 
 
 def get_product_types(product_type: str | None = None) -> list[str]:
