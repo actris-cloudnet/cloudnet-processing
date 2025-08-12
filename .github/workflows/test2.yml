@@ -1,0 +1,52 @@
+name: Test against dataportal
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Checkout fixtures
+        uses: actions/checkout@v4
+        with:
+          repository: actris-cloudnet/dataportal
+          sparse-checkout: backend/fixtures/
+          sparse-checkout-cone-mode: false
+          path: backend-fixtures
+
+      - name: Checkout production fixtures
+        uses: actions/checkout@v4
+        with:
+          repository: actris-cloudnet/dataportal-fixtures
+          path: dataportal-fixtures
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: network=host
+
+      - name: Build cloudnet-processing with cache
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          target: test
+          load: true
+          tags: cloudnet-processing:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Start supporting services
+        run: docker compose -f .github/docker-compose.yml up -d --wait dataportal-backend
+
+      - name: Run tests
+        run: docker compose -f .github/docker-compose.yml run --rm cloudnet-processing pytest -s -vv tests/integration/test.py
+
+      - name: Shutdown all services
+        if: always()
+        run: docker compose -f .github/docker-compose.yml down -v
