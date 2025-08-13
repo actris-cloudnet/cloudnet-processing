@@ -7,6 +7,7 @@ from typing import Literal
 
 import numpy as np
 from cloudnet_api_client import APIClient
+from cloudnet_api_client.containers import RawModelMetadata
 from cloudnetpy.exceptions import PlottingError
 from cloudnetpy.model_evaluation.plotting.plotting import generate_L3_day_plots
 from cloudnetpy.plotting import Dimensions, PlotParameters, generate_figure
@@ -190,17 +191,15 @@ class Processor:
 
     def get_model_upload(
         self, params: ModelParams, start_date: datetime.date, end_date: datetime.date
-    ) -> list[dict]:
-        payload = {
-            "site": params.site.id,
-            "dateFrom": start_date.isoformat(),
-            "dateTo": end_date.isoformat(),
-            "model": params.model.source_model_id or params.model.id,
-            "status": ["uploaded", "processed"],
-        }
-        rows = self.md_api.get("api/raw-model-files", payload)
-        rows = [row for row in rows if int(row["size"]) > MIN_MODEL_FILESIZE]
-        return rows
+    ) -> list[RawModelMetadata]:
+        rows = self.client.raw_model_metadata(
+            site_id=params.site.id,
+            model_id=params.model.source_model_id or params.model.id,
+            date_from=start_date,
+            date_to=end_date,
+            status=["uploaded", "processed"],
+        )
+        return [row for row in rows if int(row.size) > MIN_MODEL_FILESIZE]
 
     def get_model_file(self, params: ModelParams) -> dict | None:
         payload = {

@@ -49,13 +49,7 @@ def process_model(processor: Processor, params: ModelParams, directory: Path):
         start_date = params.date
         end_date = params.date
 
-    upload_meta = processor.client.raw_model_metadata(
-        params.site.id,
-        model_id=params.model.id,
-        date_from=start_date,
-        date_to=end_date,
-    )
-
+    upload_meta = processor.get_model_upload(params, start_date, end_date)
     if not upload_meta:
         msg = "No valid model upload found"
         raise SkipTaskError(msg)
