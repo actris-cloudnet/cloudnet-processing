@@ -25,12 +25,8 @@ def processor():
     storage_api = StorageApi(CONFIG, session)
     pid_utils = PidUtils(CONFIG, session)
     dvas = Dvas(CONFIG, md_api)
-    return Processor(md_api, storage_api, pid_utils, dvas)
-
-
-@pytest.fixture(scope="session")
-def api_client():
-    return APIClient(base_url=f"{CONFIG.dataportal_url}/api/")
+    client = APIClient(base_url=f"{CONFIG.dataportal_url}/api/", session=session)
+    return Processor(md_api, storage_api, pid_utils, dvas, client)
 
 
 @dataclass
@@ -61,9 +57,7 @@ meta_list = [
 
 
 @pytest.mark.parametrize("meta", meta_list)
-def test_instrument_processing(
-    processor: Processor, api_client: APIClient, meta: Meta, tmp_path
-):
+def test_instrument_processing(processor: Processor, meta: Meta, tmp_path):
     instrument = processor.get_instrument(meta.uuid)
     _submit_file(meta, instrument)
     date = datetime.date.fromisoformat(meta.date)
@@ -77,7 +71,9 @@ def test_instrument_processing(
         instrument=instrument,
     )
     process_instrument(processor, instru_params, tmp_path)
-    file_meta = api_client.metadata(site_id=site.id, date=date, product=meta.product)
+    file_meta = processor.client.metadata(
+        site_id=site.id, date=date, product=meta.product
+    )
     assert len(file_meta) == 1
 
 
