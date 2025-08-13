@@ -1,7 +1,5 @@
 import datetime
 import hashlib
-import os
-import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -16,24 +14,23 @@ from processing.pid_utils import PidUtils
 from processing.processor import Instrument, InstrumentParams, Processor
 from processing.storage_api import StorageApi
 
-BACKEND_URL = os.getenv("DATAPORTAL_URL", "http://localhost:3000")
 DATA_PATH = Path(__file__).parent / "data"
+CONFIG = utils.read_main_conf()
 
 
 @pytest.fixture(scope="session")
 def processor():
-    config = utils.read_main_conf()
     session = utils.make_session()
-    md_api = MetadataApi(config, session)
-    storage_api = StorageApi(config, session)
-    pid_utils = PidUtils(config, session)
-    dvas = Dvas(config, md_api)
+    md_api = MetadataApi(CONFIG, session)
+    storage_api = StorageApi(CONFIG, session)
+    pid_utils = PidUtils(CONFIG, session)
+    dvas = Dvas(CONFIG, md_api)
     return Processor(md_api, storage_api, pid_utils, dvas)
 
 
 @pytest.fixture(scope="session")
 def api_client():
-    return APIClient(base_url=f"{BACKEND_URL}/api/")
+    return APIClient(base_url=f"{CONFIG.dataportal_url}/api/")
 
 
 @dataclass
@@ -42,6 +39,7 @@ class Meta:
     site: str
     date: str
     uuid: str
+    product: str
 
 
 meta_list = [
@@ -50,35 +48,37 @@ meta_list = [
         site="juelich",
         date="2025-08-11",
         uuid="49ca09de-ca9a-4e3e-9258-9c91ed5683f8",
+        product="rain-gauge",
     ),
     Meta(
         filename="20220818_disdrometer.nc",
         site="leipzig",
         date="2022-08-18",
         uuid="922bd0a8-c7f3-4064-a6a3-f4aa2291414f",
+        product="disdrometer",
     ),
 ]
 
 
 @pytest.mark.parametrize("meta", meta_list)
-def test_instrument_processing(processor: Processor, api_client: APIClient, meta: Meta):
+def test_instrument_processing(
+    processor: Processor, api_client: APIClient, meta: Meta, tmp_path
+):
     instrument = processor.get_instrument(meta.uuid)
     _submit_file(meta, instrument)
     date = datetime.date.fromisoformat(meta.date)
     site = processor.get_site(meta.site, date)
 
-    for product in instrument.derived_product_ids:
-        print(f"Processing {product}")
-        instru_params = InstrumentParams(
-            site=site,
-            date=date,
-            product=processor.get_product(product),
-            instrument=instrument,
-        )
-        with tempfile.TemporaryDirectory() as tempdir:
-            process_instrument(processor, instru_params, Path(tempdir))
-            file_meta = api_client.metadata(site_id=site.id, date=date, product=product)
-            assert len(file_meta) == 1
+    print(f"Processing {meta.product}")
+    instru_params = InstrumentParams(
+        site=site,
+        date=date,
+        product=processor.get_product(meta.product),
+        instrument=instrument,
+    )
+    process_instrument(processor, instru_params, tmp_path)
+    file_meta = api_client.metadata(site_id=site.id, date=date, product=meta.product)
+    assert len(file_meta) == 1
 
 
 def _submit_file(meta: Meta, instrument: Instrument):
@@ -97,11 +97,15 @@ def _submit_file(meta: Meta, instrument: Instrument):
         "instrumentPid": instrument.pid,
     }
 
-    res = requests.post(f"{BACKEND_URL}/upload/metadata/", json=metadata, auth=auth)
+    res = requests.post(
+        f"{CONFIG.dataportal_url}/upload/metadata/", json=metadata, auth=auth
+    )
     if res.status_code == 409:
         return
     res.raise_for_status()
 
     with open(file_path, "rb") as f:
-        res = requests.put(f"{BACKEND_URL}/upload/data/{checksum}", data=f, auth=auth)
+        res = requests.put(
+            f"{CONFIG.dataportal_url}/upload/data/{checksum}", data=f, auth=auth
+        )
         res.raise_for_status()

@@ -44,9 +44,7 @@ services:
       - ss.env
     command: ["sh", "-c", "node build/init.js && npm start"]
   cloudnet-processing:
-    build:
-      context: ..
-      target: test
+    image: cloudnet-processing:test
     depends_on:
       - "dataportal-backend"
       - "storage-service"
