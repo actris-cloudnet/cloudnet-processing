@@ -20,6 +20,7 @@ classifiers = [
 dependencies = [
   "ceilopyter",
   "cftime",
+  "cloudnet-api-client",
   "cloudnetpy[extras]>=1.77.2",
   "cloudnetpy_qc>=1.25.8",
   "doppy>=0.3.5",
@@ -34,7 +35,6 @@ dynamic = ["version"]
 
 [project.optional-dependencies]
 dev = [
-  "cloudnet-api-client",
   "mypy",
   "pre-commit",
   "pytest",
