@@ -253,7 +253,7 @@ def _calc_hash_sum(filename, method, is_base64: bool = False) -> str:
         for byte_block in iter(lambda: f.read(4096), b""):
             hash_sum.update(byte_block)
     if is_base64:
-        return base64.encodebytes(hash_sum.digest()).decode("utf-8").strip()
+        return base64.b64encode(hash_sum.digest()).decode()
     return hash_sum.hexdigest()
 
 
