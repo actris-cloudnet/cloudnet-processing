@@ -92,11 +92,10 @@ class StorageApi:
     def _put(
         self, url: str, full_path: str | PathLike, headers: dict | None = None
     ) -> requests.Response:
-        res = self.session.put(
-            url, data=open(full_path, "rb"), auth=self._auth, headers=headers
-        )
-        res.raise_for_status()
-        return res
+        with open(full_path, "rb") as f:
+            res = self.session.put(url, data=f, auth=self._auth, headers=headers)
+            res.raise_for_status()
+            return res
 
     @staticmethod
     def _get_headers(full_path: str | PathLike) -> dict:
