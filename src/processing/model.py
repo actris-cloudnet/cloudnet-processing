@@ -61,11 +61,11 @@ def process_model(processor: Processor, params: ModelParams, directory: Path):
 
     volatile = True
     if existing_meta := processor.get_model_file(params):
-        if not existing_meta["volatile"]:
+        if not existing_meta.volatile:
             logging.warning("Stable model file found.")
             volatile = False
-        product_uuid = uuid.UUID(existing_meta["uuid"])
-        filename = existing_meta["filename"]
+        product_uuid = existing_meta.uuid
+        filename = existing_meta.filename
         existing_file = processor.storage_api.download_product(existing_meta, directory)
     else:
         product_uuid = _generate_uuid()
@@ -76,10 +76,10 @@ def process_model(processor: Processor, params: ModelParams, directory: Path):
         new_file = directory / "output.nc"
         _harmonize_model(params, tmp_path, new_file, product_uuid)
 
-        if not existing_meta or not existing_meta["pid"]:
+        if not existing_meta or not existing_meta.pid:
             volatile_pid = None
         else:
-            volatile_pid = existing_meta["pid"]
+            volatile_pid = existing_meta.pid
         processor.pid_utils.add_pid_to_file(new_file, pid=volatile_pid)
 
         upload = True

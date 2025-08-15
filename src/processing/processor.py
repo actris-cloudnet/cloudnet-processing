@@ -7,7 +7,7 @@ from typing import Literal
 
 import numpy as np
 from cloudnet_api_client import APIClient
-from cloudnet_api_client.containers import RawModelMetadata
+from cloudnet_api_client.containers import ProductMetadata, RawModelMetadata
 from cloudnetpy.exceptions import PlottingError
 from cloudnetpy.model_evaluation.plotting.plotting import generate_L3_day_plots
 from cloudnetpy.plotting import Dimensions, PlotParameters, generate_figure
@@ -201,31 +201,33 @@ class Processor:
         )
         return [row for row in rows if int(row.size) > MIN_MODEL_FILESIZE]
 
-    def get_model_file(self, params: ModelParams) -> dict | None:
-        payload = {
-            "site": params.site.id,
-            "date": params.date.isoformat(),
-            "model": params.model.id,
-        }
-        metadata = self.md_api.get("api/model-files", payload)
+    def get_model_file(self, params: ModelParams) -> ProductMetadata | None:
+        metadata = self.client.metadata(
+            product="model",
+            model_id=params.model.id,
+            site_id=params.site.id,
+            date=params.date,
+        )
         if len(metadata) == 0:
             return None
         if len(metadata) > 1:
             raise RuntimeError(f"Multiple {params.model.id} files found")
         return metadata[0]
 
-    def fetch_product(self, params: ProcessParams) -> dict | None:
-        payload = {
-            "site": params.site.id,
-            "date": params.date.isoformat(),
-            "product": params.product.id,
-            "showLegacy": True,
-        }
+    def fetch_product(self, params: ProcessParams) -> ProductMetadata | None:
         if isinstance(params, InstrumentParams):
-            payload["instrumentPid"] = params.instrument.pid
+            instrument_pid = params.instrument.pid
         elif isinstance(params, ProductParams) and params.instrument is not None:
-            payload["instrumentPid"] = params.instrument.pid
-        metadata = self.md_api.get("api/files", payload)
+            instrument_pid = params.instrument.pid
+        else:
+            instrument_pid = None
+        metadata = self.client.metadata(
+            site_id=params.site.id,
+            product=params.product.id,
+            date=params.date,
+            show_legacy=True,
+            instrument_pid=instrument_pid,
+        )
         if len(metadata) == 0:
             return None
         if len(metadata) > 1:

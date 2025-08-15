@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Iterable
 
 import requests
+from cloudnet_api_client.containers import ProductMetadata
 
 from processing import utils
 from processing.config import Config
@@ -39,14 +40,16 @@ class StorageApi:
         res = self._put(url, full_path, headers).json()
         return {"version": res.get("version", ""), "size": int(res["size"])}
 
-    def download_product(self, metadata: dict, dir_name: PathLike | str) -> Path:
+    def download_product(
+        self, metadata: ProductMetadata, dir_name: PathLike | str
+    ) -> Path:
         """Download a product."""
-        filename = metadata["filename"]
+        filename = metadata.filename
         full_path = Path(dir_name) / filename
         _download_url(
             url=self._get_download_url(metadata),
-            size=int(metadata["size"]),
-            checksum=metadata["checksum"],
+            size=int(metadata.size),
+            checksum=metadata.checksum,
             checksum_algorithm="sha256",
             output_path=full_path,
             auth=self._auth,
@@ -54,7 +57,7 @@ class StorageApi:
         return full_path
 
     def download_products(
-        self, meta_records: Iterable[dict], dir_name: PathLike | str
+        self, meta_records: Iterable[ProductMetadata], dir_name: PathLike | str
     ) -> list[Path]:
         """Download multiple products."""
         return self._download_parallel(
@@ -89,7 +92,7 @@ class StorageApi:
 
     def _download_parallel(
         self,
-        meta_records: Iterable[dict],
+        meta_records: Iterable[ProductMetadata],
         checksum_algorithm: str,
         output_directory: Path,
     ) -> list[Path]:
@@ -99,7 +102,7 @@ class StorageApi:
             paths = []
             unique_urls = set()
             for meta in meta_records:
-                filename = meta["filename"]
+                filename = meta.filename
                 path = output_directory / filename
                 paths.append(path)
                 url = self._get_download_url(meta)
@@ -109,8 +112,8 @@ class StorageApi:
                 future = executor.submit(
                     _download_url,
                     url=url,
-                    size=int(meta["size"]),
-                    checksum=meta["checksum"],
+                    size=int(meta.size),
+                    checksum=meta.checksum,
                     checksum_algorithm=checksum_algorithm,
                     output_path=path,
                     auth=self._auth,
@@ -126,11 +129,11 @@ class StorageApi:
         finally:
             executor.shutdown(cancel_futures=True)
 
-    def _get_download_url(self, metadata: dict) -> str:
+    def _get_download_url(self, metadata: ProductMetadata) -> str:
         return re.sub(
             r".*/api/download/",
             self.config.dataportal_url + "/api/download/",
-            metadata["downloadUrl"],
+            metadata.download_url,
         )
 
 
