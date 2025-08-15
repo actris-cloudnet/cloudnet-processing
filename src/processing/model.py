@@ -23,7 +23,7 @@ MODEL_READERS = {
 }
 
 
-def process_model(processor: Processor, params: ModelParams, directory: Path):
+def process_model(processor: Processor, params: ModelParams, directory: Path) -> None:
     if params.model.id in SKIP_MODELS:
         msg = f"Processing {params.model.id} not implemented yet"
         raise SkipTaskError(msg)
@@ -56,16 +56,17 @@ def process_model(processor: Processor, params: ModelParams, directory: Path):
 
     raw_dir = directory / "raw"
     raw_dir.mkdir()
-    full_paths = processor.client.download(upload_meta, raw_dir, progress=False)
-    raw_uuids = [raw.uuid for raw in upload_meta]
+    full_paths, raw_uuids = processor.storage_api.download_raw_data(
+        upload_meta, raw_dir
+    )
 
     volatile = True
     if existing_meta := processor.get_model_file(params):
-        if not existing_meta["volatile"]:
+        if not existing_meta.volatile:
             logging.warning("Stable model file found.")
             volatile = False
-        product_uuid = uuid.UUID(existing_meta["uuid"])
-        filename = existing_meta["filename"]
+        product_uuid = existing_meta.uuid
+        filename = existing_meta.filename
         existing_file = processor.storage_api.download_product(existing_meta, directory)
     else:
         product_uuid = _generate_uuid()
@@ -76,10 +77,10 @@ def process_model(processor: Processor, params: ModelParams, directory: Path):
         new_file = directory / "output.nc"
         _harmonize_model(params, tmp_path, new_file, product_uuid)
 
-        if not existing_meta or not existing_meta["pid"]:
+        if not existing_meta or not existing_meta.pid:
             volatile_pid = None
         else:
-            volatile_pid = existing_meta["pid"]
+            volatile_pid = existing_meta.pid
         processor.pid_utils.add_pid_to_file(new_file, pid=volatile_pid)
 
         upload = True
@@ -93,7 +94,7 @@ def process_model(processor: Processor, params: ModelParams, directory: Path):
             processor.upload_file(params, new_file, filename, volatile, patch=True)
         else:
             logging.info("Skipping PUT to data portal, file has not changed")
-        if "hidden" in params.site.types:
+        if "hidden" in params.site.type:
             logging.info("Skipping plotting for hidden site")
         else:
             processor.create_and_upload_images(
@@ -142,7 +143,7 @@ def _process_model(
             raise ValueError(f"Expected a single file but found {n_files} files")
         return input_paths[0]
     reader = MODEL_READERS[params.model.source_model_id]
-    location = Location(id=params.site.id, name=params.site.name)
+    location = Location(id=params.site.id, name=params.site.human_readable_name)
     models = []
     for path in input_paths:
         model = reader(path, location)
@@ -165,7 +166,7 @@ def _process_model(
 
 def _harmonize_model(
     params: ModelParams, input_path: Path, output_path: Path, uuid: uuid.UUID
-):
+) -> None:
     data = {
         "site_name": params.site.id,
         "date": params.date.isoformat(),

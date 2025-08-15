@@ -6,11 +6,17 @@ import hashlib
 import logging
 import re
 import threading
-from os import PathLike
+import uuid
 from pathlib import Path
 from typing import Iterable
 
 import requests
+from cloudnet_api_client.containers import (
+    Metadata,
+    ProductMetadata,
+    RawMetadata,
+    RawModelMetadata,
+)
 
 from processing import utils
 from processing.config import Config
@@ -29,9 +35,7 @@ class StorageApi:
         self._url = config.storage_service_url
         self._auth = config.storage_service_auth
 
-    def upload_product(
-        self, full_path: PathLike | str, s3key: str, volatile: bool
-    ) -> dict:
+    def upload_product(self, full_path: Path, s3key: str, volatile: bool) -> dict:
         """Upload a processed Cloudnet file."""
         bucket = _get_product_bucket(volatile)
         headers = self._get_headers(full_path)
@@ -39,14 +43,25 @@ class StorageApi:
         res = self._put(url, full_path, headers).json()
         return {"version": res.get("version", ""), "size": int(res["size"])}
 
-    def download_product(self, metadata: dict, dir_name: PathLike | str) -> Path:
+    def download_raw_data(
+        self,
+        metadata: list[RawMetadata] | list[RawModelMetadata],
+        dir_name: Path,
+    ) -> tuple[list[Path], list[str]]:
+        """Download raw instrument or model files."""
+        full_paths = self._download_parallel(
+            metadata, checksum_algorithm="md5", output_directory=dir_name
+        )
+        uuids = [str(row.uuid) for row in metadata]
+        return full_paths, uuids
+
+    def download_product(self, metadata: ProductMetadata, dir_name: Path) -> Path:
         """Download a product."""
-        filename = metadata["filename"]
-        full_path = Path(dir_name) / filename
+        full_path = dir_name / metadata.filename
         _download_url(
             url=self._get_download_url(metadata),
-            size=int(metadata["size"]),
-            checksum=metadata["checksum"],
+            size=int(metadata.size),
+            checksum=metadata.checksum,
             checksum_algorithm="sha256",
             output_path=full_path,
             auth=self._auth,
@@ -54,11 +69,11 @@ class StorageApi:
         return full_path
 
     def download_products(
-        self, meta_records: Iterable[dict], dir_name: PathLike | str
+        self, meta_records: Iterable[ProductMetadata], dir_name: Path
     ) -> list[Path]:
         """Download multiple products."""
         return self._download_parallel(
-            meta_records, checksum_algorithm="sha256", output_directory=Path(dir_name)
+            meta_records, checksum_algorithm="sha256", output_directory=dir_name
         )
 
     def delete_volatile_product(self, s3key: str) -> requests.Response:
@@ -68,27 +83,27 @@ class StorageApi:
         res = self.session.delete(url, auth=self._auth)
         return res
 
-    def upload_image(self, full_path: str | PathLike, s3key: str) -> None:
+    def upload_image(self, full_path: Path, s3key: str) -> None:
         url = f"{self._url}/cloudnet-img/{s3key}"
         headers = self._get_headers(full_path)
         self._put(url, full_path, headers=headers)
 
     def _put(
-        self, url: str, full_path: str | PathLike, headers: dict | None = None
+        self, url: str, full_path: Path, headers: dict | None = None
     ) -> requests.Response:
-        with open(full_path, "rb") as f:
+        with full_path.open("rb") as f:
             res = self.session.put(url, data=f, auth=self._auth, headers=headers)
             res.raise_for_status()
             return res
 
     @staticmethod
-    def _get_headers(full_path: str | PathLike) -> dict:
+    def _get_headers(full_path: Path) -> dict:
         checksum = utils.md5sum(full_path, is_base64=True)
         return {"content-md5": checksum}
 
     def _download_parallel(
         self,
-        meta_records: Iterable[dict],
+        meta_records: Iterable[Metadata],
         checksum_algorithm: str,
         output_directory: Path,
     ) -> list[Path]:
@@ -98,7 +113,7 @@ class StorageApi:
             paths = []
             unique_urls = set()
             for meta in meta_records:
-                filename = meta["filename"]
+                filename = meta.filename
                 path = output_directory / filename
                 paths.append(path)
                 url = self._get_download_url(meta)
@@ -108,8 +123,8 @@ class StorageApi:
                 future = executor.submit(
                     _download_url,
                     url=url,
-                    size=int(meta["size"]),
-                    checksum=meta["checksum"],
+                    size=int(meta.size),
+                    checksum=meta.checksum,
                     checksum_algorithm=checksum_algorithm,
                     output_path=path,
                     auth=self._auth,
@@ -125,11 +140,11 @@ class StorageApi:
         finally:
             executor.shutdown(cancel_futures=True)
 
-    def _get_download_url(self, metadata: dict) -> str:
+    def _get_download_url(self, metadata: Metadata) -> str:
         return re.sub(
             r".*/api/download/",
             self.config.dataportal_url + "/api/download/",
-            metadata["downloadUrl"],
+            metadata.download_url,
         )
 
 

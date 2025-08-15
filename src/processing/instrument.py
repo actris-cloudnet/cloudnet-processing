@@ -19,10 +19,10 @@ def process_instrument(processor: Processor, params: InstrumentParams, directory
     uuid = Uuid()
     pid_to_new_file = None
     if existing_product := processor.fetch_product(params):
-        if existing_product["volatile"]:
-            uuid.volatile = existing_product["uuid"]
-            pid_to_new_file = existing_product["pid"]
-        filename = existing_product["filename"]
+        if existing_product.volatile:
+            uuid.volatile = str(existing_product.uuid)
+            pid_to_new_file = existing_product.pid
+        filename = existing_product.filename
         existing_file = processor.storage_api.download_product(
             existing_product, directory
         )
@@ -53,15 +53,15 @@ def process_instrument(processor: Processor, params: InstrumentParams, directory
         if difference == NCDiff.NONE:
             upload = False
             new_file = existing_file
-            uuid.product = existing_product["uuid"]
+            uuid.product = str(existing_product.uuid)
         elif difference == NCDiff.MINOR:
             # Replace existing file
             patch = True
             if not params.product.experimental:
-                processor.pid_utils.add_pid_to_file(new_file, existing_product["pid"])
+                processor.pid_utils.add_pid_to_file(new_file, existing_product.pid)
             with netCDF4.Dataset(new_file, "r+") as nc:
-                nc.file_uuid = existing_product["uuid"]
-            uuid.product = existing_product["uuid"]
+                nc.file_uuid = str(existing_product.uuid)
+            uuid.product = str(existing_product.uuid)
 
     if upload:
         processor.upload_file(params, new_file, filename, volatile, patch)
@@ -80,10 +80,10 @@ def process_instrument(processor: Processor, params: InstrumentParams, directory
 
 
 def _generate_filename(params: InstrumentParams) -> str:
-    identifier = params.instrument.type
+    identifier = params.instrument.instrument_id
     if params.product.id == "mwr-l1c":
         identifier += "-l1c"
-    elif params.instrument.type == "halo-doppler-lidar-calibrated":
+    elif params.instrument.instrument_id == "halo-doppler-lidar-calibrated":
         identifier = "halo-doppler-lidar"
     elif params.product.id == "doppler-lidar-wind":
         identifier += "-wind"
@@ -91,7 +91,7 @@ def _generate_filename(params: InstrumentParams) -> str:
         params.date.strftime("%Y%m%d"),
         params.site.id,
         identifier,
-        params.instrument.uuid[:8],
+        str(params.instrument.uuid)[:8],
     ]
     return "_".join(parts) + ".nc"
 
@@ -102,7 +102,7 @@ def _process_file(
     product_camel_case = "".join(
         [part.capitalize() for part in params.product.id.split("-")]
     )
-    instrument_snake_case = params.instrument.type.replace("-", "_")
+    instrument_snake_case = params.instrument.instrument_id.replace("-", "_")
     process_class: ProcessClass = getattr(
         instrument_process, f"Process{product_camel_case}"
     )

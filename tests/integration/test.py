@@ -77,7 +77,7 @@ def test_instrument_processing(processor: Processor, meta: Meta, tmp_path):
     assert len(file_meta) == 1
 
 
-def _submit_file(meta: Meta, instrument: Instrument):
+def _submit_file(meta: Meta, instrument: Instrument) -> None:
     auth = ("admin", "admin")
     file_path = DATA_PATH / meta.filename
 
@@ -88,7 +88,7 @@ def _submit_file(meta: Meta, instrument: Instrument):
         "filename": meta.filename,
         "checksum": checksum,
         "site": meta.site,
-        "instrument": instrument.type,
+        "instrument": instrument.instrument_id,
         "measurementDate": meta.date,
         "instrumentPid": instrument.pid,
     }

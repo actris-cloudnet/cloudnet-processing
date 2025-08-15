@@ -391,6 +391,6 @@ class Level1Nc:
         return variable[:]
 
     @staticmethod
-    def _copy_variable_attributes(source, target):
+    def _copy_variable_attributes(source, target) -> None:
         attr = {k: source.getncattr(k) for k in source.ncattrs() if k != "_FillValue"}
         target.setncatts(attr)

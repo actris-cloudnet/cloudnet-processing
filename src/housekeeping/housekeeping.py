@@ -56,7 +56,7 @@ def process_record(record: dict, raw_api: RawApi, db: Database):
 def _handle_hatpro_hkd(src: bytes, metadata: dict) -> list[Point]:
     with tempfile.NamedTemporaryFile() as f:
         f.write(src)
-        hkd = HatproHkd(f.name)
+        hkd = HatproHkd(Path(f.name))
     time = hkd.data["T"]
     return _make_points(
         time, hkd.data, get_config("hatpro_hkd"), metadata, ValidDateRange.DAY
@@ -66,7 +66,7 @@ def _handle_hatpro_hkd(src: bytes, metadata: dict) -> list[Point]:
 def _handle_hatpro_nc(src: bytes, metadata: dict) -> list[Point]:
     with tempfile.NamedTemporaryFile() as f:
         f.write(src)
-        hkd = HatproHkdNc(f.name)
+        hkd = HatproHkdNc(Path(f.name))
     return _make_points(
         hkd.data["time"],
         hkd.data,

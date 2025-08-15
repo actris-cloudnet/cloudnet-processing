@@ -10,9 +10,9 @@ from collections.abc import Callable
 from pathlib import Path
 
 import requests
+from cloudnet_api_client.containers import Product, Site
 
 from processing import utils
-from processing.processor import Product, Site
 
 DATAPORTAL_URL = os.environ["DATAPORTAL_URL"].rstrip("/")
 DATAPORTAL_AUTH = ("admin", "admin")

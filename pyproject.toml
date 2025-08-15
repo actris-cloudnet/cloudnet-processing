@@ -20,7 +20,7 @@ classifiers = [
 dependencies = [
   "ceilopyter",
   "cftime",
-  "cloudnet-api-client",
+  "cloudnet-api-client>=0.11.0",
   "cloudnetpy[extras]>=1.77.2",
   "cloudnetpy_qc>=1.25.8",
   "doppy>=0.3.5",
@@ -66,6 +66,8 @@ filename = "src/processing/version.py"
 pattern = ["MAJOR = (?P<major>\\d+)", "MINOR = (?P<minor>\\d+)", "PATCH = (?P<patch>\\d+)"]
 
 [tool.ruff]
+select = ["ANN"]
+ignore = ["ANN001", "ANN002", "ANN101", "ANN201", "ANN202", "ANN204"]
 extend-select = ["I"]
 
 [tool.ruff.lint.extend-per-file-ignores]

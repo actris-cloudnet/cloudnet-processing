@@ -25,7 +25,7 @@ class Uuid:
     __slots__ = ["raw", "product", "volatile"]
 
     def __init__(self):
-        self.raw: list = []
+        self.raw: list[str] = []
         self.product: str = ""
         self.volatile: str | None = None
 
@@ -98,7 +98,7 @@ def utcnow() -> datetime.datetime:
 
 
 def create_product_put_payload(
-    full_path: str | os.PathLike,
+    full_path: Path,
     storage_service_response: dict,
     volatile: bool,
     product: str | None = None,
@@ -198,9 +198,7 @@ def get_data_processing_version() -> str:
     return version["__version__"]
 
 
-def add_global_attributes(
-    full_path: str | os.PathLike, instrument_pid: str | None = None
-):
+def add_global_attributes(full_path: Path, instrument_pid: str | None = None):
     """Add cloudnet-processing package version to file attributes."""
     version = get_data_processing_version()
     with netCDF4.Dataset(full_path, "r+") as nc:
@@ -237,17 +235,17 @@ def read_main_conf() -> Config:
     return Config(os.environ)
 
 
-def sha256sum(filename: str | os.PathLike) -> str:
+def sha256sum(filename: Path) -> str:
     """Calculates hash of file using sha-256."""
     return _calc_hash_sum(filename, "sha256")
 
 
-def md5sum(filename: str | os.PathLike, is_base64: bool = False) -> str:
+def md5sum(filename: Path, is_base64: bool = False) -> str:
     """Calculates hash of file using md5."""
     return _calc_hash_sum(filename, "md5", is_base64)
 
 
-def _calc_hash_sum(filename, method, is_base64: bool = False) -> str:
+def _calc_hash_sum(filename: Path, method: str, is_base64: bool = False) -> str:
     hash_sum = getattr(hashlib, method)()
     with open(filename, "rb") as f:
         for byte_block in iter(lambda: f.read(4096), b""):

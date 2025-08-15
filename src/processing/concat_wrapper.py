@@ -2,6 +2,7 @@
 
 import logging
 import shutil
+from pathlib import Path
 
 import netCDF4
 from cloudnetpy import concat_lib as clib
@@ -23,12 +24,12 @@ def update_daily_file(new_files: list, daily_file: str) -> list:
 
 
 def concat_netcdf_files(
-    files: list,
+    files: list[Path],
     date: str,
-    output_file: str,
+    output_file: Path,
     concat_dimension: str = "time",
     variables: list | None = None,
-) -> list:
+) -> list[Path]:
     """Concatenates several netcdf files into daily file."""
     with netCDF4.Dataset(files[0]) as nc:
         if concat_dimension not in nc.dimensions:
@@ -53,7 +54,7 @@ def concat_netcdf_files(
 
     clib.concatenate_files(
         valid_files,
-        output_file,
+        str(output_file),
         concat_dimension=concat_dimension,
         variables=variables,
     )

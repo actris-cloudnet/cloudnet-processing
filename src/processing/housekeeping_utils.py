@@ -25,7 +25,7 @@ def process_housekeeping(processor: Processor, params: InstrumentParams) -> None
 def _get_housekeeping_records(
     processor: Processor, params: InstrumentParams
 ) -> list[dict]:
-    if params.instrument.type == "halo-doppler-lidar":
+    if params.instrument.instrument_id == "halo-doppler-lidar":
         first_day_of_month = params.date.replace(day=1)
         payload = processor._get_payload(
             site=params.site.id,

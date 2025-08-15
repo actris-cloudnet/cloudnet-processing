@@ -1,13 +1,11 @@
 import datetime
 import logging
-import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, is_dataclass
 from pathlib import Path
-from typing import Literal
+from uuid import UUID
 
-import numpy as np
 from cloudnet_api_client import APIClient
-from cloudnet_api_client.containers import RawModelMetadata
+from cloudnet_api_client.containers import ProductMetadata, RawModelMetadata
 from cloudnetpy.exceptions import PlottingError
 from cloudnetpy.model_evaluation.plotting.plotting import generate_L3_day_plots
 from cloudnetpy.plotting import Dimensions, PlotParameters, generate_figure
@@ -24,50 +22,20 @@ MIN_MODEL_FILESIZE = 20200
 TIMEDELTA_ZERO = datetime.timedelta(0)
 
 
-@dataclass(frozen=True)
-class Instrument:
-    uuid: str
-    pid: str
-    type: str
-    derived_product_ids: frozenset[str]
-
-
-@dataclass(frozen=True)
-class Model:
-    id: str
-    source_model_id: str | None
-    forecast_start: int | None
-    forecast_end: int | None
-
-
-@dataclass(frozen=True)
-class Site:
-    id: str
-    name: str
-    latitude: float
-    longitude: float
-    altitude: float
-    raw_time: np.ndarray | None
-    raw_latitude: np.ndarray | None
-    raw_longitude: np.ndarray | None
-    types: set[str]
-
-
-@dataclass(frozen=True)
-class Product:
-    id: str
-    type: set[Literal["instrument", "geophysical"]]
-    source_instrument_ids: set[str]
-    source_product_ids: set[str]
-    derived_product_ids: set[str]
-    experimental: bool
+from cloudnet_api_client.containers import (
+    ExtendedInstrument,
+    ExtendedProduct,
+    ExtendedSite,
+    Model,
+    Site,
+)
 
 
 @dataclass(frozen=True)
 class ProcessParams:
-    site: Site
+    site: Site | ExtendedSite
     date: datetime.date
-    product: Product
+    product: ExtendedProduct
 
 
 @dataclass(frozen=True)
@@ -77,12 +45,12 @@ class ModelParams(ProcessParams):
 
 @dataclass(frozen=True)
 class InstrumentParams(ProcessParams):
-    instrument: Instrument
+    instrument: ExtendedInstrument
 
 
 @dataclass(frozen=True)
 class ProductParams(ProcessParams):
-    instrument: Instrument | None
+    instrument: ExtendedInstrument | None
 
 
 class Processor:
@@ -100,99 +68,25 @@ class Processor:
         self.dvas = dvas
         self.client = client
 
-    def get_site(self, site_id: str, date: datetime.date) -> Site:
-        site = self.md_api.get(f"api/sites/{site_id}")
-        if site["latitude"] is None and site["longitude"] is None:
-            location = self.md_api.get(
-                f"api/sites/{site_id}/locations", {"date": date.isoformat()}
-            )
-            site["latitude"] = location["latitude"]
-            site["longitude"] = location["longitude"]
+    def get_site(self, site_id: str, date: datetime.date) -> Site | ExtendedSite:
+        site = self.client.site(site_id)
+        if "mobile" in site.type:
+            return self.client.mobile_site(site_id, date)
+        return site
 
-            prev_date = date - datetime.timedelta(days=1)
-            next_date = date + datetime.timedelta(days=1)
-            raw_locations = np.array(
-                self._fetch_raw_locations(site_id, prev_date, -1)
-                + self._fetch_raw_locations(site_id, date)
-                + self._fetch_raw_locations(site_id, next_date, 0),
-            )
-            site["raw_time"] = raw_locations[:, 0]
-            site["raw_latitude"] = raw_locations[:, 1].astype(np.float32)
-            site["raw_longitude"] = raw_locations[:, 2].astype(np.float32)
-        return Site(
-            id=site["id"],
-            name=site["humanReadableName"],
-            latitude=site["latitude"],
-            longitude=site["longitude"],
-            raw_time=site.get("raw_time"),
-            raw_latitude=site.get("raw_latitude"),
-            raw_longitude=site.get("raw_longitude"),
-            altitude=site["altitude"],
-            types=set(site["type"]),
-        )
+    def get_product(self, product_id: str) -> ExtendedProduct:
+        return self.client.product(product_id)
 
-    def _fetch_raw_locations(
-        self, site_id: str, date: datetime.date, index: int | None = None
-    ) -> list[tuple[datetime.datetime, float, float]]:
-        locations = self.md_api.get(
-            f"api/sites/{site_id}/locations",
-            {"date": date.isoformat(), "raw": "1"},
-        )
-        if index is not None:
-            if index < 0:
-                index += len(locations)
-            locations = locations[index : index + 1]
-        output = []
-        for location in locations:
-            output.append(
-                (
-                    datetime.datetime.fromisoformat(location["date"]),
-                    location["latitude"],
-                    location["longitude"],
-                )
-            )
-        return output
-
-    def get_product(self, product_id: str) -> Product:
-        product = self.md_api.get(f"api/products/{product_id}")
-        return Product(
-            id=product["id"],
-            type=set(product["type"]),
-            source_instrument_ids={i["id"] for i in product["sourceInstruments"]},
-            source_product_ids={p["id"] for p in product["sourceProducts"]},
-            derived_product_ids={p["id"] for p in product["derivedProducts"]},
-            experimental=product["experimental"],
-        )
-
-    def get_instrument(self, uuid: str) -> Instrument:
-        instrument = self.md_api.get(f"api/instrument-pids/{uuid}")
-        return Instrument(
-            uuid=instrument["uuid"],
-            pid=instrument["pid"],
-            type=instrument["instrument"]["id"],
-            derived_product_ids=self.get_derived_products(
-                instrument["instrument"]["id"]
-            ),
-        )
-
-    def get_derived_products(self, instrument_id: str) -> frozenset[str]:
-        instrument = self.md_api.get(f"api/instruments/{instrument_id}")
-        return frozenset(p["id"] for p in instrument["derivedProducts"])
+    def get_instrument(self, uuid: str | UUID) -> ExtendedInstrument:
+        return self.client.instrument(uuid)
 
     def get_model(self, model_id: str) -> Model:
-        models = self.md_api.get("api/models")
-        model = next(model for model in models if model["id"] == model_id)
-        return Model(
-            id=model["id"],
-            source_model_id=model["sourceModelId"],
-            forecast_start=model["forecastStart"],
-            forecast_end=model["forecastEnd"],
-        )
+        return self.client.model(model_id)
 
     def get_model_upload(
         self, params: ModelParams, start_date: datetime.date, end_date: datetime.date
     ) -> list[RawModelMetadata]:
-        rows = self.client.raw_model_metadata(
+        rows = self.client.raw_model_files(
             site_id=params.site.id,
             model_id=params.model.source_model_id or params.model.id,
             date_from=start_date,
@@ -201,31 +95,33 @@ class Processor:
         )
         return [row for row in rows if int(row.size) > MIN_MODEL_FILESIZE]
 
-    def get_model_file(self, params: ModelParams) -> dict | None:
-        payload = {
-            "site": params.site.id,
-            "date": params.date.isoformat(),
-            "model": params.model.id,
-        }
-        metadata = self.md_api.get("api/model-files", payload)
+    def get_model_file(self, params: ModelParams) -> ProductMetadata | None:
+        metadata = self.client.files(
+            product="model",
+            model_id=params.model.id,
+            site_id=params.site.id,
+            date=params.date,
+        )
         if len(metadata) == 0:
             return None
         if len(metadata) > 1:
             raise RuntimeError(f"Multiple {params.model.id} files found")
         return metadata[0]
 
-    def fetch_product(self, params: ProcessParams) -> dict | None:
-        payload = {
-            "site": params.site.id,
-            "date": params.date.isoformat(),
-            "product": params.product.id,
-            "showLegacy": True,
-        }
+    def fetch_product(self, params: ProcessParams) -> ProductMetadata | None:
         if isinstance(params, InstrumentParams):
-            payload["instrumentPid"] = params.instrument.pid
+            instrument_pid = params.instrument.pid
         elif isinstance(params, ProductParams) and params.instrument is not None:
-            payload["instrumentPid"] = params.instrument.pid
-        metadata = self.md_api.get("api/files", payload)
+            instrument_pid = params.instrument.pid
+        else:
+            instrument_pid = None
+        metadata = self.client.files(
+            site_id=params.site.id,
+            product=params.product.id,
+            date=params.date,
+            show_legacy=True,
+            instrument_pid=instrument_pid,
+        )
         if len(metadata) == 0:
             return None
         if len(metadata) > 1:
@@ -248,7 +144,7 @@ class Processor:
         filename_prefix: str | None = None,
         filename_suffix: str | None = None,
         time_offset: datetime.timedelta | None = None,
-    ):
+    ) -> tuple[list[Path], list[str]]:
         """Download raw files matching the given parameters."""
         if isinstance(date, datetime.date):
             start_date = date
@@ -265,7 +161,7 @@ class Processor:
                 start_date_ext -= datetime.timedelta(days=1)
             elif time_offset > TIMEDELTA_ZERO:
                 end_date_ext += datetime.timedelta(days=1)
-        upload_metadata = self.client.raw_metadata(
+        upload_metadata = self.client.raw_files(
             site_id,
             date_from=start_date_ext,
             date_to=end_date_ext,
@@ -300,17 +196,16 @@ class Processor:
         if largest_only:
             upload_metadata = [max(upload_metadata, key=lambda item: int(item.size))]
 
-        full_paths = self.client.download(upload_metadata, directory, progress=False)
-        uuids = [f.uuid for f in upload_metadata]
+        full_paths, uuids = self.storage_api.download_raw_data(
+            upload_metadata, directory
+        )
 
         if time_offset is not None:
             uuids = [
-                meta.uuid
+                str(meta.uuid)
                 for meta in upload_metadata
                 if start_date <= meta.measurement_date <= end_date
             ]
-        if largest_only:
-            return full_paths[0], uuids
         return full_paths, uuids
 
     def _get_payload(
@@ -367,22 +262,22 @@ class Processor:
         if isinstance(params, ModelParams) and "evaluation" not in params.product.type:
             payload["model"] = params.model.id
         elif isinstance(params, InstrumentParams):
-            payload["instrument"] = params.instrument.type
+            payload["instrument"] = params.instrument.instrument_id
         elif isinstance(params, ProductParams) and params.instrument:
-            payload["instrument"] = params.instrument.type
+            payload["instrument"] = params.instrument.instrument_id
         payload["patch"] = patch
         self.md_api.put("files", s3key, payload)
 
-    def update_statuses(self, raw_uuids: list[uuid.UUID], status: str):
+    def update_statuses(self, raw_uuids: list[str], status: str) -> None:
         for raw_uuid in raw_uuids:
-            payload = {"uuid": str(raw_uuid), "status": status}
+            payload = {"uuid": raw_uuid, "status": status}
             self.md_api.post("upload-metadata", payload)
 
     def create_and_upload_images(
         self,
         full_path: Path,
         product: str,
-        product_uuid: uuid.UUID,
+        product_uuid: UUID,
         product_s3key: str,
         directory: Path,
         legacy: bool = False,
@@ -444,14 +339,14 @@ class Processor:
         full_path: Path,
         product: str,
         model_id: str,
-        product_uuid: uuid.UUID,
+        product_uuid: UUID,
         product_s3key: str,
         directory: Path,
     ) -> None:
         img_path = directory / "plot.png"
         visualizations = []
         fields = _get_fields_for_l3_plot(product, model_id)
-        l3_product = _full_product_to_l3_product(product)
+        l3_product = product.split("-")[1]
         valid_images = []
         for stat in ("area", "error"):
             dimensions = generate_L3_day_plots(
@@ -495,8 +390,8 @@ class Processor:
         self._delete_obsolete_images(product_uuid, product, valid_images)
 
     def _delete_obsolete_images(
-        self, product_uuid: uuid.UUID, product: str, valid_images: list[str]
-    ):
+        self, product_uuid: UUID, product: str, valid_images: list[str]
+    ) -> None:
         url = f"api/visualizations/{product_uuid}"
         image_metadata = self.md_api.get(url).get("visualizations", [])
         images_on_portal = {image["productVariable"]["id"] for image in image_metadata}
@@ -508,7 +403,7 @@ class Processor:
         self,
         img_path: Path,
         product_s3key: str,
-        product_uuid: uuid.UUID,
+        product_uuid: UUID,
         product: str,
         field: str,
         dimensions: Dimensions,
@@ -524,22 +419,27 @@ class Processor:
         }
 
     def upload_quality_report(
-        self, full_path: Path, uuid: uuid.UUID, site: Site, product: str | None = None
+        self,
+        full_path: Path,
+        uuid: UUID,
+        site: Site | ExtendedSite,
+        product: str | None = None,
     ) -> str:
         try:
-            # is_dev = self.config.get("PID_SERVICE_TEST_ENV", "").lower() == "true"
-            # ignore_tests = ["TestInstrumentPid"] if is_dev else None
-            has_raw = site.raw_time is not None and site.raw_time.size > 0
             site_meta: quality.SiteMeta = {
-                "time": site.raw_time if has_raw else None,
-                "latitude": site.raw_latitude if has_raw else site.latitude,
-                "longitude": site.raw_longitude if has_raw else site.longitude,
+                "time": site.raw_time if isinstance(site, ExtendedSite) else None,
+                "latitude": site.raw_latitude
+                if isinstance(site, ExtendedSite)
+                else site.latitude,
+                "longitude": site.raw_longitude
+                if isinstance(site, ExtendedSite)
+                else site.longitude,
                 "altitude": site.altitude,
             }
             quality_report = quality.run_tests(
                 full_path,
                 site_meta,
-                product=product,  # ignore_tests=ignore_tests
+                product=product,
             )
         except ValueError:
             logging.exception("Failed to run quality control")
@@ -576,19 +476,10 @@ class Processor:
 
 
 def _get_var_id(cloudnet_file_type: str, field: str) -> str:
-    """Return identifier for variable / Cloudnet file combination."""
     return f"{cloudnet_file_type}-{field}"
 
 
 def _get_fields_for_l3_plot(product: str, model: str) -> list:
-    """Return list of variables and maximum altitude for Cloudnet quicklooks.
-
-    Args:
-        product (str): Name of product, e.g., 'iwc'.
-        model (str): Name of the model, e.g., 'ecmwf'.
-    Returns:
-        list: list of wanted variables
-    """
     match product:
         case "l3-iwc":
             return [f"{model}_iwc", f"iwc_{model}"]
@@ -601,7 +492,6 @@ def _get_fields_for_l3_plot(product: str, model: str) -> list:
 
 
 def _dimensions2dict(dimensions: Dimensions) -> dict:
-    """Converts dimensions object to dictionary."""
     return {
         "width": dimensions.width,
         "height": dimensions.height,
@@ -610,8 +500,3 @@ def _dimensions2dict(dimensions: Dimensions) -> dict:
         "marginBottom": dimensions.margin_bottom,
         "marginRight": dimensions.margin_right,
     }
-
-
-def _full_product_to_l3_product(full_product: str):
-    """Returns l3 product name."""
-    return full_product.split("-")[1]

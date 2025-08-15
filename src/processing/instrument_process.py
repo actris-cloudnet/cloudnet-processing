@@ -6,9 +6,8 @@ import logging
 import re
 import shutil
 from collections import defaultdict
-from os import PathLike
 from pathlib import Path
-from typing import Any, Literal
+from typing import Literal
 from uuid import UUID
 
 import doppy
@@ -58,7 +57,7 @@ class ProcessInstrument:
         self.params = params
         self.processor = processor
         self.site_meta = {
-            "name": params.site.name,
+            "name": params.site.human_readable_name,
             "latitude": params.site.latitude,
             "longitude": params.site.longitude,
             "altitude": params.site.altitude,
@@ -104,7 +103,7 @@ class ProcessInstrument:
         return self.processor.download_instrument(
             site_id=self.params.site.id,
             date=self.params.date if date is None else date,
-            instrument_id=self.params.instrument.type,
+            instrument_id=self.params.instrument.instrument_id,
             instrument_pid=self.params.instrument.pid,
             directory=directory,
             include_pattern=include_pattern,
@@ -124,7 +123,7 @@ class ProcessRadar(ProcessInstrument):
         if self.params.site.id == "rv-meteor":
             full_paths, self.uuid.raw = self.download_instrument()
             concat_wrapper.concat_netcdf_files(
-                full_paths, self.params.date.isoformat(), str(self.daily_path)
+                full_paths, self.params.date.isoformat(), self.daily_path
             )
             self.uuid.product = bowtie2nc(
                 str(self.daily_path), *self._args, **self._kwargs
@@ -175,7 +174,7 @@ class ProcessRadar(ProcessInstrument):
     def process_basta(self):
         full_paths, self.uuid.raw = self.download_instrument()
         concat_wrapper.concat_netcdf_files(
-            full_paths, self.params.date.isoformat(), str(self.daily_path)
+            full_paths, self.params.date.isoformat(), self.daily_path
         )
         self.uuid.product = basta2nc(str(self.daily_path), *self._args, **self._kwargs)
 
@@ -203,7 +202,10 @@ class ProcessRadar(ProcessInstrument):
         return out_paths
 
     def _add_calibration(
-        self, key: str, default_value: Any = None, api_key: str | None = None
+        self,
+        key: str,
+        default_value: str | float | None = None,
+        api_key: str | None = None,
     ) -> None:
         calibration = fetch_calibration(self.params.instrument.pid, self.params.date)
         if calibration is not None:
@@ -444,7 +446,7 @@ class ProcessLidar(ProcessInstrument):
     def process_cs135(self):
         full_paths, self.uuid.raw = self.download_instrument()
         full_paths.sort()
-        _concatenate_text_files(full_paths, str(self.daily_path))
+        _concatenate_text_files(full_paths, self.daily_path)
         self._call_ceilo2nc("cs135")
 
     def process_chm15k(self):
@@ -465,11 +467,11 @@ class ProcessLidar(ProcessInstrument):
         _check_chm_version(str(self.daily_path), model)
         self._call_ceilo2nc("chm15k")
 
-    def process_ct25k(self):
+    def process_ct25k(self) -> None:
         full_paths, self.uuid.raw = self.download_instrument()
         full_paths.sort()
         full_paths = _unzip_gz_files(full_paths)
-        _concatenate_text_files(full_paths, str(self.daily_path))
+        _concatenate_text_files(full_paths, self.daily_path)
         self._call_ceilo2nc("ct25k")
 
     def process_halo_doppler_lidar_calibrated(self):
@@ -498,7 +500,7 @@ class ProcessLidar(ProcessInstrument):
     def process_cl31(self):
         full_paths, self.uuid.raw = self.download_instrument()
         full_paths.sort()
-        _concatenate_text_files(full_paths, str(self.daily_path))
+        _concatenate_text_files(full_paths, self.daily_path)
         self._call_ceilo2nc("cl31")
 
     def process_cl51(self):
@@ -510,7 +512,7 @@ class ProcessLidar(ProcessInstrument):
         )
         full_paths, self.uuid.raw = self.download_instrument(time_offset=time_offset)
         full_paths.sort()
-        _concatenate_text_files(full_paths, str(self.daily_path))
+        _concatenate_text_files(full_paths, self.daily_path)
         if time_offset is not None:
             logging.info(
                 "Shifting timestamps to UTC by %d minutes",
@@ -528,14 +530,14 @@ class ProcessLidar(ProcessInstrument):
             valid_full_paths = concat_wrapper.concat_netcdf_files(
                 full_paths,
                 self.params.date.isoformat(),
-                str(self.daily_path),
+                self.daily_path,
                 variables=variables,
             )
         except KeyError:
             valid_full_paths = concat_wrapper.concat_netcdf_files(
                 full_paths,
                 self.params.date.isoformat(),
-                str(self.daily_path),
+                self.daily_path,
                 concat_dimension="profile",
                 variables=variables,
             )
@@ -675,7 +677,7 @@ class ProcessMwr(ProcessInstrument):
                 include_pattern="(ufs_l2a.nc$|clwvi.*.nc$|.lwp.*.nc$)"
             )
             valid_full_paths = concat_wrapper.concat_netcdf_files(
-                full_paths, self.params.date.isoformat(), str(self.daily_path)
+                full_paths, self.params.date.isoformat(), self.daily_path
             )
             data = self._get_payload_for_nc_file_augmenter(str(self.daily_path))
             self.uuid.product = harmonizer.harmonize_hatpro_file(data)
@@ -817,11 +819,13 @@ class ProcessRainRadar(ProcessInstrument):
 
 
 def _get_valid_uuids(
-    uuids: list[UUID], full_paths: list[Path], valid_full_paths: list[str]
-) -> list[UUID]:
+    uuids: list[UUID], full_paths: list[Path], valid_full_paths: list[str] | list[Path]
+) -> list[str]:
     valid_paths = [Path(path) for path in valid_full_paths]
     return [
-        uuid for uuid, full_path in zip(uuids, full_paths) if full_path in valid_paths
+        str(uuid)
+        for uuid, full_path in zip(uuids, full_paths)
+        if full_path in valid_paths
     ]
 
 
@@ -1120,7 +1124,7 @@ def _shift_datetime(date_time: str, offset: datetime.timedelta) -> str:
     return dt.strftime("%Y-%m-%d %H:%M:%S")
 
 
-def _concatenate_text_files(filenames: list, output_filename: str | PathLike) -> None:
+def _concatenate_text_files(filenames: list, output_filename: Path) -> None:
     """Concatenates text files."""
     with open(output_filename, "wb") as target:
         for filename in filenames:

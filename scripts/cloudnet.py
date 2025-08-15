@@ -17,6 +17,7 @@ from typing import TypeVar
 from uuid import UUID
 
 from cloudnet_api_client import APIClient
+from cloudnet_api_client.containers import ExtendedProduct, ExtendedSite, Site
 from processing import utils
 from processing.dvas import Dvas
 from processing.fetch import fetch
@@ -29,9 +30,7 @@ from processing.processor import (
     InstrumentParams,
     ModelParams,
     Processor,
-    Product,
     ProductParams,
-    Site,
 )
 from processing.product import process_me, process_product
 from processing.storage_api import StorageApi
@@ -227,7 +226,7 @@ def _update_product_list(args: Namespace, processor: Processor) -> list[str]:
     products = set(args.products) if args.products else set()
     if args.instruments:
         for instrument in args.instruments:
-            derived_products = list(processor.get_derived_products(instrument))
+            derived_products = list(processor.client.get_derived_products(instrument))
             if len(derived_products) > 0:
                 if args.raw:
                     products.update([derived_products[0]])
@@ -252,28 +251,25 @@ def _update_instrument_list(args: Namespace, processor: Processor) -> list[str]:
 
 def _process_file(
     processor: Processor,
-    product: Product,
-    site: Site,
+    product: ExtendedProduct,
+    site: Site | ExtendedSite,
     date: datetime.date,
     args: Namespace,
-):
+) -> None:
     if product.id == "model":
         if args.models:
             model_ids = set(args.models)
         else:
-            payload = {
-                "site": site.id,
-                "date": date.isoformat(),
-                "allModels": True,
-            }
-            metadata = processor.md_api.get("api/raw-model-files", payload)
-            model_ids = set(meta["model"]["id"] for meta in metadata)
+            metadata = processor.client.raw_model_files(
+                site_id=site.id, date=date, status=["uploaded", "processed"]
+            )
+            model_ids = set(meta.model.id for meta in metadata)
         for model_id in model_ids:
             _print_header(
                 {
                     "Task": args.cmd,
                     "Site": site.id,
-                    "Date": date.isoformat(),
+                    "Date": date,
                     "Product": product.id,
                     "Model": model_id,
                 }
@@ -284,39 +280,45 @@ def _process_file(
                 product=product,
                 model=processor.get_model(model_id),
             )
-            with TemporaryDirectory() as directory:
+            with TemporaryDirectory() as temp_dir:
+                directory = Path(temp_dir)
                 if args.cmd == "plot":
-                    update_plots(processor, model_params, Path(directory))
+                    update_plots(processor, model_params, directory)
                 elif args.cmd == "qc":
-                    update_qc(processor, model_params, Path(directory))
+                    update_qc(processor, model_params, directory)
                 elif args.cmd == "freeze":
-                    freeze(processor, model_params, Path(directory))
+                    freeze(processor, model_params, directory)
                 elif args.cmd == "dvas":
                     raise utils.SkipTaskError("DVAS not supported for model products")
                 else:
-                    process_model(processor, model_params, Path(directory))
+                    process_model(processor, model_params, directory)
     elif product.source_instrument_ids:
         if args.uuids:
             instruments = {processor.get_instrument(uuid) for uuid in args.uuids}
         else:
-            payload = {
-                "site": site.id,
-                "date": date.isoformat(),
-                "instrument": args.instruments or product.source_instrument_ids,
-            }
-            metadata = processor.md_api.get("api/raw-files", payload)
+            raw_metadata = processor.client.raw_files(
+                site_id=site.id,
+                date=date,
+                instrument_id=args.instruments or list(product.source_instrument_ids),
+            )
             # Need to get instrument again because derivedProductIds is missing from raw-files response...
-            if metadata:
+            if raw_metadata:
                 instruments = {
-                    processor.get_instrument(meta["instrument"]["uuid"])
-                    for meta in metadata
+                    processor.get_instrument(meta.instrument.uuid)
+                    for meta in raw_metadata
                 }
             else:
                 # No raw data, but we can still have fetched products
-                metadata = processor.md_api.get("api/files", payload)
+                product_metadata = processor.client.files(
+                    site_id=site.id,
+                    date=date,
+                    instrument_id=args.instruments
+                    or list(product.source_instrument_ids),
+                )
                 instruments = {
-                    processor.get_instrument(meta["instrument"]["uuid"])
-                    for meta in metadata
+                    processor.get_instrument(meta.instrument.uuid)
+                    for meta in product_metadata
+                    if meta.instrument
                 }
 
         for instrument in instruments:
@@ -326,20 +328,21 @@ def _process_file(
                     "Site": site.id,
                     "Date": date.isoformat(),
                     "Product": product.id,
-                    "Instrument": instrument.type,
+                    "Instrument": instrument.instrument_id,
                     "Instrument PID": instrument.pid,
                 }
             )
             instru_params = InstrumentParams(
                 site=site, date=date, product=product, instrument=instrument
             )
-            with TemporaryDirectory() as directory:
+            with TemporaryDirectory() as temp_dir:
+                directory = Path(temp_dir)
                 if args.cmd == "plot":
-                    update_plots(processor, instru_params, Path(directory))
+                    update_plots(processor, instru_params, directory)
                 elif args.cmd == "qc":
-                    update_qc(processor, instru_params, Path(directory))
+                    update_qc(processor, instru_params, directory)
                 elif args.cmd == "freeze":
-                    freeze(processor, instru_params, Path(directory))
+                    freeze(processor, instru_params, directory)
                 elif args.cmd == "hkd":
                     hkd(processor, instru_params)
                 elif args.cmd == "dvas":
@@ -348,29 +351,31 @@ def _process_file(
                     )
                 else:
                     try:
-                        process_instrument(processor, instru_params, Path(directory))
+                        process_instrument(processor, instru_params, directory)
                     except utils.SkipTaskError as err:
                         logging.warning("Skipped task: %s", err)
     elif product.id in ("mwr-single", "mwr-multi", "epsilon-lidar"):
         if args.uuids:
             instruments = {processor.get_instrument(uuid) for uuid in args.uuids}
         elif product.id in ("mwr-single", "mwr-multi"):
-            payload = {
-                "site": site.id,
-                "date": date.isoformat(),
-                "product": "mwr-l1c",
+            product_metadata = processor.client.files(
+                site_id=site.id,
+                date=date,
+                product="mwr-l1c",
+            )
+            instrument_uuids = {
+                meta.instrument.uuid for meta in product_metadata if meta.instrument
             }
-            metadata = processor.md_api.get("api/files", payload)
-            instrument_uuids = {meta["instrument"]["uuid"] for meta in metadata}
             instruments = {processor.get_instrument(uuid) for uuid in instrument_uuids}
         else:
-            payload = {
-                "site": site.id,
-                "date": date.isoformat(),
-                "product": "doppler-lidar",
+            product_metadata = processor.client.files(
+                site_id=site.id,
+                date=date,
+                product="doppler-lidar",
+            )
+            instrument_uuids = {
+                meta.instrument.uuid for meta in product_metadata if meta.instrument
             }
-            metadata = processor.md_api.get("api/files", payload)
-            instrument_uuids = {meta["instrument"]["uuid"] for meta in metadata}
             instruments = {processor.get_instrument(uuid) for uuid in instrument_uuids}
         for instrument in instruments:
             _print_header(
@@ -379,7 +384,7 @@ def _process_file(
                     "Site": site.id,
                     "Date": date.isoformat(),
                     "Product": product.id,
-                    "Instrument": instrument.type,
+                    "Instrument": instrument.instrument_id,
                     "Instrument PID": instrument.pid,
                 }
             )
@@ -389,19 +394,20 @@ def _process_file(
                 product=product,
                 instrument=instrument,
             )
-            with TemporaryDirectory() as directory:
+            with TemporaryDirectory() as temp_dir:
+                directory = Path(temp_dir)
                 if args.cmd == "plot":
-                    update_plots(processor, product_params, Path(directory))
+                    update_plots(processor, product_params, directory)
                 elif args.cmd == "qc":
-                    update_qc(processor, product_params, Path(directory))
+                    update_qc(processor, product_params, directory)
                 elif args.cmd == "freeze":
-                    freeze(processor, product_params, Path(directory))
+                    freeze(processor, product_params, directory)
                 elif args.cmd == "dvas":
                     raise utils.SkipTaskError(
                         "DVAS not supported for instrument products"
                     )
                 else:
-                    process_product(processor, product_params, Path(directory))
+                    process_product(processor, product_params, directory)
     elif product.id in ("l3-cf", "l3-iwc", "l3-lwc"):
         model_id = "ecmwf"  # Hard coded for now. Add support for other models later.
         _print_header(
@@ -419,17 +425,18 @@ def _process_file(
             product=product,
             model=processor.get_model(model_id),
         )
-        with TemporaryDirectory() as directory:
+        with TemporaryDirectory() as temp_dir:
+            directory = Path(temp_dir)
             if args.cmd == "plot":
-                update_plots(processor, params, Path(directory))
+                update_plots(processor, params, directory)
             elif args.cmd == "qc":
-                update_qc(processor, params, Path(directory))
+                update_qc(processor, params, directory)
             elif args.cmd == "freeze":
-                freeze(processor, params, Path(directory))
+                freeze(processor, params, directory)
             elif args.cmd == "dvas":
                 raise utils.SkipTaskError("DVAS not supported for L3 products")
             else:
-                process_me(processor, params, Path(directory))
+                process_me(processor, params, directory)
     else:
         _print_header(
             {
@@ -445,17 +452,18 @@ def _process_file(
             product=product,
             instrument=None,
         )
-        with TemporaryDirectory() as directory:
+        with TemporaryDirectory() as temp_dir:
+            directory = Path(temp_dir)
             if args.cmd == "plot":
-                update_plots(processor, product_params, Path(directory))
+                update_plots(processor, product_params, directory)
             elif args.cmd == "qc":
-                update_qc(processor, product_params, Path(directory))
+                update_qc(processor, product_params, directory)
             elif args.cmd == "freeze":
-                freeze(processor, product_params, Path(directory))
+                freeze(processor, product_params, directory)
             elif args.cmd == "dvas":
                 upload_to_dvas(processor, product_params)
             else:
-                process_product(processor, product_params, Path(directory))
+                process_product(processor, product_params, directory)
 
 
 def _validate_types(types: str) -> list[str]:
@@ -542,7 +550,7 @@ def _parse_date(value: str) -> tuple[datetime.date, datetime.date]:
             raise ValueError(f"Invalid date: {invalid}")
 
 
-def _print_header(data):
+def _print_header(data) -> None:
     parts = [
         f"{BOLD}{key}:{RESET} {GREEN}{value}{RESET}" for key, value in data.items()
     ]
@@ -550,7 +558,7 @@ def _print_header(data):
     print("  ".join(parts))
 
 
-def _print_fetch_header(args: Namespace):
+def _print_fetch_header(args: Namespace) -> None:
     print()
     msg = "Fetching raw data" if args.raw else "Fetching products"
     print(f"{BOLD}{msg}:{RESET}")
