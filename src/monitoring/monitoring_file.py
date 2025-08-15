@@ -90,7 +90,7 @@ class MonitoringFile:
         self, storage_api: StorageApi, md_api: MetadataApi, vis: MonitoringVisualization
     ):
         period_str = _period_for_plotname(self.period)
-        s3key = f"monitoring/{self.instrument.id}-{self.product_id}-{vis.variable_id}-{period_str}.png"
+        s3key = f"monitoring/{self.instrument.id}-{self.instrument.uuid}-{self.site_id}-{self.product_id}-{vis.variable_id}-{period_str}.png"
         storage_api.upload_image(full_path=vis.img_path, s3key=s3key)
         payload = {
             "s3key": s3key,
