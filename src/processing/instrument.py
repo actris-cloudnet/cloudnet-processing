@@ -19,10 +19,10 @@ def process_instrument(processor: Processor, params: InstrumentParams, directory
     uuid = Uuid()
     pid_to_new_file = None
     if existing_product := processor.fetch_product(params):
-        if existing_product["volatile"]:
-            uuid.volatile = existing_product["uuid"]
-            pid_to_new_file = existing_product["pid"]
-        filename = existing_product["filename"]
+        if existing_product.volatile:
+            uuid.volatile = str(existing_product.uuid)
+            pid_to_new_file = existing_product.pid
+        filename = existing_product.filename
         existing_file = processor.storage_api.download_product(
             existing_product, directory
         )
@@ -53,15 +53,15 @@ def process_instrument(processor: Processor, params: InstrumentParams, directory
         if difference == NCDiff.NONE:
             upload = False
             new_file = existing_file
-            uuid.product = existing_product["uuid"]
+            uuid.product = str(existing_product.uuid)
         elif difference == NCDiff.MINOR:
             # Replace existing file
             patch = True
             if not params.product.experimental:
-                processor.pid_utils.add_pid_to_file(new_file, existing_product["pid"])
+                processor.pid_utils.add_pid_to_file(new_file, existing_product.pid)
             with netCDF4.Dataset(new_file, "r+") as nc:
-                nc.file_uuid = existing_product["uuid"]
-            uuid.product = existing_product["uuid"]
+                nc.file_uuid = str(existing_product.uuid)
+            uuid.product = str(existing_product.uuid)
 
     if upload:
         processor.upload_file(params, new_file, filename, volatile, patch)

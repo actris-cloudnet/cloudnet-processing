@@ -1,12 +1,13 @@
 import datetime
 import logging
-import re
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
 import numpy as np
+from cloudnet_api_client import APIClient
+from cloudnet_api_client.containers import ProductMetadata, RawModelMetadata
 from cloudnetpy.exceptions import PlottingError
 from cloudnetpy.model_evaluation.plotting.plotting import generate_L3_day_plots
 from cloudnetpy.plotting import Dimensions, PlotParameters, generate_figure
@@ -91,11 +92,13 @@ class Processor:
         storage_api: StorageApi,
         pid_utils: PidUtils,
         dvas: Dvas,
+        client: APIClient,
     ):
         self.md_api = md_api
         self.storage_api = storage_api
         self.pid_utils = pid_utils
         self.dvas = dvas
+        self.client = client
 
     def get_site(self, site_id: str, date: datetime.date) -> Site:
         site = self.md_api.get(f"api/sites/{site_id}")
@@ -186,50 +189,45 @@ class Processor:
             forecast_end=model["forecastEnd"],
         )
 
-    def download_raw_data(
-        self, upload_metadata: list[dict], directory: Path
-    ) -> tuple[list, list]:
-        return self.storage_api.download_raw_data(upload_metadata, directory)
-
     def get_model_upload(
         self, params: ModelParams, start_date: datetime.date, end_date: datetime.date
-    ) -> list[dict]:
-        payload = {
-            "site": params.site.id,
-            "dateFrom": start_date.isoformat(),
-            "dateTo": end_date.isoformat(),
-            "model": params.model.source_model_id or params.model.id,
-            "status": ["uploaded", "processed"],
-        }
-        rows = self.md_api.get("api/raw-model-files", payload)
-        rows = [row for row in rows if int(row["size"]) > MIN_MODEL_FILESIZE]
-        return rows
+    ) -> list[RawModelMetadata]:
+        rows = self.client.raw_model_metadata(
+            site_id=params.site.id,
+            model_id=params.model.source_model_id or params.model.id,
+            date_from=start_date,
+            date_to=end_date,
+            status=["uploaded", "processed"],
+        )
+        return [row for row in rows if int(row.size) > MIN_MODEL_FILESIZE]
 
-    def get_model_file(self, params: ModelParams) -> dict | None:
-        payload = {
-            "site": params.site.id,
-            "date": params.date.isoformat(),
-            "model": params.model.id,
-        }
-        metadata = self.md_api.get("api/model-files", payload)
+    def get_model_file(self, params: ModelParams) -> ProductMetadata | None:
+        metadata = self.client.metadata(
+            product="model",
+            model_id=params.model.id,
+            site_id=params.site.id,
+            date=params.date,
+        )
         if len(metadata) == 0:
             return None
         if len(metadata) > 1:
             raise RuntimeError(f"Multiple {params.model.id} files found")
         return metadata[0]
 
-    def fetch_product(self, params: ProcessParams) -> dict | None:
-        payload = {
-            "site": params.site.id,
-            "date": params.date.isoformat(),
-            "product": params.product.id,
-            "showLegacy": True,
-        }
+    def fetch_product(self, params: ProcessParams) -> ProductMetadata | None:
         if isinstance(params, InstrumentParams):
-            payload["instrumentPid"] = params.instrument.pid
+            instrument_pid = params.instrument.pid
         elif isinstance(params, ProductParams) and params.instrument is not None:
-            payload["instrumentPid"] = params.instrument.pid
-        metadata = self.md_api.get("api/files", payload)
+            instrument_pid = params.instrument.pid
+        else:
+            instrument_pid = None
+        metadata = self.client.metadata(
+            site_id=params.site.id,
+            product=params.product.id,
+            date=params.date,
+            show_legacy=True,
+            instrument_pid=instrument_pid,
+        )
         if len(metadata) == 0:
             return None
         if len(metadata) > 1:
@@ -269,53 +267,49 @@ class Processor:
                 start_date_ext -= datetime.timedelta(days=1)
             elif time_offset > TIMEDELTA_ZERO:
                 end_date_ext += datetime.timedelta(days=1)
-        payload = self._get_payload(
-            site=site_id,
-            date=(start_date_ext, end_date_ext),
-            instrument=instrument_id,
+        upload_metadata = self.client.raw_metadata(
+            site_id,
+            date_from=start_date_ext,
+            date_to=end_date_ext,
+            instrument_id=instrument_id,
             instrument_pid=instrument_pid,
-            skip_created=True,
             filename_prefix=filename_prefix,
             filename_suffix=filename_suffix,
+            status=["uploaded", "processed"],
         )
-        upload_metadata = self.md_api.get("api/raw-files", payload)
-        if include_pattern is not None:
-            upload_metadata = _include_records_with_pattern_in_filename(
-                upload_metadata, include_pattern
+        if include_pattern:
+            upload_metadata = self.client.filter(
+                upload_metadata, include_pattern=include_pattern
             )
-        if exclude_pattern is not None:
-            upload_metadata = _exclude_records_with_pattern_in_filename(
-                upload_metadata, exclude_pattern
+        if exclude_pattern:
+            upload_metadata = self.client.filter(
+                upload_metadata, exclude_pattern=exclude_pattern
             )
-        if include_tag_subset is not None:
-            upload_metadata = [
-                record
-                for record in upload_metadata
-                if include_tag_subset.issubset(set(record["tags"]))
-            ]
-        if exclude_tag_subset is not None:
-            upload_metadata = [
-                record
-                for record in upload_metadata
-                if not exclude_tag_subset.issubset(set(record["tags"]))
-            ]
+        if include_tag_subset:
+            upload_metadata = self.client.filter(
+                upload_metadata, include_tag_subset=include_tag_subset
+            )
+        if exclude_tag_subset:
+            upload_metadata = self.client.filter(
+                upload_metadata, exclude_tag_subset=exclude_tag_subset
+            )
+
         if not upload_metadata:
             if allow_empty:
                 return [], []
             else:
                 raise utils.RawDataMissingError
         if largest_only:
-            upload_metadata = [max(upload_metadata, key=lambda item: int(item["size"]))]
-        full_paths, uuids = self.storage_api.download_raw_data(
-            upload_metadata, directory
-        )
+            upload_metadata = [max(upload_metadata, key=lambda item: int(item.size))]
+
+        full_paths = self.client.download(upload_metadata, directory, progress=False)
+        uuids = [f.uuid for f in upload_metadata]
+
         if time_offset is not None:
             uuids = [
-                meta["uuid"]
+                meta.uuid
                 for meta in upload_metadata
-                if start_date
-                <= datetime.date.fromisoformat(meta["measurementDate"])
-                <= end_date
+                if start_date <= meta.measurement_date <= end_date
             ]
         if largest_only:
             return full_paths[0], uuids
@@ -618,24 +612,6 @@ def _dimensions2dict(dimensions: Dimensions) -> dict:
         "marginBottom": dimensions.margin_bottom,
         "marginRight": dimensions.margin_right,
     }
-
-
-def _include_records_with_pattern_in_filename(metadata: list, pattern: str) -> list:
-    """Includes only records with certain pattern."""
-    return [
-        row
-        for row in metadata
-        if re.search(pattern, row["filename"], flags=re.IGNORECASE)
-    ]
-
-
-def _exclude_records_with_pattern_in_filename(metadata: list, pattern: str) -> list:
-    """Excludes records with certain pattern."""
-    return [
-        row
-        for row in metadata
-        if not re.search(pattern, row["filename"], flags=re.IGNORECASE)
-    ]
 
 
 def _full_product_to_l3_product(full_product: str):
