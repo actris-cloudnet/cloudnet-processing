@@ -209,7 +209,7 @@ def process_main(args):
         for site_id in args.sites:
             site = processor.get_site(site_id, date)
             for product_id in args.products:
-                product = processor.get_product(product_id)
+                product = client.product(product_id)
                 try:
                     if args.cmd == "fetch":
                         fetch(product, site, date, args)
@@ -237,7 +237,7 @@ def _update_product_list(args: Namespace, processor: Processor) -> list[str]:
                     products.update(derived_products)
     if args.uuids:
         for uuid in args.uuids:
-            derived_products = processor.get_instrument(uuid).derived_product_ids
+            derived_products = processor.client.instrument(uuid).derived_product_ids
             if len(derived_products) > 0:
                 if args.raw:
                     products.update([derived_products][0])
@@ -248,7 +248,9 @@ def _update_product_list(args: Namespace, processor: Processor) -> list[str]:
 
 def _update_instrument_list(args: Namespace, processor: Processor) -> list[str]:
     return [
-        i for p in args.products for i in processor.get_product(p).source_instrument_ids
+        i
+        for p in args.products
+        for i in processor.client.product(p).source_instrument_ids
     ]
 
 
@@ -281,7 +283,7 @@ def _process_file(
                 site=site,
                 date=date,
                 product=product,
-                model=processor.get_model(model_id),
+                model=processor.client.model(model_id),
             )
             with TemporaryDirectory() as temp_dir:
                 directory = Path(temp_dir)
@@ -297,7 +299,7 @@ def _process_file(
                     process_model(processor, model_params, directory)
     elif product.source_instrument_ids:
         if args.uuids:
-            instruments = {processor.get_instrument(uuid) for uuid in args.uuids}
+            instruments = {processor.client.instrument(uuid) for uuid in args.uuids}
         else:
             raw_metadata = processor.client.raw_files(
                 site_id=site.id,
@@ -307,7 +309,7 @@ def _process_file(
             # Need to get instrument again because derivedProductIds is missing from raw-files response...
             if raw_metadata:
                 instruments = {
-                    processor.get_instrument(meta.instrument.uuid)
+                    processor.client.instrument(meta.instrument.uuid)
                     for meta in raw_metadata
                 }
             else:
@@ -319,7 +321,7 @@ def _process_file(
                     or list(product.source_instrument_ids),
                 )
                 instruments = {
-                    processor.get_instrument(meta.instrument.uuid)
+                    processor.client.instrument(meta.instrument.uuid)
                     for meta in product_metadata
                     if meta.instrument
                 }
@@ -359,7 +361,7 @@ def _process_file(
                         logging.warning("Skipped task: %s", err)
     elif product.id in ("mwr-single", "mwr-multi", "epsilon-lidar"):
         if args.uuids:
-            instruments = {processor.get_instrument(uuid) for uuid in args.uuids}
+            instruments = {processor.client.instrument(uuid) for uuid in args.uuids}
         elif product.id in ("mwr-single", "mwr-multi"):
             product_metadata = processor.client.files(
                 site_id=site.id,
@@ -369,7 +371,9 @@ def _process_file(
             instrument_uuids = {
                 meta.instrument.uuid for meta in product_metadata if meta.instrument
             }
-            instruments = {processor.get_instrument(uuid) for uuid in instrument_uuids}
+            instruments = {
+                processor.client.instrument(uuid) for uuid in instrument_uuids
+            }
         else:
             product_metadata = processor.client.files(
                 site_id=site.id,
@@ -379,7 +383,9 @@ def _process_file(
             instrument_uuids = {
                 meta.instrument.uuid for meta in product_metadata if meta.instrument
             }
-            instruments = {processor.get_instrument(uuid) for uuid in instrument_uuids}
+            instruments = {
+                processor.client.instrument(uuid) for uuid in instrument_uuids
+            }
         for instrument in instruments:
             _print_header(
                 {
@@ -426,7 +432,7 @@ def _process_file(
             site=site,
             date=date,
             product=product,
-            model=processor.get_model(model_id),
+            model=processor.client.model(model_id),
         )
         with TemporaryDirectory() as temp_dir:
             directory = Path(temp_dir)

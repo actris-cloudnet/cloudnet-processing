@@ -88,7 +88,7 @@ class Worker:
         try:
             date = datetime.date.fromisoformat(task["measurementDate"])
             site = self.processor.get_site(task["siteId"], date)
-            product = self.processor.get_product(task["productId"])
+            product = self.client.product(task["productId"])
             params: ProcessParams
             with TemporaryDirectory() as temp_dir:
                 directory = Path(temp_dir)
@@ -97,7 +97,7 @@ class Worker:
                         site=site,
                         date=date,
                         product=product,
-                        model=self.processor.get_model(task["modelId"]),
+                        model=self.client.model(task["modelId"]),
                     )
                     if task["type"] == "plot":
                         update_plots(self.processor, params, directory)
@@ -124,7 +124,7 @@ class Worker:
                         site=site,
                         date=date,
                         product=product,
-                        model=self.processor.get_model("ecmwf"),  # hard coded for now
+                        model=self.client.model("ecmwf"),  # hard coded for now
                     )
                     if task["type"] == "plot":
                         update_plots(self.processor, params, directory)
@@ -149,9 +149,7 @@ class Worker:
                         site=site,
                         date=date,
                         product=product,
-                        instrument=self.processor.get_instrument(
-                            task["instrumentInfoUuid"]
-                        ),
+                        instrument=self.client.instrument(task["instrumentInfoUuid"]),
                     )
                     if task["type"] == "plot":
                         update_plots(self.processor, params, directory)
@@ -176,9 +174,7 @@ class Worker:
                         site=site,
                         date=date,
                         product=product,
-                        instrument=self.processor.get_instrument(
-                            task["instrumentInfoUuid"]
-                        )
+                        instrument=self.client.instrument(task["instrumentInfoUuid"])
                         if task["instrumentInfoUuid"]
                         else None,
                     )
@@ -238,7 +234,7 @@ class Worker:
             self.publish_followup_task(product_id, params)
 
     def publish_followup_task(self, product_id: str, params: ProcessParams):
-        product = self.processor.get_product(product_id)
+        product = self.client.product(product_id)
         if product.experimental and product.id not in (
             "cpr-simulation",
             "epsilon-lidar",

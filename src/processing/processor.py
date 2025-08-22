@@ -97,15 +97,6 @@ class Processor:
         site_dict["raw_longitude"] = [t.longitude for t in locations]
         return ExtendedSite(**site_dict)
 
-    def get_product(self, product_id: str) -> ExtendedProduct:
-        return self.client.product(product_id)
-
-    def get_instrument(self, uuid: str | UUID) -> ExtendedInstrument:
-        return self.client.instrument(uuid)
-
-    def get_model(self, model_id: str) -> Model:
-        return self.client.model(model_id)
-
     def get_model_upload(
         self, params: ModelParams, start_date: datetime.date, end_date: datetime.date
     ) -> list[RawModelMetadata]:
