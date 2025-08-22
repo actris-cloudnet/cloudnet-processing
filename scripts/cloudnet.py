@@ -190,7 +190,7 @@ def process_main(args: Namespace, config: Config, session: Session, client: APIC
     md_api = MetadataApi(config, session)
     storage_api = StorageApi(config, session)
     pid_utils = PidUtils(config, session)
-    dvas = Dvas(config, md_api)
+    dvas = Dvas(config, md_api, client)
     processor = Processor(md_api, storage_api, pid_utils, dvas, client)
 
     if args.cmd == "fetch":

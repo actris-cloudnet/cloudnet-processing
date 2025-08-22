@@ -64,11 +64,11 @@ class Worker:
         self.config = config
         self.dataportal_url = config.dataportal_url
         self.session = utils.make_session()
+        self.client = APIClient(f"{config.dataportal_url}/api/", self.session)
         self.md_api = MetadataApi(self.config, self.session)
         self.storage_api = StorageApi(self.config, self.session)
         self.pid_utils = PidUtils(self.config, self.session)
-        self.dvas = Dvas(self.config, self.md_api)
-        self.client = APIClient(f"{config.dataportal_url}/api/", self.session)
+        self.dvas = Dvas(self.config, self.md_api, self.client)
         self.processor = Processor(
             self.md_api, self.storage_api, self.pid_utils, self.dvas, self.client
         )

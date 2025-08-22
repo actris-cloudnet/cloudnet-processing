@@ -2,6 +2,7 @@ import base64
 import logging
 from datetime import date, datetime, timezone
 from typing import Literal
+from uuid import UUID
 
 import requests
 from cloudnet_api_client import APIClient
@@ -19,11 +20,11 @@ class DvasError(Exception):
 class Dvas:
     """Class for managing Cloudnet file metadata operations in the DVAS API."""
 
-    def __init__(self, config: Config, md_api: MetadataApi):
+    def __init__(self, config: Config, md_api: MetadataApi, client: APIClient):
         self.config = config
         self.md_api = md_api
         self.session = self._init_session()
-        self.api_client = APIClient(session=self.session)
+        self.client = client
 
     def upload(self, file: ProductMetadata):
         """Upload Cloudnet file metadata to DVAS API and update Cloudnet data portal"""
@@ -42,7 +43,7 @@ class Dvas:
             logging.error("Skipping - not DVAS site")
             return
         try:
-            dvas_metadata = DvasMetadata(file, self.md_api)
+            dvas_metadata = DvasMetadata(file, self.md_api, self.client)
             dvas_json = dvas_metadata.create_dvas_json()
             if len(dvas_json["md_content_information"]["attribute_descriptions"]) == 0:
                 logging.error("Skipping - no ACTRIS variables")
@@ -58,7 +59,7 @@ class Dvas:
     def delete(self, file: VersionMetadata):
         """Delete Cloudnet file metadata from DVAS API"""
         logging.warning(
-            f"Deleting Cloudnet file {str(file.uuid)} with dvasId {file.dvas_id} from DVAS"
+            f"Deleting Cloudnet file {file.uuid} with dvasId {file.dvas_id} from DVAS"
         )
         url = f"{self.config.dvas_portal_url}/metadata/delete/pid/{file.pid}"
         self._delete(url)
@@ -81,7 +82,7 @@ class Dvas:
 
     def _delete_old_versions(self, file: ProductMetadata):
         """Delete all versions of the given file from DVAS API. To be used before posting new version."""
-        versions = self.api_client.versions(file.uuid)
+        versions = self.client.versions(file.uuid)
         for version in versions:
             if version.dvas_id is None:
                 continue
@@ -116,9 +117,10 @@ class Dvas:
 class DvasMetadata:
     """Create metadata for DVAS API from Cloudnet file metadata"""
 
-    def __init__(self, file: ProductMetadata, md_api: MetadataApi):
+    def __init__(self, file: ProductMetadata, md_api: MetadataApi, client: APIClient):
         self.file = file
         self.md_api = md_api
+        self.client = client
         self._product = file.product
         self._site = file.site
 
@@ -223,9 +225,7 @@ class DvasMetadata:
                 "product_type": "observation",
                 "matrix": "cloud phase",
                 "sub_matrix": None,
-                "instrument_type": list(
-                    self._find_instrument_types(str(self.file.uuid))
-                ),
+                "instrument_type": list(self._find_instrument_types(self.file.uuid)),
                 "program_affiliation": self._parse_affiliation(),
                 "variable_statistical_property": None,
                 "legacy_data": self.file.legacy,
@@ -254,7 +254,7 @@ class DvasMetadata:
             affiliation.append("ACTRIS")
         return affiliation
 
-    def _find_instrument_types(self, uuid: str) -> set[str]:
+    def _find_instrument_types(self, uuid: UUID) -> set[str]:
         """Recursively find instrument types from source files.
 
         Links:
@@ -262,11 +262,11 @@ class DvasMetadata:
             https://prod-actris-md.nilu.no/vocabulary/instrumenttype
         """
         instruments = set()
-        json_data = utils.get_from_data_portal_api(f"api/files/{uuid}")
-        assert isinstance(json_data, dict)
-        if "instrument" in json_data and json_data["instrument"] is not None:
-            instruments.add(json_data["instrument"]["type"])
-        source_ids = json_data.get("sourceFileIds", [])
+        data = self.client.file(uuid)
+        if data.instrument:
+            instruments.add(data.instrument.type)
+
+        source_ids = data.source_file_ids
         if source_ids:
             for source_uuid in source_ids:
                 instruments.update(self._find_instrument_types(source_uuid))
