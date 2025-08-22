@@ -227,9 +227,7 @@ def _update_product_list(args: Namespace, processor: Processor) -> list[str]:
     products = set(args.products) if args.products else set()
     if args.instruments:
         for instrument in args.instruments:
-            derived_products = processor.client.get_instrument_derived_products(
-                instrument
-            )
+            derived_products = processor.client.instrument_derived_products(instrument)
             if derived_products:
                 if args.raw:
                     products.add(list(derived_products)[0])
