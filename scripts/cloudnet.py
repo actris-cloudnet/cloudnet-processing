@@ -25,6 +25,7 @@ from cloudnet_api_client.containers import (
     Site,
 )
 from processing import utils
+from processing.config import Config
 from processing.dvas import Dvas
 from processing.fetch import fetch
 from processing.instrument import process_instrument
@@ -41,6 +42,7 @@ from processing.processor import (
 )
 from processing.product import process_me, process_product
 from processing.storage_api import StorageApi
+from requests import Session
 
 logging.basicConfig(level=logging.INFO)
 
@@ -69,17 +71,20 @@ else:
 
 
 def main():
-    args = _parse_args()
+    config = utils.read_main_conf()
+    session = utils.make_session()
+    client = APIClient(f"{config.dataportal_url}/api/", session)
+    args = _parse_args(client)
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
     handler = logging.StreamHandler()
     formatter = logging.Formatter("%(levelname)s: %(message)s")
     handler.setFormatter(formatter)
     logger.handlers = [handler]
-    process_main(args)
+    process_main(args, config, session, client)
 
 
-def _parse_args():
+def _parse_args(client: APIClient) -> Namespace:
     parser = argparse.ArgumentParser(
         description="Cloudnet processing main wrapper.",
         epilog="Enjoy the program! :)",
@@ -90,26 +95,26 @@ def _parse_args():
         "-s",
         "--sites",
         help="Sites to process data from, e.g. hyytiala.",
-        type=_validate_sites,
+        type=lambda sites: _validate_sites(sites, client),
         required=True,
     )
     group.add_argument(
         "-p",
         "--products",
         help="Products to be processed, e.g., radar,lidar,mwr.",
-        type=_validate_products,
+        type=lambda products: _validate_products(products, client),
     )
     parser.add_argument(
         "-i",
         "--instruments",
         help="Instrument types to be processed, e.g., mira-35,chm15k,hatpro.",
-        type=_validate_types,
+        type=lambda instruments: _validate_types(instruments, client),
     )
     parser.add_argument(
         "-m",
         "--models",
         help="Models to be processed.",
-        type=_validate_models,
+        type=lambda models: _validate_models(models, client),
     )
     parser.add_argument(
         "-u",
@@ -181,14 +186,11 @@ def _parse_args():
     return args
 
 
-def process_main(args):
-    config = utils.read_main_conf()
-    session = utils.make_session()
+def process_main(args: Namespace, config: Config, session: Session, client: APIClient):
     md_api = MetadataApi(config, session)
     storage_api = StorageApi(config, session)
     pid_utils = PidUtils(config, session)
     dvas = Dvas(config, md_api)
-    client = APIClient(f"{config.dataportal_url}/api/", session)
     processor = Processor(md_api, storage_api, pid_utils, dvas, client)
 
     if args.cmd == "fetch":
@@ -205,7 +207,7 @@ def process_main(args):
             args.instruments = _update_instrument_list(args, processor)
 
         if "model" in args.products and not args.models:
-            args.models = _get_model_types()
+            args.models = {m.id for m in client.models()}
 
         if not args.products:
             args.products = ["model"]  # just to make loop work (fetch all)
@@ -423,39 +425,39 @@ def _process_file(
                 process_product(processor, product_params, directory)
 
 
-def _validate_types(types: str) -> list[str]:
+def _validate_types(types: str, client: APIClient) -> list[str]:
     input_types = types.split(",")
-    valid_types = set(_get_instrument_types())
+    valid_types = client.instrument_ids()
     if invalid_types := set(input_types) - valid_types:
         raise ArgumentTypeError("Invalid instrument types: " + ", ".join(invalid_types))
     return input_types
 
 
-def _validate_sites(sites: str) -> list[str]:
+def _validate_sites(sites: str, client: APIClient) -> list[str]:
     input_sites = sites.split(",")
-    valid_sites = set(_get_all_sites())
+    valid_sites = {s.id for s in client.sites()}
     if invalid_sites := set(input_sites) - valid_sites:
         raise ArgumentTypeError("Invalid sites: " + ", ".join(invalid_sites))
     return input_sites
 
 
-def _validate_models(models: str) -> list[str]:
+def _validate_models(models: str, client: APIClient) -> list[str]:
     input_models = models.split(",")
-    valid_models = set(_get_model_types())
+    valid_models = {m.id for m in client.models()}
     if invalid_models := set(input_models) - valid_models:
         raise ArgumentTypeError("Invalid models: " + ", ".join(invalid_models))
     return input_models
 
 
-def _validate_products(products: str) -> list[str]:
+def _validate_products(products: str, client: APIClient) -> list[str]:
     product_list = products.split(",")
-    valid_products = utils.get_product_types()
+    valid_products = {p.id for p in client.products()}
     accepted_products = []
     rejected_products = []
     for prod in product_list:
         match prod:
             case "instrument" | "geophysical" | "evaluation":
-                product_types = utils.get_product_types(prod)
+                product_types = [p.id for p in client.products(type=prod)]
                 accepted_products.extend(product_types)
             case "voodoo":
                 product_types = ["categorize-voodoo", "classification-voodoo"]
@@ -533,23 +535,6 @@ def _print_fetch_header(args: Namespace) -> None:
     print(f"{BOLD}{msg}:{RESET}")
     if not args.raw:
         print()
-
-
-def _get_all_sites() -> list:
-    """Returns all site identifiers."""
-    sites = utils.get_from_data_portal_api("api/sites")
-    return [site["id"] for site in sites]
-
-
-def _get_model_types() -> list:
-    """Returns list of model types."""
-    models = utils.get_from_data_portal_api("api/models")
-    return [model["id"] for model in models]
-
-
-def _get_instrument_types() -> list:
-    instruments = utils.get_from_data_portal_api("api/instruments")
-    return list(set([i["id"] for i in instruments]))
 
 
 if __name__ == "__main__":

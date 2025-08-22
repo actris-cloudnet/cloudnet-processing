@@ -177,14 +177,6 @@ def _get_datetime(nc: netCDF4.Dataset, ind: int) -> datetime.datetime:
     return base + datetime.timedelta(hours=fraction_hour)
 
 
-def get_product_types(product_type: str | None = None) -> list[str]:
-    """Returns Cloudnet product types."""
-    products = get_from_data_portal_api("api/products", {"developer": True})
-    if product_type is not None:
-        products = [product for product in products if product_type in product["type"]]
-    return [product["id"] for product in products]
-
-
 def _get_last_proper_model_data_ind(nc: netCDF4.Dataset) -> int:
     data = nc.variables["temperature"][:]
     unmasked_rows = ~np.all(ma.getmaskarray(data), axis=1)
