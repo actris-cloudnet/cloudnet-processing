@@ -11,6 +11,7 @@ import sys
 import warnings
 from argparse import ArgumentTypeError, Namespace
 from collections.abc import Callable
+from dataclasses import asdict
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import TypeVar
@@ -273,21 +274,13 @@ def _process_file(
             )
             model_ids = {meta.model.id for meta in metadata}
         for model_id in model_ids:
-            _print_header(
-                {
-                    "Task": args.cmd,
-                    "Site": site.id,
-                    "Date": date,
-                    "Product": product.id,
-                    "Model": model_id,
-                }
-            )
             model_params = ModelParams(
                 site=site,
                 date=date,
                 product=product,
                 model=processor.client.model(model_id),
             )
+            _print_header(model_params, args)
             with TemporaryDirectory() as temp_dir:
                 directory = Path(temp_dir)
                 if args.cmd == "plot":
@@ -324,19 +317,10 @@ def _process_file(
                 if meta.instrument
             }
         for instrument in instruments:
-            _print_header(
-                {
-                    "Task": args.cmd,
-                    "Site": site.id,
-                    "Date": date.isoformat(),
-                    "Product": product.id,
-                    "Instrument": instrument.instrument_id,
-                    "Instrument PID": instrument.pid,
-                }
-            )
             instru_params = InstrumentParams(
                 site=site, date=date, product=product, instrument=instrument
             )
+            _print_header(instru_params, args)
             with TemporaryDirectory() as temp_dir:
                 directory = Path(temp_dir)
                 if args.cmd == "plot":
@@ -376,22 +360,13 @@ def _process_file(
                 if meta.instrument
             }
         for instrument in instruments:
-            _print_header(
-                {
-                    "Task": args.cmd,
-                    "Site": site.id,
-                    "Date": date.isoformat(),
-                    "Product": product.id,
-                    "Instrument": instrument.instrument_id,
-                    "Instrument PID": instrument.pid,
-                }
-            )
             product_params = ProductParams(
                 site=site,
                 date=date,
                 product=product,
                 instrument=instrument,
             )
+            _print_header(product_params, args)
             with TemporaryDirectory() as temp_dir:
                 directory = Path(temp_dir)
                 if args.cmd == "plot":
@@ -407,22 +382,13 @@ def _process_file(
                 else:
                     process_product(processor, product_params, directory)
     elif product.id in ("l3-cf", "l3-iwc", "l3-lwc"):
-        model_id = "ecmwf"  # Hard coded for now. Add support for other models later.
-        _print_header(
-            {
-                "Task": args.cmd,
-                "Site": site.id,
-                "Date": date.isoformat(),
-                "Product": product.id,
-                "Model": model_id,
-            }
-        )
         params = ModelParams(
             site=site,
             date=date,
             product=product,
-            model=processor.client.model(model_id),
+            model=processor.client.model("ecmwf"),  # Hard coded for now.
         )
+        _print_header(params, args)
         with TemporaryDirectory() as temp_dir:
             directory = Path(temp_dir)
             if args.cmd == "plot":
@@ -436,20 +402,13 @@ def _process_file(
             else:
                 process_me(processor, params, directory)
     else:
-        _print_header(
-            {
-                "Task": args.cmd,
-                "Site": site.id,
-                "Date": date.isoformat(),
-                "Product": product.id,
-            }
-        )
         product_params = ProductParams(
             site=site,
             date=date,
             product=product,
             instrument=None,
         )
+        _print_header(product_params, args)
         with TemporaryDirectory() as temp_dir:
             directory = Path(temp_dir)
             if args.cmd == "plot":
@@ -548,10 +507,22 @@ def _parse_date(value: str) -> tuple[datetime.date, datetime.date]:
             raise ValueError(f"Invalid date: {invalid}")
 
 
-def _print_header(data) -> None:
-    parts = [
-        f"{BOLD}{key}:{RESET} {GREEN}{value}{RESET}" for key, value in data.items()
-    ]
+def _print_header(
+    params: ModelParams | InstrumentParams | ProductParams, args: Namespace
+) -> None:
+    the_dict = asdict(params)
+    parts = [f"{BOLD}Task:{RESET} {GREEN}{args.cmd}{RESET}"]
+    parts.extend(
+        [
+            f"{BOLD}{key.capitalize()}:{RESET} {GREEN}{value.get('id') or value.get('instrument_id') or value if isinstance(value, dict) else value}{RESET}"
+            for key, value in the_dict.items()
+            if value is not None
+        ]
+    )
+    if hasattr(params, "instrument") and params.instrument:
+        parts.append(
+            f"{BOLD}Instrument PID:{RESET} {GREEN}{params.instrument.pid}{RESET}"
+        )
     print()
     print("  ".join(parts))
 
