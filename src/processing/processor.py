@@ -389,7 +389,7 @@ class Processor:
         self.storage_api.upload_image(full_path=img_path, s3key=img_s3key)
         return {
             "s3key": img_s3key,
-            "variable_id": _get_var_id(product, field),
+            "variable_id": f"{product}-{field}",
             "dimensions": _dimensions2dict(dimensions)
             if dimensions is not None
             else None,
@@ -450,10 +450,6 @@ class Processor:
             payload = {"uuid": str(uuid), "coverage": quality_report.data_coverage}
             self.md_api.post("files", payload)
         return result
-
-
-def _get_var_id(cloudnet_file_type: str, field: str) -> str:
-    return f"{cloudnet_file_type}-{field}"
 
 
 def _get_fields_for_l3_plot(product: str, model: str) -> list:
