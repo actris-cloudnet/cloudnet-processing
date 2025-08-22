@@ -123,9 +123,7 @@ class Processor:
         return metadata[0] if metadata else None
 
     def fetch_product(self, params: ProcessParams) -> ProductMetadata | None:
-        if isinstance(params, InstrumentParams):
-            instrument_pid = params.instrument.pid
-        elif isinstance(params, ProductParams) and params.instrument is not None:
+        if isinstance(params, (InstrumentParams, ProductParams)) and params.instrument:
             instrument_pid = params.instrument.pid
         else:
             instrument_pid = None
@@ -239,9 +237,9 @@ class Processor:
         )
         if isinstance(params, ModelParams) and "evaluation" not in params.product.type:
             payload["model"] = params.model.id
-        elif isinstance(params, InstrumentParams):
-            payload["instrument"] = params.instrument.instrument_id
-        elif isinstance(params, ProductParams) and params.instrument:
+        elif (
+            isinstance(params, (InstrumentParams, ProductParams)) and params.instrument
+        ):
             payload["instrument"] = params.instrument.instrument_id
         payload["patch"] = patch
         self.md_api.put("files", s3key, payload)
