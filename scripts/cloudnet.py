@@ -17,7 +17,12 @@ from typing import TypeVar
 from uuid import UUID
 
 from cloudnet_api_client import APIClient
-from cloudnet_api_client.containers import ExtendedProduct, Site
+from cloudnet_api_client.containers import (
+    ExtendedProduct,
+    ProductMetadata,
+    RawMetadata,
+    Site,
+)
 from processing import utils
 from processing.dvas import Dvas
 from processing.fetch import fetch
@@ -299,31 +304,25 @@ def _process_file(
         if args.uuids:
             instruments = {processor.client.instrument(uuid) for uuid in args.uuids}
         else:
-            raw_metadata = processor.client.raw_files(
+            file_meta: list[ProductMetadata] | list[RawMetadata]
+            file_meta = processor.client.raw_files(
                 site_id=site.id,
                 date=date,
                 instrument_id=args.instruments or list(product.source_instrument_ids),
             )
-            # Need to get instrument again because derivedProductIds is missing from raw-files response...
-            if raw_metadata:
-                instruments = {
-                    processor.client.instrument(meta.instrument.uuid)
-                    for meta in raw_metadata
-                }
-            else:
+            if not file_meta:
                 # No raw data, but we can still have fetched products
-                product_metadata = processor.client.files(
+                file_meta = processor.client.files(
                     site_id=site.id,
                     date=date,
                     instrument_id=args.instruments
                     or list(product.source_instrument_ids),
                 )
-                instruments = {
-                    processor.client.instrument(meta.instrument.uuid)
-                    for meta in product_metadata
-                    if meta.instrument
-                }
-
+            instruments = {
+                processor.client.instrument(meta.instrument.uuid)
+                for meta in file_meta
+                if meta.instrument
+            }
         for instrument in instruments:
             _print_header(
                 {
