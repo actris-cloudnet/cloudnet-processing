@@ -111,7 +111,6 @@ class Processor:
 
     def get_model_file(self, params: ModelParams) -> ProductMetadata | None:
         metadata = self.client.files(
-            product="model",
             model_id=params.model.id,
             site_id=params.site.id,
             date=params.date,
@@ -120,7 +119,7 @@ class Processor:
             return None
         if len(metadata) > 1:
             raise RuntimeError(f"Multiple {params.model.id} files found")
-        return metadata[0]
+        return metadata[0] if metadata else None
 
     def fetch_product(self, params: ProcessParams) -> ProductMetadata | None:
         if isinstance(params, InstrumentParams):
@@ -221,42 +220,6 @@ class Processor:
                 if start_date <= meta.measurement_date <= end_date
             ]
         return full_paths, uuids
-
-    def _get_payload(
-        self,
-        site: str | None = None,
-        instrument: str | None = None,
-        product: str | None = None,
-        model: str | None = None,
-        skip_created: bool = False,
-        date: datetime.date | tuple[datetime.date, datetime.date] | None = None,
-        instrument_pid: str | None = None,
-        filename_prefix: str | None = None,
-        filename_suffix: str | None = None,
-    ) -> dict:
-        payload: dict = {"developer": True}
-        if site is not None:
-            payload["site"] = site
-        if isinstance(date, datetime.date):
-            payload["date"] = date.isoformat()
-        elif isinstance(date, tuple):
-            payload["dateFrom"] = date[0].isoformat()
-            payload["dateTo"] = date[1].isoformat()
-        if instrument is not None:
-            payload["instrument"] = instrument
-        if instrument_pid is not None:
-            payload["instrumentPid"] = instrument_pid
-        if product is not None:
-            payload["product"] = product
-        if model is not None:
-            payload["model"] = model
-        if skip_created is True:
-            payload["status[]"] = ["uploaded", "processed"]
-        if filename_prefix is not None:
-            payload["filenamePrefix"] = filename_prefix
-        if filename_suffix is not None:
-            payload["filenameSuffix"] = filename_suffix
-        return payload
 
     def upload_file(
         self,

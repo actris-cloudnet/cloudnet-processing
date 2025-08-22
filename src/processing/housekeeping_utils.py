@@ -1,6 +1,7 @@
 import logging
 
 import housekeeping
+from cloudnet_api_client.containers import RawMetadata
 
 from processing import utils
 from processing.processor import InstrumentParams, Processor
@@ -24,35 +25,35 @@ def process_housekeeping(processor: Processor, params: InstrumentParams) -> None
 
 def _get_housekeeping_records(
     processor: Processor, params: InstrumentParams
-) -> list[dict]:
+) -> list[RawMetadata]:
     if params.instrument.instrument_id == "halo-doppler-lidar":
         first_day_of_month = params.date.replace(day=1)
-        payload = processor._get_payload(
-            site=params.site.id,
-            date=(first_day_of_month, params.date),
+        records = processor.client.raw_files(
+            site_id=params.site.id,
+            date_from=first_day_of_month,
+            date_to=params.date,
             instrument_pid=params.instrument.pid,
             filename_prefix="system_parameters",
         )
-        records = processor.md_api.get("api/raw-files", payload)
         return _select_halo_doppler_lidar_hkd_records(records)
-
-    payload = processor._get_payload(
-        site=params.site.id, date=params.date, instrument_pid=params.instrument.pid
+    return processor.client.raw_files(
+        site_id=params.site.id, date=params.date, instrument_pid=params.instrument.pid
     )
-    return processor.md_api.get("api/raw-files", payload)
 
 
-def _select_halo_doppler_lidar_hkd_records(records: list[dict]) -> list[dict]:
+def _select_halo_doppler_lidar_hkd_records(
+    records: list[RawMetadata]
+) -> list[RawMetadata]:
     if not records:
         return []
     return [
         max(
             records,
             key=lambda x: (
-                x.get("measurementDate"),
-                x.get("createdAt"),
-                x.get("updatedAt"),
-                x.get("size"),
+                x.measurement_date,
+                x.created_at,
+                x.updated_at,
+                x.size,
             ),
         )
     ]

@@ -7,6 +7,7 @@ import os
 import shutil
 from pathlib import Path
 from typing import Literal
+from uuid import UUID
 
 import netCDF4
 import numpy as np
@@ -336,7 +337,7 @@ class RawApi:
         self.base_url = cfg.dataportal_url
         self.session = session
 
-    def get_raw_file(self, uuid: str, fname: str) -> bytes:
+    def get_raw_file(self, uuid: UUID, fname: str) -> bytes:
         url = f"{self.base_url}/api/download/raw/{uuid}/{fname}"
         return self.session.get(url).content
 

@@ -10,6 +10,7 @@ from typing import Callable, Iterable
 import numpy as np
 import numpy.typing as npt
 import toml
+from cloudnet_api_client.containers import RawMetadata
 from influxdb_client import InfluxDBClient, Point, WritePrecision
 from influxdb_client.client.write_api import SYNCHRONOUS
 from netCDF4 import Dataset
@@ -33,16 +34,15 @@ class ValidDateRange(Enum):
     MONTH = "month"
 
 
-def process_record(record: dict, raw_api: RawApi, db: Database):
+def process_record(record: RawMetadata, raw_api: RawApi, db: Database):
     try:
         reader = get_reader(record)
-        filename = record["filename"]
-        uuid = record["uuid"]
+        filename = record.filename
         if reader is None:
             logging.debug(f"Skipping: {filename}")
             return
         logging.debug(f"Processing housekeeping data: {filename}")
-        filebytes = raw_api.get_raw_file(uuid, filename)
+        filebytes = raw_api.get_raw_file(record.uuid, filename)
         points = reader(filebytes, record)
         db.write(points)
     except UnsupportedFile as err:
@@ -53,7 +53,7 @@ def process_record(record: dict, raw_api: RawApi, db: Database):
         raise HousekeepingException from err
 
 
-def _handle_hatpro_hkd(src: bytes, metadata: dict) -> list[Point]:
+def _handle_hatpro_hkd(src: bytes, metadata: RawMetadata) -> list[Point]:
     with tempfile.NamedTemporaryFile() as f:
         f.write(src)
         hkd = HatproHkd(Path(f.name))
@@ -63,7 +63,7 @@ def _handle_hatpro_hkd(src: bytes, metadata: dict) -> list[Point]:
     )
 
 
-def _handle_hatpro_nc(src: bytes, metadata: dict) -> list[Point]:
+def _handle_hatpro_nc(src: bytes, metadata: RawMetadata) -> list[Point]:
     with tempfile.NamedTemporaryFile() as f:
         f.write(src)
         hkd = HatproHkdNc(Path(f.name))
@@ -76,11 +76,11 @@ def _handle_hatpro_nc(src: bytes, metadata: dict) -> list[Point]:
     )
 
 
-def _handle_rpg_lv1(src: bytes, metadata: dict) -> list[Point]:
+def _handle_rpg_lv1(src: bytes, metadata: RawMetadata) -> list[Point]:
     with tempfile.TemporaryDirectory() as tmpdir:
-        filepath = Path(tmpdir) / metadata["filename"]
+        filepath = Path(tmpdir) / metadata.filename
         filepath.write_bytes(src)
-        if metadata["filename"].lower().endswith(".gz"):
+        if metadata.filename.lower().endswith(".gz"):
             filepath = unzip_gz_file(filepath)
         _, data = read_rpg(filepath)
 
@@ -91,7 +91,7 @@ def _handle_rpg_lv1(src: bytes, metadata: dict) -> list[Point]:
     )
 
 
-def _handle_chm15k_nc(src: bytes, metadata: dict) -> list[Point]:
+def _handle_chm15k_nc(src: bytes, metadata: RawMetadata) -> list[Point]:
     with Dataset("dataset.nc", memory=src) as nc:
         measurements = read_chm15k(nc)
         return _make_points(
@@ -103,7 +103,7 @@ def _handle_chm15k_nc(src: bytes, metadata: dict) -> list[Point]:
         )
 
 
-def _handle_basta_nc(src: bytes, metadata: dict) -> list[Point]:
+def _handle_basta_nc(src: bytes, metadata: RawMetadata) -> list[Point]:
     with Dataset("dataset.nc", memory=src) as nc:
         measurements = read_basta(nc)
         return _make_points(
@@ -115,11 +115,11 @@ def _handle_basta_nc(src: bytes, metadata: dict) -> list[Point]:
         )
 
 
-def _handle_cs135(src: bytes, metadata: dict) -> list[Point]:
+def _handle_cs135(src: bytes, metadata: RawMetadata) -> list[Point]:
     with tempfile.TemporaryDirectory() as tmpdir:
-        filepath = Path(tmpdir) / metadata["filename"]
+        filepath = Path(tmpdir) / metadata.filename
         filepath.write_bytes(src)
-        if metadata["filename"].lower().endswith(".gz"):
+        if metadata.filename.lower().endswith(".gz"):
             filepath = unzip_gz_file(filepath)
         measurements = read_cs135(filepath)
     return _make_points(
@@ -131,11 +131,11 @@ def _handle_cs135(src: bytes, metadata: dict) -> list[Point]:
     )
 
 
-def _handle_ct25k(src: bytes, metadata: dict) -> list[Point]:
+def _handle_ct25k(src: bytes, metadata: RawMetadata) -> list[Point]:
     with tempfile.TemporaryDirectory() as tmpdir:
-        filepath = Path(tmpdir) / metadata["filename"]
+        filepath = Path(tmpdir) / metadata.filename
         filepath.write_bytes(src)
-        if metadata["filename"].lower().endswith(".gz"):
+        if metadata.filename.lower().endswith(".gz"):
             filepath = unzip_gz_file(filepath)
         measurements = read_ct25k(filepath)
     return _make_points(
@@ -147,11 +147,11 @@ def _handle_ct25k(src: bytes, metadata: dict) -> list[Point]:
     )
 
 
-def _handle_cl31_cl51(src: bytes, metadata: dict) -> list[Point]:
+def _handle_cl31_cl51(src: bytes, metadata: RawMetadata) -> list[Point]:
     with tempfile.TemporaryDirectory() as tmpdir:
-        filepath = Path(tmpdir) / metadata["filename"]
+        filepath = Path(tmpdir) / metadata.filename
         filepath.write_bytes(src)
-        if metadata["filename"].lower().endswith(".gz"):
+        if metadata.filename.lower().endswith(".gz"):
             filepath = unzip_gz_file(filepath)
         measurements = read_cl31_cl51(filepath)
     return _make_points(
@@ -163,7 +163,7 @@ def _handle_cl31_cl51(src: bytes, metadata: dict) -> list[Point]:
     )
 
 
-def _handle_cl61_nc(src: bytes, metadata: dict) -> list[Point]:
+def _handle_cl61_nc(src: bytes, metadata: RawMetadata) -> list[Point]:
     with Dataset("dataset.nc", memory=src) as nc:
         measurements = read_cl61(nc)
         return _make_points(
@@ -175,7 +175,7 @@ def _handle_cl61_nc(src: bytes, metadata: dict) -> list[Point]:
         )
 
 
-def _handle_halo_doppler_lidar(src: bytes, metadata: dict) -> list[Point]:
+def _handle_halo_doppler_lidar(src: bytes, metadata: RawMetadata) -> list[Point]:
     measurements = read_halo_doppler_lidar(src)
     return _make_points(
         measurements["time"],
@@ -186,9 +186,11 @@ def _handle_halo_doppler_lidar(src: bytes, metadata: dict) -> list[Point]:
     )
 
 
-def get_reader(metadata: dict) -> Callable[[bytes, dict], list[Point]] | None:
-    instrument_id = metadata["instrument"]["instrumentId"]
-    filename = metadata["filename"].lower()
+def get_reader(
+    metadata: RawMetadata
+) -> Callable[[bytes, RawMetadata], list[Point]] | None:
+    instrument_id = metadata.instrument.instrument_id
+    filename = metadata.filename.lower()
 
     if instrument_id == "hatpro":
         if filename.endswith(".nc"):
@@ -253,7 +255,7 @@ def _make_points(
     time: npt.NDArray,
     measurements: dict[str, npt.NDArray],
     variables: dict[str, str],
-    metadata: dict,
+    metadata: RawMetadata,
     valid_date_range: ValidDateRange,
 ) -> list[Point]:
     data = {}
@@ -275,13 +277,13 @@ def _make_points(
 
     match valid_date_range:
         case ValidDateRange.DAY:
-            date = np.datetime64(metadata["measurementDate"], "s")
+            date = np.datetime64(metadata.measurement_date, "s")
             pad_hours = 1
             lower_limit = date - np.timedelta64(pad_hours, "h")
             upper_limit = date + np.timedelta64(24 + pad_hours, "h")
             valid_timestamps = (timestamps >= lower_limit) & (timestamps < upper_limit)
         case ValidDateRange.MONTH:
-            month = np.datetime64(metadata["measurementDate"], "M")
+            month = np.datetime64(metadata.measurement_date, "M")
             next_month: np.datetime64 = month + 1
             first_day = month.astype("datetime64[s]")
             last_day = (next_month - np.timedelta64(1, "D")).astype("datetime64[s]")
@@ -308,9 +310,9 @@ def _make_points(
             {
                 "measurement": "housekeeping",
                 "tags": {
-                    "site_id": metadata["site"]["id"],
-                    "instrument_id": metadata["instrument"]["instrumentId"],
-                    "instrument_pid": metadata["instrument"]["pid"],
+                    "site_id": metadata.site.id,
+                    "instrument_id": metadata.instrument.instrument_id,
+                    "instrument_pid": metadata.instrument.pid,
                 },
                 "fields": fields,
                 "time": timestamp.astype(int),
