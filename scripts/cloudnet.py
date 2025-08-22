@@ -266,7 +266,7 @@ def _process_file(
             metadata = processor.client.raw_model_files(
                 site_id=site.id, date=date, status=["uploaded", "processed"]
             )
-            model_ids = set(meta.model.id for meta in metadata)
+            model_ids = {meta.model.id for meta in metadata}
         for model_id in model_ids:
             _print_header(
                 {
@@ -360,29 +360,21 @@ def _process_file(
     elif product.id in ("mwr-single", "mwr-multi", "epsilon-lidar"):
         if args.uuids:
             instruments = {processor.client.instrument(uuid) for uuid in args.uuids}
-        elif product.id in ("mwr-single", "mwr-multi"):
-            product_metadata = processor.client.files(
-                site_id=site.id,
-                date=date,
-                product="mwr-l1c",
-            )
-            instrument_uuids = {
-                meta.instrument.uuid for meta in product_metadata if meta.instrument
-            }
-            instruments = {
-                processor.client.instrument(uuid) for uuid in instrument_uuids
-            }
         else:
+            mapping = {
+                "mwr-single": "mwr-l1c",
+                "mwr-multi": "mwr-l1c",
+                "epsilon-lidar": "doppler-lidar",
+            }
             product_metadata = processor.client.files(
                 site_id=site.id,
                 date=date,
-                product="doppler-lidar",
+                product=mapping.get(product.id),
             )
-            instrument_uuids = {
-                meta.instrument.uuid for meta in product_metadata if meta.instrument
-            }
             instruments = {
-                processor.client.instrument(uuid) for uuid in instrument_uuids
+                processor.client.instrument(meta.instrument.uuid)
+                for meta in product_metadata
+                if meta.instrument
             }
         for instrument in instruments:
             _print_header(
