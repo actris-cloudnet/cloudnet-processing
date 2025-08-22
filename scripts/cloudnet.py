@@ -230,17 +230,17 @@ def _update_product_list(args: Namespace, processor: Processor) -> list[str]:
             derived_products = processor.client.get_instrument_derived_products(
                 instrument
             )
-            if len(derived_products) > 0:
+            if derived_products:
                 if args.raw:
-                    products.update([derived_products][0])
+                    products.add(list(derived_products)[0])
                 else:
                     products.update(derived_products)
     if args.uuids:
         for uuid in args.uuids:
             derived_products = processor.client.instrument(uuid).derived_product_ids
-            if len(derived_products) > 0:
+            if derived_products:
                 if args.raw:
-                    products.update([derived_products][0])
+                    products.add(list(derived_products)[0])
                 else:
                     products.update(derived_products)
     return list(products)
