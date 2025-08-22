@@ -5,6 +5,7 @@ from pathlib import Path
 from uuid import UUID
 
 import numpy as np
+import numpy.typing as npt
 from cloudnet_api_client import APIClient
 from cloudnet_api_client.containers import ProductMetadata, RawModelMetadata
 from cloudnetpy.exceptions import PlottingError
@@ -33,9 +34,9 @@ from cloudnet_api_client.containers import (
 
 @dataclass(frozen=True, slots=True)
 class ExtendedSite(Site):
-    raw_time: np.ndarray
-    raw_latitude: np.ndarray
-    raw_longitude: np.ndarray
+    raw_time: npt.NDArray[np.datetime64]
+    raw_latitude: npt.NDArray[np.float64]
+    raw_longitude: npt.NDArray[np.float64]
 
 
 @dataclass(frozen=True)
@@ -92,9 +93,9 @@ class Processor:
         site_dict = asdict(site)
         site_dict["latitude"] = mean_location.latitude
         site_dict["longitude"] = mean_location.longitude
-        site_dict["raw_time"] = [t.time for t in locations]
-        site_dict["raw_latitude"] = [t.latitude for t in locations]
-        site_dict["raw_longitude"] = [t.longitude for t in locations]
+        site_dict["raw_time"] = np.array([t.time for t in locations])
+        site_dict["raw_latitude"] = np.array([t.latitude for t in locations])
+        site_dict["raw_longitude"] = np.array([t.longitude for t in locations])
         return ExtendedSite(**site_dict)
 
     def get_model_upload(
