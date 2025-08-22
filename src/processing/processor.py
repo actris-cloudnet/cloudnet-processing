@@ -1,9 +1,10 @@
 import datetime
 import logging
-from dataclasses import dataclass, is_dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from uuid import UUID
 
+import numpy as np
 from cloudnet_api_client import APIClient
 from cloudnet_api_client.containers import ProductMetadata, RawModelMetadata
 from cloudnetpy.exceptions import PlottingError
@@ -25,10 +26,16 @@ TIMEDELTA_ZERO = datetime.timedelta(0)
 from cloudnet_api_client.containers import (
     ExtendedInstrument,
     ExtendedProduct,
-    ExtendedSite,
     Model,
     Site,
 )
+
+
+@dataclass(frozen=True, slots=True)
+class ExtendedSite(Site):
+    raw_time: np.ndarray
+    raw_latitude: np.ndarray
+    raw_longitude: np.ndarray
 
 
 @dataclass(frozen=True)
@@ -70,9 +77,25 @@ class Processor:
 
     def get_site(self, site_id: str, date: datetime.date) -> Site | ExtendedSite:
         site = self.client.site(site_id)
-        if "mobile" in site.type:
-            return self.client.mobile_site(site_id, date)
+        if site.latitude is None and site.longitude is None:
+            return self._create_extended_site(site, date)
         return site
+
+    def _create_extended_site(self, site: Site, date: datetime.date) -> ExtendedSite:
+        mean_location = self.client.moving_site_mean_location(site.id, date)
+        prev_date = date - datetime.timedelta(days=1)
+        next_date = date + datetime.timedelta(days=1)
+        loc1 = self.client.moving_site_locations(site.id, prev_date, -1)
+        loc2 = self.client.moving_site_locations(site.id, date)
+        loc3 = self.client.moving_site_locations(site.id, next_date, 0)
+        locations = loc1 + loc2 + loc3
+        site_dict = asdict(site)
+        site_dict["latitude"] = mean_location.latitude
+        site_dict["longitude"] = mean_location.longitude
+        site_dict["raw_time"] = [t.time for t in locations]
+        site_dict["raw_latitude"] = [t.latitude for t in locations]
+        site_dict["raw_longitude"] = [t.longitude for t in locations]
+        return ExtendedSite(**site_dict)
 
     def get_product(self, product_id: str) -> ExtendedProduct:
         return self.client.product(product_id)

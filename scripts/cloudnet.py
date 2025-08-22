@@ -17,7 +17,7 @@ from typing import TypeVar
 from uuid import UUID
 
 from cloudnet_api_client import APIClient
-from cloudnet_api_client.containers import ExtendedProduct, ExtendedSite, Site
+from cloudnet_api_client.containers import ExtendedProduct, Site
 from processing import utils
 from processing.dvas import Dvas
 from processing.fetch import fetch
@@ -27,6 +27,7 @@ from processing.metadata_api import MetadataApi
 from processing.model import process_model
 from processing.pid_utils import PidUtils
 from processing.processor import (
+    ExtendedSite,
     InstrumentParams,
     ModelParams,
     Processor,
@@ -226,18 +227,20 @@ def _update_product_list(args: Namespace, processor: Processor) -> list[str]:
     products = set(args.products) if args.products else set()
     if args.instruments:
         for instrument in args.instruments:
-            derived_products = list(processor.client.get_derived_products(instrument))
+            derived_products = processor.client.get_instrument_derived_products(
+                instrument
+            )
             if len(derived_products) > 0:
                 if args.raw:
-                    products.update([derived_products[0]])
+                    products.update([derived_products][0])
                 else:
                     products.update(derived_products)
     if args.uuids:
         for uuid in args.uuids:
-            derived_products = list(processor.get_instrument(uuid).derived_product_ids)
+            derived_products = processor.get_instrument(uuid).derived_product_ids
             if len(derived_products) > 0:
                 if args.raw:
-                    products.update([derived_products[0]])
+                    products.update([derived_products][0])
                 else:
                     products.update(derived_products)
     return list(products)
