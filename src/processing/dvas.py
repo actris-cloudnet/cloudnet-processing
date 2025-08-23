@@ -225,7 +225,7 @@ class DvasMetadata:
                 "product_type": "observation",
                 "matrix": "cloud phase",
                 "sub_matrix": None,
-                "instrument_type": list(self._find_instrument_types(self.file.uuid)),
+                "instrument_type": self._find_instrument_types(self.file.uuid),
                 "program_affiliation": self._parse_affiliation(),
                 "variable_statistical_property": None,
                 "legacy_data": self.file.legacy,
@@ -254,23 +254,14 @@ class DvasMetadata:
             affiliation.append("ACTRIS")
         return affiliation
 
-    def _find_instrument_types(self, uuid: UUID) -> set[str]:
-        """Recursively find instrument types from source files.
+    def _find_instrument_types(self, uuid: UUID) -> list[str]:
+        """Return all source instruments used to create a product.
 
         Links:
             https://vocabulary.actris.nilu.no/actris_vocab/instrumenttype
             https://prod-actris-md.nilu.no/vocabulary/instrumenttype
         """
-        instruments = set()
-        data = self.client.file(uuid)
-        if data.instrument:
-            instruments.add(data.instrument.type)
-
-        source_ids = data.source_file_ids
-        if source_ids:
-            for source_uuid in source_ids:
-                instruments.update(self._find_instrument_types(source_uuid))
-        return instruments
+        return [i.type for i in self.client.source_instruments(uuid)]
 
     def _parse_timeliness(self) -> str:
         # https://prod-actris-md.nilu.no/vocabulary/observationtimeliness
