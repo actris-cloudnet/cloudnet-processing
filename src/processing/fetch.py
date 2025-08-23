@@ -10,7 +10,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 import requests
-from cloudnet_api_client.containers import Product, Site
+from cloudnet_api_client.containers import ExtendedProduct, Product, Site
 
 from processing import utils
 
@@ -40,7 +40,11 @@ class Fetcher:
     api_url = "https://cloudnet.fmi.fi/api"
 
     def __init__(
-        self, product: Product, site: Site, date: datetime.date, args: Namespace
+        self,
+        product: Product | ExtendedProduct,
+        site: Site,
+        date: datetime.date,
+        args: Namespace,
     ):
         self.product = product
         self.args = args
@@ -48,10 +52,17 @@ class Fetcher:
 
     def get_raw_instrument_metadata(self) -> list:
         url = f"{self.api_url}/raw-files"
+        if (
+            isinstance(self.product, ExtendedProduct)
+            and self.product.source_instrument_ids
+        ):
+            instruments = self.product.source_instrument_ids
+        else:
+            instruments = self.args.instruments
         payload = {
             **self.payload,
             "status": ["uploaded", "processed"],
-            "instrument": self.args.instruments,
+            "instrument": instruments,
         }
         if self.args.instrument_pids:
             payload["instrumentPid"] = self.args.instrument_pids

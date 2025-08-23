@@ -318,22 +318,6 @@ def make_session() -> requests.Session:
     return http
 
 
-class RawApi:
-    def __init__(
-        self, cfg: Config | None = None, session: requests.Session | None = None
-    ):
-        if cfg is None:
-            cfg = read_main_conf()
-        if session is None:
-            session = make_session()
-        self.base_url = cfg.dataportal_url
-        self.session = session
-
-    def get_raw_file(self, uuid: UUID, fname: str) -> bytes:
-        url = f"{self.base_url}/api/download/raw/{uuid}/{fname}"
-        return self.session.get(url).content
-
-
 def print_info(
     uuid: Uuid,
     volatile: bool,
