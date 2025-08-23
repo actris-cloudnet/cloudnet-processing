@@ -113,7 +113,7 @@ class Level1Nc:
         instrument: cloudnetpy.instruments.instruments.Instrument,
     ):
         """Adds standard global attributes."""
-        location = processing.utils.read_site_info(self.data["site_name"])["name"]
+        location = self.data["site_meta"]["name"]
         self.nc.Conventions = "CF-1.8"
         self.nc.cloudnet_file_type = cloudnet_file_type
         self.nc.source = cloudnetpy.output.get_l1b_source(instrument)

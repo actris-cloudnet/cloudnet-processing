@@ -71,7 +71,10 @@ class ProcessInstrument:
     def _get_kwargs(self) -> dict:
         return {"uuid": self.uuid.volatile, "date": self.params.date.isoformat()}
 
-    def _get_payload_for_nc_file_augmenter(self, full_path: str) -> dict:
+    def _get_payload_for_nc_file_augmenter(self, full_path: Path | list[Path]) -> dict:
+        if isinstance(full_path, list):
+            assert len(full_path) == 1
+            full_path = full_path[0]
         return {
             "site_name": self.params.site.id,
             "date": self.params.date.isoformat(),
@@ -235,7 +238,7 @@ class ProcessDopplerLidarWind(ProcessInstrument):
         _doppy_wind_to_nc(
             wind, str(self.daily_path), self.params.date, options, time_offset
         )
-        data = self._get_payload_for_nc_file_augmenter(str(self.daily_path))
+        data = self._get_payload_for_nc_file_augmenter(self.daily_path)
         if options is not None and options.azimuth_offset_deg is not None:
             data["azimuth_offset_deg"] = options.azimuth_offset_deg
         self.uuid.product = harmonizer.harmonize_doppler_lidar_wind_file(
@@ -259,7 +262,7 @@ class ProcessDopplerLidarWind(ProcessInstrument):
         except doppy.exceptions.NoDataError as err:
             raise RawDataMissingError(str(err))
         _doppy_wls70_wind_to_nc(wind, str(self.daily_path), options)
-        data = self._get_payload_for_nc_file_augmenter(str(self.daily_path))
+        data = self._get_payload_for_nc_file_augmenter(self.daily_path)
         if options is not None and options.azimuth_offset_deg is not None:
             data["azimuth_offset_deg"] = options.azimuth_offset_deg
         self.uuid.product = harmonizer.harmonize_doppler_lidar_wind_file(
@@ -303,7 +306,7 @@ class ProcessDopplerLidarWind(ProcessInstrument):
         except doppy.exceptions.NoDataError as err:
             raise RawDataMissingError(str(err))
         _doppy_wind_to_nc(wind, str(self.daily_path), self.params.date, options)
-        data = self._get_payload_for_nc_file_augmenter(str(self.daily_path))
+        data = self._get_payload_for_nc_file_augmenter(self.daily_path)
         if options is not None and options.azimuth_offset_deg is not None:
             data["azimuth_offset_deg"] = options.azimuth_offset_deg
         self.uuid.product = harmonizer.harmonize_doppler_lidar_wind_file(
@@ -379,7 +382,7 @@ class ProcessDopplerLidar(ProcessInstrument):
             raise RawDataMissingError(str(err))
 
         _doppy_stare_to_nc(stare, str(self.daily_path), self.params.date, time_offset)
-        data = self._get_payload_for_nc_file_augmenter(str(self.daily_path))
+        data = self._get_payload_for_nc_file_augmenter(self.daily_path)
         self.uuid.product = harmonizer.harmonize_doppler_lidar_stare_file(
             data, instruments.HALO
         )
@@ -436,7 +439,7 @@ class ProcessDopplerLidar(ProcessInstrument):
                         raise
 
         _doppy_stare_to_nc(stare, str(self.daily_path), self.params.date)
-        data = self._get_payload_for_nc_file_augmenter(str(self.daily_path))
+        data = self._get_payload_for_nc_file_augmenter(self.daily_path)
         self.uuid.product = harmonizer.harmonize_doppler_lidar_stare_file(
             data, instrument
         )
@@ -679,7 +682,7 @@ class ProcessMwr(ProcessInstrument):
             valid_full_paths = concat_wrapper.concat_netcdf_files(
                 full_paths, self.params.date.isoformat(), self.daily_path
             )
-            data = self._get_payload_for_nc_file_augmenter(str(self.daily_path))
+            data = self._get_payload_for_nc_file_augmenter(self.daily_path)
             self.uuid.product = harmonizer.harmonize_hatpro_file(data)
         self.uuid.raw = _get_valid_uuids(raw_uuids, full_paths, valid_full_paths)
 

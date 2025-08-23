@@ -200,17 +200,6 @@ def add_global_attributes(full_path: Path, instrument_pid: str | None = None):
             nc.instrument_pid = instrument_pid
 
 
-def read_site_info(site_name: str) -> dict:
-    """Reads site information from Cloudnet http API."""
-    sites = get_from_data_portal_api("api/sites", {"developer": True})
-    for site in sites:
-        if site["id"] == site_name:
-            site["id"] = site_name
-            site["name"] = site.pop("humanReadableName")
-            return site
-    raise ValueError(f"Invalid site name: {site_name}")
-
-
 def fetch_calibration(instrument_pid: str, date: datetime.date | str) -> dict | None:
     """Gets calibration factor."""
     session = make_session()
