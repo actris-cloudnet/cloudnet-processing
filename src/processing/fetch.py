@@ -10,6 +10,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 import requests
+from cloudnet_api_client import APIClient
 from cloudnet_api_client.containers import ExtendedProduct, Product, Site
 
 from processing import utils
@@ -112,14 +113,16 @@ class Fetcher:
         return res.json()
 
 
-def fetch(product: Product, site: Site, date: datetime.date, args: Namespace) -> None:
+def fetch(
+    product: Product, site: Site, date: datetime.date, args: Namespace, client=APIClient
+) -> None:
     is_production = os.environ.get("PID_SERVICE_TEST_ENV", "false").lower() != "true"
     if is_production:
         logging.warning("Running in production, not fetching anything.")
         return
 
     if args.uuids:
-        args.instrument_pids = [_uuid2pid(i) for i in args.uuids]
+        args.instrument_pids = [client.instrument(i).pid for i in args.uuids]
     else:
         args.instrument_pids = None
 
@@ -357,11 +360,3 @@ def _fetch_calibration(upload_metadata: list):
         processed_pid_dates.add(
             (upload["instrument"]["pid"], upload["measurementDate"])
         )
-
-
-def _uuid2pid(uuid: str) -> str | None:
-    instrument = utils.get_from_data_portal_api(f"api/instrument-pids/{uuid}")
-    assert isinstance(instrument, dict)
-    if instrument and "pid" in instrument:
-        return str(instrument["pid"])
-    return None

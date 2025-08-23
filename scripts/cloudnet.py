@@ -220,7 +220,7 @@ def process_main(args: Namespace, config: Config, session: Session, client: APIC
                 product = client.product(product_id)
                 try:
                     if args.cmd == "fetch":
-                        fetch(product, site, date, args)
+                        fetch(product, site, date, args, client)
                     else:
                         _process_file(processor, product, site, date, args)
                 except utils.SkipTaskError as err:
