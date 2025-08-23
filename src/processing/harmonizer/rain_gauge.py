@@ -101,7 +101,7 @@ class RainGaugeNc(core.Level1Nc):
             key, dtype, "time", zlib=True, fill_value=fill_value
         )
         instrument_uuid = self.data["instrument"].uuid
-        new_units = CORRECT_UNITS.get(instrument_uuid, {}).get(key)
+        new_units = CORRECT_UNITS.get(str(instrument_uuid), {}).get(key)
         if new_units is not None:
             logging.info(f"Correcting units of '{key}' to {new_units}.")
             var_out.units = new_units
