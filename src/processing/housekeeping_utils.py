@@ -12,7 +12,6 @@ def process_housekeeping(processor: Processor, params: InstrumentParams) -> None
         logging.info("Skipping housekeeping for old data")
         return
     logging.info("Processing housekeeping data")
-    # raw_api = utils.RawApi(processor.md_api.config, processor.md_api.session)
     records = _get_housekeeping_records(processor, params)
     try:
         with housekeeping.Database() as db:

@@ -232,8 +232,9 @@ class Processor:
         payload = utils.create_product_put_payload(
             full_path,
             file_info,
+            params.site.id,
             volatile,
-            site=params.site.id,
+            patch,
         )
         if isinstance(params, ModelParams) and "evaluation" not in params.product.type:
             payload["model"] = params.model.id
@@ -241,7 +242,6 @@ class Processor:
             isinstance(params, (InstrumentParams, ProductParams)) and params.instrument
         ):
             payload["instrument"] = params.instrument.instrument_id
-        payload["patch"] = patch
         self.md_api.put("files", s3key, payload)
 
     def update_statuses(self, raw_uuids: list[str], status: str) -> None:

@@ -194,21 +194,21 @@ def unzip_gz_file(path_in: Path) -> Path:
 def create_product_put_payload(
     full_path: Path,
     storage_service_response: dict,
+    site: str,
     volatile: bool,
-    product: str | None = None,
-    site: str | None = None,
-    date_str: str | None = None,
+    patch: bool,
 ) -> dict:
     """Creates put payload for data portal."""
     with netCDF4.Dataset(full_path, "r") as nc:
         start_time, stop_time = _get_data_timestamps(nc)
         payload = {
-            "product": product or nc.cloudnet_file_type,
-            "site": site or nc.location.lower(),
-            "measurementDate": date_str or f"{nc.year}-{nc.month}-{nc.day}",
+            "product": nc.cloudnet_file_type,
+            "site": site,
+            "measurementDate": f"{nc.year}-{nc.month}-{nc.day}",
             "format": _get_file_format(nc),
             "checksum": sha256sum(full_path),
             "volatile": volatile,
+            "patch": patch,
             "uuid": getattr(nc, "file_uuid", ""),
             "pid": getattr(nc, "pid", ""),
             "software": {"cloudnet-processing": cloudnet_processing_version},
