@@ -268,16 +268,6 @@ def build_file_landing_page_url(uuid: str) -> str:
     return f"{base}/file/{uuid}"
 
 
-def get_from_data_portal_api(
-    end_point: str, payload: dict | None = None
-) -> list | dict:
-    """Reads from data portal API."""
-    session = make_session()
-    data_portal_url = _fetch_data_portal_url()
-    url = f"{data_portal_url}/{end_point}"
-    return session.get(url=url, params=payload).json()
-
-
 def _fetch_data_portal_url() -> str:
     """Returns data portal url."""
     config = read_main_conf()
