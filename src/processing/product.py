@@ -118,11 +118,7 @@ def process_product(
 def _generate_filename(params: ProductParams | ModelParams) -> str:
     match params.product.id:
         case "mwr-single" | "mwr-multi":
-            assert (
-                isinstance(params, ProductParams)
-                and params.instrument is not None
-                and params.instrument.instrument_id is not None
-            )
+            assert isinstance(params, ProductParams) and params.instrument
             identifier = params.product.id.replace(
                 "mwr", params.instrument.instrument_id
             )
