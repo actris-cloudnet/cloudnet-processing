@@ -38,7 +38,7 @@ from requests.exceptions import HTTPError
 
 from processing import concat_wrapper, harmonizer
 from processing.processor import InstrumentParams, Processor
-from processing.utils import RawDataMissingError, Uuid, fetch_calibration, unzip_gz_file
+from processing.utils import RawDataMissingError, Uuid, unzip_gz_file
 
 
 class ProcessInstrument:
@@ -210,7 +210,9 @@ class ProcessRadar(ProcessInstrument):
         default_value: str | float | None = None,
         api_key: str | None = None,
     ) -> None:
-        calibration = fetch_calibration(self.params.instrument.pid, self.params.date)
+        calibration = self.processor.client.calibration(
+            self.params.instrument.pid, self.params.date
+        )
         if calibration is not None:
             data = calibration["data"]
             self.site_meta[key] = data.get(api_key or key, default_value)
@@ -218,7 +220,9 @@ class ProcessRadar(ProcessInstrument):
 
 class ProcessDopplerLidarWind(ProcessInstrument):
     def process_halo_doppler_lidar(self):
-        calibration = fetch_calibration(self.params.instrument.pid, self.params.date)
+        calibration = self.processor.client.calibration(
+            self.params.instrument.pid, self.params.date
+        )
         time_offset = (
             datetime.timedelta(minutes=calibration["data"]["time_offset"])
             if calibration is not None and "time_offset" in calibration["data"]
@@ -314,7 +318,9 @@ class ProcessDopplerLidarWind(ProcessInstrument):
         )
 
     def _calibration_options(self) -> doppy.product.WindOptions | None:
-        calibration = fetch_calibration(self.params.instrument.pid, self.params.date)
+        calibration = self.processor.client.calibration(
+            self.params.instrument.pid, self.params.date
+        )
         azimuth_offset = (
             calibration.get("data", {}).get("azimuth_offset") if calibration else None
         )
@@ -327,7 +333,9 @@ class ProcessDopplerLidarWind(ProcessInstrument):
 
 class ProcessDopplerLidar(ProcessInstrument):
     def process_halo_doppler_lidar(self):
-        calibration = fetch_calibration(self.params.instrument.pid, self.params.date)
+        calibration = self.processor.client.calibration(
+            self.params.instrument.pid, self.params.date
+        )
         time_offset = (
             datetime.timedelta(minutes=calibration["data"]["time_offset"])
             if calibration is not None and "time_offset" in calibration["data"]
@@ -507,7 +515,9 @@ class ProcessLidar(ProcessInstrument):
         self._call_ceilo2nc("cl31")
 
     def process_cl51(self):
-        calibration = fetch_calibration(self.params.instrument.pid, self.params.date)
+        calibration = self.processor.client.calibration(
+            self.params.instrument.pid, self.params.date
+        )
         time_offset = (
             datetime.timedelta(minutes=calibration["data"]["time_offset"])
             if calibration is not None and "time_offset" in calibration["data"]
@@ -563,7 +573,9 @@ class ProcessLidar(ProcessInstrument):
 
     def _fetch_ceilo_calibration(self) -> dict:
         output: dict = {}
-        calibration = fetch_calibration(self.params.instrument.pid, self.params.date)
+        calibration = self.processor.client.calibration(
+            self.params.instrument.pid, self.params.date
+        )
         if not calibration:
             return output
         if "calibration_factor" in calibration["data"]:
@@ -576,7 +588,9 @@ class ProcessLidar(ProcessInstrument):
 
     def _fetch_pollyxt_calibration(self) -> dict:
         output = {"snr_limit": 25.0}
-        calibration = fetch_calibration(self.params.instrument.pid, self.params.date)
+        calibration = self.processor.client.calibration(
+            self.params.instrument.pid, self.params.date
+        )
         if not calibration:
             return output
         if "snr_limit" in calibration["data"]:
@@ -749,7 +763,9 @@ class ProcessDisdrometer(ProcessInstrument):
 
     def _fetch_parsivel_calibration(self) -> dict:
         output: dict = {"telegram": None, "missing_timestamps": False}
-        calibration = fetch_calibration(self.params.instrument.pid, self.params.date)
+        calibration = self.processor.client.calibration(
+            self.params.instrument.pid, self.params.date
+        )
         if calibration is not None:
             data = calibration["data"]
             output["telegram"] = data.get("telegram", None)
@@ -792,7 +808,9 @@ class ProcessWeatherStation(ProcessInstrument):
         if self.params.site.id not in supported_sites:
             raise NotImplementedError("Weather station not implemented for this site")
 
-        calibration = fetch_calibration(self.params.instrument.pid, self.params.date)
+        calibration = self.processor.client.calibration(
+            self.params.instrument.pid, self.params.date
+        )
         if calibration and calibration.get("data", {}).get("time_offset"):
             time_offset = datetime.timedelta(minutes=calibration["data"]["time_offset"])
             full_paths, self.uuid.raw = self.download_instrument(

@@ -200,18 +200,6 @@ def add_global_attributes(full_path: Path, instrument_pid: str | None = None):
             nc.instrument_pid = instrument_pid
 
 
-def fetch_calibration(instrument_pid: str, date: datetime.date | str) -> dict | None:
-    """Gets calibration factor."""
-    session = make_session()
-    if isinstance(date, str):
-        date = datetime.date.fromisoformat(date)
-    data_portal_url = _fetch_data_portal_url()
-    url = f"{data_portal_url}/api/calibration"
-    payload = {"instrumentPid": instrument_pid, "date": date.isoformat()}
-    res = session.get(url, params=payload)
-    return res.json() if res.ok else None
-
-
 def sha256sum(filename: Path) -> str:
     """Calculates hash of file using sha-256."""
     return _calc_hash_sum(filename, "sha256")
@@ -261,12 +249,6 @@ def build_file_landing_page_url(uuid: str) -> str:
     config = Config()
     base = config.dataportal_public_url
     return f"{base}/file/{uuid}"
-
-
-def _fetch_data_portal_url() -> str:
-    """Returns data portal url."""
-    config = Config()
-    return config.dataportal_url
 
 
 class MyAdapter(HTTPAdapter):
