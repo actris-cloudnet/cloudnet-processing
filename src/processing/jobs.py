@@ -93,7 +93,7 @@ def freeze(processor: Processor, params: ProcessParams, directory: Path) -> None
 
 
 def upload_to_dvas(processor: Processor, params: ProcessParams) -> None:
-    metadata = processor.fetch_product(params)
+    metadata = processor.get_product(params)
     if not metadata:
         raise utils.SkipTaskError("Product not found")
     if metadata.dvas_id:
@@ -105,10 +105,7 @@ def upload_to_dvas(processor: Processor, params: ProcessParams) -> None:
 def _fetch_data(
     processor: Processor, params: ProcessParams, directory: Path
 ) -> tuple[ProductMetadata, Path]:
-    if isinstance(params, ModelParams) and "evaluation" not in params.product.type:
-        metadata = processor.get_model_file(params)
-    else:
-        metadata = processor.fetch_product(params)
+    metadata = processor.get_product(params)
     if not metadata:
         raise utils.SkipTaskError("Product not found")
     full_path = processor.storage_api.download_product(metadata, directory)

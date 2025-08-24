@@ -18,7 +18,7 @@ ProcessClass = Type[instrument_process.ProcessInstrument]
 def process_instrument(processor: Processor, params: InstrumentParams, directory: Path):
     uuid = Uuid()
     pid_to_new_file = None
-    if existing_product := processor.fetch_product(params):
+    if existing_product := processor.get_product(params):
         if existing_product.volatile:
             uuid.volatile = str(existing_product.uuid)
             pid_to_new_file = existing_product.pid

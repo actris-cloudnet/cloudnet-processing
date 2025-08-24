@@ -29,7 +29,7 @@ def process_product(
 ):
     uuid = Uuid()
     pid_to_new_file = None
-    if existing_product := processor.fetch_product(params):
+    if existing_product := processor.get_product(params):
         if existing_product.volatile:
             uuid.volatile = str(existing_product.uuid)
         filename = existing_product.filename

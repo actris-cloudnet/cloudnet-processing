@@ -49,7 +49,7 @@ def process_model(processor: Processor, params: ModelParams, directory: Path) ->
         start_date = params.date
         end_date = params.date
 
-    upload_meta = processor.get_model_upload(params, start_date, end_date)
+    upload_meta = processor.get_raw_model_files(params, start_date, end_date)
     if not upload_meta:
         msg = "No valid model upload found"
         raise SkipTaskError(msg)
@@ -61,7 +61,7 @@ def process_model(processor: Processor, params: ModelParams, directory: Path) ->
     )
 
     volatile = True
-    if existing_meta := processor.get_model_file(params):
+    if existing_meta := processor.get_product(params):
         if not existing_meta.volatile:
             logging.warning("Stable model file found.")
             volatile = False

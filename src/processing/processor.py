@@ -98,7 +98,30 @@ class Processor:
         site_dict["raw_longitude"] = np.array([t.longitude for t in locations])
         return ExtendedSite(**site_dict)
 
-    def get_model_upload(
+    def get_product(self, params: ProcessParams) -> ProductMetadata | None:
+        if isinstance(params, (InstrumentParams, ProductParams)):
+            instrument_pid = params.instrument.pid if params.instrument else None
+            model_id = None
+        else:
+            assert isinstance(params, ModelParams)
+            instrument_pid = None
+            model_id = params.model.id
+
+        metadata = self.client.files(
+            site_id=params.site.id,
+            product=params.product.id,
+            date=params.date,
+            show_legacy=True,
+            instrument_pid=instrument_pid,
+            model_id=model_id,
+        )
+        if len(metadata) == 0:
+            return None
+        if len(metadata) > 1:
+            raise RuntimeError(f"Multiple {params.product.id} files found")
+        return metadata[0]
+
+    def get_raw_model_files(
         self, params: ModelParams, start_date: datetime.date, end_date: datetime.date
     ) -> list[RawModelMetadata]:
         rows = self.client.raw_model_files(
@@ -109,36 +132,6 @@ class Processor:
             status=["uploaded", "processed"],
         )
         return [row for row in rows if int(row.size) > MIN_MODEL_FILESIZE]
-
-    def get_model_file(self, params: ModelParams) -> ProductMetadata | None:
-        metadata = self.client.files(
-            model_id=params.model.id,
-            site_id=params.site.id,
-            date=params.date,
-        )
-        if len(metadata) == 0:
-            return None
-        if len(metadata) > 1:
-            raise RuntimeError(f"Multiple {params.model.id} files found")
-        return metadata[0] if metadata else None
-
-    def fetch_product(self, params: ProcessParams) -> ProductMetadata | None:
-        if isinstance(params, (InstrumentParams, ProductParams)) and params.instrument:
-            instrument_pid = params.instrument.pid
-        else:
-            instrument_pid = None
-        metadata = self.client.files(
-            site_id=params.site.id,
-            product=params.product.id,
-            date=params.date,
-            show_legacy=True,
-            instrument_pid=instrument_pid,
-        )
-        if len(metadata) == 0:
-            return None
-        if len(metadata) > 1:
-            raise RuntimeError(f"Multiple {params.product.id} files found")
-        return metadata[0]
 
     def download_instrument(
         self,
