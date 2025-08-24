@@ -29,7 +29,7 @@ from processing.config import Config
 from processing.dvas import Dvas
 from processing.fetch import fetch
 from processing.instrument import process_instrument
-from processing.jobs import freeze, hkd, update_plots, update_qc, upload_to_dvas
+from processing.jobs import freeze, update_plots, update_qc, upload_to_dvas
 from processing.metadata_api import MetadataApi
 from processing.model import process_model
 from processing.pid_utils import PidUtils
@@ -332,7 +332,7 @@ def _process_file(
                 elif args.cmd == "freeze":
                     freeze(processor, instru_params, directory)
                 elif args.cmd == "hkd":
-                    hkd(processor, instru_params)
+                    processor.process_housekeeping(instru_params)
                 elif args.cmd == "dvas":
                     raise utils.SkipTaskError(
                         "DVAS not supported for instrument products"

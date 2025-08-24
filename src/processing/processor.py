@@ -4,10 +4,15 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from uuid import UUID
 
+import housekeeping
 import numpy as np
 import numpy.typing as npt
 from cloudnet_api_client import APIClient
-from cloudnet_api_client.containers import ProductMetadata, RawModelMetadata
+from cloudnet_api_client.containers import (
+    ProductMetadata,
+    RawMetadata,
+    RawModelMetadata,
+)
 from cloudnetpy.exceptions import PlottingError
 from cloudnetpy.model_evaluation.plotting.plotting import generate_L3_day_plots
 from cloudnetpy.plotting import Dimensions, PlotParameters, generate_figure
@@ -447,6 +452,54 @@ class Processor:
             payload = {"uuid": str(uuid), "coverage": quality_report.data_coverage}
             self.md_api.post("files", payload)
         return result
+
+    def process_housekeeping(self, params: InstrumentParams) -> None:
+        if params.date < utils.utctoday() - self.md_api.config.housekeeping_retention:
+            logging.info("Skipping housekeeping for old data")
+            return
+        logging.info("Processing housekeeping data")
+        records = self._get_housekeeping_records(params)
+        try:
+            with housekeeping.Database() as db:
+                for record in records:
+                    housekeeping.process_record(record, client=self.client, db=db)
+        except housekeeping.HousekeepingException:
+            logging.exception("Housekeeping failed")
+
+    def _get_housekeeping_records(self, params: InstrumentParams) -> list[RawMetadata]:
+        if params.instrument.instrument_id == "halo-doppler-lidar":
+            first_day_of_month = params.date.replace(day=1)
+            records = self.client.raw_files(
+                site_id=params.site.id,
+                date_from=first_day_of_month,
+                date_to=params.date,
+                instrument_pid=params.instrument.pid,
+                filename_prefix="system_parameters",
+            )
+            return _select_halo_doppler_lidar_hkd_records(records)
+        return self.client.raw_files(
+            site_id=params.site.id,
+            date=params.date,
+            instrument_pid=params.instrument.pid,
+        )
+
+
+def _select_halo_doppler_lidar_hkd_records(
+    records: list[RawMetadata]
+) -> list[RawMetadata]:
+    if not records:
+        return []
+    return [
+        max(
+            records,
+            key=lambda x: (
+                x.measurement_date,
+                x.created_at,
+                x.updated_at,
+                x.size,
+            ),
+        )
+    ]
 
 
 def _get_fields_for_l3_plot(product: str, model: str) -> list:

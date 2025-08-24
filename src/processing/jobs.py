@@ -5,7 +5,6 @@ from pathlib import Path
 from cloudnet_api_client.containers import ProductMetadata
 
 from processing import utils
-from processing.housekeeping_utils import process_housekeeping as hkd
 from processing.processor import ModelParams, Processor, ProcessParams
 
 __all__ = ["freeze", "hkd", "update_plots", "update_qc", "upload_to_dvas"]

@@ -7,7 +7,6 @@ import netCDF4
 from cloudnetpy.exceptions import CloudnetException
 
 from processing import instrument_process, utils
-from processing.housekeeping_utils import process_housekeeping
 from processing.netcdf_comparer import NCDiff, nc_difference
 from processing.processor import InstrumentParams, Processor
 from processing.utils import Uuid
@@ -76,7 +75,7 @@ def process_instrument(processor: Processor, params: InstrumentParams, directory
     processor.update_statuses(uuid.raw, "processed")
     utils.print_info(uuid, volatile, patch, upload, qc_result)
     if processor.md_api.config.is_production:
-        process_housekeeping(processor, params)
+        processor.process_housekeeping(params)
 
 
 def _generate_filename(params: InstrumentParams) -> str:

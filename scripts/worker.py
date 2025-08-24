@@ -15,7 +15,7 @@ from processing import utils
 from processing.config import Config
 from processing.dvas import Dvas
 from processing.instrument import process_instrument
-from processing.jobs import freeze, hkd, update_plots, update_qc, upload_to_dvas
+from processing.jobs import freeze, update_plots, update_qc, upload_to_dvas
 from processing.metadata_api import MetadataApi
 from processing.model import process_model
 from processing.pid_utils import PidUtils
@@ -158,7 +158,7 @@ class Worker:
                     elif task["type"] == "freeze":
                         freeze(self.processor, params, directory)
                     elif task["type"] == "hkd":
-                        hkd(self.processor, params)
+                        self.processor.process_housekeeping(params)
                     elif task["type"] == "dvas":
                         raise utils.SkipTaskError(
                             "DVAS not supported for instrument products"
