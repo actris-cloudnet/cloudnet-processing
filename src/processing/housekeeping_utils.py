@@ -3,7 +3,6 @@ import logging
 import housekeeping
 from cloudnet_api_client.containers import RawMetadata
 
-from processing import utils
 from processing.processor import InstrumentParams, Processor
 from processing.utils import utctoday
 
