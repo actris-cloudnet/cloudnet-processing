@@ -254,20 +254,20 @@ class Processor:
 
     def create_and_upload_images(
         self,
-        full_path: Path,
-        product: str,
-        product_uuid: UUID,
-        product_s3key: str,
+        filepath: Path,
+        product_id: str,
+        uuid: UUID,
+        s3key: str,
         directory: Path,
         legacy: bool = False,
     ) -> None:
         img_path = directory / "plot.png"
         visualizations = []
-        product_s3key = f"legacy/{product_s3key}" if legacy is True else product_s3key
+        s3key = f"legacy/{s3key}" if legacy is True else s3key
         try:
-            fields, max_alt = self._get_fields_for_plot(product)
+            fields, max_alt = self._get_fields_for_plot(product_id)
         except NotImplementedError:
-            logging.warning(f"Plotting for {product} not implemented")
+            logging.warning(f"Plotting for {product_id} not implemented")
             return
         options = PlotParameters()
         options.max_y = max_alt
@@ -280,7 +280,7 @@ class Processor:
         for field in fields:
             try:
                 dimensions = generate_figure(
-                    full_path,
+                    filepath,
                     [field],
                     show=False,
                     output_filename=img_path,
@@ -292,17 +292,15 @@ class Processor:
                 continue
 
             visualizations.append(
-                self._upload_img(
-                    img_path, product_s3key, product_uuid, product, field, dimensions
-                )
+                self._upload_img(img_path, s3key, uuid, product_id, field, dimensions)
             )
-        self.md_api.put_images(visualizations, product_uuid)
-        self._delete_obsolete_images(product_uuid, product, valid_images)
+        self.md_api.put_images(visualizations, uuid)
+        self._delete_obsolete_images(uuid, product_id, valid_images)
 
-    def _get_fields_for_plot(self, product: str) -> tuple[list, int]:
-        variables = self.md_api.get(f"api/products/{product}/variables")
+    def _get_fields_for_plot(self, product_id: str) -> tuple[list, int]:
+        variables = self.md_api.get(f"api/products/{product_id}/variables")
         variable_ids = [var["id"] for var in variables]
-        match product:
+        match product_id:
             case "lwc" | "der" | "mwr" | "mwr-single" | "mwr-multi":
                 max_alt = 6
             case "drizzle":
@@ -315,21 +313,21 @@ class Processor:
 
     def create_and_upload_l3_images(
         self,
-        full_path: Path,
-        product: str,
+        filepath: Path,
+        product_id: str,
         model_id: str,
-        product_uuid: UUID,
-        product_s3key: str,
+        uuid: UUID,
+        s3key: str,
         directory: Path,
     ) -> None:
         img_path = directory / "plot.png"
         visualizations = []
-        fields = _get_fields_for_l3_plot(product, model_id)
-        l3_product = product.split("-")[1]
+        fields = _get_fields_for_l3_plot(product_id, model_id)
+        l3_product = product_id.split("-")[1]
         valid_images = []
         for stat in ("area", "error"):
             dimensions = generate_L3_day_plots(
-                str(full_path),
+                str(filepath),
                 l3_product,
                 model_id,
                 var_list=fields,
@@ -341,15 +339,13 @@ class Processor:
             if len(dimensions) > 1:
                 raise ValueError(f"More than one dimension in the plot: {dimensions}")
             visualizations.append(
-                self._upload_img(
-                    img_path, product_s3key, product_uuid, product, stat, dimensions[0]
-                )
+                self._upload_img(img_path, s3key, uuid, product_id, stat, dimensions[0])
             )
             valid_images.append(stat)
 
         for field in fields:
             dimensions = generate_L3_day_plots(
-                str(full_path),
+                str(filepath),
                 l3_product,
                 model_id,
                 var_list=[field],
@@ -361,37 +357,37 @@ class Processor:
                 raise ValueError(f"More than one dimension in the plot: {dimensions}")
             visualizations.append(
                 self._upload_img(
-                    img_path, product_s3key, product_uuid, product, field, dimensions[0]
+                    img_path, s3key, uuid, product_id, field, dimensions[0]
                 )
             )
             valid_images.append(field)
-        self.md_api.put_images(visualizations, product_uuid)
-        self._delete_obsolete_images(product_uuid, product, valid_images)
+        self.md_api.put_images(visualizations, uuid)
+        self._delete_obsolete_images(uuid, product_id, valid_images)
 
     def _delete_obsolete_images(
-        self, product_uuid: UUID, product: str, valid_images: list[str]
+        self, uuid: UUID, product_id: str, valid_images: list[str]
     ) -> None:
-        url = f"api/visualizations/{product_uuid}"
+        url = f"api/visualizations/{uuid}"
         image_metadata = self.md_api.get(url).get("visualizations", [])
         images_on_portal = {image["productVariable"]["id"] for image in image_metadata}
-        expected_images = {f"{product}-{image}" for image in valid_images}
+        expected_images = {f"{product_id}-{image}" for image in valid_images}
         if obsolete_images := images_on_portal - expected_images:
             self.md_api.delete(url, {"images": obsolete_images})
 
     def _upload_img(
         self,
         img_path: Path,
-        product_s3key: str,
-        product_uuid: UUID,
-        product: str,
+        s3key: str,
+        uuid: UUID,
+        product_id: str,
         field: str,
         dimensions: Dimensions,
     ) -> dict:
-        img_s3key = product_s3key.replace(".nc", f"-{product_uuid.hex[:8]}-{field}.png")
+        img_s3key = s3key.replace(".nc", f"-{uuid.hex[:8]}-{field}.png")
         self.storage_api.upload_image(full_path=img_path, s3key=img_s3key)
         return {
             "s3key": img_s3key,
-            "variable_id": f"{product}-{field}",
+            "variable_id": f"{product_id}-{field}",
             "dimensions": _dimensions2dict(dimensions)
             if dimensions is not None
             else None,
@@ -399,10 +395,10 @@ class Processor:
 
     def upload_quality_report(
         self,
-        full_path: Path,
+        filepath: Path,
         uuid: UUID | str,
         site: Site | ExtendedSite,
-        product: str | None = None,
+        product_id: str | None = None,
     ) -> str:
         try:
             site_meta: quality.SiteMeta = {
@@ -416,9 +412,9 @@ class Processor:
                 "altitude": site.altitude,
             }
             quality_report = quality.run_tests(
-                full_path,
+                filepath,
                 site_meta,
-                product=product,
+                product=product_id,
             )
         except ValueError:
             logging.exception("Failed to run quality control")
