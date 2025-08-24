@@ -42,6 +42,7 @@ from processing.processor import (
 )
 from processing.product import process_product
 from processing.storage_api import StorageApi
+from processing.utils import SkipTaskError
 from requests import Session
 
 logging.basicConfig(level=logging.INFO)
@@ -223,7 +224,7 @@ def process_main(args: Namespace, config: Config, session: Session, client: APIC
                         fetch(product, site, date, args, client)
                     else:
                         _process_file(processor, product, site, date, args)
-                except utils.SkipTaskError as err:
+                except SkipTaskError as err:
                     logging.warning("Skipped task: %s", err)
                 except Exception:
                     logging.exception("Failed to process task")
@@ -268,6 +269,10 @@ def _process_file(
     args: Namespace,
 ) -> None:
     if product.id == "model":
+        if args.cmd in ("dvas", "hkd"):
+            raise SkipTaskError(
+                f"{args.cmd.casefold()} not supported for model products"
+            )
         if args.models:
             model_ids = set(args.models)
         else:
@@ -291,11 +296,11 @@ def _process_file(
                     update_qc(processor, model_params, directory)
                 elif args.cmd == "freeze":
                     freeze(processor, model_params, directory)
-                elif args.cmd == "dvas":
-                    raise utils.SkipTaskError("DVAS not supported for model products")
                 else:
                     process_model(processor, model_params, directory)
     elif product.source_instrument_ids:
+        if args.cmd == "dvas":
+            raise SkipTaskError("DVAS not supported for instrument products")
         if args.uuids:
             instruments = {processor.client.instrument(uuid) for uuid in args.uuids}
         else:
@@ -333,16 +338,16 @@ def _process_file(
                     freeze(processor, instru_params, directory)
                 elif args.cmd == "hkd":
                     processor.process_housekeeping(instru_params)
-                elif args.cmd == "dvas":
-                    raise utils.SkipTaskError(
-                        "DVAS not supported for instrument products"
-                    )
                 else:
                     try:
                         process_instrument(processor, instru_params, directory)
-                    except utils.SkipTaskError as err:
+                    except SkipTaskError as err:
                         logging.warning("Skipped task: %s", err)
     elif product.id in ("mwr-single", "mwr-multi", "epsilon-lidar"):
+        if args.cmd in ("dvas", "hkd"):
+            raise SkipTaskError(
+                f"{args.cmd.casefold()} not supported for instrument products"
+            )
         if args.uuids:
             instruments = {processor.client.instrument(uuid) for uuid in args.uuids}
         else:
@@ -377,10 +382,6 @@ def _process_file(
                     update_qc(processor, product_params, directory)
                 elif args.cmd == "freeze":
                     freeze(processor, product_params, directory)
-                elif args.cmd == "dvas":
-                    raise utils.SkipTaskError(
-                        "DVAS not supported for instrument products"
-                    )
                 else:
                     process_product(processor, product_params, directory)
     elif product.id in ("l3-cf", "l3-iwc", "l3-lwc"):
@@ -399,8 +400,10 @@ def _process_file(
                 update_qc(processor, params, directory)
             elif args.cmd == "freeze":
                 freeze(processor, params, directory)
-            elif args.cmd == "dvas":
-                raise utils.SkipTaskError("DVAS not supported for L3 products")
+            elif args.cmd in ("dvas", "hkd"):
+                raise SkipTaskError(
+                    f"{args.cmd.casefold()} not supported for L3 products"
+                )
             else:
                 process_product(processor, params, directory)
     else:
@@ -421,6 +424,8 @@ def _process_file(
                 freeze(processor, product_params, directory)
             elif args.cmd == "dvas":
                 upload_to_dvas(processor, product_params)
+            elif args.cmd == "hkd":
+                raise SkipTaskError("HKD not supported for geophysical products")
             else:
                 process_product(processor, product_params, directory)
 
