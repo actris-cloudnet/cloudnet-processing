@@ -13,7 +13,7 @@ logging.basicConfig(level=logging.INFO)
 
 
 def main():
-    config = utils.read_main_conf()
+    config = Config()
     session = utils.make_session()
     md_api = MetadataApi(config, session)
     try:

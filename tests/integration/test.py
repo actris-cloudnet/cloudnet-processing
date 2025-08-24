@@ -7,6 +7,7 @@ import pytest
 import requests
 from cloudnet_api_client import APIClient
 from processing import utils
+from processing.config import Config
 from processing.dvas import Dvas
 from processing.instrument import process_instrument
 from processing.metadata_api import MetadataApi
@@ -15,7 +16,7 @@ from processing.processor import Instrument, InstrumentParams, Processor
 from processing.storage_api import StorageApi
 
 DATA_PATH = Path(__file__).parent / "data"
-CONFIG = utils.read_main_conf()
+CONFIG = Config()
 
 
 @pytest.fixture(scope="session")

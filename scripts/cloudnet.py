@@ -71,7 +71,7 @@ else:
 
 
 def main():
-    config = utils.read_main_conf()
+    config = Config()
     session = utils.make_session()
     client = APIClient(f"{config.dataportal_url}/api/", session)
     args = _parse_args(client)

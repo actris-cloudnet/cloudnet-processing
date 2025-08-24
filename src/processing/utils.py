@@ -212,11 +212,6 @@ def fetch_calibration(instrument_pid: str, date: datetime.date | str) -> dict | 
     return res.json() if res.ok else None
 
 
-def read_main_conf() -> Config:
-    """Reads config from env vars."""
-    return Config(os.environ)
-
-
 def sha256sum(filename: Path) -> str:
     """Calculates hash of file using sha-256."""
     return _calc_hash_sum(filename, "sha256")
@@ -263,14 +258,14 @@ class SkipTaskError(Exception):
 
 def build_file_landing_page_url(uuid: str) -> str:
     """Returns file landing page url."""
-    config = read_main_conf()
+    config = Config()
     base = config.dataportal_public_url
     return f"{base}/file/{uuid}"
 
 
 def _fetch_data_portal_url() -> str:
     """Returns data portal url."""
-    config = read_main_conf()
+    config = Config()
     return config.dataportal_url
 
 

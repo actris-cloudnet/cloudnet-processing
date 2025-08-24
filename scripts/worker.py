@@ -290,7 +290,7 @@ class Worker:
 
 
 def main() -> None:
-    config = utils.read_main_conf()
+    config = Config()
     worker = Worker(config)
     exit = Event()
 
