@@ -71,7 +71,7 @@ def process_instrument(processor: Processor, params: InstrumentParams, directory
         new_file, params.product.id, std_uuid.UUID(uuid.product), filename, directory
     )
     qc_result = processor.upload_quality_report(
-        new_file, std_uuid.UUID(uuid.product), params.site, params.product.id
+        new_file, uuid.product, params.site, params.product.id
     )
     processor.update_statuses(uuid.raw, "processed")
     utils.print_info(uuid, volatile, patch, upload, qc_result)

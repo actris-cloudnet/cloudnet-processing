@@ -397,7 +397,7 @@ class Processor:
     def upload_quality_report(
         self,
         full_path: Path,
-        uuid: UUID,
+        uuid: UUID | str,
         site: Site | ExtendedSite,
         product: str | None = None,
     ) -> str:

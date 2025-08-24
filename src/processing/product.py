@@ -108,7 +108,7 @@ def process_product(
             directory,
         )
     qc_result = processor.upload_quality_report(
-        new_file, UUID(uuid.product), params.site, params.product.id
+        new_file, uuid.product, params.site, params.product.id
     )
     utils.print_info(uuid, volatile, patch, upload, qc_result)
     if processor.md_api.config.is_production and isinstance(params, ProductParams):
