@@ -3,6 +3,7 @@ from pathlib import Path
 import netCDF4
 import numpy as np
 import pytest
+from cloudnet_api_client.utils import md5sum, sha256sum
 from numpy import ma
 from processing import netcdf_comparer, utils
 from processing.netcdf_comparer import NCDiff
@@ -20,11 +21,11 @@ class TestHash:
     file = "tests/data/20201121_bucharest_classification.nc"
 
     def test_md5sum(self):
-        hash_sum = utils.md5sum(self.file)
+        hash_sum = md5sum(self.file)
         assert hash_sum == "c81d7834d7189facbc5f63416fe5b3da"
 
     def test_sha256sum2(self):
-        hash_sum = utils.sha256sum(self.file)
+        hash_sum = sha256sum(self.file)
         assert (
             hash_sum
             == "48e006f769a9352a42bf41beac449eae62aea545f4d3ba46bffd35759d8982ca"

@@ -3,6 +3,7 @@ import uuid
 from pathlib import Path
 
 from cloudnet_api_client.containers import ProductMetadata
+from cloudnet_api_client.utils import sha256sum
 
 from processing import utils
 from processing.processor import ModelParams, Processor, ProcessParams
@@ -78,7 +79,7 @@ def freeze(processor: Processor, params: ProcessParams, directory: Path) -> None
     )
     payload = {
         "uuid": file_uuid,
-        "checksum": utils.sha256sum(full_path),
+        "checksum": sha256sum(full_path),
         "volatile": volatile,
         "pid": pid,
         **response_data,
