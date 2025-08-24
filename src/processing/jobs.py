@@ -33,7 +33,7 @@ def update_plots(processor: Processor, params: ProcessParams, directory: Path) -
             directory,
             metadata.legacy,
         )
-    url = utils.build_file_landing_page_url(str(file_uuid))
+    url = utils.build_file_landing_page_url(file_uuid)
     logging.info(f"Plots updated: {url}/visualizations")
 
 
@@ -42,7 +42,7 @@ def update_qc(processor: Processor, params: ProcessParams, directory: Path) -> N
     result = processor.upload_quality_report(
         full_path, metadata.uuid, params.site, params.product.id
     )
-    url = f"{utils.build_file_landing_page_url(str(metadata.uuid))}/quality"
+    url = f"{utils.build_file_landing_page_url(metadata.uuid)}/quality"
     logging.info(f"Created quality report: {url} {result.upper()}")
 
 

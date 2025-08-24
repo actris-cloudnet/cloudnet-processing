@@ -244,7 +244,7 @@ class SkipTaskError(Exception):
         super().__init__(self.message)
 
 
-def build_file_landing_page_url(uuid: str) -> str:
+def build_file_landing_page_url(uuid: str | UUID) -> str:
     """Returns file landing page url."""
     config = Config()
     base = config.dataportal_public_url

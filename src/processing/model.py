@@ -180,6 +180,6 @@ def _harmonize_model(
 
 
 def _print_info(file_uuid: uuid.UUID, qc_result: str | None = None) -> None:
-    link = utils.build_file_landing_page_url(str(file_uuid))
+    link = utils.build_file_landing_page_url(file_uuid)
     qc_str = f" QC: {qc_result.upper()}" if qc_result is not None else ""
     logging.info(f"Updated model: {link}{qc_str}")

@@ -28,7 +28,7 @@ class Dvas:
 
     def upload(self, file: ProductMetadata):
         """Upload Cloudnet file metadata to DVAS API and update Cloudnet data portal"""
-        landing_page_url = utils.build_file_landing_page_url(str(file.uuid))
+        landing_page_url = utils.build_file_landing_page_url(file.uuid)
         logging.info(f"Uploading {landing_page_url} metadata to DVAS")
         if not file.pid:
             logging.error("Skipping - volatile file")
