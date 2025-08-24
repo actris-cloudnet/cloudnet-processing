@@ -10,7 +10,7 @@ import cloudnetpy.utils
 import netCDF4
 import numpy as np
 
-import processing.utils
+from processing.version import __version__ as cloudnet_processing_version
 
 
 class Level1Nc:
@@ -129,11 +129,10 @@ class Level1Nc:
 
     def add_history(self, product: str, source: str = "history"):
         """Adds history attribute."""
-        version = processing.utils.get_data_processing_version()
         old_history = getattr(self.nc_raw, source, "")
         history = (
             f"{cloudnetpy.utils.get_time()} - {product} metadata harmonized by CLU using "
-            f"cloudnet-processing v{version}"
+            f"cloudnet-processing v{cloudnet_processing_version}"
         )
         if len(old_history) > 0:
             history = f"{history}\n{old_history}"

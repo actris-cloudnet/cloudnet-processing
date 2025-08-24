@@ -3,7 +3,6 @@ import datetime
 import gzip
 import hashlib
 import logging
-import os
 import shutil
 from pathlib import Path
 from typing import Literal
@@ -16,8 +15,8 @@ from numpy import ma
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-import processing.version
 from processing.config import Config
+from processing.version import __version__ as cloudnet_processing_version
 
 ErrorSource = Literal["data", "worker", "freeze-cronjob", "qc-cronjob"]
 
@@ -118,7 +117,7 @@ def create_product_put_payload(
             "volatile": volatile,
             "uuid": getattr(nc, "file_uuid", ""),
             "pid": getattr(nc, "pid", ""),
-            "software": {"cloudnet-processing": get_data_processing_version()},
+            "software": {"cloudnet-processing": cloudnet_processing_version},
             "startTime": start_time,
             "stopTime": stop_time,
             **storage_service_response,
@@ -183,19 +182,10 @@ def _get_last_proper_model_data_ind(nc: netCDF4.Dataset) -> int:
     return min(np.where(unmasked_rows)[0][-1] + 1, data.shape[0] - 1)
 
 
-def get_data_processing_version() -> str:
-    version_file = Path(os.path.abspath(processing.version.__file__))
-    version: dict = {}
-    with open(version_file) as f:
-        exec(f.read(), version)
-    return version["__version__"]
-
-
 def add_global_attributes(full_path: Path, instrument_pid: str | None = None):
     """Add cloudnet-processing package version to file attributes."""
-    version = get_data_processing_version()
     with netCDF4.Dataset(full_path, "r+") as nc:
-        nc.cloudnet_processing_version = version
+        nc.cloudnet_processing_version = cloudnet_processing_version
         if instrument_pid:
             nc.instrument_pid = instrument_pid
 
