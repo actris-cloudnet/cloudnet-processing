@@ -12,8 +12,7 @@ from pathlib import Path
 import requests
 from cloudnet_api_client import APIClient
 from cloudnet_api_client.containers import ExtendedProduct, Product, Site
-
-from processing import utils
+from cloudnet_api_client.utils import md5sum
 
 DATAPORTAL_URL = os.environ["DATAPORTAL_URL"].rstrip("/")
 DATAPORTAL_AUTH = ("admin", "admin")
@@ -260,7 +259,7 @@ def _submit_file(filename: Path, row: dict) -> str:
         bucket = f"{bucket}/legacy"
     ss_url = f"{STORAGE_SERVICE_URL}/{bucket}/{row['filename']}"
     ss_body = filename.read_bytes()
-    ss_headers = {"Content-MD5": utils.md5sum(filename, is_base64=True)}
+    ss_headers = {"Content-MD5": md5sum(filename, is_base64=True)}
     ss_res = requests.put(
         ss_url, ss_body, auth=STORAGE_SERVICE_AUTH, headers=ss_headers
     )

@@ -6,7 +6,6 @@ import hashlib
 import logging
 import re
 import threading
-import uuid
 from pathlib import Path
 from typing import Iterable
 
@@ -17,8 +16,8 @@ from cloudnet_api_client.containers import (
     RawMetadata,
     RawModelMetadata,
 )
+from cloudnet_api_client.utils import md5sum
 
-from processing import utils
 from processing.config import Config
 
 
@@ -98,7 +97,7 @@ class StorageApi:
 
     @staticmethod
     def _get_headers(full_path: Path) -> dict:
-        checksum = utils.md5sum(full_path, is_base64=True)
+        checksum = md5sum(full_path, is_base64=True)
         return {"content-md5": checksum}
 
     def _download_parallel(

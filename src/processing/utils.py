@@ -1,7 +1,5 @@
-import base64
 import datetime
 import gzip
-import hashlib
 import logging
 import shutil
 from pathlib import Path
@@ -11,6 +9,7 @@ from uuid import UUID
 import netCDF4
 import numpy as np
 import requests
+from cloudnet_api_client.utils import sha256sum
 from numpy import ma
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
@@ -28,6 +27,61 @@ class Uuid:
         self.raw: list[str] = []
         self.product: str = ""
         self.volatile: str | None = None
+
+
+class MiscError(Exception):
+    """Internal exception class."""
+
+    def __init__(self, msg: str):
+        self.message = msg
+        super().__init__(self.message)
+
+
+class RawDataMissingError(Exception):
+    """Internal exception class."""
+
+    def __init__(self, msg: str = "Missing raw data"):
+        self.message = msg
+        super().__init__(self.message)
+
+
+class SkipTaskError(Exception):
+    """Unable to complete task for an expected reason."""
+
+    def __init__(self, msg: str):
+        self.message = msg
+        super().__init__(self.message)
+
+
+class MyAdapter(HTTPAdapter):
+    def __init__(self):
+        retry_strategy = Retry(
+            total=10, backoff_factor=0.1, status_forcelist=[504, 524]
+        )
+        super().__init__(max_retries=retry_strategy)
+
+    def send(
+        self, request, stream=False, timeout=None, verify=True, cert=None, proxies=None
+    ):
+        if timeout is None:
+            timeout = 120
+        return super().send(request, stream, timeout, verify, cert, proxies)
+
+
+def make_session() -> requests.Session:
+    adapter = MyAdapter()
+    http = requests.Session()
+    http.mount("https://", adapter)
+    http.mount("http://", adapter)
+    return http
+
+
+def utctoday() -> datetime.date:
+    return utcnow().date()
+
+
+def utcnow() -> datetime.datetime:
+    return datetime.datetime.now(datetime.timezone.utc)
 
 
 def send_slack_alert(
@@ -89,12 +143,52 @@ def send_slack_alert(
         logging.fatal(f"Failed to send Slack notification: {body.text}")
 
 
-def utctoday() -> datetime.date:
-    return utcnow().date()
+def add_global_attributes(full_path: Path, instrument_pid: str | None = None):
+    """Add cloudnet-processing package version to file attributes."""
+    with netCDF4.Dataset(full_path, "r+") as nc:
+        nc.cloudnet_processing_version = cloudnet_processing_version
+        if instrument_pid:
+            nc.instrument_pid = instrument_pid
 
 
-def utcnow() -> datetime.datetime:
-    return datetime.datetime.now(datetime.timezone.utc)
+def print_info(
+    uuid: Uuid,
+    volatile: bool,
+    patch: bool,
+    upload: bool,
+    qc_result: str | None = None,
+) -> None:
+    if not upload:
+        action = "Kept existing file"
+    elif patch:
+        action = "Patched existing file"
+    elif not volatile:
+        action = "Created new version"
+    else:
+        action = "Replaced volatile file" if uuid.volatile else "Created volatile file"
+
+    link = build_file_landing_page_url(uuid.product)
+    qc_str = f" QC: {qc_result.upper()}" if qc_result else ""
+    logging.info(f"{action}: {link}{qc_str}")
+
+
+def build_file_landing_page_url(uuid: str | UUID) -> str:
+    """Returns file landing page url."""
+    config = Config()
+    base = config.dataportal_public_url
+    return f"{base}/file/{uuid}"
+
+
+def unzip_gz_file(path_in: Path) -> Path:
+    if path_in.suffix != ".gz":
+        return path_in
+    path_out = path_in.parent / path_in.stem
+    logging.debug(f"Decompressing {path_in} to {path_out}")
+    with gzip.open(path_in, "rb") as file_in:
+        with open(path_out, "wb") as file_out:
+            shutil.copyfileobj(file_in, file_out)
+    path_in.unlink()
+    return path_out
 
 
 def create_product_put_payload(
@@ -180,118 +274,3 @@ def _get_last_proper_model_data_ind(nc: netCDF4.Dataset) -> int:
     data = nc.variables["temperature"][:]
     unmasked_rows = ~np.all(ma.getmaskarray(data), axis=1)
     return min(np.where(unmasked_rows)[0][-1] + 1, data.shape[0] - 1)
-
-
-def add_global_attributes(full_path: Path, instrument_pid: str | None = None):
-    """Add cloudnet-processing package version to file attributes."""
-    with netCDF4.Dataset(full_path, "r+") as nc:
-        nc.cloudnet_processing_version = cloudnet_processing_version
-        if instrument_pid:
-            nc.instrument_pid = instrument_pid
-
-
-def sha256sum(filename: Path) -> str:
-    """Calculates hash of file using sha-256."""
-    return _calc_hash_sum(filename, "sha256")
-
-
-def md5sum(filename: Path, is_base64: bool = False) -> str:
-    """Calculates hash of file using md5."""
-    return _calc_hash_sum(filename, "md5", is_base64)
-
-
-def _calc_hash_sum(filename: Path, method: str, is_base64: bool = False) -> str:
-    hash_sum = getattr(hashlib, method)()
-    with open(filename, "rb") as f:
-        for byte_block in iter(lambda: f.read(4096), b""):
-            hash_sum.update(byte_block)
-    if is_base64:
-        return base64.b64encode(hash_sum.digest()).decode()
-    return hash_sum.hexdigest()
-
-
-class MiscError(Exception):
-    """Internal exception class."""
-
-    def __init__(self, msg: str):
-        self.message = msg
-        super().__init__(self.message)
-
-
-class RawDataMissingError(Exception):
-    """Internal exception class."""
-
-    def __init__(self, msg: str = "Missing raw data"):
-        self.message = msg
-        super().__init__(self.message)
-
-
-class SkipTaskError(Exception):
-    """Unable to complete task for an expected reason."""
-
-    def __init__(self, msg: str):
-        self.message = msg
-        super().__init__(self.message)
-
-
-def build_file_landing_page_url(uuid: str | UUID) -> str:
-    """Returns file landing page url."""
-    config = Config()
-    base = config.dataportal_public_url
-    return f"{base}/file/{uuid}"
-
-
-class MyAdapter(HTTPAdapter):
-    def __init__(self):
-        retry_strategy = Retry(
-            total=10, backoff_factor=0.1, status_forcelist=[504, 524]
-        )
-        super().__init__(max_retries=retry_strategy)
-
-    def send(
-        self, request, stream=False, timeout=None, verify=True, cert=None, proxies=None
-    ):
-        if timeout is None:
-            timeout = 120
-        return super().send(request, stream, timeout, verify, cert, proxies)
-
-
-def make_session() -> requests.Session:
-    adapter = MyAdapter()
-    http = requests.Session()
-    http.mount("https://", adapter)
-    http.mount("http://", adapter)
-    return http
-
-
-def print_info(
-    uuid: Uuid,
-    volatile: bool,
-    patch: bool,
-    upload: bool,
-    qc_result: str | None = None,
-) -> None:
-    if not upload:
-        action = "Kept existing file"
-    elif patch:
-        action = "Patched existing file"
-    elif not volatile:
-        action = "Created new version"
-    else:
-        action = "Replaced volatile file" if uuid.volatile else "Created volatile file"
-
-    link = build_file_landing_page_url(uuid.product)
-    qc_str = f" QC: {qc_result.upper()}" if qc_result else ""
-    logging.info(f"{action}: {link}{qc_str}")
-
-
-def unzip_gz_file(path_in: Path) -> Path:
-    if path_in.suffix != ".gz":
-        return path_in
-    path_out = path_in.parent / path_in.stem
-    logging.debug(f"Decompressing {path_in} to {path_out}")
-    with gzip.open(path_in, "rb") as file_in:
-        with open(path_out, "wb") as file_out:
-            shutil.copyfileobj(file_in, file_out)
-    path_in.unlink()
-    return path_out
