@@ -26,7 +26,7 @@ from processing.processor import (
     ProcessParams,
     ProductParams,
 )
-from processing.product import process_me, process_product
+from processing.product import process_product
 from processing.storage_api import StorageApi
 from processing.utils import send_slack_alert, utcnow, utctoday
 
@@ -139,7 +139,7 @@ class Worker:
                     elif task["type"] == "dvas":
                         raise utils.SkipTaskError("DVAS not supported for L3 products")
                     elif task["type"] == "process":
-                        process_me(self.processor, params, directory)
+                        process_product(self.processor, params, directory)
                         if task["options"]["derivedProducts"]:
                             self.publish_followup_tasks(site, product, params)
                     else:

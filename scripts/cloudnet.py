@@ -40,7 +40,7 @@ from processing.processor import (
     Processor,
     ProductParams,
 )
-from processing.product import process_me, process_product
+from processing.product import process_product
 from processing.storage_api import StorageApi
 from requests import Session
 
@@ -402,7 +402,7 @@ def _process_file(
             elif args.cmd == "dvas":
                 raise utils.SkipTaskError("DVAS not supported for L3 products")
             else:
-                process_me(processor, params, directory)
+                process_product(processor, params, directory)
     else:
         product_params = ProductParams(
             site=site,

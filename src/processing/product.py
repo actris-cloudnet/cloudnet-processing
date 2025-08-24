@@ -24,70 +24,9 @@ from processing.processor import ModelParams, Processor, ProductParams
 from processing.utils import RawDataMissingError, SkipTaskError, Uuid
 
 
-def process_me(processor: Processor, params: ModelParams, directory: Path):
-    uuid = Uuid()
-    pid_to_new_file = None
-    if existing_product := processor.fetch_product(params):
-        if existing_product.volatile:
-            uuid.volatile = str(existing_product.uuid)
-            pid_to_new_file = existing_product.pid
-        filename = existing_product.filename
-        existing_file = processor.storage_api.download_product(
-            existing_product, directory
-        )
-    else:
-        filename = _generate_filename(params)
-        existing_file = None
-
-    volatile = not existing_file or uuid.volatile is not None
-
-    try:
-        new_file = _process_l3(processor, params, uuid, directory)
-    except CloudnetException as err:
-        raise utils.SkipTaskError(str(err)) from err
-
-    if not params.product.experimental:
-        processor.pid_utils.add_pid_to_file(new_file, pid_to_new_file)
-
-    utils.add_global_attributes(new_file)
-
-    upload = True
-    patch = False
-    if existing_product and existing_file:
-        difference = nc_difference(existing_file, new_file)
-        if difference == NCDiff.NONE:
-            upload = False
-            new_file = existing_file
-            uuid.product = str(existing_product.uuid)
-        elif difference == NCDiff.MINOR:
-            # Replace existing file
-            patch = True
-            if not params.product.experimental:
-                processor.pid_utils.add_pid_to_file(new_file, existing_product.pid)
-            with netCDF4.Dataset(new_file, "r+") as nc:
-                nc.file_uuid = str(existing_product.uuid)
-            uuid.product = str(existing_product.uuid)
-
-    if upload:
-        processor.upload_file(params, new_file, filename, volatile, patch)
-    else:
-        logging.info("Skipping PUT to data portal, file has not changed")
-
-    processor.create_and_upload_l3_images(
-        new_file,
-        params.product.id,
-        params.model.id,
-        UUID(uuid.product),
-        filename,
-        directory,
-    )
-    qc_result = processor.upload_quality_report(
-        new_file, UUID(uuid.product), params.site, params.product.id
-    )
-    utils.print_info(uuid, volatile, patch, upload, qc_result)
-
-
-def process_product(processor: Processor, params: ProductParams, directory: Path):
+def process_product(
+    processor: Processor, params: ProductParams | ModelParams, directory: Path
+):
     uuid = Uuid()
     pid_to_new_file = None
     if existing_product := processor.fetch_product(params):
@@ -104,7 +43,9 @@ def process_product(processor: Processor, params: ProductParams, directory: Path
     volatile = not existing_file or uuid.volatile is not None
 
     try:
-        if params.product.id in ("mwr-single", "mwr-multi"):
+        if isinstance(params, ModelParams):
+            new_file = _process_l3(processor, params, uuid, directory)
+        elif params.product.id in ("mwr-single", "mwr-multi"):
             new_file = _process_mwrpy(processor, params, uuid, directory)
         elif params.product.id in ("categorize", "categorize-voodoo"):
             new_file = _process_categorize(processor, params, uuid, directory)
@@ -121,7 +62,10 @@ def process_product(processor: Processor, params: ProductParams, directory: Path
         processor.pid_utils.add_pid_to_file(new_file, pid_to_new_file)
 
     utils.add_global_attributes(
-        new_file, instrument_pid=params.instrument.pid if params.instrument else None
+        new_file,
+        params.instrument.pid
+        if isinstance(params, ProductParams) and params.instrument
+        else None,
     )
 
     upload = True
@@ -146,18 +90,28 @@ def process_product(processor: Processor, params: ProductParams, directory: Path
     else:
         logging.info("Skipping PUT to data portal, file has not changed")
 
-    processor.create_and_upload_images(
-        new_file,
-        params.product.id,
-        UUID(uuid.product),
-        filename,
-        directory,
-    )
+    if isinstance(params, ModelParams):
+        processor.create_and_upload_l3_images(
+            new_file,
+            params.product.id,
+            params.model.id,
+            UUID(uuid.product),
+            filename,
+            directory,
+        )
+    else:
+        processor.create_and_upload_images(
+            new_file,
+            params.product.id,
+            UUID(uuid.product),
+            filename,
+            directory,
+        )
     qc_result = processor.upload_quality_report(
         new_file, UUID(uuid.product), params.site, params.product.id
     )
     utils.print_info(uuid, volatile, patch, upload, qc_result)
-    if processor.md_api.config.is_production:
+    if processor.md_api.config.is_production and isinstance(params, ProductParams):
         _update_dvas_metadata(processor, params)
 
 
