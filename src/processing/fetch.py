@@ -55,6 +55,7 @@ class Fetcher:
         if (
             isinstance(self.product, ExtendedProduct)
             and self.product.source_instrument_ids
+            and not self.args.instruments
         ):
             instruments = self.product.source_instrument_ids
         else:
