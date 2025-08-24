@@ -98,22 +98,27 @@ class Processor:
         site_dict["raw_longitude"] = np.array([t.longitude for t in locations])
         return ExtendedSite(**site_dict)
 
-    def get_product(self, params: ProcessParams) -> ProductMetadata | None:
+    def get_product(
+        self,
+        params: ProcessParams,
+        product_id: str | None = None,
+        model_id: str | None = None,
+    ) -> ProductMetadata | None:
         if isinstance(params, (InstrumentParams, ProductParams)):
             instrument_pid = params.instrument.pid if params.instrument else None
-            model_id = None
+            model = None
         else:
             assert isinstance(params, ModelParams)
             instrument_pid = None
-            model_id = params.model.id
+            model = params.model.id
 
         metadata = self.client.files(
             site_id=params.site.id,
-            product=params.product.id,
+            product=product_id or params.product.id,
             date=params.date,
             show_legacy=True,
             instrument_pid=instrument_pid,
-            model_id=model_id,
+            model_id=model_id or model,
         )
         if len(metadata) == 0:
             return None

@@ -256,12 +256,11 @@ def _process_categorize(
         )
         uuid.raw.extend(lv0_uuid)
     except ModelDataError as exc:
-        payload = _get_payload(params, model_id="gdas1")
-        metadata = processor.md_api.get("api/model-files", payload)
-        if not metadata:
+        gdas1_meta = processor.get_product(params, product_id="model", model_id="gdas1")
+        if not gdas1_meta:
             raise SkipTaskError("Bad model data and no gdas1") from exc
         input_files["model"] = str(
-            processor.storage_api.download_product(metadata[0], directory)
+            processor.storage_api.download_product(gdas1_meta, directory)
         )
         uuid.product = generate_categorize(
             input_files, str(output_path), uuid=uuid.volatile
@@ -348,7 +347,7 @@ def _get_level1b_metadata_for_categorize(
     processor: Processor, params: ProductParams, is_voodoo: bool
 ) -> dict[str, ProductMetadata]:
     meta_records = {
-        "model": _find_model_product(processor, params),
+        "model": processor.get_product(params, product_id="model"),
         "mwr": (
             _find_instrument_product(processor, params, "mwr-single")
             or _find_instrument_product(
@@ -389,18 +388,6 @@ def _get_level1b_metadata_for_categorize(
         if product not in optional_products and metadata is None:
             raise SkipTaskError(f"Missing required input product: {product}")
     return {key: value for key, value in meta_records.items() if value is not None}
-
-
-def _find_model_product(
-    processor: Processor, params: ProductParams
-) -> ProductMetadata | None:
-    metadata = processor.client.files(
-        site_id=params.site.id,
-        date=params.date,
-        product="model",
-    )
-    _check_response(metadata, "model")
-    return metadata[0]
 
 
 def _find_instrument_product(
@@ -503,29 +490,6 @@ def _get_input_files_for_voodoo(
     except RawDataMissingError:
         raise SkipTaskError("Missing rpg-fmcw-94 Level 0 data.")
     return [str(path) for path in full_paths], uuids
-
-
-def _get_payload(
-    params: ProductParams | ModelParams,
-    product_id: str | list[str] | None = None,
-    instrument_id: str | list[str] | None = None,
-    instrument_pid: str | list[str] | None = None,
-    model_id: str | None = None,
-) -> dict:
-    payload = {
-        "site": params.site.id,
-        "date": params.date.isoformat(),
-        "developer": True,
-    }
-    if product_id is not None:
-        payload["product"] = product_id
-    if instrument_id is not None:
-        payload["instrument"] = instrument_id
-    if instrument_pid is not None:
-        payload["instrumentPid"] = instrument_pid
-    if model_id is not None:
-        payload["model"] = model_id
-    return payload
 
 
 def _update_dvas_metadata(processor: Processor, params: ProductParams):
