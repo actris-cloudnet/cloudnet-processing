@@ -355,7 +355,7 @@ def _process_file(
             product_metadata = processor.client.files(
                 site_id=site.id,
                 date=date,
-                product=mapping.get(product.id),
+                product_id=mapping.get(product.id),
             )
             instruments = {
                 processor.client.instrument(meta.instrument.uuid)

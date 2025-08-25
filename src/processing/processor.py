@@ -119,7 +119,7 @@ class Processor:
 
         metadata = self.client.files(
             site_id=params.site.id,
-            product=product_id or params.product.id,
+            product_id=product_id or params.product.id,
             date=params.date,
             show_legacy=True,
             instrument_pid=instrument_pid,

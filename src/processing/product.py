@@ -144,7 +144,7 @@ def _process_mwrpy(
     metadata = processor.client.files(
         site_id=params.site.id,
         date=params.date,
-        product="mwr-l1c",
+        product_id="mwr-l1c",
         instrument_pid=params.instrument.pid,
     )
     _check_response(metadata, "mwr-l1c")
@@ -179,7 +179,7 @@ def _process_cpr_simulation(
     metadata = processor.client.files(
         site_id=params.site.id,
         date=params.date,
-        product="categorize",
+        product_id="categorize",
     )
     _check_response(metadata, "categorize")
     categorize_file = processor.storage_api.download_product(metadata[0], directory)
@@ -200,7 +200,7 @@ def _process_epsilon_from_lidar(
     metadata_stare = processor.client.files(
         site_id=params.site.id,
         date=params.date,
-        product="doppler-lidar",
+        product_id="doppler-lidar",
         instrument_pid=params.instrument.pid,
     )
     _check_response(metadata_stare, "doppler-lidar")
@@ -208,7 +208,7 @@ def _process_epsilon_from_lidar(
     metadata_wind = processor.client.files(
         site_id=params.site.id,
         date=params.date,
-        product="doppler-lidar-wind",
+        product_id="doppler-lidar-wind",
         instrument_pid=params.instrument.pid,
     )
     _check_response(metadata_wind, "doppler-lidar-wind")
@@ -283,7 +283,7 @@ def _process_l3(
     model_meta = processor.client.files(
         site_id=params.site.id,
         date=params.date,
-        product="model",
+        product_id="model",
         model_id=params.model.id,
     )
     _check_response(model_meta, "model")
@@ -295,7 +295,7 @@ def _process_l3(
     product_meta = processor.client.files(
         site_id=params.site.id,
         date=params.date,
-        product=source,
+        product_id=source,
     )
     _check_response(product_meta, source)
 
@@ -326,7 +326,7 @@ def _process_level2(
     metadata = processor.client.files(
         site_id=params.site.id,
         date=params.date,
-        product=cat_file,
+        product_id=cat_file,
     )
     _check_response(metadata, cat_file)
 
@@ -437,7 +437,7 @@ def _find_instrument_product(
     metadata = processor.client.files(
         site_id=params.site.id,
         date=params.date,
-        product=product_id,
+        product_id=product_id,
         instrument_id=require,
     )
     metadata = [
@@ -496,7 +496,7 @@ def _update_dvas_metadata(processor: Processor, params: ProductParams):
     metadata = processor.client.files(
         site_id=params.site.id,
         date=params.date,
-        product=params.product.id,
+        product_id=params.product.id,
         instrument_pid=params.instrument.pid if params.instrument else None,
     )
     if metadata:

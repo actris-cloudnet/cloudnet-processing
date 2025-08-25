@@ -245,7 +245,7 @@ class Worker:
         metadata = self.client.files(
             site_id=params.site.id,
             date=params.date.isoformat(),
-            product=product.id,
+            product_id=product.id,
             instrument_pid=instrument.pid if instrument else None,
         )
         is_freezed = len(metadata) == 1 and not metadata[0].volatile
