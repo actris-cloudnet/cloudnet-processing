@@ -223,14 +223,18 @@ class ProcessRadar(ProcessInstrument):
 
 class ProcessDopplerLidarWind(ProcessInstrument):
     def process_halo_doppler_lidar(self):
-        calibration = self.processor.client.calibration(
-            self.params.instrument.pid, self.params.date
-        )
-        time_offset = (
-            datetime.timedelta(minutes=calibration["data"]["time_offset"])
-            if calibration is not None and "time_offset" in calibration["data"]
-            else None
-        )
+        try:
+            calibration = self.processor.client.calibration(
+                self.params.instrument.pid, self.params.date
+            )
+            time_offset = (
+                datetime.timedelta(minutes=calibration["data"]["time_offset"])
+                if "time_offset" in calibration["data"]
+                else None
+            )
+        except CloudnetAPIError:
+            time_offset = None
+
         full_paths, self.uuid.raw = self.download_instrument(
             include_pattern=r".*\.hpl",
             exclude_pattern=r"Stare.*",
@@ -321,12 +325,17 @@ class ProcessDopplerLidarWind(ProcessInstrument):
         )
 
     def _calibration_options(self) -> doppy.product.WindOptions | None:
-        calibration = self.processor.client.calibration(
-            self.params.instrument.pid, self.params.date
-        )
-        azimuth_offset = (
-            calibration.get("data", {}).get("azimuth_offset") if calibration else None
-        )
+        try:
+            calibration = self.processor.client.calibration(
+                self.params.instrument.pid, self.params.date
+            )
+            azimuth_offset = (
+                calibration.get("data", {}).get("azimuth_offset")
+                if calibration
+                else None
+            )
+        except CloudnetAPIError:
+            return None
         return (
             doppy.product.WindOptions(azimuth_offset_deg=float(azimuth_offset))
             if azimuth_offset
@@ -336,14 +345,17 @@ class ProcessDopplerLidarWind(ProcessInstrument):
 
 class ProcessDopplerLidar(ProcessInstrument):
     def process_halo_doppler_lidar(self):
-        calibration = self.processor.client.calibration(
-            self.params.instrument.pid, self.params.date
-        )
-        time_offset = (
-            datetime.timedelta(minutes=calibration["data"]["time_offset"])
-            if calibration is not None and "time_offset" in calibration["data"]
-            else None
-        )
+        try:
+            calibration = self.processor.client.calibration(
+                self.params.instrument.pid, self.params.date
+            )
+            time_offset = (
+                datetime.timedelta(minutes=calibration["data"]["time_offset"])
+                if calibration is not None and "time_offset" in calibration["data"]
+                else None
+            )
+        except CloudnetAPIError:
+            time_offset = None
         # Co files either have "co" tag or no tags at all.
         full_paths_co, raw_uuids_co = self.download_instrument(
             filename_prefix="Stare",
@@ -518,14 +530,17 @@ class ProcessLidar(ProcessInstrument):
         self._call_ceilo2nc("cl31")
 
     def process_cl51(self):
-        calibration = self.processor.client.calibration(
-            self.params.instrument.pid, self.params.date
-        )
-        time_offset = (
-            datetime.timedelta(minutes=calibration["data"]["time_offset"])
-            if calibration is not None and "time_offset" in calibration["data"]
-            else None
-        )
+        try:
+            calibration = self.processor.client.calibration(
+                self.params.instrument.pid, self.params.date
+            )
+            time_offset = (
+                datetime.timedelta(minutes=calibration["data"]["time_offset"])
+                if "time_offset" in calibration["data"]
+                else None
+            )
+        except CloudnetAPIError:
+            time_offset = None
         full_paths, self.uuid.raw = self.download_instrument(time_offset=time_offset)
         full_paths.sort()
         _concatenate_text_files(full_paths, self.daily_path)
@@ -576,10 +591,11 @@ class ProcessLidar(ProcessInstrument):
 
     def _fetch_ceilo_calibration(self) -> dict:
         output: dict = {}
-        calibration = self.processor.client.calibration(
-            self.params.instrument.pid, self.params.date
-        )
-        if not calibration:
+        try:
+            calibration = self.processor.client.calibration(
+                self.params.instrument.pid, self.params.date
+            )
+        except CloudnetAPIError:
             return output
         if "calibration_factor" in calibration["data"]:
             output["calibration_factor"] = float(
@@ -591,10 +607,11 @@ class ProcessLidar(ProcessInstrument):
 
     def _fetch_pollyxt_calibration(self) -> dict:
         output = {"snr_limit": 25.0}
-        calibration = self.processor.client.calibration(
-            self.params.instrument.pid, self.params.date
-        )
-        if not calibration:
+        try:
+            calibration = self.processor.client.calibration(
+                self.params.instrument.pid, self.params.date
+            )
+        except CloudnetAPIError:
             return output
         if "snr_limit" in calibration["data"]:
             output["snr_limit"] = float(calibration["data"]["snr_limit"])
@@ -766,13 +783,15 @@ class ProcessDisdrometer(ProcessInstrument):
 
     def _fetch_parsivel_calibration(self) -> dict:
         output: dict = {"telegram": None, "missing_timestamps": False}
-        calibration = self.processor.client.calibration(
-            self.params.instrument.pid, self.params.date
-        )
-        if calibration is not None:
-            data = calibration["data"]
-            output["telegram"] = data.get("telegram", None)
-            output["missing_timestamps"] = data.get("missing_timestamps", False)
+        try:
+            calibration = self.processor.client.calibration(
+                self.params.instrument.pid, self.params.date
+            )
+        except CloudnetAPIError:
+            return output
+        data = calibration["data"]
+        output["telegram"] = data.get("telegram", None)
+        output["missing_timestamps"] = data.get("missing_timestamps", False)
         return output
 
 
@@ -810,10 +829,12 @@ class ProcessWeatherStation(ProcessInstrument):
         )
         if self.params.site.id not in supported_sites:
             raise NotImplementedError("Weather station not implemented for this site")
-
-        calibration = self.processor.client.calibration(
-            self.params.instrument.pid, self.params.date
-        )
+        try:
+            calibration = self.processor.client.calibration(
+                self.params.instrument.pid, self.params.date
+            )
+        except CloudnetAPIError:
+            calibration = None
         if calibration and calibration.get("data", {}).get("time_offset"):
             time_offset = datetime.timedelta(minutes=calibration["data"]["time_offset"])
             full_paths, self.uuid.raw = self.download_instrument(
