@@ -270,9 +270,7 @@ def _process_file(
 ) -> None:
     if product.id == "model":
         if args.cmd in ("dvas", "hkd"):
-            raise SkipTaskError(
-                f"{args.cmd.casefold()} not supported for model products"
-            )
+            raise SkipTaskError(f"{args.cmd.upper()} not supported for model products")
         if args.models:
             model_ids = set(args.models)
         else:
@@ -345,9 +343,7 @@ def _process_file(
                         logging.warning("Skipped task: %s", err)
     elif product.id in ("mwr-single", "mwr-multi", "epsilon-lidar"):
         if args.cmd in ("dvas", "hkd"):
-            raise SkipTaskError(
-                f"{args.cmd.casefold()} not supported for instrument products"
-            )
+            raise SkipTaskError(f"{args.cmd.upper()} not supported for {product.id}")
         if args.uuids:
             instruments = {processor.client.instrument(uuid) for uuid in args.uuids}
         else:
@@ -401,9 +397,7 @@ def _process_file(
             elif args.cmd == "freeze":
                 freeze(processor, params, directory)
             elif args.cmd in ("dvas", "hkd"):
-                raise SkipTaskError(
-                    f"{args.cmd.casefold()} not supported for L3 products"
-                )
+                raise SkipTaskError(f"{args.cmd.upper()} not supported for L3 products")
             else:
                 process_product(processor, params, directory)
     else:
