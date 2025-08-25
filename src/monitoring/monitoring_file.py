@@ -77,13 +77,15 @@ class MonitoringFile:
             "uuid": self.monitoring_file_uuid,
             "startDate": start_date,
             "periodType": str(self.period),
-            "site": self.site_id,
-            "monitoringProduct": self.product_id,
-            "instrumentInfo": self.instrument.uuid,
+            "siteId": self.site_id,
+            "productId": self.product_id,
+            "instrumentUuid": self.instrument.uuid,
         }
 
         resp = md_api.session.put(f"{md_api._url}/api/monitoring-files", json=payload)
+        print(resp)
         if not resp.ok:
+            print("put file not ok: \n",resp.json())
             raise ValueError("Failed to create a monitoring file")
 
     def put_visualization(
@@ -94,14 +96,16 @@ class MonitoringFile:
         storage_api.upload_image(full_path=vis.img_path, s3key=s3key)
         payload = {
             "s3key": s3key,
-            "sourceFile": self.monitoring_file_uuid,
-            "monitoringProductVariable": vis.variable_id,
+            "sourceFileUuid": self.monitoring_file_uuid,
+            "variableId": vis.variable_id,
             **vis.dimensions.as_payload_dict(),
         }
         resp = md_api.session.put(
             f"{md_api._url}/api/monitoring-visualizations", json=payload
         )
-        print(resp)
+        if not resp.ok:
+            print(resp.json())
+            print("put visualisation not ok: \n",resp.json())
 
 
 def _period_for_plotname(period: Period) -> str:
