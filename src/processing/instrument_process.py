@@ -13,6 +13,7 @@ from uuid import UUID
 import doppy
 import netCDF4
 import numpy as np
+from cloudnet_api_client import CloudnetAPIError
 from cloudnetpy.instruments import (
     basta2nc,
     bowtie2nc,
@@ -210,12 +211,14 @@ class ProcessRadar(ProcessInstrument):
         default_value: str | float | None = None,
         api_key: str | None = None,
     ) -> None:
-        calibration = self.processor.client.calibration(
-            self.params.instrument.pid, self.params.date
-        )
-        if calibration is not None:
-            data = calibration["data"]
-            self.site_meta[key] = data.get(api_key or key, default_value)
+        try:
+            calibration = self.processor.client.calibration(
+                self.params.instrument.pid, self.params.date
+            )
+        except CloudnetAPIError:
+            return
+        data = calibration["data"]
+        self.site_meta[key] = data.get(api_key or key, default_value)
 
 
 class ProcessDopplerLidarWind(ProcessInstrument):
