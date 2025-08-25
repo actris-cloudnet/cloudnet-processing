@@ -65,13 +65,11 @@ class Worker:
         self.dataportal_url = config.dataportal_url
         self.session = utils.make_session()
         self.client = APIClient(f"{config.dataportal_url}/api/", self.session)
-        self.md_api = MetadataApi(self.config, self.session)
-        self.storage_api = StorageApi(self.config, self.session)
-        self.pid_utils = PidUtils(self.config, self.session)
-        self.dvas = Dvas(self.config, self.md_api, self.client)
-        self.processor = Processor(
-            self.md_api, self.storage_api, self.pid_utils, self.dvas, self.client
-        )
+        md_api = MetadataApi(config, self.session)
+        storage_api = StorageApi(config, self.session)
+        pid_utils = PidUtils(config, self.session)
+        dvas = Dvas(config, md_api, self.client)
+        self.processor = Processor(md_api, storage_api, pid_utils, dvas, self.client)
         self.logger = MemoryLogger()
         self.n_processed_tasks = 0
 
@@ -105,13 +103,9 @@ class Worker:
                         update_qc(self.processor, params, directory)
                     elif task["type"] == "freeze":
                         freeze(self.processor, params, directory)
-                    elif task["type"] == "hkd":
+                    elif task["type"] in ("hkd", "dvas"):
                         raise utils.SkipTaskError(
-                            "Housekeeping not supported for model products"
-                        )
-                    elif task["type"] == "dvas":
-                        raise utils.SkipTaskError(
-                            "DVAS not supported for model products"
+                            f"{task['type'].upper()} not supported for model products"
                         )
                     elif task["type"] == "process":
                         process_model(self.processor, params, directory)
@@ -132,12 +126,10 @@ class Worker:
                         update_qc(self.processor, params, directory)
                     elif task["type"] == "freeze":
                         freeze(self.processor, params, directory)
-                    elif task["type"] == "hkd":
+                    elif task["type"] in ("hkd", "dvas"):
                         raise utils.SkipTaskError(
-                            "Housekeeping not supported for L3 products"
+                            f"{task['type'].upper()} not supported for L3 products"
                         )
-                    elif task["type"] == "dvas":
-                        raise utils.SkipTaskError("DVAS not supported for L3 products")
                     elif task["type"] == "process":
                         process_product(self.processor, params, directory)
                         if task["options"]["derivedProducts"]:
