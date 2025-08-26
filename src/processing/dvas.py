@@ -1,6 +1,6 @@
 import base64
+import datetime
 import logging
-from datetime import date, datetime, timezone
 from typing import Literal
 from uuid import UUID
 
@@ -121,23 +121,25 @@ class DvasMetadata:
         self.file = file
         self.md_api = md_api
         self.client = client
-        self._product = file.product
-        self._site = file.site
 
-    def create_dvas_json(self) -> dict:
-        time_begin = (
-            self.file.start_time or f"{self.file.measurement_date}T00:00:00.0000000Z"
+    def create_dvas_json(self, dvas_timestamp: datetime.datetime | None = None) -> dict:
+        time_begin = self.file.start_time or datetime.datetime.combine(
+            self.file.measurement_date, datetime.time(0, 0, 0), datetime.timezone.utc
         )
-        time_end = (
-            self.file.stop_time or f"{self.file.measurement_date}T23:59:59.9999999Z"
+        time_end = self.file.stop_time or datetime.datetime.combine(
+            self.file.measurement_date,
+            datetime.time(23, 59, 59, 999999),
+            datetime.timezone.utc,
         )
+        if dvas_timestamp is None:
+            dvas_timestamp = utils.utcnow()
         return {
             "md_metadata": {
                 "file_identifier": self.file.filename,
                 "language": "en",
                 "hierarchy_level": "dataset",
                 "online_resource": {"linkage": "https://cloudnet.fmi.fi/"},
-                "datestamp": datetime.now(timezone.utc).isoformat(),
+                "datestamp": dvas_timestamp.isoformat(),
                 "contact": [
                     {
                         "first_name": "Ewan",
@@ -168,7 +170,7 @@ class DvasMetadata:
                     "pid": self.file.pid,
                     "type": "handle",
                 },
-                "date": time_begin,
+                "date": time_begin.isoformat(),
             },
             "md_constraints": {
                 "access_constraints": "license",
@@ -183,24 +185,24 @@ class DvasMetadata:
                 "keywords": [
                     "FMI",
                     "ACTRIS",
-                    self._product.human_readable_name,
+                    self.file.product.human_readable_name,
                 ]
             },
             "md_data_identification": {
                 "language": "en",
                 "topic_category": "climatologyMeteorologyAtmosphere",
                 "description": "time series of profile measurements",
-                "facility_identifier": self._site.dvas_id,
+                "facility_identifier": self.file.site.dvas_id,
             },
             "ex_geographic_bounding_box": {
-                "west_bound_longitude": self._site.longitude,
-                "east_bound_longitude": self._site.longitude,
-                "south_bound_latitude": self._site.latitude,
-                "north_bound_latitude": self._site.latitude,
+                "west_bound_longitude": self.file.site.longitude,
+                "east_bound_longitude": self.file.site.longitude,
+                "south_bound_latitude": self.file.site.latitude,
+                "north_bound_latitude": self.file.site.latitude,
             },
             "ex_temporal_extent": {
-                "time_period_begin": time_begin,
-                "time_period_end": time_end,
+                "time_period_begin": time_begin.isoformat(),
+                "time_period_end": time_end.isoformat(),
             },
             "md_content_information": {
                 "attribute_descriptions": self._parse_variable_names(),
@@ -242,15 +244,15 @@ class DvasMetadata:
 
     def _parse_variable_names(self) -> list[str]:
         # https://prod-actris-md.nilu.no/Vocabulary/ContentAttribute
-        file_vars = self.md_api.get(f"api/products/{self._product.id}/variables")
+        file_vars = self.md_api.get(f"api/products/{self.file.product.id}/variables")
         return [v["actrisName"] for v in file_vars if v["actrisName"] is not None]
 
     def _parse_affiliation(self) -> list[str]:
         # https://prod-actris-md.nilu.no/vocabulary/networkprogram
         affiliation = ["CLOUDNET"]
-        if "arm" in self._site.type:
+        if "arm" in self.file.site.type:
             affiliation.append("ARM")
-        if "cloudnet" in self._site.type:
+        if "cloudnet" in self.file.site.type:
             affiliation.append("ACTRIS")
         return affiliation
 
@@ -279,7 +281,7 @@ class DvasMetadata:
     def _parse_compliance(self) -> str:
         return (
             "ACTRIS legacy"
-            if self.file.measurement_date < date(2023, 4, 25)
+            if self.file.measurement_date < datetime.date(2023, 4, 25)
             else "ACTRIS associated"
         )
 
@@ -300,9 +302,9 @@ class DvasMetadata:
 
     def _parse_title(self) -> str:
         return (
-            f"{self._product.human_readable_name} data "
+            f"{self.file.product.human_readable_name} data "
             f"derived from cloud remote sensing measurements "
-            f"at {self._site.human_readable_name}"
+            f"at {self.file.site.human_readable_name}"
         )
 
     def _calc_file_size(self) -> float:
