@@ -99,7 +99,7 @@ class ProcessInstrument:
         filename_suffix: str | None = None,
         subdir: str | None = None,
         time_offset: datetime.timedelta | None = None,
-    ):
+    ) -> tuple[list[Path], list[str]]:
         directory = self.raw_dir
         if subdir is not None:
             directory = directory / subdir
@@ -841,7 +841,9 @@ class ProcessWeatherStation(ProcessInstrument):
                 time_offset=time_offset
             )
             full_paths.sort()
-            self.uuid.product = ws2nc(full_paths, *self._args, **self._kwargs)
+            self.uuid.product = ws2nc(
+                [str(path) for path in full_paths], *self._args, **self._kwargs
+            )
         else:
             full_paths, self.uuid.raw = self.download_instrument()
             full_paths.sort()
@@ -849,7 +851,9 @@ class ProcessWeatherStation(ProcessInstrument):
                 data = self._get_payload_for_nc_file_augmenter(full_paths[0])
                 self.uuid.product = harmonizer.harmonize_ws_file(data)
             else:
-                self.uuid.product = ws2nc(full_paths, *self._args, **self._kwargs)
+                self.uuid.product = ws2nc(
+                    [str(path) for path in full_paths], *self._args, **self._kwargs
+                )
 
     def process_fd12(self):
         full_path, self.uuid.raw = self.download_instrument(largest_only=True)
@@ -864,7 +868,7 @@ class ProcessRainRadar(ProcessInstrument):
 
 
 def _get_valid_uuids(
-    uuids: list[UUID], full_paths: list[Path], valid_full_paths: list[str] | list[Path]
+    uuids: list[str], full_paths: list[Path], valid_full_paths: list[str] | list[Path]
 ) -> list[str]:
     valid_paths = [Path(path) for path in valid_full_paths]
     return [
