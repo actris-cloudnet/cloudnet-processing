@@ -266,7 +266,7 @@ class Worker:
             "priority": priority,
         }
         if instrument:
-            task["instrumentInfoUuid"] = instrument.uuid
+            task["instrumentInfoUuid"] = str(instrument.uuid)
         logging.info(f"Publish task: {task}")
         res = self.session.post(
             f"{self.dataportal_url}/api/queue/publish",
