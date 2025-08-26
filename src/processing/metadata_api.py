@@ -61,9 +61,9 @@ class MetadataApi:
             self.put("visualizations", data["s3key"], payload)
 
     def update_dvas_info(self, uuid: uuid.UUID, timestamp: str, dvas_id: str):
-        payload = {"uuid": uuid, "dvasUpdatedAt": timestamp, "dvasId": dvas_id}
+        payload = {"uuid": str(uuid), "dvasUpdatedAt": timestamp, "dvasId": dvas_id}
         self.post("files", payload)
 
     def clean_dvas_info(self, uuid: uuid.UUID):
-        payload = {"uuid": uuid, "dvasUpdatedAt": None, "dvasId": None}
+        payload = {"uuid": str(uuid), "dvasUpdatedAt": None, "dvasId": None}
         self.post("files", payload)
