@@ -3,7 +3,7 @@ import os
 
 
 class Config:
-    def __init__(self, environ=os.environ) -> None:
+    def __init__(self, environ: os._Environ[str] = os.environ) -> None:
         self.storage_service_url = environ["STORAGE_SERVICE_URL"].rstrip("/")
         self.storage_service_auth = (
             environ["STORAGE_SERVICE_USER"],

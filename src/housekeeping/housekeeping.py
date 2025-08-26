@@ -10,11 +10,13 @@ from typing import Callable, Iterable
 import numpy as np
 import numpy.typing as npt
 import toml
+from cloudnet_api_client import APIClient
+from cloudnet_api_client.containers import RawMetadata
 from influxdb_client import InfluxDBClient, Point, WritePrecision
 from influxdb_client.client.write_api import SYNCHRONOUS
 from netCDF4 import Dataset
 from numpy import ma
-from processing.utils import RawApi, unzip_gz_file
+from processing.utils import unzip_gz_file
 from rpgpy import read_rpg
 from rpgpy.utils import decode_rpg_status_flags, rpg_seconds2datetime64
 
@@ -33,18 +35,18 @@ class ValidDateRange(Enum):
     MONTH = "month"
 
 
-def process_record(record: dict, raw_api: RawApi, db: Database):
+def process_record(record: RawMetadata, client: APIClient, db: Database):
     try:
         reader = get_reader(record)
-        filename = record["filename"]
-        uuid = record["uuid"]
         if reader is None:
-            logging.debug(f"Skipping: {filename}")
+            logging.debug(f"Skipping: {record.filename}")
             return
-        logging.debug(f"Processing housekeeping data: {filename}")
-        filebytes = raw_api.get_raw_file(uuid, filename)
-        points = reader(filebytes, record)
-        db.write(points)
+        logging.debug(f"Processing housekeeping data: {record.filename}")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            filepath = client.download([record], tmpdir, progress=False)[0]
+            filepath = unzip_gz_file(filepath)
+            points = reader(filepath, record)
+            db.write(points)
     except UnsupportedFile as err:
         logging.warning(f"Unable to process file: {err}")
     except KeyboardInterrupt as err:
@@ -53,20 +55,16 @@ def process_record(record: dict, raw_api: RawApi, db: Database):
         raise HousekeepingException from err
 
 
-def _handle_hatpro_hkd(src: bytes, metadata: dict) -> list[Point]:
-    with tempfile.NamedTemporaryFile() as f:
-        f.write(src)
-        hkd = HatproHkd(f.name)
+def _handle_hatpro_hkd(filepath: Path, metadata: RawMetadata) -> list[Point]:
+    hkd = HatproHkd(filepath)
     time = hkd.data["T"]
     return _make_points(
         time, hkd.data, get_config("hatpro_hkd"), metadata, ValidDateRange.DAY
     )
 
 
-def _handle_hatpro_nc(src: bytes, metadata: dict) -> list[Point]:
-    with tempfile.NamedTemporaryFile() as f:
-        f.write(src)
-        hkd = HatproHkdNc(f.name)
+def _handle_hatpro_nc(filepath: Path, metadata: RawMetadata) -> list[Point]:
+    hkd = HatproHkdNc(filepath)
     return _make_points(
         hkd.data["time"],
         hkd.data,
@@ -76,14 +74,8 @@ def _handle_hatpro_nc(src: bytes, metadata: dict) -> list[Point]:
     )
 
 
-def _handle_rpg_lv1(src: bytes, metadata: dict) -> list[Point]:
-    with tempfile.TemporaryDirectory() as tmpdir:
-        filepath = Path(tmpdir) / metadata["filename"]
-        filepath.write_bytes(src)
-        if metadata["filename"].lower().endswith(".gz"):
-            filepath = unzip_gz_file(filepath)
-        _, data = read_rpg(filepath)
-
+def _handle_rpg_lv1(filepath: Path, metadata: RawMetadata) -> list[Point]:
+    _, data = read_rpg(filepath)
     time = rpg_seconds2datetime64(data["Time"])
     data |= decode_rpg_status_flags(data["Status"])._asdict()
     return _make_points(
@@ -91,8 +83,8 @@ def _handle_rpg_lv1(src: bytes, metadata: dict) -> list[Point]:
     )
 
 
-def _handle_chm15k_nc(src: bytes, metadata: dict) -> list[Point]:
-    with Dataset("dataset.nc", memory=src) as nc:
+def _handle_chm15k_nc(filepath: Path, metadata: RawMetadata) -> list[Point]:
+    with Dataset(filepath) as nc:
         measurements = read_chm15k(nc)
         return _make_points(
             measurements["time"],
@@ -103,25 +95,20 @@ def _handle_chm15k_nc(src: bytes, metadata: dict) -> list[Point]:
         )
 
 
-def _handle_basta_nc(src: bytes, metadata: dict) -> list[Point]:
-    with Dataset("dataset.nc", memory=src) as nc:
+def _handle_basta_nc(filepath: Path, metadata: RawMetadata) -> list[Point]:
+    with Dataset(filepath) as nc:
         measurements = read_basta(nc)
-        return _make_points(
-            measurements["time"],
-            measurements,
-            get_config("basta_nc"),
-            metadata,
-            ValidDateRange.DAY,
-        )
+    return _make_points(
+        measurements["time"],
+        measurements,
+        get_config("basta_nc"),
+        metadata,
+        ValidDateRange.DAY,
+    )
 
 
-def _handle_cs135(src: bytes, metadata: dict) -> list[Point]:
-    with tempfile.TemporaryDirectory() as tmpdir:
-        filepath = Path(tmpdir) / metadata["filename"]
-        filepath.write_bytes(src)
-        if metadata["filename"].lower().endswith(".gz"):
-            filepath = unzip_gz_file(filepath)
-        measurements = read_cs135(filepath)
+def _handle_cs135(filepath: Path, metadata: RawMetadata) -> list[Point]:
+    measurements = read_cs135(filepath)
     return _make_points(
         measurements["time"],
         measurements,
@@ -131,13 +118,8 @@ def _handle_cs135(src: bytes, metadata: dict) -> list[Point]:
     )
 
 
-def _handle_ct25k(src: bytes, metadata: dict) -> list[Point]:
-    with tempfile.TemporaryDirectory() as tmpdir:
-        filepath = Path(tmpdir) / metadata["filename"]
-        filepath.write_bytes(src)
-        if metadata["filename"].lower().endswith(".gz"):
-            filepath = unzip_gz_file(filepath)
-        measurements = read_ct25k(filepath)
+def _handle_ct25k(filepath: Path, metadata: RawMetadata) -> list[Point]:
+    measurements = read_ct25k(filepath)
     return _make_points(
         measurements["time"],
         measurements,
@@ -147,13 +129,8 @@ def _handle_ct25k(src: bytes, metadata: dict) -> list[Point]:
     )
 
 
-def _handle_cl31_cl51(src: bytes, metadata: dict) -> list[Point]:
-    with tempfile.TemporaryDirectory() as tmpdir:
-        filepath = Path(tmpdir) / metadata["filename"]
-        filepath.write_bytes(src)
-        if metadata["filename"].lower().endswith(".gz"):
-            filepath = unzip_gz_file(filepath)
-        measurements = read_cl31_cl51(filepath)
+def _handle_cl31_cl51(filepath: Path, metadata: RawMetadata) -> list[Point]:
+    measurements = read_cl31_cl51(filepath)
     return _make_points(
         measurements["time"],
         measurements,
@@ -163,8 +140,8 @@ def _handle_cl31_cl51(src: bytes, metadata: dict) -> list[Point]:
     )
 
 
-def _handle_cl61_nc(src: bytes, metadata: dict) -> list[Point]:
-    with Dataset("dataset.nc", memory=src) as nc:
+def _handle_cl61_nc(filepath: Path, metadata: RawMetadata) -> list[Point]:
+    with Dataset(filepath) as nc:
         measurements = read_cl61(nc)
         return _make_points(
             measurements["time"],
@@ -175,8 +152,8 @@ def _handle_cl61_nc(src: bytes, metadata: dict) -> list[Point]:
         )
 
 
-def _handle_halo_doppler_lidar(src: bytes, metadata: dict) -> list[Point]:
-    measurements = read_halo_doppler_lidar(src)
+def _handle_halo_doppler_lidar(filepath: Path, metadata: RawMetadata) -> list[Point]:
+    measurements = read_halo_doppler_lidar(filepath)
     return _make_points(
         measurements["time"],
         measurements,
@@ -186,9 +163,11 @@ def _handle_halo_doppler_lidar(src: bytes, metadata: dict) -> list[Point]:
     )
 
 
-def get_reader(metadata: dict) -> Callable[[bytes, dict], list[Point]] | None:
-    instrument_id = metadata["instrument"]["instrumentId"]
-    filename = metadata["filename"].lower()
+def get_reader(
+    metadata: RawMetadata
+) -> Callable[[Path, RawMetadata], list[Point]] | None:
+    instrument_id = metadata.instrument.instrument_id
+    filename = metadata.filename.lower()
 
     if instrument_id == "hatpro":
         if filename.endswith(".nc"):
@@ -253,7 +232,7 @@ def _make_points(
     time: npt.NDArray,
     measurements: dict[str, npt.NDArray],
     variables: dict[str, str],
-    metadata: dict,
+    metadata: RawMetadata,
     valid_date_range: ValidDateRange,
 ) -> list[Point]:
     data = {}
@@ -275,13 +254,13 @@ def _make_points(
 
     match valid_date_range:
         case ValidDateRange.DAY:
-            date = np.datetime64(metadata["measurementDate"], "s")
+            date = np.datetime64(metadata.measurement_date, "s")
             pad_hours = 1
             lower_limit = date - np.timedelta64(pad_hours, "h")
             upper_limit = date + np.timedelta64(24 + pad_hours, "h")
             valid_timestamps = (timestamps >= lower_limit) & (timestamps < upper_limit)
         case ValidDateRange.MONTH:
-            month = np.datetime64(metadata["measurementDate"], "M")
+            month = np.datetime64(metadata.measurement_date, "M")
             next_month: np.datetime64 = month + 1
             first_day = month.astype("datetime64[s]")
             last_day = (next_month - np.timedelta64(1, "D")).astype("datetime64[s]")
@@ -308,9 +287,9 @@ def _make_points(
             {
                 "measurement": "housekeeping",
                 "tags": {
-                    "site_id": metadata["site"]["id"],
-                    "instrument_id": metadata["instrument"]["instrumentId"],
-                    "instrument_pid": metadata["instrument"]["pid"],
+                    "site_id": metadata.site.id,
+                    "instrument_id": metadata.instrument.instrument_id,
+                    "instrument_pid": metadata.instrument.pid,
                 },
                 "fields": fields,
                 "time": timestamp.astype(int),
@@ -324,8 +303,3 @@ def _make_points(
 def get_config(format_id: str) -> dict:
     src = Path(__file__).parent.joinpath("config.toml")
     return toml.load(src)["format"][format_id]["vars"]
-
-
-def list_instruments() -> list[str]:
-    src = Path(__file__).parent.joinpath("config.toml")
-    return list(toml.load(src)["metadata"].keys())

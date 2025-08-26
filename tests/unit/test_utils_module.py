@@ -3,8 +3,9 @@ from pathlib import Path
 import netCDF4
 import numpy as np
 import pytest
+from cloudnet_api_client.utils import md5sum, sha256sum
 from numpy import ma
-from processing import netcdf_comparer, utils
+from processing import netcdf_comparer
 from processing.netcdf_comparer import NCDiff
 from processing.storage_api import _get_product_bucket
 
@@ -20,11 +21,11 @@ class TestHash:
     file = "tests/data/20201121_bucharest_classification.nc"
 
     def test_md5sum(self):
-        hash_sum = utils.md5sum(self.file)
+        hash_sum = md5sum(self.file)
         assert hash_sum == "c81d7834d7189facbc5f63416fe5b3da"
 
     def test_sha256sum2(self):
-        hash_sum = utils.sha256sum(self.file)
+        hash_sum = sha256sum(self.file)
         assert (
             hash_sum
             == "48e006f769a9352a42bf41beac449eae62aea545f4d3ba46bffd35759d8982ca"
@@ -35,8 +36,8 @@ def test_are_identical_nc_files_real_data():
     fname1 = "tests/data/20180703_granada_classification_old.nc"
     fname2 = "tests/data/20180703_granada_classification.nc"
     fname3 = "tests/data/20180703_granada_classification_reprocessed.nc"
-    assert netcdf_comparer.nc_difference(fname1, fname2) == NCDiff.MAJOR
-    assert netcdf_comparer.nc_difference(fname2, fname3) == NCDiff.NONE
+    assert netcdf_comparer.nc_difference(Path(fname1), Path(fname2)) == NCDiff.MAJOR
+    assert netcdf_comparer.nc_difference(Path(fname2), Path(fname3)) == NCDiff.NONE
 
 
 @pytest.mark.parametrize(

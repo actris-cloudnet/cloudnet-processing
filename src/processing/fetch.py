@@ -10,9 +10,9 @@ from collections.abc import Callable
 from pathlib import Path
 
 import requests
-
-from processing import utils
-from processing.processor import Product, Site
+from cloudnet_api_client import APIClient
+from cloudnet_api_client.containers import ExtendedProduct, Product, Site
+from cloudnet_api_client.utils import md5sum
 
 DATAPORTAL_URL = os.environ["DATAPORTAL_URL"].rstrip("/")
 DATAPORTAL_AUTH = ("admin", "admin")
@@ -40,7 +40,11 @@ class Fetcher:
     api_url = "https://cloudnet.fmi.fi/api"
 
     def __init__(
-        self, product: Product, site: Site, date: datetime.date, args: Namespace
+        self,
+        product: Product | ExtendedProduct,
+        site: Site,
+        date: datetime.date,
+        args: Namespace,
     ):
         self.product = product
         self.args = args
@@ -48,10 +52,18 @@ class Fetcher:
 
     def get_raw_instrument_metadata(self) -> list:
         url = f"{self.api_url}/raw-files"
+        if (
+            isinstance(self.product, ExtendedProduct)
+            and self.product.source_instrument_ids
+            and not self.args.instruments
+        ):
+            instruments = self.product.source_instrument_ids
+        else:
+            instruments = self.args.instruments
         payload = {
             **self.payload,
             "status": ["uploaded", "processed"],
-            "instrument": self.args.instruments,
+            "instrument": instruments,
         }
         if self.args.instrument_pids:
             payload["instrumentPid"] = self.args.instrument_pids
@@ -101,14 +113,16 @@ class Fetcher:
         return res.json()
 
 
-def fetch(product: Product, site: Site, date: datetime.date, args: Namespace) -> None:
+def fetch(
+    product: Product, site: Site, date: datetime.date, args: Namespace, client=APIClient
+) -> None:
     is_production = os.environ.get("PID_SERVICE_TEST_ENV", "false").lower() != "true"
     if is_production:
         logging.warning("Running in production, not fetching anything.")
         return
 
     if args.uuids:
-        args.instrument_pids = [_uuid2pid(i) for i in args.uuids]
+        args.instrument_pids = [client.instrument(i).pid for i in args.uuids]
     else:
         args.instrument_pids = None
 
@@ -246,7 +260,7 @@ def _submit_file(filename: Path, row: dict) -> str:
         bucket = f"{bucket}/legacy"
     ss_url = f"{STORAGE_SERVICE_URL}/{bucket}/{row['filename']}"
     ss_body = filename.read_bytes()
-    ss_headers = {"Content-MD5": utils.md5sum(filename, is_base64=True)}
+    ss_headers = {"Content-MD5": md5sum(filename, is_base64=True)}
     ss_res = requests.put(
         ss_url, ss_body, auth=STORAGE_SERVICE_AUTH, headers=ss_headers
     )
@@ -346,11 +360,3 @@ def _fetch_calibration(upload_metadata: list):
         processed_pid_dates.add(
             (upload["instrument"]["pid"], upload["measurementDate"])
         )
-
-
-def _uuid2pid(uuid: str) -> str | None:
-    instrument = utils.get_from_data_portal_api(f"api/instrument-pids/{uuid}")
-    assert isinstance(instrument, dict)
-    if instrument and "pid" in instrument:
-        return str(instrument["pid"])
-    return None

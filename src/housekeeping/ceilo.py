@@ -1,5 +1,5 @@
 from collections import defaultdict
-from os import PathLike
+from pathlib import Path
 from typing import Any
 
 import ceilopyter
@@ -8,7 +8,7 @@ import numpy as np
 C_TO_K = 273.15
 
 
-def read_ct25k(filename: str | PathLike) -> dict:
+def read_ct25k(filename: Path) -> dict:
     time, msgs = ceilopyter.read_ct_file(filename)
     data: dict[str, Any] = defaultdict(list)
     for msg in msgs:
@@ -26,7 +26,7 @@ def read_ct25k(filename: str | PathLike) -> dict:
     return result
 
 
-def read_cl31_cl51(filename: str | PathLike) -> dict:
+def read_cl31_cl51(filename: Path) -> dict:
     time, msgs = ceilopyter.read_cl_file(filename)
     data: dict[str, Any] = defaultdict(list)
     for msg in msgs:
@@ -43,7 +43,7 @@ def read_cl31_cl51(filename: str | PathLike) -> dict:
     return result
 
 
-def read_cs135(filename: str | PathLike) -> dict:
+def read_cs135(filename: Path) -> dict:
     time, msgs = ceilopyter.read_cs_file(filename)
     data: dict[str, Any] = defaultdict(list)
     for msg in msgs:

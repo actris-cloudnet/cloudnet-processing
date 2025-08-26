@@ -9,11 +9,13 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from threading import Event
 
+from cloudnet_api_client import APIClient
+from cloudnet_api_client.containers import ExtendedProduct, Site
 from processing import utils
 from processing.config import Config
 from processing.dvas import Dvas
 from processing.instrument import process_instrument
-from processing.jobs import freeze, hkd, update_plots, update_qc, upload_to_dvas
+from processing.jobs import freeze, update_plots, update_qc, upload_to_dvas
 from processing.metadata_api import MetadataApi
 from processing.model import process_model
 from processing.pid_utils import PidUtils
@@ -22,11 +24,9 @@ from processing.processor import (
     ModelParams,
     Processor,
     ProcessParams,
-    Product,
     ProductParams,
-    Site,
 )
-from processing.product import process_me, process_product
+from processing.product import process_product
 from processing.storage_api import StorageApi
 from processing.utils import send_slack_alert, utcnow, utctoday
 
@@ -34,7 +34,7 @@ from processing.utils import send_slack_alert, utcnow, utctoday
 class MemoryLogger:
     """Logger that outputs to stderr but also keeps content in memory."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         logger = logging.getLogger()
         logger.setLevel(logging.INFO)
         formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
@@ -60,17 +60,16 @@ class MemoryLogger:
 
 
 class Worker:
-    def __init__(self, config: Config):
+    def __init__(self, config: Config) -> None:
         self.config = config
         self.dataportal_url = config.dataportal_url
         self.session = utils.make_session()
-        self.md_api = MetadataApi(self.config, self.session)
-        self.storage_api = StorageApi(self.config, self.session)
-        self.pid_utils = PidUtils(self.config, self.session)
-        self.dvas = Dvas(self.config, self.md_api)
-        self.processor = Processor(
-            self.md_api, self.storage_api, self.pid_utils, self.dvas
-        )
+        self.client = APIClient(f"{config.dataportal_url}/api/", self.session)
+        md_api = MetadataApi(config, self.session)
+        storage_api = StorageApi(config, self.session)
+        pid_utils = PidUtils(config, self.session)
+        dvas = Dvas(config, md_api, self.client)
+        self.processor = Processor(md_api, storage_api, pid_utils, dvas, self.client)
         self.logger = MemoryLogger()
         self.n_processed_tasks = 0
 
@@ -87,32 +86,29 @@ class Worker:
         try:
             date = datetime.date.fromisoformat(task["measurementDate"])
             site = self.processor.get_site(task["siteId"], date)
-            product = self.processor.get_product(task["productId"])
+            product = self.client.product(task["productId"])
             params: ProcessParams
-            with TemporaryDirectory() as directory:
+            with TemporaryDirectory() as temp_dir:
+                directory = Path(temp_dir)
                 if product.id == "model":
                     params = ModelParams(
                         site=site,
                         date=date,
                         product=product,
-                        model=self.processor.get_model(task["modelId"]),
+                        model=self.client.model(task["modelId"]),
                     )
                     if task["type"] == "plot":
-                        update_plots(self.processor, params, Path(directory))
+                        update_plots(self.processor, params, directory)
                     elif task["type"] == "qc":
-                        update_qc(self.processor, params, Path(directory))
+                        update_qc(self.processor, params, directory)
                     elif task["type"] == "freeze":
-                        freeze(self.processor, params, Path(directory))
-                    elif task["type"] == "hkd":
+                        freeze(self.processor, params, directory)
+                    elif task["type"] in ("hkd", "dvas"):
                         raise utils.SkipTaskError(
-                            "Housekeeping not supported for model products"
-                        )
-                    elif task["type"] == "dvas":
-                        raise utils.SkipTaskError(
-                            "DVAS not supported for model products"
+                            f"{task['type'].upper()} not supported for model products"
                         )
                     elif task["type"] == "process":
-                        process_model(self.processor, params, Path(directory))
+                        process_model(self.processor, params, directory)
                         if task["options"]["derivedProducts"]:
                             self.publish_followup_tasks(site, product, params)
                     else:
@@ -122,22 +118,20 @@ class Worker:
                         site=site,
                         date=date,
                         product=product,
-                        model=self.processor.get_model("ecmwf"),  # hard coded for now
+                        model=self.client.model("ecmwf"),  # hard coded for now
                     )
                     if task["type"] == "plot":
-                        update_plots(self.processor, params, Path(directory))
+                        update_plots(self.processor, params, directory)
                     elif task["type"] == "qc":
-                        update_qc(self.processor, params, Path(directory))
+                        update_qc(self.processor, params, directory)
                     elif task["type"] == "freeze":
-                        freeze(self.processor, params, Path(directory))
-                    elif task["type"] == "hkd":
+                        freeze(self.processor, params, directory)
+                    elif task["type"] in ("hkd", "dvas"):
                         raise utils.SkipTaskError(
-                            "Housekeeping not supported for L3 products"
+                            f"{task['type'].upper()} not supported for L3 products"
                         )
-                    elif task["type"] == "dvas":
-                        raise utils.SkipTaskError("DVAS not supported for L3 products")
                     elif task["type"] == "process":
-                        process_me(self.processor, params, Path(directory))
+                        process_product(self.processor, params, directory)
                         if task["options"]["derivedProducts"]:
                             self.publish_followup_tasks(site, product, params)
                     else:
@@ -147,24 +141,22 @@ class Worker:
                         site=site,
                         date=date,
                         product=product,
-                        instrument=self.processor.get_instrument(
-                            task["instrumentInfoUuid"]
-                        ),
+                        instrument=self.client.instrument(task["instrumentInfoUuid"]),
                     )
                     if task["type"] == "plot":
-                        update_plots(self.processor, params, Path(directory))
+                        update_plots(self.processor, params, directory)
                     elif task["type"] == "qc":
-                        update_qc(self.processor, params, Path(directory))
+                        update_qc(self.processor, params, directory)
                     elif task["type"] == "freeze":
-                        freeze(self.processor, params, Path(directory))
+                        freeze(self.processor, params, directory)
                     elif task["type"] == "hkd":
-                        hkd(self.processor, params)
+                        self.processor.process_housekeeping(params)
                     elif task["type"] == "dvas":
                         raise utils.SkipTaskError(
                             "DVAS not supported for instrument products"
                         )
                     elif task["type"] == "process":
-                        process_instrument(self.processor, params, Path(directory))
+                        process_instrument(self.processor, params, directory)
                         if task["options"]["derivedProducts"]:
                             self.publish_followup_tasks(site, product, params)
                     else:
@@ -174,18 +166,16 @@ class Worker:
                         site=site,
                         date=date,
                         product=product,
-                        instrument=self.processor.get_instrument(
-                            task["instrumentInfoUuid"]
-                        )
+                        instrument=self.client.instrument(task["instrumentInfoUuid"])
                         if task["instrumentInfoUuid"]
                         else None,
                     )
                     if task["type"] == "plot":
-                        update_plots(self.processor, params, Path(directory))
+                        update_plots(self.processor, params, directory)
                     elif task["type"] == "qc":
-                        update_qc(self.processor, params, Path(directory))
+                        update_qc(self.processor, params, directory)
                     elif task["type"] == "freeze":
-                        freeze(self.processor, params, Path(directory))
+                        freeze(self.processor, params, directory)
                     elif task["type"] == "dvas":
                         upload_to_dvas(self.processor, params)
                     elif task["type"] == "hkd":
@@ -193,7 +183,7 @@ class Worker:
                             "Housekeeping not supported for products"
                         )
                     elif task["type"] == "process":
-                        process_product(self.processor, params, Path(directory))
+                        process_product(self.processor, params, directory)
                         if task["options"]["derivedProducts"]:
                             self.publish_followup_tasks(site, product, params)
                     else:
@@ -225,16 +215,16 @@ class Worker:
         return True
 
     def publish_followup_tasks(
-        self, site: Site, product: Product, params: ProcessParams
-    ):
-        if "hidden" in site.types or "model" in site.types:
+        self, site: Site, product: ExtendedProduct, params: ProcessParams
+    ) -> None:
+        if "hidden" in site.type or "model" in site.type:
             logging.info("Site is model / hidden, will not publish followup tasks")
             return
         for product_id in product.derived_product_ids:
             self.publish_followup_task(product_id, params)
 
     def publish_followup_task(self, product_id: str, params: ProcessParams):
-        product = self.processor.get_product(product_id)
+        product = self.client.product(product_id)
         if product.experimental and product.id not in (
             "cpr-simulation",
             "epsilon-lidar",
@@ -246,21 +236,17 @@ class Worker:
 
         if "instrument" in product.type:
             assert isinstance(params, InstrumentParams | ProductParams)
-            assert params.instrument is not None
             instrument = params.instrument
         else:
             instrument = None
 
-        payload = {
-            "site": params.site.id,
-            "date": params.date.isoformat(),
-            "product": product.id,
-        }
-        if instrument:
-            payload["instrumentPid"] = instrument.pid
-        metadata = self.processor.md_api.get("api/files", payload)
-        is_freezed = len(metadata) == 1 and not metadata[0]["volatile"]
-
+        metadata = self.client.files(
+            site_id=params.site.id,
+            date=params.date.isoformat(),
+            product_id=product.id,
+            instrument_pid=instrument.pid if instrument else None,
+        )
+        is_freezed = len(metadata) == 1 and not metadata[0].volatile
         if is_freezed:
             delay = datetime.timedelta(hours=1)
         elif len(product.source_product_ids) > 1:
@@ -290,8 +276,8 @@ class Worker:
         res.raise_for_status()
 
 
-def main():
-    config = utils.read_main_conf()
+def main() -> None:
+    config = Config()
     worker = Worker(config)
     exit = Event()
 

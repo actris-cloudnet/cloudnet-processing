@@ -10,7 +10,7 @@ import cloudnetpy.utils
 import netCDF4
 import numpy as np
 
-import processing.utils
+from processing.version import __version__ as cloudnet_processing_version
 
 
 class Level1Nc:
@@ -113,7 +113,7 @@ class Level1Nc:
         instrument: cloudnetpy.instruments.instruments.Instrument,
     ):
         """Adds standard global attributes."""
-        location = processing.utils.read_site_info(self.data["site_name"])["name"]
+        location = self.data["site_meta"]["name"]
         self.nc.Conventions = "CF-1.8"
         self.nc.cloudnet_file_type = cloudnet_file_type
         self.nc.source = cloudnetpy.output.get_l1b_source(instrument)
@@ -129,11 +129,10 @@ class Level1Nc:
 
     def add_history(self, product: str, source: str = "history"):
         """Adds history attribute."""
-        version = processing.utils.get_data_processing_version()
         old_history = getattr(self.nc_raw, source, "")
         history = (
             f"{cloudnetpy.utils.get_time()} - {product} metadata harmonized by CLU using "
-            f"cloudnet-processing v{version}"
+            f"cloudnet-processing v{cloudnet_processing_version}"
         )
         if len(old_history) > 0:
             history = f"{history}\n{old_history}"
@@ -391,6 +390,6 @@ class Level1Nc:
         return variable[:]
 
     @staticmethod
-    def _copy_variable_attributes(source, target):
+    def _copy_variable_attributes(source, target) -> None:
         attr = {k: source.getncattr(k) for k in source.ncattrs() if k != "_FillValue"}
         target.setncatts(attr)

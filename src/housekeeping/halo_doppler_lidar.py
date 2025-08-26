@@ -1,10 +1,12 @@
+from pathlib import Path
+
 import doppy
 
 C_TO_K = 273.15
 
 
-def read_halo_doppler_lidar(src: bytes) -> dict:
-    sp = doppy.raw.HaloSysParams.from_src(src)
+def read_halo_doppler_lidar(full_path: Path) -> dict:
+    sp = doppy.raw.HaloSysParams.from_src(full_path)
     return {
         "time": sp.time.astype("datetime64[s]"),
         "internal_temperature": sp.internal_temperature + C_TO_K,

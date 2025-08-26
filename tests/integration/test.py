@@ -6,16 +6,18 @@ from pathlib import Path
 import pytest
 import requests
 from cloudnet_api_client import APIClient
+from cloudnet_api_client.containers import Instrument
 from processing import utils
+from processing.config import Config
 from processing.dvas import Dvas
 from processing.instrument import process_instrument
 from processing.metadata_api import MetadataApi
 from processing.pid_utils import PidUtils
-from processing.processor import Instrument, InstrumentParams, Processor
+from processing.processor import InstrumentParams, Processor
 from processing.storage_api import StorageApi
 
 DATA_PATH = Path(__file__).parent / "data"
-CONFIG = utils.read_main_conf()
+CONFIG = Config()
 
 
 @pytest.fixture(scope="session")
@@ -24,13 +26,9 @@ def processor():
     md_api = MetadataApi(CONFIG, session)
     storage_api = StorageApi(CONFIG, session)
     pid_utils = PidUtils(CONFIG, session)
-    dvas = Dvas(CONFIG, md_api)
-    return Processor(md_api, storage_api, pid_utils, dvas)
-
-
-@pytest.fixture(scope="session")
-def api_client():
-    return APIClient(base_url=f"{CONFIG.dataportal_url}/api/")
+    client = APIClient(base_url=f"{CONFIG.dataportal_url}/api/", session=session)
+    dvas = Dvas(CONFIG, md_api, client)
+    return Processor(md_api, storage_api, pid_utils, dvas, client)
 
 
 @dataclass
@@ -61,10 +59,8 @@ meta_list = [
 
 
 @pytest.mark.parametrize("meta", meta_list)
-def test_instrument_processing(
-    processor: Processor, api_client: APIClient, meta: Meta, tmp_path
-):
-    instrument = processor.get_instrument(meta.uuid)
+def test_instrument_processing(processor: Processor, meta: Meta, tmp_path):
+    instrument = processor.client.instrument(meta.uuid)
     _submit_file(meta, instrument)
     date = datetime.date.fromisoformat(meta.date)
     site = processor.get_site(meta.site, date)
@@ -73,15 +69,17 @@ def test_instrument_processing(
     instru_params = InstrumentParams(
         site=site,
         date=date,
-        product=processor.get_product(meta.product),
+        product=processor.client.product(meta.product),
         instrument=instrument,
     )
     process_instrument(processor, instru_params, tmp_path)
-    file_meta = api_client.metadata(site_id=site.id, date=date, product=meta.product)
+    file_meta = processor.client.files(
+        site_id=site.id, date=date, product_id=meta.product
+    )
     assert len(file_meta) == 1
 
 
-def _submit_file(meta: Meta, instrument: Instrument):
+def _submit_file(meta: Meta, instrument: Instrument) -> None:
     auth = ("admin", "admin")
     file_path = DATA_PATH / meta.filename
 
@@ -92,7 +90,7 @@ def _submit_file(meta: Meta, instrument: Instrument):
         "filename": meta.filename,
         "checksum": checksum,
         "site": meta.site,
-        "instrument": instrument.type,
+        "instrument": instrument.instrument_id,
         "measurementDate": meta.date,
         "instrumentPid": instrument.pid,
     }

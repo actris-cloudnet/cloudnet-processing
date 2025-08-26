@@ -1,6 +1,6 @@
 import random
 import string
-from os import PathLike
+from pathlib import Path
 
 import netCDF4
 import requests
@@ -21,7 +21,7 @@ class PidUtils:
         self.session = session
 
     def add_pid_to_file(
-        self, filepath: PathLike | str, pid: str | None = None
+        self, filepath: Path, pid: str | None = None
     ) -> tuple[str, str, str]:
         """Queries PID service and adds the PID to NC file metadata."""
         with netCDF4.Dataset(filepath, "r+") as rootgrp:

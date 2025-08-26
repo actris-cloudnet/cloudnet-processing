@@ -94,7 +94,7 @@ def harmonize_ws_file(data: dict) -> str:
 
 
 class Ws(core.Level1Nc):
-    def copy_ws_file_contents(self, time_ind: list):
+    def copy_ws_file_contents(self, time_ind: list) -> None:
         self.nc.createDimension("time", len(time_ind))
         for key, variable in self.nc_raw.variables.items():
             if key not in list(VARIABLE_MAP.keys()) + ["datetime", "time"]:
@@ -134,7 +134,7 @@ class Ws(core.Level1Nc):
             self._copy_variable_attributes(variable, var)
             var[:] = data
 
-    def fix_long_names(self):
+    def fix_long_names(self) -> None:
         keymap = {
             "air_pressure_quality_flag": "Air pressure quality flag",
             "air_temperature_quality_flag": "Air temperature quality flag",
@@ -152,7 +152,7 @@ class Ws(core.Level1Nc):
         }
         self.fix_attribute(keymap, "long_name")
 
-    def fix_standard_names(self):
+    def fix_standard_names(self) -> None:
         keymap = {
             "visibility": "visibility_in_air",
             "rainfall_amount": "thickness_of_rainfall_amount",
@@ -161,13 +161,13 @@ class Ws(core.Level1Nc):
         }
         self.fix_attribute(keymap, "standard_name")
 
-    def fix_ancillary_variable_names(self):
+    def fix_ancillary_variable_names(self) -> None:
         for key, var in self.nc.variables.items():
             name = f"{key}_quality_flag"
             if hasattr(var, "ancillary_variables") and name in self.nc.variables:
                 var.ancillary_variables = name
 
-    def convert_rainfall_rate(self):
+    def convert_rainfall_rate(self) -> None:
         """Converts rainfall rate to correct units."""
         orig_data = self.nc["rainfall_rate"][:]
         orig_units = self.nc["rainfall_rate"].units
@@ -178,7 +178,7 @@ class Ws(core.Level1Nc):
             self.nc["rainfall_rate"].units = "mm h-1"
         self.to_ms1("rainfall_rate")
 
-    def calculate_rainfall_amount(self):
+    def calculate_rainfall_amount(self) -> None:
         """Calculates rainfall amount from rainfall rate."""
         dt = np.median(np.diff(self.nc.variables["time"][:]))
         rate = self.nc["rainfall_rate"]
@@ -191,19 +191,19 @@ class Ws(core.Level1Nc):
         self.nc["rainfall_amount"][:] = np.cumsum(rate[:]) * dt * 3600
         self.nc["rainfall_amount"].units = "m"
 
-    def fix_comments(self):
+    def fix_comments(self) -> None:
         if "rainfall_amount" in self.nc.variables:
             self.nc[
                 "rainfall_amount"
             ].comment = "Cumulated precipitation since 00:00 UTC"
 
-    def fix_flag_attributes(self):
+    def fix_flag_attributes(self) -> None:
         for key, var in self.nc.variables.items():
             if key.endswith("_flag") and hasattr(var, "flag_values"):
                 var.flag_values = np.array(var.flag_values, dtype="i1")
                 var.units = "1"
 
-    def mask_bad_data(self):
+    def mask_bad_data(self) -> None:
         for key, var in self.nc.variables.items():
             if flagvar := self.nc.variables.get(f"{key}_quality_flag"):
                 var[:] = ma.masked_where(flagvar[:] == 1, var[:])

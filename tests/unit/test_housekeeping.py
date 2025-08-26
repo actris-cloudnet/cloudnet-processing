@@ -1,7 +1,10 @@
+import datetime
+import uuid
 from pathlib import Path
 
 import numpy as np
 import pytest
+from cloudnet_api_client.containers import Instrument, RawMetadata, Site
 from housekeeping.housekeeping import get_reader
 from housekeeping.utils import decode_bits
 
@@ -46,17 +49,51 @@ from housekeeping.utils import decode_bits
         ),
     ],
 )
-def test_something(filename, instrument_id, measurement_date):
+def test_something(filename: str, instrument_id: str, measurement_date: str):
     path = Path(filename)
-    metadata = {
-        "filename": path.name,
-        "instrument": {"pid": None, "instrumentId": instrument_id},
-        "measurementDate": measurement_date,
-        "site": {"id": "hyytiala"},
-    }
+    instrument = Instrument(
+        uuid=uuid.uuid4(),
+        pid="some_pid",
+        instrument_id=instrument_id,
+        model="model",
+        type="type",
+        owners=("owner1", "owner2"),
+        name="name",
+        serial_number=None,
+    )
+    site = Site(
+        id="hyytiala",
+        human_readable_name="Hyytiala",
+        latitude=61.847,
+        longitude=24.288,
+        altitude=100,
+        country="Finland",
+        country_code="FI",
+        type=frozenset(("cloudnet",)),
+        station_name="Hyytiala",
+        dvas_id=None,
+        country_subdivision_code=None,
+        gaw=None,
+        actris_id=None,
+    )
+
+    metadata = RawMetadata(
+        filename=path.name,
+        instrument=instrument,
+        measurement_date=datetime.date.fromisoformat(measurement_date),
+        site=site,
+        tags=frozenset(),
+        created_at=datetime.datetime.now(),
+        updated_at=datetime.datetime.now(),
+        download_url="<download_url>",
+        status="uploaded",
+        checksum="<checksum>",
+        uuid=uuid.uuid4(),
+        size=233,
+    )
     reader = get_reader(metadata)
     assert reader is not None
-    points = reader(path.read_bytes(), metadata)
+    points = reader(path, metadata)
     assert len(points) > 0
 
 
