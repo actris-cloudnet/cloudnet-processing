@@ -220,8 +220,6 @@ class Worker:
         if "hidden" in site.type or "model" in site.type:
             logging.info("Site is model / hidden, will not publish followup tasks")
             return
-        if product.derived_product_ids is None:
-            return
         for product_id in product.derived_product_ids:
             self.publish_followup_task(product_id, params)
 
@@ -251,10 +249,7 @@ class Worker:
         is_freezed = len(metadata) == 1 and not metadata[0].volatile
         if is_freezed:
             delay = datetime.timedelta(hours=1)
-        elif (
-            product.source_product_ids is not None
-            and len(product.source_product_ids) > 1
-        ):
+        elif len(product.source_product_ids) > 1:
             delay = datetime.timedelta(minutes=15)
         else:
             delay = datetime.timedelta(seconds=0)

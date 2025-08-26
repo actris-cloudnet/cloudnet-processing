@@ -141,7 +141,7 @@ class Processor:
             date_to=end_date,
             status=["uploaded", "processed"],
         )
-        return [row for row in rows if int(row.size) > MIN_MODEL_FILESIZE]
+        return [row for row in rows if row.size > MIN_MODEL_FILESIZE]
 
     def download_instrument(
         self,
@@ -209,7 +209,7 @@ class Processor:
             else:
                 raise utils.RawDataMissingError
         if largest_only:
-            upload_metadata = [max(upload_metadata, key=lambda item: int(item.size))]
+            upload_metadata = [max(upload_metadata, key=lambda item: item.size)]
 
         full_paths, uuids = self.storage_api.download_raw_data(
             upload_metadata, directory
