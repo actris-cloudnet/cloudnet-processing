@@ -23,7 +23,10 @@ COPY src /app/src
 COPY scripts /app/scripts
 
 FROM base AS dev
+RUN pip3 install -e .[dev]
 
+FROM base AS test
+COPY tests /app/tests
 RUN pip3 install -e .[dev]
 
 FROM base AS prod

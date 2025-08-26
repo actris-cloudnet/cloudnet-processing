@@ -4,9 +4,10 @@ import math
 import uuid
 from pathlib import Path
 
+import netCDF4
 from model_munger.merge import merge_models
 from model_munger.model import Location
-from model_munger.readers import read_arpege, read_ecmwf_open
+from model_munger.readers import read_arpege, read_ecmwf_open, read_gdas1
 
 from processing import utils
 from processing.harmonizer.model import harmonize_model_file
@@ -15,10 +16,14 @@ from processing.processor import ModelParams, Processor
 from processing.utils import MiscError, SkipTaskError
 
 SKIP_MODELS = ()
-MODEL_READERS = {"arpege": read_arpege, "ecmwf-open": read_ecmwf_open}
+MODEL_READERS = {
+    "arpege": read_arpege,
+    "ecmwf-open": read_ecmwf_open,
+    "gdas1": read_gdas1,
+}
 
 
-def process_model(processor: Processor, params: ModelParams, directory: Path):
+def process_model(processor: Processor, params: ModelParams, directory: Path) -> None:
     if params.model.id in SKIP_MODELS:
         msg = f"Processing {params.model.id} not implemented yet"
         raise SkipTaskError(msg)
@@ -44,22 +49,24 @@ def process_model(processor: Processor, params: ModelParams, directory: Path):
         start_date = params.date
         end_date = params.date
 
-    upload_meta = processor.get_model_upload(params, start_date, end_date)
+    upload_meta = processor.get_raw_model_files(params, start_date, end_date)
     if not upload_meta:
         msg = "No valid model upload found"
         raise SkipTaskError(msg)
 
     raw_dir = directory / "raw"
     raw_dir.mkdir()
-    full_paths, raw_uuids = processor.download_raw_data(upload_meta, raw_dir)
+    full_paths, raw_uuids = processor.storage_api.download_raw_data(
+        upload_meta, raw_dir
+    )
 
     volatile = True
-    if existing_meta := processor.get_model_file(params):
-        if not existing_meta["volatile"]:
+    if existing_meta := processor.get_product(params):
+        if not existing_meta.volatile:
             logging.warning("Stable model file found.")
             volatile = False
-        product_uuid = uuid.UUID(existing_meta["uuid"])
-        filename = existing_meta["filename"]
+        product_uuid = existing_meta.uuid
+        filename = existing_meta.filename
         existing_file = processor.storage_api.download_product(existing_meta, directory)
     else:
         product_uuid = _generate_uuid()
@@ -70,10 +77,10 @@ def process_model(processor: Processor, params: ModelParams, directory: Path):
         new_file = directory / "output.nc"
         _harmonize_model(params, tmp_path, new_file, product_uuid)
 
-        if not existing_meta or not existing_meta["pid"]:
+        if not existing_meta or not existing_meta.pid:
             volatile_pid = None
         else:
-            volatile_pid = existing_meta["pid"]
+            volatile_pid = existing_meta.pid
         processor.pid_utils.add_pid_to_file(new_file, pid=volatile_pid)
 
         upload = True
@@ -87,7 +94,7 @@ def process_model(processor: Processor, params: ModelParams, directory: Path):
             processor.upload_file(params, new_file, filename, volatile, patch=True)
         else:
             logging.info("Skipping PUT to data portal, file has not changed")
-        if "hidden" in params.site.types:
+        if "hidden" in params.site.type:
             logging.info("Skipping plotting for hidden site")
         else:
             processor.create_and_upload_images(
@@ -116,12 +123,27 @@ def _generate_filename(params: ModelParams) -> str:
 def _process_model(
     params: ModelParams, input_paths: list[Path], output_path: Path
 ) -> Path:
+    # Skip processing of legacy gdas1 files.
+    if params.model.id == "gdas1":
+        date_str = params.date.strftime("%Y%m%d")
+        munger_files = []
+        legacy_files = []
+        for input_path in input_paths:
+            with netCDF4.Dataset(input_path) as nc:
+                if hasattr(nc, "history") and "model-munger" in nc.history:
+                    munger_files.append(input_path)
+                elif input_path.name.startswith(date_str):
+                    legacy_files.append(input_path)
+        if legacy_files:
+            return legacy_files[0]
+        input_paths = munger_files
+    # Skip processing of other legacy files.
     if params.model.source_model_id is None:
         if n_files := len(input_paths) != 1:
             raise ValueError(f"Expected a single file but found {n_files} files")
         return input_paths[0]
     reader = MODEL_READERS[params.model.source_model_id]
-    location = Location(id=params.site.id, name=params.site.name)
+    location = Location(id=params.site.id, name=params.site.human_readable_name)
     models = []
     for path in input_paths:
         model = reader(path, location)
@@ -144,7 +166,7 @@ def _process_model(
 
 def _harmonize_model(
     params: ModelParams, input_path: Path, output_path: Path, uuid: uuid.UUID
-):
+) -> None:
     data = {
         "site_name": params.site.id,
         "date": params.date.isoformat(),
@@ -158,6 +180,6 @@ def _harmonize_model(
 
 
 def _print_info(file_uuid: uuid.UUID, qc_result: str | None = None) -> None:
-    link = utils.build_file_landing_page_url(str(file_uuid))
+    link = utils.build_file_landing_page_url(file_uuid)
     qc_str = f" QC: {qc_result.upper()}" if qc_result is not None else ""
     logging.info(f"Updated model: {link}{qc_str}")

@@ -1,34 +1,20 @@
 """Module containing helper functions for CH15k concatenation."""
 
-import logging
 import shutil
+from pathlib import Path
 
 import netCDF4
 from cloudnetpy import concat_lib as clib
 from cloudnetpy.utils import get_epoch, seconds2date
 
 
-def update_daily_file(new_files: list, daily_file: str) -> list:
-    """Appends new files to existing daily file."""
-    if not new_files:
-        return []
-    valid_files = []
-    new_files.sort()
-    for file in new_files:
-        success = clib.update_nc(daily_file, file)
-        if success == 1:
-            valid_files.append(file)
-    logging.info(f"Added {len(valid_files)} new files")
-    return valid_files
-
-
 def concat_netcdf_files(
-    files: list,
+    files: list[Path],
     date: str,
-    output_file: str,
+    output_file: Path,
     concat_dimension: str = "time",
     variables: list | None = None,
-) -> list:
+) -> list[Path]:
     """Concatenates several netcdf files into daily file."""
     with netCDF4.Dataset(files[0]) as nc:
         if concat_dimension not in nc.dimensions:
@@ -53,7 +39,7 @@ def concat_netcdf_files(
 
     clib.concatenate_files(
         valid_files,
-        output_file,
+        str(output_file),
         concat_dimension=concat_dimension,
         variables=variables,
     )

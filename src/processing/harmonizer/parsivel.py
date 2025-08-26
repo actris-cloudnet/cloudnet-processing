@@ -15,7 +15,81 @@ DIMENSION_MAP = {
     "rof_class": "diameter",
     "diameter_classes": "diameter",
     "velocity_classes": "velocity",
+    # Old Leipzig files:
+    "times": "time",
+    "velocities": "velocity",
+    "diameters": "diameter",
 }
+
+VELOCITIES = [
+    0.05,
+    0.15,
+    0.23,
+    0.35,
+    0.45,
+    0.55,
+    0.65,
+    0.75,
+    0.85,
+    0.95,
+    1.1,
+    1.3,
+    1.5,
+    1.7,
+    1.9,
+    2.2,
+    2.6,
+    3,
+    3.4,
+    3.8,
+    4.4,
+    5.2,
+    6,
+    6.8,
+    7.6,
+    8.8,
+    10.4,
+    12,
+    13.6,
+    15.2,
+    17.6,
+    20.8,
+]
+
+DIAMETERS = [
+    6.2e-05,
+    0.000187,
+    0.000312,
+    0.000437,
+    0.000562,
+    0.000687,
+    0.000812,
+    0.000937,
+    0.001062,
+    0.001187,
+    0.001375,
+    0.001625,
+    0.001875,
+    0.002125,
+    0.002375,
+    0.00275,
+    0.00325,
+    0.00375,
+    0.00425,
+    0.00475,
+    0.0055,
+    0.0065,
+    0.0075,
+    0.0085,
+    0.0095,
+    0.011,
+    0.013,
+    0.015,
+    0.017,
+    0.019,
+    0.0215,
+    0.0245,
+]
 
 
 def harmonize_parsivel_file(data: dict) -> str:
@@ -68,11 +142,37 @@ def harmonize_parsivel_file(data: dict) -> str:
                 "absolute_rain_amount",
                 "T_L_sensor_head",
                 "T_R_sensor_head",
+                # Old Leipzig files:
+                "RR_Accumulated",
+                "RR_Total",
             ),
         )
+        if "Meas_Time" in nc_raw.variables:
+            for key, var in nc.variables.items():
+                if key == "time":
+                    var.units = "seconds since 1970-01-01 00:00:00 +00:00"
+                elif key == "data_raw":
+                    var.units = "1"
+                elif key == "number_concentration":
+                    var.units = ("m-3 mm-1",)
+                elif key == "fall_velocity":
+                    var.units = "m s-1"
+                elif hasattr(var, "unit"):
+                    var.units = var.unit
+        if "velocity" not in nc.variables:
+            variable = nc.createVariable("velocity", "f4", "velocity")
+            variable[:] = VELOCITIES
+            variable.long_name = "Center fall velocity of precipitation particles"
+            variable.units = "m s-1"
+        if "diameter" not in nc.variables:
+            variable = nc.createVariable("diameter", "f4", "diameter")
+            variable[:] = DIAMETERS
+            variable.long_name = "Center diameter of precipitation particles"
+            variable.units = "m"
         parsivel.convert_time()
         parsivel.convert_precipitations()
         parsivel.convert_diameters()
+        parsivel.convert_temperatures()
         parsivel.clean_global_attributes()
         parsivel.add_date()
         parsivel.add_geolocation()
@@ -110,11 +210,11 @@ class ParsivelNc(core.Level1Nc):
     def copy_var(self, key: str, time_ind: list):
         variable = self.nc_raw.variables[key]
 
-        if key == "time":
+        if key in ("time", "Meas_Time"):
             dtype = "f8"
-        elif key in ("diameter_bnds",):
+        elif key in ("diameter_bnds", "T_Sensor"):
             dtype = "f4"
-        elif key in ("data_raw", "M"):
+        elif key in ("data_raw", "M", "Data_Raw"):
             dtype = "i2"
         elif np.issubdtype(variable.dtype, np.integer):
             dtype = "i4"
@@ -169,6 +269,23 @@ class ParsivelNc(core.Level1Nc):
             "Ze": "radar_reflectivity",
             "M": "data_raw",
             "diameter_center_classes": "diameter",
+            # Old Leipzig files:
+            "Meas_Time": "time",
+            "Meas_Interval": "interval",
+            "RR_Intensity": "rainfall_rate",
+            "Synop_WW": "synop_WW",
+            "Reflectivity": "radar_reflectivity",
+            "Visibility": "visibility",
+            "T_Sensor": "T_sensor",
+            "Sig_Laser": "sig_laser",
+            "N_Particles": "n_particles",
+            "State_Sensor": "state_sensor",
+            "V_Sensor": "V_power_supply",
+            "I_Heating": "I_heating",
+            "Error_Code": "error_code",
+            "Data_Raw": "data_raw",
+            "Data_N_Field": "number_concentration",
+            "Data_V_Field": "fall_velocity",
         }
         return keymap.get(key, key)
 
@@ -204,6 +321,7 @@ class ParsivelNc(core.Level1Nc):
             "interval": "Length of measurement interval",
             "velocity": "Center fall velocity of precipitation particles",
             "number_concentration": "Number of particles per diameter class",
+            "T_sensor": "Temperature in the sensor housing",
         }
         self.fix_attribute(keymap, "long_name")
         skip = ("time", "visibility", "synop_WaWa", "synop_WW")
@@ -255,17 +373,18 @@ class ParsivelNc(core.Level1Nc):
 
     def convert_precipitations(self):
         for key in self.nc.variables:
-            if key in (
-                "rainfall_rate",
-                "snowfall_rate",
-                "fall_velocity",
-            ):
+            if key in ("rainfall_rate", "snowfall_rate", "fall_velocity"):
                 self.to_ms1(key)
 
     def convert_diameters(self):
         for key in self.nc.variables:
             if key in ("diameter", "diameter_spread"):
                 self.to_m(key)
+
+    def convert_temperatures(self):
+        for key in self.nc.variables:
+            if key in ("T_sensor"):
+                self.to_k(key)
 
     def _find_bad_values(self, variable: netCDF4.Variable) -> np.ndarray:
         bad_value = -9.999

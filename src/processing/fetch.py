@@ -10,9 +10,9 @@ from collections.abc import Callable
 from pathlib import Path
 
 import requests
-
-from processing import utils
-from processing.processor import Product, Site
+from cloudnet_api_client import APIClient
+from cloudnet_api_client.containers import ExtendedProduct, Product, Site
+from cloudnet_api_client.utils import md5sum
 
 DATAPORTAL_URL = os.environ["DATAPORTAL_URL"].rstrip("/")
 DATAPORTAL_AUTH = ("admin", "admin")
@@ -40,7 +40,11 @@ class Fetcher:
     api_url = "https://cloudnet.fmi.fi/api"
 
     def __init__(
-        self, product: Product, site: Site, date: datetime.date, args: Namespace
+        self,
+        product: Product | ExtendedProduct,
+        site: Site,
+        date: datetime.date,
+        args: Namespace,
     ):
         self.product = product
         self.args = args
@@ -48,10 +52,18 @@ class Fetcher:
 
     def get_raw_instrument_metadata(self) -> list:
         url = f"{self.api_url}/raw-files"
+        if (
+            isinstance(self.product, ExtendedProduct)
+            and self.product.source_instrument_ids
+            and not self.args.instruments
+        ):
+            instruments = self.product.source_instrument_ids
+        else:
+            instruments = self.args.instruments
         payload = {
             **self.payload,
             "status": ["uploaded", "processed"],
-            "instrument": self.args.instruments,
+            "instrument": instruments,
         }
         if self.args.instrument_pids:
             payload["instrumentPid"] = self.args.instrument_pids
@@ -101,14 +113,16 @@ class Fetcher:
         return res.json()
 
 
-def fetch(product: Product, site: Site, date: datetime.date, args: Namespace) -> None:
+def fetch(
+    product: Product, site: Site, date: datetime.date, args: Namespace, client=APIClient
+) -> None:
     is_production = os.environ.get("PID_SERVICE_TEST_ENV", "false").lower() != "true"
     if is_production:
         logging.warning("Running in production, not fetching anything.")
         return
 
     if args.uuids:
-        args.instrument_pids = [_uuid2pid(i) for i in args.uuids]
+        args.instrument_pids = [client.instrument(i).pid for i in args.uuids]
     else:
         args.instrument_pids = None
 
@@ -191,8 +205,12 @@ def _download_file(row: dict) -> Path:
         subdir = "product-" + row["product"]["id"]
     elif "model" in row:
         subdir = "model-" + row["model"]["id"]
-    elif "instrumentPid" in row and row["instrumentPid"] is not None:
-        subdir = row["instrument"]["id"] + "-" + row["instrumentPid"].split(".")[-1][:8]
+    elif "instrument" in row:
+        subdir = (
+            row["instrument"]["instrumentId"]
+            + "-"
+            + row["instrument"]["pid"].split(".")[-1][:8]
+        )
         if row["tags"]:
             subdir += "-" + "-".join(sorted(row["tags"]))
     else:
@@ -214,8 +232,8 @@ def _submit_upload(filename: Path, row: dict) -> str:
     if "tags" in row:
         metadata["tags"] = row["tags"]
     if "instrument" in row:
-        metadata["instrument"] = row["instrument"]["id"]
-        metadata["instrumentPid"] = row["instrumentPid"]
+        metadata["instrument"] = row["instrument"]["instrumentId"]
+        metadata["instrumentPid"] = row["instrument"]["pid"]
         end_point = "upload"
     elif "model" in row:
         metadata["model"] = row["model"]["id"]
@@ -242,7 +260,7 @@ def _submit_file(filename: Path, row: dict) -> str:
         bucket = f"{bucket}/legacy"
     ss_url = f"{STORAGE_SERVICE_URL}/{bucket}/{row['filename']}"
     ss_body = filename.read_bytes()
-    ss_headers = {"Content-MD5": utils.md5sum(filename, is_base64=True)}
+    ss_headers = {"Content-MD5": md5sum(filename, is_base64=True)}
     ss_res = requests.put(
         ss_url, ss_body, auth=STORAGE_SERVICE_AUTH, headers=ss_headers
     )
@@ -315,10 +333,13 @@ def _fetch_calibration(upload_metadata: list):
     first = True
     processed_pid_dates: set[tuple] = set()
     for upload in upload_metadata:
-        if (upload["instrumentPid"], upload["measurementDate"]) in processed_pid_dates:
+        if (
+            upload["instrument"]["pid"],
+            upload["measurementDate"],
+        ) in processed_pid_dates:
             continue
         params = {
-            "instrumentPid": upload["instrumentPid"],
+            "instrumentPid": upload["instrument"]["pid"],
             "date": upload["measurementDate"],
         }
         res = requests.get("https://cloudnet.fmi.fi/api/calibration", params=params)
@@ -327,7 +348,7 @@ def _fetch_calibration(upload_metadata: list):
         if first:
             print(f"\n{BOLD}Calibration:{RESET}\n")
             first = False
-        print(upload["instrumentPid"], upload["measurementDate"])
+        print(upload["instrument"]["pid"], upload["measurementDate"])
         res.raise_for_status()
         res = requests.put(
             f"{DATAPORTAL_URL}/api/calibration",
@@ -336,12 +357,6 @@ def _fetch_calibration(upload_metadata: list):
             auth=("admin", "admin"),
         )
         res.raise_for_status()
-        processed_pid_dates.add((upload["instrumentPid"], upload["measurementDate"]))
-
-
-def _uuid2pid(uuid: str) -> str | None:
-    instrument = utils.get_from_data_portal_api(f"api/instrument-pids/{uuid}")
-    assert isinstance(instrument, dict)
-    if instrument and "pid" in instrument:
-        return str(instrument["pid"])
-    return None
+        processed_pid_dates.add(
+            (upload["instrument"]["pid"], upload["measurementDate"])
+        )

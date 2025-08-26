@@ -1,0 +1,52 @@
+services:
+  dataportal-backend:
+    image: ghcr.io/actris-cloudnet/dataportal-backend
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ../dataportal-fixtures:/dataportal-fixtures
+      - ../backend-fixtures:/backend-fixtures
+    env_file:
+      - dataportal.env
+    command:
+      [
+        "sh",
+        "-c",
+        "node build/fixtures.js /backend-fixtures/backend/fixtures TRUNCATE && node build/fixtures.js /dataportal-fixtures APPEND && npm run start",
+      ]
+  db:
+    image: "postgres:16"
+    volumes:
+      - ./initdb.d:/docker-entrypoint-initdb.d
+    ports:
+      - "54321:54321"
+    env_file:
+      - db.env
+    healthcheck:
+      test: ["CMD", "psql", "-c", "select 1"]
+      interval: 1s
+      retries: 120
+  moto-server:
+    image: "motoserver/moto:3.0.1"
+  storage-service:
+    image: ghcr.io/actris-cloudnet/storage-service
+    ports:
+      - "5900:5900"
+    depends_on:
+      db:
+        condition: service_healthy
+      moto-server:
+        condition: service_started
+    env_file:
+      - ss.env
+    command: ["sh", "-c", "node build/init.js && npm start"]
+  cloudnet-processing:
+    image: cloudnet-processing:test
+    depends_on:
+      - "dataportal-backend"
+      - "storage-service"
+    env_file:
+      - ../dev.env

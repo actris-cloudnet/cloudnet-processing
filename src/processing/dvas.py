@@ -2,8 +2,11 @@ import base64
 import datetime
 import logging
 from typing import Literal
+from uuid import UUID
 
 import requests
+from cloudnet_api_client import APIClient
+from cloudnet_api_client.containers import ProductMetadata, VersionMetadata
 
 from processing import utils
 from processing.config import Config
@@ -17,29 +20,30 @@ class DvasError(Exception):
 class Dvas:
     """Class for managing Cloudnet file metadata operations in the DVAS API."""
 
-    def __init__(self, config: Config, md_api: MetadataApi):
+    def __init__(self, config: Config, md_api: MetadataApi, client: APIClient):
         self.config = config
         self.md_api = md_api
         self.session = self._init_session()
+        self.client = client
 
-    def upload(self, file: dict):
+    def upload(self, file: ProductMetadata):
         """Upload Cloudnet file metadata to DVAS API and update Cloudnet data portal"""
-        landing_page_url = utils.build_file_landing_page_url(file["uuid"])
+        landing_page_url = utils.build_file_landing_page_url(file.uuid)
         logging.info(f"Uploading {landing_page_url} metadata to DVAS")
-        if not file["pid"]:
+        if not file.pid:
             logging.error("Skipping - volatile file")
             return
-        if "geophysical" not in file["product"]["type"]:
+        if "geophysical" not in file.product.type:
             logging.error("Skipping - only geophysical products supported for now")
             return
-        if "categorize" in file["product"]["id"]:
+        if "categorize" in file.product.id:
             logging.error("Skipping - categorize file")
             return
-        if not file["site"]["dvasId"]:
+        if not file.site.dvas_id:
             logging.error("Skipping - not DVAS site")
             return
         try:
-            dvas_metadata = DvasMetadata(file, self.md_api)
+            dvas_metadata = DvasMetadata(file, self.md_api, self.client)
             dvas_timestamp = datetime.datetime.now(datetime.timezone.utc)
             dvas_json = dvas_metadata.create_dvas_json(dvas_timestamp)
             if not dvas_json["variables"]:
@@ -47,16 +51,16 @@ class Dvas:
                 return
             self._delete_old_versions(file)
             dvas_id = self._post(dvas_json)
-            self.md_api.update_dvas_info(file["uuid"], dvas_timestamp, dvas_id)
+            self.md_api.update_dvas_info(file.uuid, dvas_timestamp, dvas_id)
         except DvasError:
-            logging.exception(f"Failed to upload {file['filename']} to DVAS")
+            logging.exception(f"Failed to upload {file.filename} to DVAS")
 
-    def delete(self, file: dict):
+    def delete(self, file: VersionMetadata):
         """Delete Cloudnet file metadata from DVAS API"""
         logging.warning(
-            f"Deleting Cloudnet file {file['uuid']} with dvasId {file['dvasId']} from DVAS"
+            f"Deleting Cloudnet file {file.uuid} with dvasId {file.dvas_id} from DVAS"
         )
-        url = f"{self.config.dvas_portal_url}/metadata/delete/pid/{file['pid']}"
+        url = f"{self.config.dvas_portal_url}/metadata/delete/pid/{file.pid}"
         self._delete(url)
 
     def delete_all(self):
@@ -75,20 +79,18 @@ class Dvas:
             raise DvasError(res)
         logging.debug(f"DELETE successful: {res.status_code} {res.text}")
 
-    def _delete_old_versions(self, file: dict):
+    def _delete_old_versions(self, file: ProductMetadata):
         """Delete all versions of the given file from DVAS API. To be used before posting new version."""
-        versions = self.md_api.get(
-            f"api/files/{file['uuid']}/versions", {"properties": ["dvasId", "pid"]}
-        )
+        versions = self.client.versions(file.uuid)
         for version in versions:
-            if version["dvasId"] is None:
+            if version.dvas_id is None:
                 continue
-            logging.debug(f"Deleting version {version['uuid']} of {file['filename']}")
+            logging.debug(f"Deleting version {version.uuid} of {file.filename}")
             try:
                 self.delete(version)
-                self.md_api.clean_dvas_info(version["uuid"])
+                self.md_api.clean_dvas_info(version.uuid)
             except DvasError as err:
-                logging.error(f"Failed to delete {version['dvasId']} from DVAS")
+                logging.error(f"Failed to delete {version.dvas_id} from DVAS")
                 logging.debug(err)
 
     def _post(self, metadata: dict) -> str:
@@ -114,9 +116,10 @@ class Dvas:
 class DvasMetadata:
     """Create metadata for DVAS API from Cloudnet file metadata"""
 
-    def __init__(self, file: dict, md_api: MetadataApi):
+    def __init__(self, file: ProductMetadata, md_api: MetadataApi, client: APIClient):
         self.file = file
         self.md_api = md_api
+        self.client = client
 
     def create_dvas_json(self, timestamp: datetime.datetime) -> dict:
         time_begin = self.file.start_time or datetime.datetime.combine(
@@ -193,9 +196,9 @@ class DvasMetadata:
                         self.file.site.altitude,
                     ],
                     [
-                        self.file.sitelongitude,
-                        self.file.sitelatitude,
-                        self.file.sitealtitude + 12_000,
+                        self.file.site.longitude,
+                        self.file.site.latitude,
+                        self.file.site.altitude + 12_000,
                     ],
                 ],
             },
@@ -234,44 +237,28 @@ class DvasMetadata:
                     "transfersize": {"size": self.file.size, "unit": "B"},
                 }
             ],
-            "provenance": [
-                {
-                    "title": software.title,
-                    "url": software.url,
-                }
-                for software in self.file.software
-            ],
+            # TODO:
+            # "provenance": [
+            #     {
+            #         "title": software.title,
+            #         "url": software.url,
+            #     }
+            #     for software in self.file.software
+            # ],
         }
 
     def _parse_variable_names(self) -> list[str]:
         # https://prod-actris-md.nilu.no/Vocabulary/ContentAttribute
-        file_vars = self.md_api.get(f"api/products/{self._product['id']}/variables")
+        file_vars = self.md_api.get(f"api/products/{self.file.product.id}/variables")
         return [v["actrisName"] for v in file_vars if v["actrisName"] is not None]
 
     def _parse_frameworks(self) -> list[str]:
         affiliation = ["CLOUDNET"]
-        if "arm" in self._site["type"]:
+        if "arm" in self.file.site.type:
             affiliation.append("ARM")
-        if "cloudnet" in self._site["type"]:
+        if "cloudnet" in self.file.site.type:
             affiliation.append("ACTRIS")
         return affiliation
-
-    def _find_instruments(self, uuid: str) -> dict[str, dict]:
-        """Recursively find instruments from source files."""
-        instruments = {}
-        json_data = utils.get_from_data_portal_api(f"api/files/{uuid}")
-        assert isinstance(json_data, dict)
-        if "instrument" in json_data and json_data["instrument"] is not None:
-            instruments[json_data["instrument"]["pid"]] = {
-                "instrument_pid": json_data["instrument"]["pid"],
-                "instrument_type": json_data["instrument"]["type"],
-                "instrument_name": json_data["instrument"]["name"],
-            }
-        source_ids = json_data.get("sourceFileIds", [])
-        if source_ids:
-            for source_uuid in source_ids:
-                instruments.update(self._find_instruments(source_uuid))
-        return instruments
 
     def _parse_timeliness(self) -> str:
         # https://prod-actris-md.nilu.no/vocabulary/observationtimeliness
@@ -280,12 +267,12 @@ class DvasMetadata:
             "rrt": "real real-time",
             "scheduled": "scheduled",
         }
-        return clu_to_dvas_map[self.file["timeliness"]]
+        return clu_to_dvas_map[self.file.timeliness]
 
     def _parse_compliance(self) -> str:
         return (
             "ACTRIS legacy"
-            if self.file["measurementDate"] < "2023-04-25"
+            if self.file.measurement_date < datetime.date(2023, 4, 25)
             else "ACTRIS associated"
         )
 
@@ -297,21 +284,23 @@ class DvasMetadata:
             "error": "4 - Bad",
         }
         unknown_outcome = "2 - Not evaluated, not available or unknown"
-        return outcome_map.get(self.file["errorLevel"], unknown_outcome)
+        if self.file.error_level is None:
+            return unknown_outcome
+        return outcome_map.get(self.file.error_level, unknown_outcome)
 
     def _parse_netcdf_version(self) -> str:
-        return self.file["format"]
+        return self.file.format
 
     def _parse_title(self) -> str:
         return (
-            f"{self._product['humanReadableName']} data "
+            f"{self.file.product.human_readable_name} data "
             f"derived from cloud remote sensing measurements "
-            f"at {self._site['humanReadableName']}"
+            f"at {self.file.site.human_readable_name}"
         )
 
     def _fetch_credits(self, type: Literal["citation", "acknowledgements"]) -> str:
         params = {"format": "txt"}
         response = self.md_api.get(
-            f"api/reference/{self.file['uuid']}/{type}", params, json=False
+            f"api/reference/{self.file.uuid}/{type}", params, json=False
         )
         return response.text

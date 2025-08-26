@@ -6,14 +6,14 @@ import logging
 import re
 import shutil
 from collections import defaultdict
-from os import PathLike
 from pathlib import Path
-from typing import Any, Literal
+from typing import Literal
 from uuid import UUID
 
 import doppy
 import netCDF4
 import numpy as np
+from cloudnet_api_client import CloudnetAPIError
 from cloudnetpy.instruments import (
     basta2nc,
     bowtie2nc,
@@ -39,7 +39,7 @@ from requests.exceptions import HTTPError
 
 from processing import concat_wrapper, harmonizer
 from processing.processor import InstrumentParams, Processor
-from processing.utils import RawDataMissingError, Uuid, fetch_calibration, unzip_gz_file
+from processing.utils import RawDataMissingError, Uuid, unzip_gz_file
 
 
 class ProcessInstrument:
@@ -58,7 +58,7 @@ class ProcessInstrument:
         self.params = params
         self.processor = processor
         self.site_meta = {
-            "name": params.site.name,
+            "name": params.site.human_readable_name,
             "latitude": params.site.latitude,
             "longitude": params.site.longitude,
             "altitude": params.site.altitude,
@@ -72,7 +72,10 @@ class ProcessInstrument:
     def _get_kwargs(self) -> dict:
         return {"uuid": self.uuid.volatile, "date": self.params.date.isoformat()}
 
-    def _get_payload_for_nc_file_augmenter(self, full_path: str) -> dict:
+    def _get_payload_for_nc_file_augmenter(self, full_path: Path | list[Path]) -> dict:
+        if isinstance(full_path, list):
+            assert len(full_path) == 1
+            full_path = full_path[0]
         return {
             "site_name": self.params.site.id,
             "date": self.params.date.isoformat(),
@@ -96,7 +99,7 @@ class ProcessInstrument:
         filename_suffix: str | None = None,
         subdir: str | None = None,
         time_offset: datetime.timedelta | None = None,
-    ):
+    ) -> tuple[list[Path], list[str]]:
         directory = self.raw_dir
         if subdir is not None:
             directory = directory / subdir
@@ -104,7 +107,7 @@ class ProcessInstrument:
         return self.processor.download_instrument(
             site_id=self.params.site.id,
             date=self.params.date if date is None else date,
-            instrument_id=self.params.instrument.type,
+            instrument_id=self.params.instrument.instrument_id,
             instrument_pid=self.params.instrument.pid,
             directory=directory,
             include_pattern=include_pattern,
@@ -124,7 +127,7 @@ class ProcessRadar(ProcessInstrument):
         if self.params.site.id == "rv-meteor":
             full_paths, self.uuid.raw = self.download_instrument()
             concat_wrapper.concat_netcdf_files(
-                full_paths, self.params.date.isoformat(), str(self.daily_path)
+                full_paths, self.params.date.isoformat(), self.daily_path
             )
             self.uuid.product = bowtie2nc(
                 str(self.daily_path), *self._args, **self._kwargs
@@ -175,7 +178,7 @@ class ProcessRadar(ProcessInstrument):
     def process_basta(self):
         full_paths, self.uuid.raw = self.download_instrument()
         concat_wrapper.concat_netcdf_files(
-            full_paths, self.params.date.isoformat(), str(self.daily_path)
+            full_paths, self.params.date.isoformat(), self.daily_path
         )
         self.uuid.product = basta2nc(str(self.daily_path), *self._args, **self._kwargs)
 
@@ -203,22 +206,35 @@ class ProcessRadar(ProcessInstrument):
         return out_paths
 
     def _add_calibration(
-        self, key: str, default_value: Any = None, api_key: str | None = None
+        self,
+        key: str,
+        default_value: str | float | None = None,
+        api_key: str | None = None,
     ) -> None:
-        calibration = fetch_calibration(self.params.instrument.pid, self.params.date)
-        if calibration is not None:
-            data = calibration["data"]
-            self.site_meta[key] = data.get(api_key or key, default_value)
+        try:
+            calibration = self.processor.client.calibration(
+                self.params.instrument.pid, self.params.date
+            )
+        except CloudnetAPIError:
+            return
+        data = calibration["data"]
+        self.site_meta[key] = data.get(api_key or key, default_value)
 
 
 class ProcessDopplerLidarWind(ProcessInstrument):
     def process_halo_doppler_lidar(self):
-        calibration = fetch_calibration(self.params.instrument.pid, self.params.date)
-        time_offset = (
-            datetime.timedelta(minutes=calibration["data"]["time_offset"])
-            if calibration is not None and "time_offset" in calibration["data"]
-            else None
-        )
+        try:
+            calibration = self.processor.client.calibration(
+                self.params.instrument.pid, self.params.date
+            )
+            time_offset = (
+                datetime.timedelta(minutes=calibration["data"]["time_offset"])
+                if "time_offset" in calibration["data"]
+                else None
+            )
+        except CloudnetAPIError:
+            time_offset = None
+
         full_paths, self.uuid.raw = self.download_instrument(
             include_pattern=r".*\.hpl",
             exclude_pattern=r"Stare.*",
@@ -233,7 +249,7 @@ class ProcessDopplerLidarWind(ProcessInstrument):
         _doppy_wind_to_nc(
             wind, str(self.daily_path), self.params.date, options, time_offset
         )
-        data = self._get_payload_for_nc_file_augmenter(str(self.daily_path))
+        data = self._get_payload_for_nc_file_augmenter(self.daily_path)
         if options is not None and options.azimuth_offset_deg is not None:
             data["azimuth_offset_deg"] = options.azimuth_offset_deg
         self.uuid.product = harmonizer.harmonize_doppler_lidar_wind_file(
@@ -257,7 +273,7 @@ class ProcessDopplerLidarWind(ProcessInstrument):
         except doppy.exceptions.NoDataError as err:
             raise RawDataMissingError(str(err))
         _doppy_wls70_wind_to_nc(wind, str(self.daily_path), options)
-        data = self._get_payload_for_nc_file_augmenter(str(self.daily_path))
+        data = self._get_payload_for_nc_file_augmenter(self.daily_path)
         if options is not None and options.azimuth_offset_deg is not None:
             data["azimuth_offset_deg"] = options.azimuth_offset_deg
         self.uuid.product = harmonizer.harmonize_doppler_lidar_wind_file(
@@ -301,7 +317,7 @@ class ProcessDopplerLidarWind(ProcessInstrument):
         except doppy.exceptions.NoDataError as err:
             raise RawDataMissingError(str(err))
         _doppy_wind_to_nc(wind, str(self.daily_path), self.params.date, options)
-        data = self._get_payload_for_nc_file_augmenter(str(self.daily_path))
+        data = self._get_payload_for_nc_file_augmenter(self.daily_path)
         if options is not None and options.azimuth_offset_deg is not None:
             data["azimuth_offset_deg"] = options.azimuth_offset_deg
         self.uuid.product = harmonizer.harmonize_doppler_lidar_wind_file(
@@ -309,10 +325,17 @@ class ProcessDopplerLidarWind(ProcessInstrument):
         )
 
     def _calibration_options(self) -> doppy.product.WindOptions | None:
-        calibration = fetch_calibration(self.params.instrument.pid, self.params.date)
-        azimuth_offset = (
-            calibration.get("data", {}).get("azimuth_offset") if calibration else None
-        )
+        try:
+            calibration = self.processor.client.calibration(
+                self.params.instrument.pid, self.params.date
+            )
+            azimuth_offset = (
+                calibration.get("data", {}).get("azimuth_offset")
+                if calibration
+                else None
+            )
+        except CloudnetAPIError:
+            return None
         return (
             doppy.product.WindOptions(azimuth_offset_deg=float(azimuth_offset))
             if azimuth_offset
@@ -322,12 +345,17 @@ class ProcessDopplerLidarWind(ProcessInstrument):
 
 class ProcessDopplerLidar(ProcessInstrument):
     def process_halo_doppler_lidar(self):
-        calibration = fetch_calibration(self.params.instrument.pid, self.params.date)
-        time_offset = (
-            datetime.timedelta(minutes=calibration["data"]["time_offset"])
-            if calibration is not None and "time_offset" in calibration["data"]
-            else None
-        )
+        try:
+            calibration = self.processor.client.calibration(
+                self.params.instrument.pid, self.params.date
+            )
+            time_offset = (
+                datetime.timedelta(minutes=calibration["data"]["time_offset"])
+                if calibration is not None and "time_offset" in calibration["data"]
+                else None
+            )
+        except CloudnetAPIError:
+            time_offset = None
         # Co files either have "co" tag or no tags at all.
         full_paths_co, raw_uuids_co = self.download_instrument(
             filename_prefix="Stare",
@@ -377,7 +405,7 @@ class ProcessDopplerLidar(ProcessInstrument):
             raise RawDataMissingError(str(err))
 
         _doppy_stare_to_nc(stare, str(self.daily_path), self.params.date, time_offset)
-        data = self._get_payload_for_nc_file_augmenter(str(self.daily_path))
+        data = self._get_payload_for_nc_file_augmenter(self.daily_path)
         self.uuid.product = harmonizer.harmonize_doppler_lidar_stare_file(
             data, instruments.HALO
         )
@@ -434,7 +462,7 @@ class ProcessDopplerLidar(ProcessInstrument):
                         raise
 
         _doppy_stare_to_nc(stare, str(self.daily_path), self.params.date)
-        data = self._get_payload_for_nc_file_augmenter(str(self.daily_path))
+        data = self._get_payload_for_nc_file_augmenter(self.daily_path)
         self.uuid.product = harmonizer.harmonize_doppler_lidar_stare_file(
             data, instrument
         )
@@ -444,7 +472,7 @@ class ProcessLidar(ProcessInstrument):
     def process_cs135(self):
         full_paths, self.uuid.raw = self.download_instrument()
         full_paths.sort()
-        _concatenate_text_files(full_paths, str(self.daily_path))
+        _concatenate_text_files(full_paths, self.daily_path)
         self._call_ceilo2nc("cs135")
 
     def process_chm15k(self):
@@ -465,11 +493,11 @@ class ProcessLidar(ProcessInstrument):
         _check_chm_version(str(self.daily_path), model)
         self._call_ceilo2nc("chm15k")
 
-    def process_ct25k(self):
+    def process_ct25k(self) -> None:
         full_paths, self.uuid.raw = self.download_instrument()
         full_paths.sort()
         full_paths = _unzip_gz_files(full_paths)
-        _concatenate_text_files(full_paths, str(self.daily_path))
+        _concatenate_text_files(full_paths, self.daily_path)
         self._call_ceilo2nc("ct25k")
 
     def process_halo_doppler_lidar_calibrated(self):
@@ -498,19 +526,24 @@ class ProcessLidar(ProcessInstrument):
     def process_cl31(self):
         full_paths, self.uuid.raw = self.download_instrument()
         full_paths.sort()
-        _concatenate_text_files(full_paths, str(self.daily_path))
+        _concatenate_text_files(full_paths, self.daily_path)
         self._call_ceilo2nc("cl31")
 
     def process_cl51(self):
-        calibration = fetch_calibration(self.params.instrument.pid, self.params.date)
-        time_offset = (
-            datetime.timedelta(minutes=calibration["data"]["time_offset"])
-            if calibration is not None and "time_offset" in calibration["data"]
-            else None
-        )
+        try:
+            calibration = self.processor.client.calibration(
+                self.params.instrument.pid, self.params.date
+            )
+            time_offset = (
+                datetime.timedelta(minutes=calibration["data"]["time_offset"])
+                if "time_offset" in calibration["data"]
+                else None
+            )
+        except CloudnetAPIError:
+            time_offset = None
         full_paths, self.uuid.raw = self.download_instrument(time_offset=time_offset)
         full_paths.sort()
-        _concatenate_text_files(full_paths, str(self.daily_path))
+        _concatenate_text_files(full_paths, self.daily_path)
         if time_offset is not None:
             logging.info(
                 "Shifting timestamps to UTC by %d minutes",
@@ -528,14 +561,14 @@ class ProcessLidar(ProcessInstrument):
             valid_full_paths = concat_wrapper.concat_netcdf_files(
                 full_paths,
                 self.params.date.isoformat(),
-                str(self.daily_path),
+                self.daily_path,
                 variables=variables,
             )
         except KeyError:
             valid_full_paths = concat_wrapper.concat_netcdf_files(
                 full_paths,
                 self.params.date.isoformat(),
-                str(self.daily_path),
+                self.daily_path,
                 concat_dimension="profile",
                 variables=variables,
             )
@@ -558,8 +591,11 @@ class ProcessLidar(ProcessInstrument):
 
     def _fetch_ceilo_calibration(self) -> dict:
         output: dict = {}
-        calibration = fetch_calibration(self.params.instrument.pid, self.params.date)
-        if not calibration:
+        try:
+            calibration = self.processor.client.calibration(
+                self.params.instrument.pid, self.params.date
+            )
+        except CloudnetAPIError:
             return output
         if "calibration_factor" in calibration["data"]:
             output["calibration_factor"] = float(
@@ -571,8 +607,11 @@ class ProcessLidar(ProcessInstrument):
 
     def _fetch_pollyxt_calibration(self) -> dict:
         output = {"snr_limit": 25.0}
-        calibration = fetch_calibration(self.params.instrument.pid, self.params.date)
-        if not calibration:
+        try:
+            calibration = self.processor.client.calibration(
+                self.params.instrument.pid, self.params.date
+            )
+        except CloudnetAPIError:
             return output
         if "snr_limit" in calibration["data"]:
             output["snr_limit"] = float(calibration["data"]["snr_limit"])
@@ -675,9 +714,9 @@ class ProcessMwr(ProcessInstrument):
                 include_pattern="(ufs_l2a.nc$|clwvi.*.nc$|.lwp.*.nc$)"
             )
             valid_full_paths = concat_wrapper.concat_netcdf_files(
-                full_paths, self.params.date.isoformat(), str(self.daily_path)
+                full_paths, self.params.date.isoformat(), self.daily_path
             )
-            data = self._get_payload_for_nc_file_augmenter(str(self.daily_path))
+            data = self._get_payload_for_nc_file_augmenter(self.daily_path)
             self.uuid.product = harmonizer.harmonize_hatpro_file(data)
         self.uuid.raw = _get_valid_uuids(raw_uuids, full_paths, valid_full_paths)
 
@@ -744,11 +783,15 @@ class ProcessDisdrometer(ProcessInstrument):
 
     def _fetch_parsivel_calibration(self) -> dict:
         output: dict = {"telegram": None, "missing_timestamps": False}
-        calibration = fetch_calibration(self.params.instrument.pid, self.params.date)
-        if calibration is not None:
-            data = calibration["data"]
-            output["telegram"] = data.get("telegram", None)
-            output["missing_timestamps"] = data.get("missing_timestamps", False)
+        try:
+            calibration = self.processor.client.calibration(
+                self.params.instrument.pid, self.params.date
+            )
+        except CloudnetAPIError:
+            return output
+        data = calibration["data"]
+        output["telegram"] = data.get("telegram", None)
+        output["missing_timestamps"] = data.get("missing_timestamps", False)
         return output
 
 
@@ -765,7 +808,7 @@ class ProcessRainGauge(ProcessInstrument):
 
     def process_rain_e_h3(self):
         full_path, self.uuid.raw = self.download_instrument(largest_only=True)
-        self.uuid.product = rain_e_h32nc(full_path, *self._args, **self._kwargs)
+        self.uuid.product = rain_e_h32nc(full_path[0], *self._args, **self._kwargs)
 
 
 class ProcessWeatherStation(ProcessInstrument):
@@ -786,15 +829,21 @@ class ProcessWeatherStation(ProcessInstrument):
         )
         if self.params.site.id not in supported_sites:
             raise NotImplementedError("Weather station not implemented for this site")
-
-        calibration = fetch_calibration(self.params.instrument.pid, self.params.date)
+        try:
+            calibration = self.processor.client.calibration(
+                self.params.instrument.pid, self.params.date
+            )
+        except CloudnetAPIError:
+            calibration = None
         if calibration and calibration.get("data", {}).get("time_offset"):
             time_offset = datetime.timedelta(minutes=calibration["data"]["time_offset"])
             full_paths, self.uuid.raw = self.download_instrument(
                 time_offset=time_offset
             )
             full_paths.sort()
-            self.uuid.product = ws2nc(full_paths, *self._args, **self._kwargs)
+            self.uuid.product = ws2nc(
+                [str(path) for path in full_paths], *self._args, **self._kwargs
+            )
         else:
             full_paths, self.uuid.raw = self.download_instrument()
             full_paths.sort()
@@ -802,11 +851,13 @@ class ProcessWeatherStation(ProcessInstrument):
                 data = self._get_payload_for_nc_file_augmenter(full_paths[0])
                 self.uuid.product = harmonizer.harmonize_ws_file(data)
             else:
-                self.uuid.product = ws2nc(full_paths, *self._args, **self._kwargs)
+                self.uuid.product = ws2nc(
+                    [str(path) for path in full_paths], *self._args, **self._kwargs
+                )
 
     def process_fd12(self):
         full_path, self.uuid.raw = self.download_instrument(largest_only=True)
-        self.uuid.product = fd12p2nc(full_path, *self._args, **self._kwargs)
+        self.uuid.product = fd12p2nc(full_path[0], *self._args, **self._kwargs)
 
 
 class ProcessRainRadar(ProcessInstrument):
@@ -817,11 +868,13 @@ class ProcessRainRadar(ProcessInstrument):
 
 
 def _get_valid_uuids(
-    uuids: list[UUID], full_paths: list[Path], valid_full_paths: list[str]
-) -> list[UUID]:
+    uuids: list[str], full_paths: list[Path], valid_full_paths: list[str] | list[Path]
+) -> list[str]:
     valid_paths = [Path(path) for path in valid_full_paths]
     return [
-        uuid for uuid, full_path in zip(uuids, full_paths) if full_path in valid_paths
+        str(uuid)
+        for uuid, full_path in zip(uuids, full_paths)
+        if full_path in valid_paths
     ]
 
 
@@ -1120,7 +1173,7 @@ def _shift_datetime(date_time: str, offset: datetime.timedelta) -> str:
     return dt.strftime("%Y-%m-%d %H:%M:%S")
 
 
-def _concatenate_text_files(filenames: list, output_filename: str | PathLike) -> None:
+def _concatenate_text_files(filenames: list, output_filename: Path) -> None:
     """Concatenates text files."""
     with open(output_filename, "wb") as target:
         for filename in filenames:

@@ -1,5 +1,5 @@
 from io import SEEK_END
-from os import PathLike
+from pathlib import Path
 from typing import BinaryIO
 
 import netCDF4
@@ -23,7 +23,7 @@ def _read_from_file(
     return {field: arr[field] for field, _type in fields}
 
 
-def _check_eof(file: BinaryIO):
+def _check_eof(file: BinaryIO) -> None:
     current_offset = file.tell()
     file.seek(0, SEEK_END)
     end_offset = file.tell()
@@ -49,7 +49,7 @@ class HatproHkd:
     header: dict
     data: dict
 
-    def __init__(self, filename: str | bytes | PathLike):
+    def __init__(self, filename: bytes | Path):
         with open(filename, "rb") as file:
             self._read_header(file)
             self._read_data(file)
@@ -102,7 +102,7 @@ class HatproHkd:
 
 
 class HatproHkdNc:
-    def __init__(self, filename: str | PathLike):
+    def __init__(self, filename: Path):
         with netCDF4.Dataset(filename) as nc:
             time_ref = nc.variables.get("time_reference")
             if time_ref and time_ref[0] != TIME_REF_UTC:

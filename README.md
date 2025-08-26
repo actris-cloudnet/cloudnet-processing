@@ -84,6 +84,24 @@ Options:
 | `-i`  | `--instrument` | Instrument to submit, e.g. `chm15k`.  |
 |       | `--pid`        | Instrument PID to submit.             |
 
+### `dvas-json.py`
+
+Output file metadata as it would be sent to DVAS.
+
+    usage: dvas-json.py [-h] file_uuid
+
+Positional arguments:
+
+| Name        | Description                              |
+| :---------- | :--------------------------------------- |
+| `file_uuid` | Output DVAS metadata for this file UUID. |
+
+Options:
+
+| Short | Long     | Description         |
+| :---- | :------- | :------------------ |
+| `-h`  | `--help` | Show help and exit. |
+
 ### `worker.py`
 
 Launch a worker with `./scripts/worker.py` to process incoming _tasks_. Used mainly in production to process data in real-time.

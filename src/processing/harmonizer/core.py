@@ -10,7 +10,7 @@ import cloudnetpy.utils
 import netCDF4
 import numpy as np
 
-import processing.utils
+from processing.version import __version__ as cloudnet_processing_version
 
 
 class Level1Nc:
@@ -113,7 +113,7 @@ class Level1Nc:
         instrument: cloudnetpy.instruments.instruments.Instrument,
     ):
         """Adds standard global attributes."""
-        location = processing.utils.read_site_info(self.data["site_name"])["name"]
+        location = self.data["site_meta"]["name"]
         self.nc.Conventions = "CF-1.8"
         self.nc.cloudnet_file_type = cloudnet_file_type
         self.nc.source = cloudnetpy.output.get_l1b_source(instrument)
@@ -129,11 +129,10 @@ class Level1Nc:
 
     def add_history(self, product: str, source: str = "history"):
         """Adds history attribute."""
-        version = processing.utils.get_data_processing_version()
         old_history = getattr(self.nc_raw, source, "")
         history = (
             f"{cloudnetpy.utils.get_time()} - {product} metadata harmonized by CLU using "
-            f"cloudnet-processing v{version}"
+            f"cloudnet-processing v{cloudnet_processing_version}"
         )
         if len(old_history) > 0:
             history = f"{history}\n{old_history}"
@@ -188,24 +187,35 @@ class Level1Nc:
 
     def get_valid_time_indices(self) -> list:
         """Finds valid time indices."""
-        supported_time_vars = ("time", "datetime")
-        for time_var in supported_time_vars:
-            if time_var in self.nc_raw.variables:
-                time = self.nc_raw.variables[time_var]
-                break
-        else:
-            raise RuntimeError(f"Time variable not found from {supported_time_vars}")
-
-        time_stamps = time[:]
-        if len(time_stamps) < 2:
-            raise cloudnetpy.exceptions.ValidTimeStampError
-
-        raw_time_stamps = time_stamps.copy()
-
-        if "seconds since" in time.units:
+        # Handle old Leipzig Parsivel files
+        if "Meas_Time" in self.nc_raw.variables:
+            time = self.nc_raw.variables["Meas_Time"]
+            time_stamps = time[:]
+            if len(time_stamps) < 2:
+                raise cloudnetpy.exceptions.ValidTimeStampError
+            raw_time_stamps = time_stamps.copy()
             time_stamps = np.array(cloudnetpy.utils.seconds2hours(time_stamps))
+            max_time = 24
+        else:
+            supported_time_vars = ("time", "datetime")
+            for time_var in supported_time_vars:
+                if time_var in self.nc_raw.variables:
+                    time = self.nc_raw.variables[time_var]
+                    break
+            else:
+                raise RuntimeError(
+                    f"Time variable not found from {supported_time_vars}"
+                )
+            time_stamps = time[:]
+            if len(time_stamps) < 2:
+                raise cloudnetpy.exceptions.ValidTimeStampError
 
-        max_time = 1440 if "minutes" in time.units else 24
+            raw_time_stamps = time_stamps.copy()
+
+            if "seconds" in time.units:
+                time_stamps = np.array(cloudnetpy.utils.seconds2hours(time_stamps))
+
+            max_time = 1440 if "minutes" in time.units else 24
         valid_ind: list[int] = []
         for ind, t in enumerate(time_stamps):
             if 0 <= t < max_time:
@@ -235,7 +245,9 @@ class Level1Nc:
             case "mm/s" | "mm s-1" | "mm / s":
                 factor = 1e-3
             case _:
-                raise ValueError(f"Unknown units: {units}")
+                raise ValueError(
+                    f"Variable '{variable}' has unsupported units: {units}"
+                )
         if factor:
             self.nc.variables[variable][:] *= factor
             logging.info(f"Converting {variable} from {units} to {target_unit}.")
@@ -254,7 +266,9 @@ class Level1Nc:
             case "mm":
                 factor = 1e-3
             case _:
-                raise ValueError(f"Unknown units: {units}")
+                raise ValueError(
+                    f"Variable '{variable}' has unsupported units: {units}"
+                )
         if factor:
             self.nc.variables[variable][:] *= factor
             logging.info(f"Converting {variable} from {units} to {target_unit}.")
@@ -273,7 +287,9 @@ class Level1Nc:
             case "%" | "percent":
                 factor = 1e-2
             case _:
-                raise ValueError(f"Unknown units: {units}")
+                raise ValueError(
+                    f"Variable '{variable}' has unsupported units: {units}"
+                )
         if factor:
             self.nc.variables[variable][:] *= factor
             logging.info(f"Converting {variable} from {units} to {target_unit}.")
@@ -292,7 +308,9 @@ class Level1Nc:
             case "hpa":
                 factor = 100.0
             case _:
-                raise ValueError(f"Unknown units: {units}")
+                raise ValueError(
+                    f"Variable '{variable}' has unsupported units: {units}"
+                )
         if factor:
             self.nc.variables[variable][:] *= factor
             logging.info(f"Converting {variable} from {units} to {target_unit}.")
@@ -309,7 +327,9 @@ class Level1Nc:
             case "degrees" | "degree":
                 factor = None
             case _:
-                raise ValueError(f"Unknown units: {units}")
+                raise ValueError(
+                    f"Variable '{variable}' has unsupported units: {units}"
+                )
         if factor:
             self.nc.variables[variable][:] *= factor
             logging.info(f"Converting {variable} from {units} to {target_unit}.")
@@ -336,7 +356,9 @@ class Level1Nc:
                 self.nc.variables[variable][:] += 273.15
                 logging.info(f"Converting {variable} from {units} to {target_unit}.")
             case _:
-                raise ValueError(f"Unknown units: {units}")
+                raise ValueError(
+                    f"Variable '{variable}' has unsupported units: {units}"
+                )
         self.nc.variables[variable].units = target_unit
 
     def _set_fallback_unit(self, variable: str, fallback: str):
@@ -368,6 +390,6 @@ class Level1Nc:
         return variable[:]
 
     @staticmethod
-    def _copy_variable_attributes(source, target):
+    def _copy_variable_attributes(source, target) -> None:
         attr = {k: source.getncattr(k) for k in source.ncattrs() if k != "_FillValue"}
         target.setncatts(attr)

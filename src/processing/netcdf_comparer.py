@@ -1,6 +1,6 @@
 import logging
 from enum import Enum
-from os import PathLike
+from pathlib import Path
 from typing import Tuple
 
 import netCDF4
@@ -17,8 +17,8 @@ class NCDiff(Enum):
 class NetCDFComparator:
     def __init__(
         self,
-        old_file: PathLike | str,
-        new_file: PathLike | str,
+        old_file: Path,
+        new_file: Path,
         ignore_vars: Tuple[str, ...] = (
             "beta_smooth",
             "ze_sat_noise",
@@ -290,6 +290,6 @@ class NetCDFComparator:
         return True
 
 
-def nc_difference(old_file: PathLike | str, new_file: PathLike | str) -> NCDiff:
+def nc_difference(old_file: Path, new_file: Path) -> NCDiff:
     comparator = NetCDFComparator(old_file, new_file)
     return comparator.compare()

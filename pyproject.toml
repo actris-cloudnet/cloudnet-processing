@@ -20,11 +20,12 @@ classifiers = [
 dependencies = [
   "ceilopyter",
   "cftime",
+  "cloudnet-api-client>=0.12.0",
   "cloudnetpy[extras]>=1.77.2",
   "cloudnetpy_qc>=1.25.8",
   "doppy>=0.3.5",
   "influxdb-client",
-  "model-munger @ git+https://github.com/actris-cloudnet/model-munger.git@v0.2.0",
+  "model-munger",
   "orbital-radar @ git+https://github.com/actris-cloudnet/orbital-radar.git@v0.0.3",
   "requests",
   "rpgpy>=0.15.10",
@@ -65,6 +66,8 @@ filename = "src/processing/version.py"
 pattern = ["MAJOR = (?P<major>\\d+)", "MINOR = (?P<minor>\\d+)", "PATCH = (?P<patch>\\d+)"]
 
 [tool.ruff]
+select = ["ANN"]
+ignore = ["ANN001", "ANN002", "ANN101", "ANN201", "ANN202", "ANN204"]
 extend-select = ["I"]
 
 [tool.ruff.lint.extend-per-file-ignores]

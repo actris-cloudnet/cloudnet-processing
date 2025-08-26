@@ -11,29 +11,39 @@ import sys
 import warnings
 from argparse import ArgumentTypeError, Namespace
 from collections.abc import Callable
+from dataclasses import asdict
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import TypeVar
 from uuid import UUID
 
+from cloudnet_api_client import APIClient
+from cloudnet_api_client.containers import (
+    ExtendedProduct,
+    ProductMetadata,
+    RawMetadata,
+    Site,
+)
 from processing import utils
+from processing.config import Config
 from processing.dvas import Dvas
 from processing.fetch import fetch
 from processing.instrument import process_instrument
-from processing.jobs import freeze, hkd, update_plots, update_qc, upload_to_dvas
+from processing.jobs import freeze, update_plots, update_qc, upload_to_dvas
 from processing.metadata_api import MetadataApi
 from processing.model import process_model
 from processing.pid_utils import PidUtils
 from processing.processor import (
+    ExtendedSite,
     InstrumentParams,
     ModelParams,
     Processor,
-    Product,
     ProductParams,
-    Site,
 )
-from processing.product import process_me, process_product
+from processing.product import process_product
 from processing.storage_api import StorageApi
+from processing.utils import SkipTaskError
+from requests import Session
 
 logging.basicConfig(level=logging.INFO)
 
@@ -62,17 +72,20 @@ else:
 
 
 def main():
-    args = _parse_args()
+    config = Config()
+    session = utils.make_session()
+    client = APIClient(f"{config.dataportal_url}/api/", session)
+    args = _parse_args(client)
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
     handler = logging.StreamHandler()
     formatter = logging.Formatter("%(levelname)s: %(message)s")
     handler.setFormatter(formatter)
     logger.handlers = [handler]
-    process_main(args)
+    process_main(args, config, session, client)
 
 
-def _parse_args():
+def _parse_args(client: APIClient) -> Namespace:
     parser = argparse.ArgumentParser(
         description="Cloudnet processing main wrapper.",
         epilog="Enjoy the program! :)",
@@ -83,26 +96,26 @@ def _parse_args():
         "-s",
         "--sites",
         help="Sites to process data from, e.g. hyytiala.",
-        type=_validate_sites,
+        type=lambda sites: _validate_sites(sites, client),
         required=True,
     )
     group.add_argument(
         "-p",
         "--products",
         help="Products to be processed, e.g., radar,lidar,mwr.",
-        type=_validate_products,
+        type=lambda products: _validate_products(products, client),
     )
     parser.add_argument(
         "-i",
         "--instruments",
         help="Instrument types to be processed, e.g., mira-35,chm15k,hatpro.",
-        type=_validate_types,
+        type=lambda instruments: _validate_types(instruments, client),
     )
     parser.add_argument(
         "-m",
         "--models",
         help="Models to be processed.",
-        type=_validate_models,
+        type=lambda models: _validate_models(models, client),
     )
     parser.add_argument(
         "-u",
@@ -174,14 +187,12 @@ def _parse_args():
     return args
 
 
-def process_main(args):
-    config = utils.read_main_conf()
-    session = utils.make_session()
+def process_main(args: Namespace, config: Config, session: Session, client: APIClient):
     md_api = MetadataApi(config, session)
     storage_api = StorageApi(config, session)
     pid_utils = PidUtils(config, session)
-    dvas = Dvas(config, md_api)
-    processor = Processor(md_api, storage_api, pid_utils, dvas)
+    dvas = Dvas(config, md_api, client)
+    processor = Processor(md_api, storage_api, pid_utils, dvas, client)
 
     if args.cmd == "fetch":
         _print_fetch_header(args)
@@ -197,7 +208,7 @@ def process_main(args):
             args.instruments = _update_instrument_list(args, processor)
 
         if "model" in args.products and not args.models:
-            args.models = _get_model_types()
+            args.models = {m.id for m in client.models()}
 
         if not args.products:
             args.products = ["model"]  # just to make loop work (fetch all)
@@ -207,13 +218,13 @@ def process_main(args):
         for site_id in args.sites:
             site = processor.get_site(site_id, date)
             for product_id in args.products:
-                product = processor.get_product(product_id)
+                product = client.product(product_id)
                 try:
                     if args.cmd == "fetch":
-                        fetch(product, site, date, args)
+                        fetch(product, site, date, args, client)
                     else:
                         _process_file(processor, product, site, date, args)
-                except utils.SkipTaskError as err:
+                except SkipTaskError as err:
                     logging.warning("Skipped task: %s", err)
                 except Exception:
                     logging.exception("Failed to process task")
@@ -225,18 +236,18 @@ def _update_product_list(args: Namespace, processor: Processor) -> list[str]:
     products = set(args.products) if args.products else set()
     if args.instruments:
         for instrument in args.instruments:
-            derived_products = list(processor.get_derived_products(instrument))
-            if len(derived_products) > 0:
+            derived_products = processor.client.instrument_derived_products(instrument)
+            if derived_products:
                 if args.raw:
-                    products.update([derived_products[0]])
+                    products.add(list(derived_products)[0])
                 else:
                     products.update(derived_products)
     if args.uuids:
         for uuid in args.uuids:
-            derived_products = list(processor.get_instrument(uuid).derived_product_ids)
-            if len(derived_products) > 0:
+            derived_products = processor.client.instrument(uuid).derived_product_ids
+            if derived_products:
                 if args.raw:
-                    products.update([derived_products[0]])
+                    products.add(list(derived_products)[0])
                 else:
                     products.update(derived_products)
     return list(products)
@@ -244,251 +255,208 @@ def _update_product_list(args: Namespace, processor: Processor) -> list[str]:
 
 def _update_instrument_list(args: Namespace, processor: Processor) -> list[str]:
     return [
-        i for p in args.products for i in processor.get_product(p).source_instrument_ids
+        i
+        for p in args.products
+        for i in processor.client.product(p).source_instrument_ids
     ]
 
 
 def _process_file(
     processor: Processor,
-    product: Product,
-    site: Site,
+    product: ExtendedProduct,
+    site: Site | ExtendedSite,
     date: datetime.date,
     args: Namespace,
-):
+) -> None:
     if product.id == "model":
+        if args.cmd in ("dvas", "hkd"):
+            raise SkipTaskError(f"{args.cmd.upper()} not supported for model products")
         if args.models:
             model_ids = set(args.models)
         else:
-            payload = {
-                "site": site.id,
-                "date": date.isoformat(),
-                "allModels": True,
-            }
-            metadata = processor.md_api.get("api/raw-model-files", payload)
-            model_ids = set(meta["model"]["id"] for meta in metadata)
-        for model_id in model_ids:
-            _print_header(
-                {
-                    "Task": args.cmd,
-                    "Site": site.id,
-                    "Date": date.isoformat(),
-                    "Product": product.id,
-                    "Model": model_id,
-                }
+            metadata = processor.client.raw_model_files(
+                site_id=site.id, date=date, status=["uploaded", "processed"]
             )
+            model_ids = {meta.model.id for meta in metadata}
+        for model_id in model_ids:
             model_params = ModelParams(
                 site=site,
                 date=date,
                 product=product,
-                model=processor.get_model(model_id),
+                model=processor.client.model(model_id),
             )
-            with TemporaryDirectory() as directory:
+            _print_header(model_params, args)
+            with TemporaryDirectory() as temp_dir:
+                directory = Path(temp_dir)
                 if args.cmd == "plot":
-                    update_plots(processor, model_params, Path(directory))
+                    update_plots(processor, model_params, directory)
                 elif args.cmd == "qc":
-                    update_qc(processor, model_params, Path(directory))
+                    update_qc(processor, model_params, directory)
                 elif args.cmd == "freeze":
-                    freeze(processor, model_params, Path(directory))
-                elif args.cmd == "dvas":
-                    raise utils.SkipTaskError("DVAS not supported for model products")
+                    freeze(processor, model_params, directory)
                 else:
-                    process_model(processor, model_params, Path(directory))
+                    process_model(processor, model_params, directory)
     elif product.source_instrument_ids:
+        if args.cmd == "dvas":
+            raise SkipTaskError("DVAS not supported for instrument products")
         if args.uuids:
-            instruments = {processor.get_instrument(uuid) for uuid in args.uuids}
+            instruments = {processor.client.instrument(uuid) for uuid in args.uuids}
         else:
-            payload = {
-                "site": site.id,
-                "date": date.isoformat(),
-                "instrument": args.instruments or product.source_instrument_ids,
-            }
-            metadata = processor.md_api.get("api/raw-files", payload)
-            # Need to get instrument again because derivedProductIds is missing from raw-files response...
-            if metadata:
-                instruments = {
-                    processor.get_instrument(meta["instrumentInfo"]["uuid"])
-                    for meta in metadata
-                }
-            else:
-                # No raw data, but we can still have fetched products
-                metadata = processor.md_api.get("api/files", payload)
-                instruments = {
-                    processor.get_instrument(meta["instrument"]["uuid"])
-                    for meta in metadata
-                }
-
-        for instrument in instruments:
-            _print_header(
-                {
-                    "Task": args.cmd,
-                    "Site": site.id,
-                    "Date": date.isoformat(),
-                    "Product": product.id,
-                    "Instrument": instrument.type,
-                    "Instrument PID": instrument.pid,
-                }
+            file_meta: list[ProductMetadata] | list[RawMetadata]
+            file_meta = processor.client.raw_files(
+                site_id=site.id,
+                date=date,
+                instrument_id=args.instruments or list(product.source_instrument_ids),
             )
+            if not file_meta:
+                # No raw data, but we can still have fetched products
+                file_meta = processor.client.files(
+                    site_id=site.id,
+                    date=date,
+                    instrument_id=args.instruments
+                    or list(product.source_instrument_ids),
+                )
+            instruments = {
+                processor.client.instrument(meta.instrument.uuid)
+                for meta in file_meta
+                if meta.instrument
+            }
+        for instrument in instruments:
             instru_params = InstrumentParams(
                 site=site, date=date, product=product, instrument=instrument
             )
-            with TemporaryDirectory() as directory:
+            _print_header(instru_params, args)
+            with TemporaryDirectory() as temp_dir:
+                directory = Path(temp_dir)
                 if args.cmd == "plot":
-                    update_plots(processor, instru_params, Path(directory))
+                    update_plots(processor, instru_params, directory)
                 elif args.cmd == "qc":
-                    update_qc(processor, instru_params, Path(directory))
+                    update_qc(processor, instru_params, directory)
                 elif args.cmd == "freeze":
-                    freeze(processor, instru_params, Path(directory))
+                    freeze(processor, instru_params, directory)
                 elif args.cmd == "hkd":
-                    hkd(processor, instru_params)
-                elif args.cmd == "dvas":
-                    raise utils.SkipTaskError(
-                        "DVAS not supported for instrument products"
-                    )
+                    processor.process_housekeeping(instru_params)
                 else:
                     try:
-                        process_instrument(processor, instru_params, Path(directory))
-                    except utils.SkipTaskError as err:
+                        process_instrument(processor, instru_params, directory)
+                    except SkipTaskError as err:
                         logging.warning("Skipped task: %s", err)
     elif product.id in ("mwr-single", "mwr-multi", "epsilon-lidar"):
+        if args.cmd in ("dvas", "hkd"):
+            raise SkipTaskError(f"{args.cmd.upper()} not supported for {product.id}")
         if args.uuids:
-            instruments = {processor.get_instrument(uuid) for uuid in args.uuids}
-        elif product.id in ("mwr-single", "mwr-multi"):
-            payload = {
-                "site": site.id,
-                "date": date.isoformat(),
-                "product": "mwr-l1c",
-            }
-            metadata = processor.md_api.get("api/files", payload)
-            instrument_uuids = {meta["instrument"]["uuid"] for meta in metadata}
-            instruments = {processor.get_instrument(uuid) for uuid in instrument_uuids}
+            instruments = {processor.client.instrument(uuid) for uuid in args.uuids}
         else:
-            payload = {
-                "site": site.id,
-                "date": date.isoformat(),
-                "product": "doppler-lidar",
+            mapping = {
+                "mwr-single": "mwr-l1c",
+                "mwr-multi": "mwr-l1c",
+                "epsilon-lidar": "doppler-lidar",
             }
-            metadata = processor.md_api.get("api/files", payload)
-            instrument_uuids = {meta["instrument"]["uuid"] for meta in metadata}
-            instruments = {processor.get_instrument(uuid) for uuid in instrument_uuids}
-        for instrument in instruments:
-            _print_header(
-                {
-                    "Task": args.cmd,
-                    "Site": site.id,
-                    "Date": date.isoformat(),
-                    "Product": product.id,
-                    "Instrument": instrument.type,
-                    "Instrument PID": instrument.pid,
-                }
+            product_metadata = processor.client.files(
+                site_id=site.id,
+                date=date,
+                product_id=mapping.get(product.id),
             )
+            instruments = {
+                processor.client.instrument(meta.instrument.uuid)
+                for meta in product_metadata
+                if meta.instrument
+            }
+        for instrument in instruments:
             product_params = ProductParams(
                 site=site,
                 date=date,
                 product=product,
                 instrument=instrument,
             )
-            with TemporaryDirectory() as directory:
+            _print_header(product_params, args)
+            with TemporaryDirectory() as temp_dir:
+                directory = Path(temp_dir)
                 if args.cmd == "plot":
-                    update_plots(processor, product_params, Path(directory))
+                    update_plots(processor, product_params, directory)
                 elif args.cmd == "qc":
-                    update_qc(processor, product_params, Path(directory))
+                    update_qc(processor, product_params, directory)
                 elif args.cmd == "freeze":
-                    freeze(processor, product_params, Path(directory))
-                elif args.cmd == "dvas":
-                    raise utils.SkipTaskError(
-                        "DVAS not supported for instrument products"
-                    )
+                    freeze(processor, product_params, directory)
                 else:
-                    process_product(processor, product_params, Path(directory))
+                    process_product(processor, product_params, directory)
     elif product.id in ("l3-cf", "l3-iwc", "l3-lwc"):
-        model_id = "ecmwf"  # Hard coded for now. Add support for other models later.
-        _print_header(
-            {
-                "Task": args.cmd,
-                "Site": site.id,
-                "Date": date.isoformat(),
-                "Product": product.id,
-                "Model": model_id,
-            }
-        )
         params = ModelParams(
             site=site,
             date=date,
             product=product,
-            model=processor.get_model(model_id),
+            model=processor.client.model("ecmwf"),  # Hard coded for now.
         )
-        with TemporaryDirectory() as directory:
+        _print_header(params, args)
+        with TemporaryDirectory() as temp_dir:
+            directory = Path(temp_dir)
             if args.cmd == "plot":
-                update_plots(processor, params, Path(directory))
+                update_plots(processor, params, directory)
             elif args.cmd == "qc":
-                update_qc(processor, params, Path(directory))
+                update_qc(processor, params, directory)
             elif args.cmd == "freeze":
-                freeze(processor, params, Path(directory))
-            elif args.cmd == "dvas":
-                raise utils.SkipTaskError("DVAS not supported for L3 products")
+                freeze(processor, params, directory)
+            elif args.cmd in ("dvas", "hkd"):
+                raise SkipTaskError(f"{args.cmd.upper()} not supported for L3 products")
             else:
-                process_me(processor, params, Path(directory))
+                process_product(processor, params, directory)
     else:
-        _print_header(
-            {
-                "Task": args.cmd,
-                "Site": site.id,
-                "Date": date.isoformat(),
-                "Product": product.id,
-            }
-        )
         product_params = ProductParams(
             site=site,
             date=date,
             product=product,
             instrument=None,
         )
-        with TemporaryDirectory() as directory:
+        _print_header(product_params, args)
+        with TemporaryDirectory() as temp_dir:
+            directory = Path(temp_dir)
             if args.cmd == "plot":
-                update_plots(processor, product_params, Path(directory))
+                update_plots(processor, product_params, directory)
             elif args.cmd == "qc":
-                update_qc(processor, product_params, Path(directory))
+                update_qc(processor, product_params, directory)
             elif args.cmd == "freeze":
-                freeze(processor, product_params, Path(directory))
+                freeze(processor, product_params, directory)
             elif args.cmd == "dvas":
                 upload_to_dvas(processor, product_params)
+            elif args.cmd == "hkd":
+                raise SkipTaskError("HKD not supported for geophysical products")
             else:
-                process_product(processor, product_params, Path(directory))
+                process_product(processor, product_params, directory)
 
 
-def _validate_types(types: str) -> list[str]:
+def _validate_types(types: str, client: APIClient) -> list[str]:
     input_types = types.split(",")
-    valid_types = set(_get_instrument_types())
+    valid_types = client.instrument_ids()
     if invalid_types := set(input_types) - valid_types:
         raise ArgumentTypeError("Invalid instrument types: " + ", ".join(invalid_types))
     return input_types
 
 
-def _validate_sites(sites: str) -> list[str]:
+def _validate_sites(sites: str, client: APIClient) -> list[str]:
     input_sites = sites.split(",")
-    valid_sites = set(_get_all_sites())
+    valid_sites = {s.id for s in client.sites()}
     if invalid_sites := set(input_sites) - valid_sites:
         raise ArgumentTypeError("Invalid sites: " + ", ".join(invalid_sites))
     return input_sites
 
 
-def _validate_models(models: str) -> list[str]:
+def _validate_models(models: str, client: APIClient) -> list[str]:
     input_models = models.split(",")
-    valid_models = set(_get_model_types())
+    valid_models = {m.id for m in client.models()}
     if invalid_models := set(input_models) - valid_models:
         raise ArgumentTypeError("Invalid models: " + ", ".join(invalid_models))
     return input_models
 
 
-def _validate_products(products: str) -> list[str]:
+def _validate_products(products: str, client: APIClient) -> list[str]:
     product_list = products.split(",")
-    valid_products = utils.get_product_types()
+    valid_products = {p.id for p in client.products()}
     accepted_products = []
     rejected_products = []
     for prod in product_list:
         match prod:
             case "instrument" | "geophysical" | "evaluation":
-                product_types = utils.get_product_types(prod)
+                product_types = [p.id for p in client.products(type=prod)]
                 accepted_products.extend(product_types)
             case "voodoo":
                 product_types = ["categorize-voodoo", "classification-voodoo"]
@@ -540,37 +508,32 @@ def _parse_date(value: str) -> tuple[datetime.date, datetime.date]:
             raise ValueError(f"Invalid date: {invalid}")
 
 
-def _print_header(data):
-    parts = [
-        f"{BOLD}{key}:{RESET} {GREEN}{value}{RESET}" for key, value in data.items()
-    ]
+def _print_header(
+    params: ModelParams | InstrumentParams | ProductParams, args: Namespace
+) -> None:
+    the_dict = asdict(params)
+    parts = [f"{BOLD}Task:{RESET} {GREEN}{args.cmd}{RESET}"]
+    parts.extend(
+        [
+            f"{BOLD}{key.capitalize()}:{RESET} {GREEN}{value.get('id') or value.get('instrument_id') or value if isinstance(value, dict) else value}{RESET}"
+            for key, value in the_dict.items()
+            if value is not None
+        ]
+    )
+    if hasattr(params, "instrument") and params.instrument:
+        parts.append(
+            f"{BOLD}Instrument PID:{RESET} {GREEN}{params.instrument.pid}{RESET}"
+        )
     print()
     print("  ".join(parts))
 
 
-def _print_fetch_header(args: Namespace):
+def _print_fetch_header(args: Namespace) -> None:
     print()
     msg = "Fetching raw data" if args.raw else "Fetching products"
     print(f"{BOLD}{msg}:{RESET}")
     if not args.raw:
         print()
-
-
-def _get_all_sites() -> list:
-    """Returns all site identifiers."""
-    sites = utils.get_from_data_portal_api("api/sites")
-    return [site["id"] for site in sites]
-
-
-def _get_model_types() -> list:
-    """Returns list of model types."""
-    models = utils.get_from_data_portal_api("api/models")
-    return [model["id"] for model in models]
-
-
-def _get_instrument_types() -> list:
-    instruments = utils.get_from_data_portal_api("api/instruments")
-    return list(set([i["id"] for i in instruments]))
 
 
 if __name__ == "__main__":
