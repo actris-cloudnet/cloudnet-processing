@@ -212,7 +212,14 @@ class DvasMetadata:
                     "variable_matrix": "cloud phase",
                     "variable_geometry": "atmospheric vertical profile",
                     "timeliness": timeliness,
-                    "instrument": instruments,
+                    "instrument": [
+                        {
+                            "instrument_pid": instrument.pid,
+                            "instrument_type": instrument.type,
+                            "instrument_name": instrument.name,
+                        }
+                        for instrument in instruments
+                    ],
                     "data_quality_control": [
                         {
                             "compliance": compliance,
