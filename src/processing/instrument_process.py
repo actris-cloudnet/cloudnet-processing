@@ -853,7 +853,7 @@ class ProcessWeatherStation(ProcessInstrument):
 
     def process_fd12(self):
         full_path, self.uuid.raw = self.download_instrument(largest_only=True)
-        self.uuid.product = fd12p2nc(full_path, *self._args, **self._kwargs)
+        self.uuid.product = fd12p2nc(full_path[0], *self._args, **self._kwargs)
 
 
 class ProcessRainRadar(ProcessInstrument):
