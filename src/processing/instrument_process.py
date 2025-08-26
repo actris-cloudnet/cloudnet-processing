@@ -808,7 +808,7 @@ class ProcessRainGauge(ProcessInstrument):
 
     def process_rain_e_h3(self):
         full_path, self.uuid.raw = self.download_instrument(largest_only=True)
-        self.uuid.product = rain_e_h32nc(full_path, *self._args, **self._kwargs)
+        self.uuid.product = rain_e_h32nc(full_path[0], *self._args, **self._kwargs)
 
 
 class ProcessWeatherStation(ProcessInstrument):
