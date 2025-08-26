@@ -6,7 +6,7 @@ from uuid import UUID
 
 import requests
 from cloudnet_api_client import APIClient
-from cloudnet_api_client.containers import ProductMetadata, VersionMetadata
+from cloudnet_api_client.containers import ExtendedProductMetadata, VersionMetadata
 
 from processing import utils
 from processing.config import Config
@@ -26,7 +26,7 @@ class Dvas:
         self.session = self._init_session()
         self.client = client
 
-    def upload(self, file: ProductMetadata):
+    def upload(self, file: ExtendedProductMetadata):
         """Upload Cloudnet file metadata to DVAS API and update Cloudnet data portal"""
         landing_page_url = utils.build_file_landing_page_url(file.uuid)
         logging.info(f"Uploading {landing_page_url} metadata to DVAS")
@@ -79,7 +79,7 @@ class Dvas:
             raise DvasError(res)
         logging.debug(f"DELETE successful: {res.status_code} {res.text}")
 
-    def _delete_old_versions(self, file: ProductMetadata):
+    def _delete_old_versions(self, file: ExtendedProductMetadata):
         """Delete all versions of the given file from DVAS API. To be used before posting new version."""
         versions = self.client.versions(file.uuid)
         for version in versions:
@@ -116,7 +116,9 @@ class Dvas:
 class DvasMetadata:
     """Create metadata for DVAS API from Cloudnet file metadata"""
 
-    def __init__(self, file: ProductMetadata, md_api: MetadataApi, client: APIClient):
+    def __init__(
+        self, file: ExtendedProductMetadata, md_api: MetadataApi, client: APIClient
+    ):
         self.file = file
         self.md_api = md_api
         self.client = client
@@ -244,14 +246,13 @@ class DvasMetadata:
                     "transfersize": {"size": self.file.size, "unit": "B"},
                 }
             ],
-            # TODO:
-            # "provenance": [
-            #     {
-            #         "title": software.title,
-            #         "url": software.url,
-            #     }
-            #     for software in self.file.software
-            # ],
+            "provenance": [
+                {
+                    "title": software.title,
+                    "url": software.url,
+                }
+                for software in self.file.software
+            ],
         }
 
     def _parse_variable_names(self) -> list[str]:
