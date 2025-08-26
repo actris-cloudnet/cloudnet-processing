@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 from cloudnet_api_client.utils import md5sum, sha256sum
 from numpy import ma
-from processing import netcdf_comparer, utils
+from processing import netcdf_comparer
 from processing.netcdf_comparer import NCDiff
 from processing.storage_api import _get_product_bucket
 
@@ -36,8 +36,8 @@ def test_are_identical_nc_files_real_data():
     fname1 = "tests/data/20180703_granada_classification_old.nc"
     fname2 = "tests/data/20180703_granada_classification.nc"
     fname3 = "tests/data/20180703_granada_classification_reprocessed.nc"
-    assert netcdf_comparer.nc_difference(fname1, fname2) == NCDiff.MAJOR
-    assert netcdf_comparer.nc_difference(fname2, fname3) == NCDiff.NONE
+    assert netcdf_comparer.nc_difference(Path(fname1), Path(fname2)) == NCDiff.MAJOR
+    assert netcdf_comparer.nc_difference(Path(fname2), Path(fname3)) == NCDiff.NONE
 
 
 @pytest.mark.parametrize(
