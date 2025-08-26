@@ -117,28 +117,30 @@ class DvasMetadata:
     def __init__(self, file: dict, md_api: MetadataApi):
         self.file = file
         self.md_api = md_api
-        self._product = file["product"]
-        self._site = file["site"]
 
     def create_dvas_json(self, timestamp: datetime.datetime) -> dict:
-        time_begin = (
-            self.file["startTime"]
-            or f"{self.file['measurementDate']}T00:00:00.0000000Z"
+        time_begin = self.file.start_time or datetime.datetime.combine(
+            self.file.measurement_date, datetime.time(0, 0, 0), datetime.timezone.utc
         )
-        time_end = (
-            self.file["stopTime"] or f"{self.file['measurementDate']}T23:59:59.9999999Z"
+        time_end = self.file.stop_time or datetime.datetime.combine(
+            self.file.measurement_date,
+            datetime.time(23, 59, 59, 999999),
+            datetime.timezone.utc,
         )
         timeliness = self._parse_timeliness()
-        instruments = list(self._find_instruments(self.file["uuid"]).values())
+        instruments = self.client.source_instruments(self.file.uuid)
+        compliance = self._parse_compliance()
+        qc_outcome = self._parse_qc_outcome()
+        frameworks = self._parse_frameworks()
         return {
             "dataset_metadata": {
                 "repository": {"repository_id": "CLU"},
-                "time_file_created": self.file["createdAt"],
+                "time_file_created": self.file.created_at.isoformat(),
                 "time_metadata_created": timestamp.isoformat(),
-                "time_content_revised": self.file["updatedAt"],
+                "time_content_revised": self.file.updated_at.isoformat(),
             },
             "identification": {
-                "identifier": {"pid": self.file["pid"], "pid_type": "ePIC"},
+                "identifier": {"pid": self.file.pid, "pid_type": "ePIC"},
                 "title": self._parse_title(),
                 "abstract": self._parse_title(),
                 "roles": [
@@ -180,26 +182,26 @@ class DvasMetadata:
             },
             "product_type": "observation",
             "facility": {
-                "identifier": self._site["dvasId"],
+                "identifier": self.file.site.dvas_id,
             },
             "spatial_extent": {
                 "type": "LineString",
                 "coordinates": [
                     [
-                        self._site["longitude"],
-                        self._site["latitude"],
-                        self._site["altitude"],
+                        self.file.site.longitude,
+                        self.file.site.latitude,
+                        self.file.site.altitude,
                     ],
                     [
-                        self._site["longitude"],
-                        self._site["latitude"],
-                        self._site["altitude"] + 12_000,
+                        self.file.sitelongitude,
+                        self.file.sitelatitude,
+                        self.file.sitealtitude + 12_000,
                     ],
                 ],
             },
             "temporal_extent": {
-                "time_period_begin": time_begin,
-                "time_period_end": time_end,
+                "time_period_begin": time_begin.isoformat(),
+                "time_period_end": time_end.isoformat(),
             },
             "variables": [
                 {
@@ -210,16 +212,13 @@ class DvasMetadata:
                     "instrument": instruments,
                     "data_quality_control": [
                         {
-                            "compliance": self._parse_compliance(),
+                            "compliance": compliance,
                             "quality_control_extent": "full quality control applied",
                             "quality_control_mechanism": "automatic quality control",
-                            "quality_control_outcome": self._parse_qc_outcome(),
+                            "quality_control_outcome": qc_outcome,
                         }
                     ],
-                    "framework": [
-                        {"framework": framework}
-                        for framework in self._parse_frameworks()
-                    ],
+                    "framework": [{"framework": framework} for framework in frameworks],
                     "temporal_resolution": "P30S",
                 }
                 for variable_name in self._parse_variable_names()
@@ -227,20 +226,20 @@ class DvasMetadata:
             "distribution_information": [
                 {
                     "data_format": self._parse_netcdf_version(),
-                    "dataset_url": self.file["downloadUrl"],
+                    "dataset_url": self.file.download_url,
                     "protocol": "HTTP",
                     "access_restriction": {
                         "restricted": False,
                     },
-                    "transfersize": {"size": int(self.file["size"]), "unit": "B"},
+                    "transfersize": {"size": self.file.size, "unit": "B"},
                 }
             ],
             "provenance": [
                 {
-                    "title": software["title"],
-                    "url": software["url"],
+                    "title": software.title,
+                    "url": software.url,
                 }
-                for software in self.file["software"]
+                for software in self.file.software
             ],
         }
 
