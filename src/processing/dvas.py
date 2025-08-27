@@ -20,13 +20,13 @@ class DvasError(Exception):
 class Dvas:
     """Class for managing Cloudnet file metadata operations in the DVAS API."""
 
-    def __init__(self, config: Config, md_api: MetadataApi, client: APIClient):
+    def __init__(self, config: Config, md_api: MetadataApi, client: APIClient) -> None:
         self.config = config
         self.md_api = md_api
         self.session = self._init_session()
         self.client = client
 
-    def upload(self, file: ExtendedProductMetadata):
+    def upload(self, file: ExtendedProductMetadata) -> None:
         """Upload Cloudnet file metadata to DVAS API and update Cloudnet data portal"""
         landing_page_url = utils.build_file_landing_page_url(file.uuid)
         logging.info(f"Uploading {landing_page_url} metadata to DVAS")
@@ -55,7 +55,7 @@ class Dvas:
         except DvasError:
             logging.exception(f"Failed to upload {file.filename} to DVAS")
 
-    def delete(self, file: VersionMetadata):
+    def delete(self, file: VersionMetadata) -> None:
         """Delete Cloudnet file metadata from DVAS API"""
         logging.warning(
             f"Deleting Cloudnet file {file.uuid} with dvasId {file.dvas_id} from DVAS"
@@ -63,13 +63,13 @@ class Dvas:
         url = f"{self.config.dvas_portal_url}/metadata/delete/pid/{file.pid}"
         self._delete(url)
 
-    def delete_all(self):
+    def delete_all(self) -> None:
         """Delete all Cloudnet file metadata from DVAS API"""
         url = f"{self.config.dvas_portal_url}/metadata/delete/all/{self.config.dvas_provider_id}"
         self._delete(url)
         logging.info("Done. All Cloudnet files deleted from DVAS")
 
-    def _delete(self, url: str):
+    def _delete(self, url: str) -> None:
         auth = base64.b64encode(
             f"{self.config.dvas_username}:{self.config.dvas_password}".encode()
         ).decode()
@@ -79,7 +79,7 @@ class Dvas:
             raise DvasError(res)
         logging.debug(f"DELETE successful: {res.status_code} {res.text}")
 
-    def _delete_old_versions(self, file: ExtendedProductMetadata):
+    def _delete_old_versions(self, file: ExtendedProductMetadata) -> None:
         """Delete all versions of the given file from DVAS API. To be used before posting new version."""
         versions = self.client.versions(file.uuid)
         for version in versions:
@@ -118,7 +118,7 @@ class DvasMetadata:
 
     def __init__(
         self, file: ExtendedProductMetadata, md_api: MetadataApi, client: APIClient
-    ):
+    ) -> None:
         self.file = file
         self.md_api = md_api
         self.client = client

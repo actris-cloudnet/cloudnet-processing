@@ -44,7 +44,7 @@ class ModelNc(core.Level1Nc):
             )
         if n_steps > n_steps_expected + 1:
             raise MiscError(
-                f"Too many steps in model file: expected at most {n_steps_expected+1} but found {n_steps}"
+                f"Too many steps in model file: expected at most {n_steps_expected + 1} but found {n_steps}"
             )
 
     def add_date(self) -> None:
