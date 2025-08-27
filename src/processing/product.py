@@ -112,7 +112,7 @@ def process_product(
     )
     utils.print_info(uuid, volatile, patch, upload, qc_result)
     if processor.md_api.config.is_production and isinstance(params, ProductParams):
-        _update_dvas_metadata(processor, params)
+        _update_dvas_metadata(processor, UUID(uuid.product))
 
 
 def _generate_filename(params: ProductParams | ModelParams) -> str:
@@ -492,15 +492,9 @@ def _get_input_files_for_voodoo(
     return [str(path) for path in full_paths], uuids
 
 
-def _update_dvas_metadata(processor: Processor, params: ProductParams) -> None:
-    metadata = processor.client.files(
-        site_id=params.site.id,
-        date=params.date,
-        product_id=params.product.id,
-        instrument_pid=params.instrument.pid if params.instrument else None,
-    )
-    if metadata:
-        processor.dvas.upload(metadata[0])
+def _update_dvas_metadata(processor: Processor, uuid: UUID) -> None:
+    meta = processor.client.file(uuid)
+    processor.dvas.upload(meta)
 
 
 def _check_response(metadata: list[ProductMetadata], product: str) -> None:

@@ -1,5 +1,6 @@
 """Metadata API for Cloudnet files."""
 
+import datetime
 import uuid
 from typing import Any
 
@@ -61,8 +62,14 @@ class MetadataApi:
             }
             self.put("visualizations", data["s3key"], payload)
 
-    def update_dvas_info(self, uuid: uuid.UUID, timestamp: str, dvas_id: str) -> None:
-        payload = {"uuid": str(uuid), "dvasUpdatedAt": timestamp, "dvasId": dvas_id}
+    def update_dvas_info(
+        self, uuid: uuid.UUID, timestamp: datetime.datetime, dvas_id: str
+    ) -> None:
+        payload = {
+            "uuid": str(uuid),
+            "dvasUpdatedAt": timestamp.isoformat(),
+            "dvasId": dvas_id,
+        }
         self.post("files", payload)
 
     def clean_dvas_info(self, uuid: uuid.UUID) -> None:
