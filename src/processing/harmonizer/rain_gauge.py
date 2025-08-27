@@ -38,7 +38,7 @@ def harmonize_pluvio_nc(data: dict) -> str:
     return _harmonize(data, instruments.PLUVIO2)
 
 
-def _harmonize(data: dict, instrument: Instrument):
+def _harmonize(data: dict, instrument: Instrument) -> str:
     if "output_path" not in data:
         temp_file = NamedTemporaryFile()
     with (
@@ -73,11 +73,11 @@ def _harmonize(data: dict, instrument: Instrument):
 
 
 class RainGaugeNc(core.Level1Nc):
-    def mask_bad_data_values(self):
+    def mask_bad_data_values(self) -> None:
         for _, variable in self.nc.variables.items():
             variable[:] = ma.masked_invalid(variable[:])
 
-    def fix_variable_attributes(self):
+    def fix_variable_attributes(self) -> None:
         for key in (RATE, AMOUNT):
             for attr in ("long_name", "standard_name", "comment"):
                 self.harmonize_attribute(attr, (key,))
@@ -85,11 +85,11 @@ class RainGaugeNc(core.Level1Nc):
     def copy_data(
         self,
         time_ind: list,
-    ):
+    ) -> None:
         for key in VALID_KEYS:
             self._copy_variable(key, time_ind)
 
-    def _copy_variable(self, key: str, time_ind: list):
+    def _copy_variable(self, key: str, time_ind: list) -> None:
         if key not in self.nc_raw.variables.keys():
             logging.debug(f"Key {key} not found from the source file.")
             return
@@ -111,7 +111,7 @@ class RainGaugeNc(core.Level1Nc):
         screened_data = self._screen_data(variable, time_ind)
         var_out[:] = screened_data
 
-    def fix_variable_names(self):
+    def fix_variable_names(self) -> None:
         keymap = {
             "rain_rate": RATE,
             "int_h": RATE,
@@ -122,7 +122,7 @@ class RainGaugeNc(core.Level1Nc):
         }
         self.fix_name(keymap)
 
-    def fix_pt_jumps(self):
+    def fix_pt_jumps(self) -> None:
         """Fixes suspicious jumps from a valid value to single 0-value and back in Thies PT data."""
         data = self.nc.variables[AMOUNT][:]
         for i in range(1, len(data) - 1):

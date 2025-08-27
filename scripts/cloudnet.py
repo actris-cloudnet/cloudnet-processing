@@ -24,6 +24,8 @@ from cloudnet_api_client.containers import (
     RawMetadata,
     Site,
 )
+from requests import Session
+
 from processing import utils
 from processing.config import Config
 from processing.dvas import Dvas
@@ -43,7 +45,6 @@ from processing.processor import (
 from processing.product import process_product
 from processing.storage_api import StorageApi
 from processing.utils import SkipTaskError
-from requests import Session
 
 logging.basicConfig(level=logging.INFO)
 
@@ -71,7 +72,7 @@ else:
     RESET = ""
 
 
-def main():
+def main() -> None:
     config = Config()
     session = utils.make_session()
     client = APIClient(f"{config.dataportal_url}/api/", session)
@@ -187,7 +188,9 @@ def _parse_args(client: APIClient) -> Namespace:
     return args
 
 
-def process_main(args: Namespace, config: Config, session: Session, client: APIClient):
+def process_main(
+    args: Namespace, config: Config, session: Session, client: APIClient
+) -> None:
     md_api = MetadataApi(config, session)
     storage_api = StorageApi(config, session)
     pid_utils = PidUtils(config, session)

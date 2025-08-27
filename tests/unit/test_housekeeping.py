@@ -5,6 +5,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 from cloudnet_api_client.containers import Instrument, RawMetadata, Site
+
 from housekeeping.housekeeping import get_reader
 from housekeeping.utils import decode_bits
 
@@ -49,7 +50,7 @@ from housekeeping.utils import decode_bits
         ),
     ],
 )
-def test_something(filename: str, instrument_id: str, measurement_date: str):
+def test_something(filename: str, instrument_id: str, measurement_date: str) -> None:
     path = Path(filename)
     instrument = Instrument(
         uuid=uuid.uuid4(),
@@ -97,7 +98,7 @@ def test_something(filename: str, instrument_id: str, measurement_date: str):
     assert len(points) > 0
 
 
-def test_decode_bits():
+def test_decode_bits() -> None:
     values = decode_bits(np.array([0b101010]), [("A", 4), ("_B", 1), ("C", 1)])
     assert values == {
         "A": np.array([0b1010]),

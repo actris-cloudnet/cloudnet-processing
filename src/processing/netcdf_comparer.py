@@ -27,15 +27,16 @@ class NetCDFComparator:
             "folding_flag",
             "nyquist_velocity",
         ),
-    ):
+    ) -> None:
         self.old_file = old_file
         self.new_file = new_file
         self.ignore_vars = ignore_vars
 
     def compare(self) -> NCDiff:
-        with netCDF4.Dataset(self.old_file, "r") as old, netCDF4.Dataset(
-            self.new_file, "r"
-        ) as new:
+        with (
+            netCDF4.Dataset(self.old_file, "r") as old,
+            netCDF4.Dataset(self.new_file, "r") as new,
+        ):
             self.old = old
             self.new = new
 

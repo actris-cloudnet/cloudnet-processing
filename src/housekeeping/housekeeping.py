@@ -16,11 +16,11 @@ from influxdb_client import InfluxDBClient, Point, WritePrecision
 from influxdb_client.client.write_api import SYNCHRONOUS
 from netCDF4 import Dataset
 from numpy import ma
-from processing.utils import unzip_gz_file
 from rpgpy import read_rpg
 from rpgpy.utils import decode_rpg_status_flags, rpg_seconds2datetime64
 
 from housekeeping.cl61 import read_cl61
+from processing.utils import unzip_gz_file
 
 from .basta import read_basta
 from .ceilo import read_cl31_cl51, read_cs135, read_ct25k
@@ -35,7 +35,7 @@ class ValidDateRange(Enum):
     MONTH = "month"
 
 
-def process_record(record: RawMetadata, client: APIClient, db: Database):
+def process_record(record: RawMetadata, client: APIClient, db: Database) -> None:
     try:
         reader = get_reader(record)
         if reader is None:
@@ -164,7 +164,7 @@ def _handle_halo_doppler_lidar(filepath: Path, metadata: RawMetadata) -> list[Po
 
 
 def get_reader(
-    metadata: RawMetadata
+    metadata: RawMetadata,
 ) -> Callable[[Path, RawMetadata], list[Point]] | None:
     instrument_id = metadata.instrument.instrument_id
     filename = metadata.filename.lower()
@@ -217,13 +217,13 @@ class Database:
         self.bucket = os.environ["INFLUXDB_BUCKET"]
         self.write_api = self.client.write_api(write_options=SYNCHRONOUS)
 
-    def write(self, points: Iterable[Point]):
+    def write(self, points: Iterable[Point]) -> None:
         self.write_api.write(bucket=self.bucket, record=points)
 
-    def __enter__(self):
+    def __enter__(self) -> Database:
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:  # noqa: ANN001
         self.write_api.close()
         self.client.close()
 

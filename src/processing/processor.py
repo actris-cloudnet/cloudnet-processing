@@ -4,7 +4,6 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from uuid import UUID
 
-import housekeeping
 import numpy as np
 import numpy.typing as npt
 from cloudnet_api_client import APIClient
@@ -19,6 +18,7 @@ from cloudnetpy.plotting import Dimensions, PlotParameters, generate_figure
 from cloudnetpy_qc import quality
 from cloudnetpy_qc.quality import ErrorLevel
 
+import housekeeping
 from processing import utils
 from processing.dvas import Dvas
 from processing.metadata_api import MetadataApi
@@ -74,7 +74,7 @@ class Processor:
         pid_utils: PidUtils,
         dvas: Dvas,
         client: APIClient,
-    ):
+    ) -> None:
         self.md_api = md_api
         self.storage_api = storage_api
         self.pid_utils = pid_utils
@@ -155,7 +155,7 @@ class Processor:
         exclude_pattern: str | None = None,
         include_tag_subset: set[str] | None = None,
         exclude_tag_subset: set[str] | None = None,
-        allow_empty=False,
+        allow_empty: bool = False,
         filename_prefix: str | None = None,
         filename_suffix: str | None = None,
         time_offset: datetime.timedelta | None = None,
@@ -230,7 +230,7 @@ class Processor:
         s3key: str,
         volatile: bool,
         patch: bool,
-    ):
+    ) -> None:
         file_info = self.storage_api.upload_product(full_path, s3key, volatile)
         payload = utils.create_product_put_payload(
             full_path,
@@ -481,7 +481,7 @@ class Processor:
 
 
 def _select_halo_doppler_lidar_hkd_records(
-    records: list[RawMetadata]
+    records: list[RawMetadata],
 ) -> list[RawMetadata]:
     if not records:
         return []

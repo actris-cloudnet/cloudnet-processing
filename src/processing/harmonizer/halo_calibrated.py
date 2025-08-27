@@ -44,17 +44,17 @@ def harmonize_halo_calibrated_file(data: dict) -> str:
 
 
 class HaloNcCalibrated(core.Level1Nc):
-    def copy_file(self, valid_ind: list):
+    def copy_file(self, valid_ind: list) -> None:
         """Copies useful variables only."""
         keys = ("beta", "beta_raw", "time", "wavelength", "elevation", "range")
         self.copy_file_contents(keys, valid_ind)
 
-    def add_zenith_angle(self):
+    def add_zenith_angle(self) -> None:
         """Converts elevation to zenith angle."""
         self.nc.renameVariable("elevation", "zenith_angle")
         self.nc.variables["zenith_angle"][:] = 90 - self.nc.variables["zenith_angle"][:]
 
-    def check_zenith_angle(self):
+    def check_zenith_angle(self) -> None:
         """Checks zenith angle value."""
         threshold = 15
         if (
@@ -62,18 +62,18 @@ class HaloNcCalibrated(core.Level1Nc):
         ) > threshold:
             raise MiscError(f"Invalid zenith angle {zenith_angle}")
 
-    def add_range(self):
+    def add_range(self) -> None:
         """Converts halo 'range', which is actually height, to true range (towards LOS)."""
         self.nc.renameVariable("range", "height")
         self.copy_variable("range")
         zenith_angle = np.median(self.nc.variables["zenith_angle"][:])
         self.nc.variables["range"][:] /= np.cos(np.radians(zenith_angle))
 
-    def add_wavelength(self):
+    def add_wavelength(self) -> None:
         """Converts wavelength m to nm."""
         self.nc.variables["wavelength"][:] *= 1e9
 
-    def fix_time_units(self):
+    def fix_time_units(self) -> None:
         """Fixes time units."""
         self.nc.variables["time"].units = self._get_time_units()
         self.nc.variables["time"].calendar = "standard"

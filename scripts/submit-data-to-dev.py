@@ -13,7 +13,7 @@ USERNAME = "admin"
 PASSWORD = "admin"
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("filename", type=Path)
     parser.add_argument("-s", "--site", required=True)

@@ -23,7 +23,7 @@ ErrorSource = Literal["data", "worker", "freeze-cronjob", "qc-cronjob"]
 class Uuid:
     __slots__ = ["raw", "product", "volatile"]
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.raw: list[str] = []
         self.product: str = ""
         self.volatile: str | None = None
@@ -32,7 +32,7 @@ class Uuid:
 class MiscError(Exception):
     """Internal exception class."""
 
-    def __init__(self, msg: str):
+    def __init__(self, msg: str) -> None:
         self.message = msg
         super().__init__(self.message)
 
@@ -40,7 +40,7 @@ class MiscError(Exception):
 class RawDataMissingError(Exception):
     """Internal exception class."""
 
-    def __init__(self, msg: str = "Missing raw data"):
+    def __init__(self, msg: str = "Missing raw data") -> None:
         self.message = msg
         super().__init__(self.message)
 
@@ -48,20 +48,26 @@ class RawDataMissingError(Exception):
 class SkipTaskError(Exception):
     """Unable to complete task for an expected reason."""
 
-    def __init__(self, msg: str):
+    def __init__(self, msg: str) -> None:
         self.message = msg
         super().__init__(self.message)
 
 
 class MyAdapter(HTTPAdapter):
-    def __init__(self):
+    def __init__(self) -> None:
         retry_strategy = Retry(
             total=10, backoff_factor=0.1, status_forcelist=[504, 524]
         )
         super().__init__(max_retries=retry_strategy)
 
-    def send(
-        self, request, stream=False, timeout=None, verify=True, cert=None, proxies=None
+    def send(  # noqa: ANN201
+        self,
+        request,  # noqa: ANN001
+        stream=False,  # noqa: ANN001
+        timeout=None,  # noqa: ANN001
+        verify=True,  # noqa: ANN001
+        cert=None,  # noqa: ANN001
+        proxies=None,  # noqa: ANN001
     ):
         if timeout is None:
             timeout = 120
@@ -143,7 +149,7 @@ def send_slack_alert(
         logging.fatal(f"Failed to send Slack notification: {body.text}")
 
 
-def add_global_attributes(full_path: Path, instrument_pid: str | None = None):
+def add_global_attributes(full_path: Path, instrument_pid: str | None = None) -> None:
     """Add cloudnet-processing package version to file attributes."""
     with netCDF4.Dataset(full_path, "r+") as nc:
         nc.cloudnet_processing_version = cloudnet_processing_version
@@ -237,7 +243,7 @@ def create_product_put_payload(
     return payload
 
 
-def _get_file_format(nc: netCDF4.Dataset):
+def _get_file_format(nc: netCDF4.Dataset) -> str:
     """Returns netCDF file format."""
     file_format = nc.file_format.lower()
     if "netcdf4" in file_format:
