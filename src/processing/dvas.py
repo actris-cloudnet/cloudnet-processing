@@ -50,7 +50,13 @@ class Dvas:
             dvas_metadata = DvasMetadata(file, self.md_api, self.client)
             dvas_timestamp = datetime.datetime.now(datetime.timezone.utc)
             dvas_json = dvas_metadata.create_dvas_json(dvas_timestamp)
-            if not dvas_json["variables"]:
+            if (
+                isinstance(dvas_metadata, DvasMetadata)
+                and not dvas_json["md_content_information"]["attribute_descriptions"]
+            ) or (
+                isinstance(dvas_metadata, NewDvasMetadata)
+                and not dvas_json["variables"]
+            ):
                 logging.error("Skipping - no ACTRIS variables")
                 return
             self._delete_old_versions(file)
