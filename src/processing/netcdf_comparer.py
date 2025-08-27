@@ -6,6 +6,7 @@ from typing import Tuple
 import netCDF4
 import numpy as np
 import numpy.ma as ma
+import numpy.typing as npt
 
 
 class NCDiff(Enum):
@@ -41,23 +42,17 @@ class NetCDFComparator:
             self.new = new
 
             major_checks = [
-                self._compare_dimensions,
                 self._check_old_variables_exist,
                 self._check_old_global_attributes_exist,
-                self._compare_variable_shapes,
-                self._compare_critical_variable_attributes,
+                self._compare_variable_units,
             ]
 
             for check in major_checks:
                 if not check():
                     return NCDiff.MAJOR
 
-            mask_diff = self._compare_variable_masks()
-            if mask_diff in (NCDiff.MAJOR, NCDiff.MINOR):
-                return mask_diff
-
-            var_diff = self._compare_variable_values()
-            if var_diff in (NCDiff.MAJOR, NCDiff.MINOR):
+            var_diff = self._compare_variable_data()
+            if var_diff != NCDiff.NONE:
                 return var_diff
 
             minor_checks = [
@@ -73,23 +68,6 @@ class NetCDFComparator:
                     return NCDiff.MINOR
 
         return NCDiff.NONE
-
-    def _compare_dimensions(self) -> bool:
-        dims_old = set(self.old.dimensions.keys())
-        dims_new = set(self.new.dimensions.keys())
-        if dims_old != dims_new:
-            logging.info(f"Different dimensions: {dims_old} vs {dims_new}")
-            return False
-
-        for dim in dims_old:
-            len_old = len(self.old.dimensions[dim])
-            len_new = len(self.new.dimensions[dim])
-            if len_old != len_new:
-                logging.info(
-                    f"Dimension '{dim}' lengths differ: {len_old} vs {len_new}"
-                )
-                return False
-        return True
 
     def _compare_global_attributes(self) -> bool:
         old_attrs = {
@@ -167,80 +145,103 @@ class NetCDFComparator:
             return False
         return True
 
-    def _compare_variable_shapes(self) -> bool:
+    def _compare_variable_data(self) -> NCDiff:
         for var in self.old.variables:
             if var in self.ignore_vars:
                 continue
-            shape_old = self.old.variables[var].shape
-            shape_new = self.new.variables[var].shape
-            if shape_old != shape_new:
-                logging.info(
-                    f"Variable '{var}' shapes differ: {shape_old} vs {shape_new}"
-                )
-                return False
-        return True
 
-    def _compare_variable_values(self) -> NCDiff:
-        for var in self.old.variables:
-            if var in self.ignore_vars:
-                continue
-            val_old = ma.masked_invalid(self.old.variables[var][:])
-            val_new = ma.masked_invalid(self.new.variables[var][:])
-
-            epsilon = 1e-12
-            val_old_nonzero = ma.where(ma.abs(val_old) < epsilon, epsilon, val_old)
-            percentage_error = (
-                ma.abs(val_new - val_old) / ma.abs(val_old_nonzero) * 100.0
+            old_var = self.old.variables[var]
+            new_var = self.new.variables[var]
+            smaller_var, larger_var = sorted(
+                [old_var, new_var], key=lambda variable: len(variable.shape)
             )
-            percentage_error = ma.masked_invalid(percentage_error)
-            mape = ma.mean(percentage_error)
 
-            major_threshold = 5
-            minor_threshold = 0.1
-
-            if mape >= major_threshold:
-                logging.info(f"Variable '{var}' has major differences (MAPE={mape:g})")
-                return NCDiff.MAJOR
-            elif mape >= minor_threshold:
-                logging.info(f"Variable '{var}' has minor differences (MAPE={mape:g})")
-                return NCDiff.MINOR
-        return NCDiff.NONE
-
-    def _compare_variable_masks(self) -> NCDiff:
-        for var in self.old.variables:
-            if var in self.ignore_vars:
-                continue
-            val_old = self.old.variables[var][:]
-            val_new = self.new.variables[var][:]
-            mask_old = ma.getmaskarray(val_old)
-            mask_new = ma.getmaskarray(val_new)
-            same_percentage = (
-                100 * np.count_nonzero(mask_old == mask_new) / mask_old.size
-            )
-            if same_percentage <= 99.9:
+            # For now, only broadcasting scalar to array (of any shape) is
+            # supported. More complex cases (e.g. 1d to 2d array) could be
+            # handled in the future.
+            if (
+                len(smaller_var.dimensions) != 0
+                and smaller_var.dimensions != larger_var.dimensions
+            ):
                 logging.info(
-                    f"Variable '{var}' masks have major differences (matches {same_percentage:.2f} %)"
+                    f"Variable '{var}' has incompatible dimensions: {old_var.dimensions} vs {new_var.dimensions}"
                 )
                 return NCDiff.MAJOR
-            if same_percentage <= 99.9999:
+
+            try:
+                orig_data = ma.getdata(smaller_var[:])
+                orig_mask = ma.getmaskarray(smaller_var[:])
+                broad_data = np.broadcast_to(orig_data, larger_var.shape)
+                broad_mask = np.broadcast_to(orig_mask, larger_var.shape)
+                data_smaller = ma.array(broad_data, mask=broad_mask)
+                data_larger = larger_var[:]
+            except ValueError:
                 logging.info(
-                    f"Variable '{var}' masks have minor differences (matches {same_percentage:.2f} %)"
+                    f"Cannot broadcast variable '{var}' from {smaller_var.shape} to {larger_var.shape}"
                 )
+                return NCDiff.MAJOR
+
+            mask_diff = self._compare_variable_masks(var, data_smaller, data_larger)
+            if mask_diff != NCDiff.NONE:
+                return mask_diff
+
+            var_diff = self._compare_variable_values(var, data_smaller, data_larger)
+            if var_diff != NCDiff.NONE:
+                return var_diff
+
+            # If dimensions don't match and there are no major differences,
+            # consider this always as a minor difference.
+            if smaller_var.dimensions != larger_var.dimensions:
                 return NCDiff.MINOR
+
         return NCDiff.NONE
 
-    def _compare_critical_variable_attributes(self) -> bool:
+    def _compare_variable_values(
+        self, var: str, val_old: npt.NDArray, val_new: npt.NDArray
+    ) -> NCDiff:
+        val_old = ma.masked_invalid(val_old)
+        val_new = ma.masked_invalid(val_new)
+
+        epsilon = 1e-12
+        val_old_nonzero = ma.where(ma.abs(val_old) < epsilon, epsilon, val_old)
+        percentage_error = ma.abs(val_new - val_old) / ma.abs(val_old_nonzero) * 100.0
+        percentage_error = ma.masked_invalid(percentage_error)
+        mape = ma.mean(percentage_error)
+
+        major_threshold = 5
+        minor_threshold = 0.1
+
+        if mape >= major_threshold:
+            logging.info(f"Variable '{var}' has major differences (MAPE={mape:g})")
+            return NCDiff.MAJOR
+        elif mape >= minor_threshold:
+            logging.info(f"Variable '{var}' has minor differences (MAPE={mape:g})")
+            return NCDiff.MINOR
+
+        return NCDiff.NONE
+
+    def _compare_variable_masks(
+        self, var: str, val_old: npt.NDArray, val_new: npt.NDArray
+    ) -> NCDiff:
+        mask_old = ma.getmaskarray(val_old)
+        mask_new = ma.getmaskarray(val_new)
+        same_percentage = 100 * np.count_nonzero(mask_old == mask_new) / mask_old.size
+        if same_percentage <= 99.9:
+            logging.info(
+                f"Variable '{var}' masks have major differences (matches {same_percentage:.2f} %)"
+            )
+            return NCDiff.MAJOR
+        if same_percentage <= 99.9999:
+            logging.info(
+                f"Variable '{var}' masks have minor differences (matches {same_percentage:.2f} %)"
+            )
+            return NCDiff.MINOR
+        return NCDiff.NONE
+
+    def _compare_variable_units(self) -> bool:
         for var in self.old.variables:
             if var in self.ignore_vars:
                 continue
-            # Compare dimensions
-            dims_old = self.old.variables[var].dimensions
-            dims_new = self.new.variables[var].dimensions
-            if dims_old != dims_new:
-                logging.info(
-                    f"Variable '{var}' dimensions differ: {dims_old} vs {dims_new}"
-                )
-                return False
             # Compare units if present
             units_old = getattr(self.old.variables[var], "units", None)
             units_new = getattr(self.new.variables[var], "units", None)
