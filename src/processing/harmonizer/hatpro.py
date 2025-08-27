@@ -45,7 +45,7 @@ def harmonize_hatpro_file(data: dict) -> str:
 class HatproNc(core.Level1Nc):
     bad_lwp_keys = ("LWP", "LWP_data", "clwvi", "atmosphere_liquid_water_content")
 
-    def copy_file(self, all_keys: bool = False):
+    def copy_file(self, all_keys: bool = False) -> None:
         """Copies essential fields only."""
         valid_ind = self._get_valid_timestamps()
         if all_keys is True:
@@ -54,7 +54,7 @@ class HatproNc(core.Level1Nc):
             possible_keys = ("lwp", "time") + self.bad_lwp_keys
         self._copy_hatpro_file_contents(valid_ind, possible_keys)
 
-    def add_lwp(self):
+    def add_lwp(self) -> None:
         """Converts lwp and fixes its attributes."""
         key = "lwp"
         for invalid_name in self.bad_lwp_keys:
@@ -72,7 +72,7 @@ class HatproNc(core.Level1Nc):
             if hasattr(lwp, attr):
                 delattr(lwp, attr)
 
-    def check_lwp_data(self):
+    def check_lwp_data(self) -> None:
         """Sanity checks LWP data."""
         threshold_kg = 10
         lwp = self.nc.variables["lwp"][:]
@@ -82,7 +82,7 @@ class HatproNc(core.Level1Nc):
                 f"Invalid LWP data, median value: {np.round(median_value, 2)} kg"
             )
 
-    def sort_time(self):
+    def sort_time(self) -> None:
         """Sorts time array."""
         time = self.nc.variables["time"][:]
         array = self.nc.variables["lwp"][:]
@@ -90,7 +90,7 @@ class HatproNc(core.Level1Nc):
         self.nc.variables["time"][:] = time[ind]
         self.nc.variables["lwp"][:] = array[ind]
 
-    def check_time_reference(self):
+    def check_time_reference(self) -> None:
         """Checks the reference time zone."""
         key = "time_reference"
         if key in self.nc_raw.variables:
@@ -112,7 +112,9 @@ class HatproNc(core.Level1Nc):
         _, ind = np.unique(time_stamps[valid_ind], return_index=True)
         return list(np.array(valid_ind)[ind])
 
-    def _copy_hatpro_file_contents(self, time_ind: list, keys: tuple | None = None):
+    def _copy_hatpro_file_contents(
+        self, time_ind: list, keys: tuple | None = None
+    ) -> None:
         self.nc.createDimension("time", len(time_ind))
         for name, variable in self.nc_raw.variables.items():
             if keys is not None and name not in keys:

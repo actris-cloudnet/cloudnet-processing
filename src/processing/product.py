@@ -26,7 +26,7 @@ from processing.utils import RawDataMissingError, SkipTaskError, Uuid
 
 def process_product(
     processor: Processor, params: ProductParams | ModelParams, directory: Path
-):
+) -> None:
     uuid = Uuid()
     pid_to_new_file = None
     if existing_product := processor.get_product(params):
@@ -169,7 +169,7 @@ def _process_mwrpy(
 
 def _process_cpr_simulation(
     processor: Processor, params: ProductParams, uuid: Uuid, directory: Path
-):
+) -> Path:
     earthcare_launch_date = datetime.date(2024, 5, 28)
     if params.date < earthcare_launch_date:
         raise SkipTaskError(
@@ -420,7 +420,7 @@ def _find_instrument_product(
     if require:
         fallback = require
 
-    def file_key(file: ProductMetadata):
+    def file_key(file: ProductMetadata) -> int:
         if (
             nominal_instrument_pid
             and file.instrument is not None
@@ -492,7 +492,7 @@ def _get_input_files_for_voodoo(
     return [str(path) for path in full_paths], uuids
 
 
-def _update_dvas_metadata(processor: Processor, params: ProductParams):
+def _update_dvas_metadata(processor: Processor, params: ProductParams) -> None:
     metadata = processor.client.files(
         site_id=params.site.id,
         date=params.date,

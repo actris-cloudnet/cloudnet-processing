@@ -4,15 +4,16 @@ import logging
 import traceback
 from datetime import timedelta
 
+from requests import Session
+
 from processing import utils
 from processing.config import Config
 from processing.metadata_api import MetadataApi
-from requests import Session
 
 logging.basicConfig(level=logging.INFO)
 
 
-def main():
+def main() -> None:
     config = Config()
     session = utils.make_session()
     md_api = MetadataApi(config, session)
@@ -43,7 +44,7 @@ def _find_yesterdays_files(md_api: MetadataApi) -> list:
     return regular_files + model_files
 
 
-def _publish_qc_task(config: Config, session: Session, file: dict):
+def _publish_qc_task(config: Config, session: Session, file: dict) -> None:
     task = {
         "type": "qc",
         "siteId": file["site"]["id"],
