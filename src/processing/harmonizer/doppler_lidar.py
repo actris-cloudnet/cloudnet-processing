@@ -80,7 +80,7 @@ def harmonize_doppler_lidar_stare_file(
 
 
 class DopplerLidarWindNc(core.Level1Nc):
-    def copy_file(self, valid_ind: list):
+    def copy_file(self, valid_ind: list) -> None:
         keys = (
             "time",
             "height",
@@ -92,12 +92,12 @@ class DopplerLidarWindNc(core.Level1Nc):
         )
         self.copy_file_contents(keys, valid_ind)
 
-    def height_to_asl_height(self):
+    def height_to_asl_height(self) -> None:
         self.nc.variables["height"][:] += self.nc.variables["altitude"][:]
         self.nc.variables["height"].standard_name = "height_above_mean_sea_level"
         self.nc.variables["height"].long_name = "Height above mean sea level"
 
-    def harmonise_serial_number(self):
+    def harmonise_serial_number(self) -> None:
         if "serial_number" in self.nc.ncattrs():
             self.nc.serial_number = _harmonise_doppler_lidar_serial_number(
                 self.nc.serial_number
@@ -105,7 +105,7 @@ class DopplerLidarWindNc(core.Level1Nc):
 
 
 class DopplerLidarStareNc(core.Level1Nc):
-    def clean_global_attributes(self):
+    def clean_global_attributes(self) -> None:
         for attr in self.nc.ncattrs():
             if attr == "filename":
                 delattr(self.nc, attr)
@@ -113,7 +113,7 @@ class DopplerLidarStareNc(core.Level1Nc):
                 self.nc.serial_number = getattr(self.nc, attr)
                 delattr(self.nc, attr)
 
-    def copy_file(self, valid_ind: list):
+    def copy_file(self, valid_ind: list) -> None:
         """Copies useful variables only."""
         keys = (
             "beta",
@@ -133,12 +133,12 @@ class DopplerLidarStareNc(core.Level1Nc):
         )
         self.copy_file_contents(keys, valid_ind)
 
-    def add_zenith_angle(self):
+    def add_zenith_angle(self) -> None:
         """Converts elevation to zenith angle."""
         self.nc.renameVariable("elevation", "zenith_angle")
         self.nc.variables["zenith_angle"][:] = 90 - self.nc.variables["zenith_angle"][:]
 
-    def check_zenith_angle(self):
+    def check_zenith_angle(self) -> None:
         """Checks zenith angle value."""
         threshold = 15
         if (
@@ -146,7 +146,7 @@ class DopplerLidarStareNc(core.Level1Nc):
         ) > threshold:
             raise MiscError(f"Invalid zenith angle {zenith_angle}")
 
-    def add_range(self):
+    def add_range(self) -> None:
         """Converts halo 'range', which is actually height, to true range
         (towards LOS)."""
         self.nc.renameVariable("range", "height")
@@ -155,16 +155,16 @@ class DopplerLidarStareNc(core.Level1Nc):
         self.nc.variables["range"][:] /= np.cos(np.radians(zenith_angle))
         self.nc.variables["height"][:] += self.nc.variables["altitude"][:]
 
-    def add_wavelength(self):
+    def add_wavelength(self) -> None:
         """Converts wavelength m to nm."""
         self.nc.variables["wavelength"][:] *= 1e9
 
-    def fix_time_units(self):
+    def fix_time_units(self) -> None:
         """Fixes time units."""
         self.nc.variables["time"].units = self._get_time_units()
         self.nc.variables["time"].calendar = "standard"
 
-    def fix_long_names(self):
+    def fix_long_names(self) -> None:
         if "depolarisation_raw" in self.nc.variables:
             self.nc.variables[
                 "depolarisation_raw"
@@ -196,7 +196,7 @@ class DopplerLidarStareNc(core.Level1Nc):
                 "Attenuated backscatter coefficient for the cross-polarised signal"
             )
 
-    def harmonise_serial_number(self):
+    def harmonise_serial_number(self) -> None:
         if "serial_number" in self.nc.ncattrs():
             self.nc.serial_number = _harmonise_doppler_lidar_serial_number(
                 self.nc.serial_number

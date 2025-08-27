@@ -28,7 +28,7 @@ class StorageApiError(Exception):
 class StorageApi:
     """Class for uploading and downloading files from the Cloudnet S3 data archive."""
 
-    def __init__(self, config: Config, session: requests.Session):
+    def __init__(self, config: Config, session: requests.Session) -> None:
         self.session = session
         self.config = config
         self._url = config.storage_service_url
@@ -161,7 +161,7 @@ def _download_url(
     checksum_algorithm: str,
     output_path: Path,
     auth: tuple[str, str],
-):
+) -> None:
     if not hasattr(thread_local, "session"):
         thread_local.session = requests.Session()
     res_size = 0

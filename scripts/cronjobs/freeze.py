@@ -4,15 +4,16 @@ import logging
 import traceback
 from datetime import timedelta
 
+from requests import Session
+
 from processing import utils
 from processing.config import Config
 from processing.metadata_api import MetadataApi
-from requests import Session
 
 logging.basicConfig(level=logging.INFO)
 
 
-def main():
+def main() -> None:
     config = Config()
     session = utils.make_session()
     md_api = MetadataApi(config, session)
@@ -54,7 +55,7 @@ def _get_freeze_payload(freeze_after_days: int) -> dict:
     return {"volatile": True, "releasedBefore": updated_before.isoformat()}
 
 
-def _is_freezable(md_api: MetadataApi, file_uuid: str, depth: int = 0):
+def _is_freezable(md_api: MetadataApi, file_uuid: str, depth: int = 0) -> bool:
     file = md_api.get(f"api/files/{file_uuid}")
     return (
         (depth == 0 or not file["volatile"])
@@ -66,7 +67,7 @@ def _is_freezable(md_api: MetadataApi, file_uuid: str, depth: int = 0):
     )
 
 
-def _publish_freeze_task(config: Config, session: Session, file: dict):
+def _publish_freeze_task(config: Config, session: Session, file: dict) -> None:
     task = {
         "type": "freeze",
         "siteId": file["site"]["id"],

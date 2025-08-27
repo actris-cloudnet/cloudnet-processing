@@ -2,9 +2,11 @@ from pathlib import Path
 
 import netCDF4
 import numpy as np
+import numpy.typing as npt
 import pytest
 from cloudnet_api_client.utils import md5sum, sha256sum
 from numpy import ma
+
 from processing import netcdf_comparer
 from processing.netcdf_comparer import NCDiff
 from processing.storage_api import _get_product_bucket
@@ -12,7 +14,7 @@ from processing.storage_api import _get_product_bucket
 test_file_path = Path(__file__).parent.absolute()
 
 
-def test_get_product_bucket():
+def test_get_product_bucket() -> None:
     assert _get_product_bucket(True) == "cloudnet-product-volatile"
     assert _get_product_bucket(False) == "cloudnet-product"
 
@@ -20,11 +22,11 @@ def test_get_product_bucket():
 class TestHash:
     file = "tests/data/20201121_bucharest_classification.nc"
 
-    def test_md5sum(self):
+    def test_md5sum(self) -> None:
         hash_sum = md5sum(self.file)
         assert hash_sum == "c81d7834d7189facbc5f63416fe5b3da"
 
-    def test_sha256sum2(self):
+    def test_sha256sum2(self) -> None:
         hash_sum = sha256sum(self.file)
         assert (
             hash_sum
@@ -32,7 +34,7 @@ class TestHash:
         )
 
 
-def test_are_identical_nc_files_real_data():
+def test_are_identical_nc_files_real_data() -> None:
     fname1 = "tests/data/20180703_granada_classification_old.nc"
     fname2 = "tests/data/20180703_granada_classification.nc"
     fname3 = "tests/data/20180703_granada_classification_reprocessed.nc"
@@ -229,8 +231,15 @@ def test_are_identical_nc_files_real_data():
     ],
 )
 def test_are_identical_nc_files_generated_data(
-    data1, kwargs1, ncattrs1, data2, kwargs2, ncattrs2, expected, tmp_path
-):
+    data1: npt.NDArray,
+    kwargs1: dict,
+    ncattrs1: dict,
+    data2: npt.NDArray,
+    kwargs2: dict,
+    ncattrs2: dict,
+    expected: NCDiff,
+    tmp_path: Path,
+) -> None:
     fname1 = tmp_path / "old.nc"
     fname2 = tmp_path / "new.nc"
     for fname, data, kwargs, ncattrs in zip(
@@ -316,7 +325,9 @@ def test_are_identical_nc_files_generated_data(
         ),
     ],
 )
-def test_are_identical_nc_files_global_attributes(tmp_path, attrs1, attrs2, expected):
+def test_are_identical_nc_files_global_attributes(
+    tmp_path: Path, attrs1: dict, attrs2: dict, expected: NCDiff
+) -> None:
     fname1 = tmp_path / "old.nc"
     fname2 = tmp_path / "new.nc"
     for fname, attrs in zip((fname1, fname2), (attrs1, attrs2)):
@@ -347,7 +358,9 @@ def test_are_identical_nc_files_global_attributes(tmp_path, attrs1, attrs2, expe
         ),
     ],
 )
-def test_compare_variables(array1, array2, expected: NCDiff, tmp_path):
+def test_compare_variables(
+    array1: npt.ArrayLike, array2: npt.ArrayLike, expected: NCDiff, tmp_path: Path
+) -> None:
     temp1 = tmp_path / "file1.nc"
     temp2 = tmp_path / "file2.nc"
     with (
@@ -363,7 +376,7 @@ def test_compare_variables(array1, array2, expected: NCDiff, tmp_path):
     assert netcdf_comparer.nc_difference(temp1, temp2) == expected
 
 
-def test_missing_variable_in_new_file(tmp_path):
+def test_missing_variable_in_new_file(tmp_path: Path) -> None:
     old_file = tmp_path / "file1.nc"
     new_file = tmp_path / "file2.nc"
     with (
@@ -378,7 +391,7 @@ def test_missing_variable_in_new_file(tmp_path):
     assert netcdf_comparer.nc_difference(old_file, new_file) == NCDiff.MAJOR
 
 
-def test_missing_variable_in_old_file(tmp_path):
+def test_missing_variable_in_old_file(tmp_path: Path) -> None:
     old_file = tmp_path / "file1.nc"
     new_file = tmp_path / "file2.nc"
     with (
@@ -402,7 +415,9 @@ def test_missing_variable_in_old_file(tmp_path):
         ("f4", "i4", NCDiff.MINOR),
     ],
 )
-def test_compare_variable_dtypes(dtype_old, dtype_new, expected, tmp_path):
+def test_compare_variable_dtypes(
+    dtype_old: str, dtype_new: str, expected: NCDiff, tmp_path: Path
+) -> None:
     old_file = tmp_path / "file1.nc"
     new_file = tmp_path / "file2.nc"
     with (
@@ -427,7 +442,9 @@ def test_compare_variable_dtypes(dtype_old, dtype_new, expected, tmp_path):
         (10000, NCDiff.MAJOR),
     ],
 )
-def test_compare_variable_values_added(change, expected, tmp_path):
+def test_compare_variable_values_added(
+    change: float, expected: NCDiff, tmp_path: Path
+) -> None:
     old_file = tmp_path / "file1.nc"
     new_file = tmp_path / "file2.nc"
     len_data = 100_000
@@ -464,7 +481,9 @@ def test_compare_variable_values_added(change, expected, tmp_path):
         (2, NCDiff.MAJOR),
     ],
 )
-def test_compare_variable_values_multiplied(change, expected, tmp_path):
+def test_compare_variable_values_multiplied(
+    change: float, expected: NCDiff, tmp_path: Path
+) -> None:
     old_file = tmp_path / "file1.nc"
     new_file = tmp_path / "file2.nc"
     len_data = 10_000
@@ -485,7 +504,7 @@ def test_compare_variable_values_multiplied(change, expected, tmp_path):
     assert netcdf_comparer.nc_difference(old_file, new_file) == expected
 
 
-def test_missing_units_in_new_variable(tmp_path):
+def test_missing_units_in_new_variable(tmp_path: Path) -> None:
     old_file = tmp_path / "file1.nc"
     new_file = tmp_path / "file2.nc"
     with (
@@ -512,7 +531,7 @@ def test_missing_units_in_new_variable(tmp_path):
         (1000, NCDiff.MAJOR),
     ],
 )
-def test_compare_masks(n_masked: int, expected: NCDiff, tmp_path):
+def test_compare_masks(n_masked: int, expected: NCDiff, tmp_path: Path) -> None:
     temp1 = tmp_path / "file1.nc"
     temp2 = tmp_path / "file2.nc"
     with (

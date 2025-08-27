@@ -191,7 +191,7 @@ def harmonize_parsivel_file(data: dict) -> str:
 
 
 class ParsivelNc(core.Level1Nc):
-    def create_dimensions(self, time_ind: list):
+    def create_dimensions(self, time_ind: list) -> None:
         for name, dimension in self.nc_raw.dimensions.items():
             name = DIMENSION_MAP.get(name, name)
             n = len(time_ind) if name == "time" else dimension.size
@@ -201,13 +201,13 @@ class ParsivelNc(core.Level1Nc):
         self,
         time_ind: list,
         skip: tuple,
-    ):
+    ) -> None:
         for key in self.nc_raw.variables.keys():
             if key not in skip:
                 self.copy_var(key, time_ind)
         self._copy_global_attributes()
 
-    def copy_var(self, key: str, time_ind: list):
+    def copy_var(self, key: str, time_ind: list) -> None:
         variable = self.nc_raw.variables[key]
 
         if key in ("time", "Meas_Time"):
@@ -244,7 +244,7 @@ class ParsivelNc(core.Level1Nc):
             return netCDF4.default_fillvals[dtype]
         return None
 
-    def _get_new_name(self, key) -> str:
+    def _get_new_name(self, key: str) -> str:
         keymap = {
             "V_sensor": "V_power_supply",
             "E_kin": "kinetic_energy",
@@ -289,14 +289,14 @@ class ParsivelNc(core.Level1Nc):
         }
         return keymap.get(key, key)
 
-    def add_serial_number(self):
+    def add_serial_number(self) -> None:
         if "serial_no" in self.nc_raw.variables:
             self.nc.serial_number = str(self.nc_raw["serial_no"][0])
         for attr in ("Sensor_ID", "sensor_serial_number"):
             if hasattr(self.nc_raw, attr):
                 self.nc.serial_number = getattr(self.nc_raw, attr)
 
-    def fix_long_names(self):
+    def fix_long_names(self) -> None:
         keymap = {
             "diameter_bnds": "Diameter bounds",
             "velocity_bnds": "Velocity bounds",
@@ -329,7 +329,7 @@ class ParsivelNc(core.Level1Nc):
             if key not in skip and hasattr(var, "long_name"):
                 var.long_name = var.long_name.lower().capitalize()
 
-    def fix_units(self):
+    def fix_units(self) -> None:
         keymap = {
             "velocity_spread": "m s-1",
             "velocity_bnds": "m s-1",
@@ -346,7 +346,7 @@ class ParsivelNc(core.Level1Nc):
         }
         self.fix_attribute(keymap, "units")
 
-    def fix_standard_names(self):
+    def fix_standard_names(self) -> None:
         for key in self.nc.variables:
             if key not in (
                 "time",
@@ -364,24 +364,24 @@ class ParsivelNc(core.Level1Nc):
         }
         self.fix_attribute(keymap, "standard_name")
 
-    def fix_comments(self):
+    def fix_comments(self) -> None:
         for key in self.nc.variables:
             if hasattr(self.nc.variables[key], "comment"):
                 delattr(self.nc.variables[key], "comment")
             if (attr := ATTRIBUTES.get(key)) and attr.comment:
                 self.nc.variables[key].comment = attr.comment
 
-    def convert_precipitations(self):
+    def convert_precipitations(self) -> None:
         for key in self.nc.variables:
             if key in ("rainfall_rate", "snowfall_rate", "fall_velocity"):
                 self.to_ms1(key)
 
-    def convert_diameters(self):
+    def convert_diameters(self) -> None:
         for key in self.nc.variables:
             if key in ("diameter", "diameter_spread"):
                 self.to_m(key)
 
-    def convert_temperatures(self):
+    def convert_temperatures(self) -> None:
         for key in self.nc.variables:
             if key in ("T_sensor"):
                 self.to_k(key)
@@ -392,7 +392,7 @@ class ParsivelNc(core.Level1Nc):
         data = variable[:]
         return np.isclose(data, bad_value, atol=threshold)
 
-    def _mask_bad_values(self):
+    def _mask_bad_values(self) -> None:
         for variable in self.nc.variables.values():
             mask = self._find_bad_values(variable)
             variable[:] = ma.masked_array(variable[:], mask=mask)

@@ -45,7 +45,7 @@ class Fetcher:
         site: Site,
         date: datetime.date,
         args: Namespace,
-    ):
+    ) -> None:
         self.product = product
         self.args = args
         self.payload = {"site": site.id, "date": date.isoformat()}
@@ -114,7 +114,11 @@ class Fetcher:
 
 
 def fetch(
-    product: Product, site: Site, date: datetime.date, args: Namespace, client=APIClient
+    product: Product,
+    site: Site,
+    date: datetime.date,
+    args: Namespace,
+    client: APIClient,
 ) -> None:
     is_production = os.environ.get("PID_SERVICE_TEST_ENV", "false").lower() != "true"
     if is_production:
@@ -166,8 +170,8 @@ def _process_metadata(
     submitter: Callable[[Path, dict], str],
     upload_metadata: list,
     show_progress: bool = True,
-):
-    def process_row(row: dict):
+) -> None:
+    def process_row(row: dict) -> str:
         filename = _download_file(row)
         return submitter(filename, row)
 
@@ -245,7 +249,7 @@ def _submit_upload(filename: Path, row: dict) -> str:
     if res.status_code == 200:
         with filename.open("rb") as f:
             res = requests.put(
-                f'{url}data/{metadata["checksum"]}', data=f, auth=DATAPORTAL_AUTH
+                f"{url}data/{metadata['checksum']}", data=f, auth=DATAPORTAL_AUTH
             )
             res.raise_for_status()
     elif res.status_code != 409:
@@ -329,7 +333,7 @@ def _submit_file(filename: Path, row: dict) -> str:
     return "OK"
 
 
-def _fetch_calibration(upload_metadata: list):
+def _fetch_calibration(upload_metadata: list) -> None:
     first = True
     processed_pid_dates: set[tuple] = set()
     for upload in upload_metadata:

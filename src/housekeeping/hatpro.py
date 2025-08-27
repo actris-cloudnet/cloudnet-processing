@@ -49,13 +49,13 @@ class HatproHkd:
     header: dict
     data: dict
 
-    def __init__(self, filename: bytes | Path):
+    def __init__(self, filename: bytes | Path) -> None:
         with open(filename, "rb") as file:
             self._read_header(file)
             self._read_data(file)
             _check_eof(file)
 
-    def _read_header(self, file: BinaryIO):
+    def _read_header(self, file: BinaryIO) -> None:
         self.header = _read_from_file(
             file,
             [
@@ -66,11 +66,11 @@ class HatproHkd:
             ],
         )
         if self.header["HKDCode"] != 837854832:
-            raise HatproHkdError(f'Unknown file signature: {self.header["HKDCode"]}')
+            raise HatproHkdError(f"Unknown file signature: {self.header['HKDCode']}")
         if self.header["HKDTimeRef"] != TIME_REF_UTC:
             raise HatproHkdError("Only UTC time reference is supported")
 
-    def _read_data(self, file: BinaryIO):
+    def _read_data(self, file: BinaryIO) -> None:
         fields = [("T", "<i4"), ("Alarm", "b")]
         if self.header["HKDSelect"] & 0x1:
             # According to the file format description, coordinates are stored
@@ -102,7 +102,7 @@ class HatproHkd:
 
 
 class HatproHkdNc:
-    def __init__(self, filename: Path):
+    def __init__(self, filename: Path) -> None:
         with netCDF4.Dataset(filename) as nc:
             time_ref = nc.variables.get("time_reference")
             if time_ref and time_ref[0] != TIME_REF_UTC:

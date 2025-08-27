@@ -8,9 +8,11 @@ from io import StringIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from threading import Event
+from types import FrameType
 
 from cloudnet_api_client import APIClient
 from cloudnet_api_client.containers import ExtendedProduct, Site
+
 from processing import utils
 from processing.config import Config
 from processing.dvas import Dvas
@@ -48,7 +50,7 @@ class MemoryLogger:
         stderr_handler.setFormatter(formatter)
         logger.addHandler(stderr_handler)
 
-    def clear_memory(self):
+    def clear_memory(self) -> None:
         """Clear log memory."""
         self._memory.truncate(0)
         self._memory.seek(0)
@@ -223,7 +225,7 @@ class Worker:
         for product_id in product.derived_product_ids:
             self.publish_followup_task(product_id, params)
 
-    def publish_followup_task(self, product_id: str, params: ProcessParams):
+    def publish_followup_task(self, product_id: str, params: ProcessParams) -> None:
         product = self.client.product(product_id)
         if product.experimental and product.id not in (
             "cpr-simulation",
@@ -281,7 +283,7 @@ def main() -> None:
     worker = Worker(config)
     exit = Event()
 
-    def signal_handler(sig, frame):
+    def signal_handler(sig: int, frame: FrameType | None) -> None:
         logging.info("Received termination signal")
         exit.set()
 

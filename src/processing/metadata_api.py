@@ -2,6 +2,7 @@
 
 import datetime
 import uuid
+from typing import Any
 
 import requests
 
@@ -14,13 +15,13 @@ class MetadataApi:
 
     def __init__(
         self, config: Config, session: requests.Session = utils.make_session()
-    ):
+    ) -> None:
         self.config = config
         self.session = session
         self._url = config.dataportal_url
         self._auth = config.data_submission_auth
 
-    def get(self, end_point: str, payload: dict | None = None, json: bool = True):
+    def get(self, end_point: str, payload: dict | None = None, json: bool = True):  # noqa: ANN201
         """Get Cloudnet metadata."""
         url = f"{self._url}/{end_point}"
         res = self.session.get(url, params=payload)
@@ -52,7 +53,7 @@ class MetadataApi:
         res.raise_for_status()
         return res
 
-    def put_images(self, img_metadata: list, product_uuid: str | uuid.UUID):
+    def put_images(self, img_metadata: list, product_uuid: str | uuid.UUID) -> None:
         for data in img_metadata:
             payload = {
                 "sourceFileId": str(product_uuid),
@@ -63,10 +64,14 @@ class MetadataApi:
 
     def update_dvas_info(
         self, uuid: uuid.UUID, timestamp: datetime.datetime, dvas_id: str
-    ):
-        payload = {"uuid": str(uuid), "dvasUpdatedAt": timestamp, "dvasId": dvas_id}
+    ) -> None:
+        payload = {
+            "uuid": str(uuid),
+            "dvasUpdatedAt": timestamp.isoformat(),
+            "dvasId": dvas_id,
+        }
         self.post("files", payload)
 
-    def clean_dvas_info(self, uuid: uuid.UUID):
+    def clean_dvas_info(self, uuid: uuid.UUID) -> None:
         payload = {"uuid": str(uuid), "dvasUpdatedAt": None, "dvasId": None}
         self.post("files", payload)

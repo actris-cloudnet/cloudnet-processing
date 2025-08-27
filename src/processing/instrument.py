@@ -14,7 +14,9 @@ from processing.utils import Uuid
 ProcessClass = Type[instrument_process.ProcessInstrument]
 
 
-def process_instrument(processor: Processor, params: InstrumentParams, directory: Path):
+def process_instrument(
+    processor: Processor, params: InstrumentParams, directory: Path
+) -> None:
     uuid = Uuid()
     pid_to_new_file = None
     if existing_product := processor.get_product(params):

@@ -14,12 +14,14 @@ from processing.version import __version__ as cloudnet_processing_version
 
 
 class Level1Nc:
-    def __init__(self, nc_raw: netCDF4.Dataset, nc: netCDF4.Dataset, data: dict):
+    def __init__(
+        self, nc_raw: netCDF4.Dataset, nc: netCDF4.Dataset, data: dict
+    ) -> None:
         self.nc_raw = nc_raw
         self.nc = nc
         self.data = data
 
-    def convert_time(self):
+    def convert_time(self) -> None:
         """Converts time to decimal hours."""
         time = self.nc.variables["time"]
         calendar = getattr(time, "calendar", "standard")
@@ -58,7 +60,7 @@ class Level1Nc:
         keys: tuple | None = None,
         time_ind: list | None = None,
         skip: tuple | None = None,
-    ):
+    ) -> None:
         """Copies all variables and global attributes from one file to another.
         Optionally copies only certain keys and / or uses certain time indices only.
         """
@@ -75,7 +77,7 @@ class Level1Nc:
                 self.copy_variable(key, time_ind)
         self._copy_global_attributes()
 
-    def copy_variable(self, key: str, time_ind: list | None = None):
+    def copy_variable(self, key: str, time_ind: list | None = None) -> None:
         """Copies one variable from source file to target. Optionally uses certain
         time indices only.
         """
@@ -97,7 +99,7 @@ class Level1Nc:
         screened_data = self._screen_data(variable, time_ind)
         var_out[:] = screened_data
 
-    def add_geolocation(self):
+    def add_geolocation(self) -> None:
         """Adds standard geolocation information."""
         for key in ("altitude", "latitude", "longitude"):
             if key not in self.nc.variables.keys():
@@ -111,7 +113,7 @@ class Level1Nc:
         self,
         cloudnet_file_type: str,
         instrument: cloudnetpy.instruments.instruments.Instrument,
-    ):
+    ) -> None:
         """Adds standard global attributes."""
         location = self.data["site_meta"]["name"]
         self.nc.Conventions = "CF-1.8"
@@ -127,7 +129,7 @@ class Level1Nc:
         self.nc.file_uuid = uuid
         return uuid
 
-    def add_history(self, product: str, source: str = "history"):
+    def add_history(self, product: str, source: str = "history") -> None:
         """Adds history attribute."""
         old_history = getattr(self.nc_raw, source, "")
         history = (
@@ -138,11 +140,11 @@ class Level1Nc:
             history = f"{history}\n{old_history}"
         self.nc.history = history
 
-    def add_date(self):
+    def add_date(self) -> None:
         """Adds date attributes."""
         self.nc.year, self.nc.month, self.nc.day = self.data["date"].split("-")
 
-    def harmonize_attribute(self, attribute: str, keys: tuple | None = None):
+    def harmonize_attribute(self, attribute: str, keys: tuple | None = None) -> None:
         """Harmonizes variable attributes."""
         keys_to_process = keys if keys is not None else self.nc.variables.keys()
         for key in keys_to_process:
@@ -154,12 +156,12 @@ class Level1Nc:
             else:
                 logging.debug(f"Can't find {attribute} for {key}")
 
-    def harmonize_standard_attributes(self, key: str):
+    def harmonize_standard_attributes(self, key: str) -> None:
         """Harmonizes standard attributes of one variable."""
         for attribute in ("units", "long_name", "standard_name"):
             self.harmonize_attribute(attribute, (key,))
 
-    def clean_variable_attributes(self, accepted_extra: tuple | None = None):
+    def clean_variable_attributes(self, accepted_extra: tuple | None = None) -> None:
         """Removes obsolete variable attributes."""
         accepted = ("_FillValue", "units") + (accepted_extra or ())
         for _, item in self.nc.variables.items():
@@ -167,17 +169,17 @@ class Level1Nc:
                 if attr not in accepted:
                     delattr(item, attr)
 
-    def clean_global_attributes(self):
+    def clean_global_attributes(self) -> None:
         """Removes all global attributes."""
         for attr in self.nc.ncattrs():
             delattr(self.nc, attr)
 
-    def fix_name(self, keymap: dict):
+    def fix_name(self, keymap: dict) -> None:
         for old_name, new_name in keymap.items():
             if old_name in self.nc.variables:
                 self.nc.renameVariable(old_name, new_name)
 
-    def fix_attribute(self, keymap: dict, attribute: str):
+    def fix_attribute(self, keymap: dict, attribute: str) -> None:
         """Fixes one attribute."""
         if attribute not in ("units", "long_name", "standard_name"):
             raise ValueError
@@ -228,7 +230,7 @@ class Level1Nc:
             raise cloudnetpy.exceptions.ValidTimeStampError
         return valid_ind
 
-    def to_ms1(self, variable: str):
+    def to_ms1(self, variable: str) -> None:
         """Converts velocity to m s-1."""
         target_unit = "m s-1"
         if not hasattr(self.nc.variables[variable], "units"):
@@ -253,7 +255,7 @@ class Level1Nc:
             logging.info(f"Converting {variable} from {units} to {target_unit}.")
         self.nc.variables[variable].units = target_unit
 
-    def to_m(self, variable: str):
+    def to_m(self, variable: str) -> None:
         """Converts length to m."""
         target_unit = "m"
         if not hasattr(self.nc.variables[variable], "units"):
@@ -274,7 +276,7 @@ class Level1Nc:
             logging.info(f"Converting {variable} from {units} to {target_unit}.")
         self.nc.variables[variable].units = target_unit
 
-    def to_ratio(self, variable: str):
+    def to_ratio(self, variable: str) -> None:
         """Converts percent to ratio."""
         target_unit = "1"
         if not hasattr(self.nc.variables[variable], "units"):
@@ -295,7 +297,7 @@ class Level1Nc:
             logging.info(f"Converting {variable} from {units} to {target_unit}.")
         self.nc.variables[variable].units = target_unit
 
-    def to_pa(self, variable: str):
+    def to_pa(self, variable: str) -> None:
         """Converts pressure to Pa."""
         target_unit = "Pa"
         if not hasattr(self.nc.variables[variable], "units"):
@@ -316,7 +318,7 @@ class Level1Nc:
             logging.info(f"Converting {variable} from {units} to {target_unit}.")
         self.nc.variables[variable].units = target_unit
 
-    def to_degree(self, variable: str):
+    def to_degree(self, variable: str) -> None:
         """Converts direction to degree."""
         target_unit = "degree"
         if not hasattr(self.nc.variables[variable], "units"):
@@ -335,7 +337,7 @@ class Level1Nc:
             logging.info(f"Converting {variable} from {units} to {target_unit}.")
         self.nc.variables[variable].units = target_unit
 
-    def to_k(self, variable: str):
+    def to_k(self, variable: str) -> None:
         target_unit = "K"
         if not hasattr(self.nc.variables[variable], "units"):
             self._set_fallback_unit(variable, target_unit)
@@ -361,16 +363,16 @@ class Level1Nc:
                 )
         self.nc.variables[variable].units = target_unit
 
-    def _set_fallback_unit(self, variable: str, fallback: str):
+    def _set_fallback_unit(self, variable: str, fallback: str) -> None:
         logging.warning(f"No units attribute in '{variable}'! Assuming '{fallback}'.")
         self.nc.variables[variable].units = fallback
 
-    def _copy_global_attributes(self):
+    def _copy_global_attributes(self) -> None:
         for name in self.nc_raw.ncattrs():
             setattr(self.nc, name, self.nc_raw.getncattr(name))
 
     def _get_time_units(self) -> str:
-        return f'hours since {self.data["date"]} 00:00:00 +00:00'
+        return f"hours since {self.data['date']} 00:00:00 +00:00"
 
     @staticmethod
     def _screen_data(
@@ -390,6 +392,8 @@ class Level1Nc:
         return variable[:]
 
     @staticmethod
-    def _copy_variable_attributes(source, target) -> None:
+    def _copy_variable_attributes(
+        source: netCDF4.Variable, target: netCDF4.Variable
+    ) -> None:
         attr = {k: source.getncattr(k) for k in source.ncattrs() if k != "_FillValue"}
         target.setncatts(attr)

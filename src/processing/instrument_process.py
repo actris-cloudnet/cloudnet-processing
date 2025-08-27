@@ -7,7 +7,7 @@ import re
 import shutil
 from collections import defaultdict
 from pathlib import Path
-from typing import Literal
+from typing import Literal, NoReturn
 from uuid import UUID
 
 import doppy
@@ -49,7 +49,7 @@ class ProcessInstrument:
         params: InstrumentParams,
         uuid: Uuid,
         processor: Processor,
-    ):
+    ) -> None:
         self.output_path = directory / "output.nc"
         self.daily_path = directory / "daily.nc"
         self.raw_dir = directory / "raw"
@@ -94,7 +94,7 @@ class ProcessInstrument:
         include_tag_subset: set[str] | None = None,
         exclude_tag_subset: set[str] | None = None,
         date: datetime.date | tuple[datetime.date, datetime.date] | None = None,
-        allow_empty=False,
+        allow_empty: bool = False,
         filename_prefix: str | None = None,
         filename_suffix: str | None = None,
         subdir: str | None = None,
@@ -123,7 +123,7 @@ class ProcessInstrument:
 
 
 class ProcessRadar(ProcessInstrument):
-    def process_rpg_fmcw_94(self):
+    def process_rpg_fmcw_94(self) -> None:
         if self.params.site.id == "rv-meteor":
             full_paths, self.uuid.raw = self.download_instrument()
             concat_wrapper.concat_netcdf_files(
@@ -142,10 +142,10 @@ class ProcessRadar(ProcessInstrument):
             )
             self.uuid.raw = _get_valid_uuids(raw_uuids, full_paths, valid_full_paths)
 
-    def process_rpg_fmcw_35(self):
+    def process_rpg_fmcw_35(self) -> None:
         self.process_rpg_fmcw_94()
 
-    def process_mira_10(self):
+    def process_mira_10(self) -> None:
         full_paths, self.uuid.raw = self.download_instrument()
         full_paths = _unzip_gz_files(full_paths)
         full_paths = self._fix_suffices(full_paths, ".znc")
@@ -160,7 +160,7 @@ class ProcessRadar(ProcessInstrument):
             **self._kwargs,
         )
 
-    def process_mira_35(self):
+    def process_mira_35(self) -> None:
         full_paths, self.uuid.raw = self.download_instrument()
         full_paths = _unzip_gz_files(full_paths)
         full_paths = self._fix_suffices(full_paths, ".mmclx")
@@ -175,21 +175,21 @@ class ProcessRadar(ProcessInstrument):
             **self._kwargs,
         )
 
-    def process_basta(self):
+    def process_basta(self) -> None:
         full_paths, self.uuid.raw = self.download_instrument()
         concat_wrapper.concat_netcdf_files(
             full_paths, self.params.date.isoformat(), self.daily_path
         )
         self.uuid.product = basta2nc(str(self.daily_path), *self._args, **self._kwargs)
 
-    def process_copernicus(self):
+    def process_copernicus(self) -> None:
         full_paths, self.uuid.raw = self.download_instrument()
         self._add_calibration("range_offset", 0)
         self.uuid.product = copernicus2nc(
             str(self.raw_dir), *self._args, **self._kwargs
         )
 
-    def process_galileo(self):
+    def process_galileo(self) -> None:
         full_paths, self.uuid.raw = self.download_instrument()
         self.uuid.product = galileo2nc(str(self.raw_dir), *self._args, **self._kwargs)
 
@@ -222,7 +222,7 @@ class ProcessRadar(ProcessInstrument):
 
 
 class ProcessDopplerLidarWind(ProcessInstrument):
-    def process_halo_doppler_lidar(self):
+    def process_halo_doppler_lidar(self) -> None:
         try:
             calibration = self.processor.client.calibration(
                 self.params.instrument.pid, self.params.date
@@ -256,16 +256,16 @@ class ProcessDopplerLidarWind(ProcessInstrument):
             data, instruments.HALO
         )
 
-    def process_wls100s(self):
+    def process_wls100s(self) -> NoReturn:
         raise NotImplementedError()
 
-    def process_wls200s(self):
+    def process_wls200s(self) -> None:
         self._process_windcube(instruments.WINDCUBE_WLS200S)
 
-    def process_wls400s(self):
+    def process_wls400s(self) -> None:
         self._process_windcube(instruments.WINDCUBE_WLS400S)
 
-    def process_wls70(self):
+    def process_wls70(self) -> None:
         full_paths, self.uuid.raw = self.download_instrument(include_pattern=r".*\.rtd")
         try:
             options = self._calibration_options()
@@ -280,7 +280,7 @@ class ProcessDopplerLidarWind(ProcessInstrument):
             data, instruments.WINDCUBE_WLS70
         )
 
-    def _process_windcube(self, instrument: instruments.Instrument):
+    def _process_windcube(self, instrument: instruments.Instrument) -> None:
         file_groups = defaultdict(list)
         full_paths, self.uuid.raw = self.download_instrument(
             include_pattern=r".*(vad)|(dbs).*\.nc.*",
@@ -344,7 +344,7 @@ class ProcessDopplerLidarWind(ProcessInstrument):
 
 
 class ProcessDopplerLidar(ProcessInstrument):
-    def process_halo_doppler_lidar(self):
+    def process_halo_doppler_lidar(self) -> None:
         try:
             calibration = self.processor.client.calibration(
                 self.params.instrument.pid, self.params.date
@@ -410,19 +410,19 @@ class ProcessDopplerLidar(ProcessInstrument):
             data, instruments.HALO
         )
 
-    def process_wls100s(self):
+    def process_wls100s(self) -> NoReturn:
         raise NotImplementedError()
 
-    def process_wls200s(self):
+    def process_wls200s(self) -> None:
         self._process_windcube(instruments.WINDCUBE_WLS200S)
 
-    def process_wls400s(self):
+    def process_wls400s(self) -> None:
         self._process_windcube(instruments.WINDCUBE_WLS400S)
 
-    def process_wls70(self):
+    def process_wls70(self) -> NoReturn:
         raise NotImplementedError()
 
-    def _process_windcube(self, instrument: instruments.Instrument):
+    def _process_windcube(self, instrument: instruments.Instrument) -> None:
         file_groups = defaultdict(list)
         full_paths, self.uuid.raw = self.download_instrument(
             include_pattern=r".*fixed.*\.nc(\..+)?"
@@ -469,22 +469,22 @@ class ProcessDopplerLidar(ProcessInstrument):
 
 
 class ProcessLidar(ProcessInstrument):
-    def process_cs135(self):
+    def process_cs135(self) -> None:
         full_paths, self.uuid.raw = self.download_instrument()
         full_paths.sort()
         _concatenate_text_files(full_paths, self.daily_path)
         self._call_ceilo2nc("cs135")
 
-    def process_chm15k(self):
+    def process_chm15k(self) -> None:
         self._process_chm_lidar("chm15k")
 
-    def process_chm15x(self):
+    def process_chm15x(self) -> None:
         self._process_chm_lidar("chm15x")
 
-    def process_chm15kx(self):
+    def process_chm15kx(self) -> None:
         self._process_chm_lidar("chm15kx")
 
-    def _process_chm_lidar(self, model: str):
+    def _process_chm_lidar(self, model: str) -> None:
         full_paths, raw_uuids = self.download_instrument()
         valid_full_paths = concat_wrapper.concat_chm15k_files(
             full_paths, self.params.date.isoformat(), str(self.daily_path)
@@ -500,12 +500,12 @@ class ProcessLidar(ProcessInstrument):
         _concatenate_text_files(full_paths, self.daily_path)
         self._call_ceilo2nc("ct25k")
 
-    def process_halo_doppler_lidar_calibrated(self):
+    def process_halo_doppler_lidar_calibrated(self) -> None:
         full_path, self.uuid.raw = self.download_instrument(largest_only=True)
         data = self._get_payload_for_nc_file_augmenter(full_path)
         self.uuid.product = harmonizer.harmonize_halo_calibrated_file(data)
 
-    def process_pollyxt(self):
+    def process_pollyxt(self) -> None:
         full_paths, self.uuid.raw = self.download_instrument()
         calibration = self._fetch_pollyxt_calibration()
         site_meta = self.site_meta | calibration
@@ -517,19 +517,19 @@ class ProcessLidar(ProcessInstrument):
             date=self.params.date.isoformat(),
         )
 
-    def process_minimpl(self):
+    def process_minimpl(self) -> NoReturn:
         raise NotImplementedError()
 
-    def process_ld40(self):
+    def process_ld40(self) -> NoReturn:
         raise NotImplementedError()
 
-    def process_cl31(self):
+    def process_cl31(self) -> None:
         full_paths, self.uuid.raw = self.download_instrument()
         full_paths.sort()
         _concatenate_text_files(full_paths, self.daily_path)
         self._call_ceilo2nc("cl31")
 
-    def process_cl51(self):
+    def process_cl51(self) -> None:
         try:
             calibration = self.processor.client.calibration(
                 self.params.instrument.pid, self.params.date
@@ -552,7 +552,7 @@ class ProcessLidar(ProcessInstrument):
             _fix_cl51_timestamps(str(self.daily_path), time_offset)
         self._call_ceilo2nc("cl51")
 
-    def process_cl61d(self):
+    def process_cl61d(self) -> None:
         full_paths, raw_uuids = self.download_instrument(
             exclude_pattern="clu-generated"
         )
@@ -577,7 +577,7 @@ class ProcessLidar(ProcessInstrument):
         self._call_ceilo2nc("cl61d")
         self.uuid.raw = _get_valid_uuids(raw_uuids, full_paths, valid_full_paths)
 
-    def _call_ceilo2nc(self, model: str):
+    def _call_ceilo2nc(self, model: str) -> None:
         calibration = self._fetch_ceilo_calibration()
         site_meta = self.site_meta | calibration
         site_meta["model"] = model
@@ -619,18 +619,18 @@ class ProcessLidar(ProcessInstrument):
 
 
 class ProcessMwrL1c(ProcessInstrument):
-    def process_hatpro(self):
+    def process_hatpro(self) -> None:
         self._process_rpg("hatpro")
 
-    def process_lhatpro(self):
+    def process_lhatpro(self) -> None:
         self._process_rpg("lhatpro")
 
-    def process_lhumpro(self):
+    def process_lhumpro(self) -> None:
         self._process_rpg("lhumpro_u90")
 
     def _process_rpg(
         self, instrument_type: Literal["hatpro", "lhatpro", "lhumpro_u90"]
-    ):
+    ) -> None:
         calibration = self._get_calibration_data()
         full_paths, self.uuid.raw = self.download_instrument(
             include_pattern=r"\.(brt|hkd|met|irt|blb|bls)$",
@@ -678,16 +678,16 @@ class ProcessMwrL1c(ProcessInstrument):
 
 
 class ProcessMwr(ProcessInstrument):
-    def process_hatpro(self):
+    def process_hatpro(self) -> None:
         self._process_rpg("hatpro")
 
-    def process_lhatpro(self):
+    def process_lhatpro(self) -> None:
         self._process_rpg("lhatpro")
 
-    def process_lhumpro(self):
+    def process_lhumpro(self) -> None:
         self._process_rpg("lhumpro_u90")
 
-    def process_radiometrics(self):
+    def process_radiometrics(self) -> None:
         full_paths, self.uuid.raw = self.download_instrument()
         _unzip_gz_files(full_paths)
         self.uuid.product = radiometrics2nc(
@@ -696,7 +696,7 @@ class ProcessMwr(ProcessInstrument):
 
     def _process_rpg(
         self, instrument_type: Literal["hatpro", "lhatpro", "lhumpro_u90"]
-    ):
+    ) -> None:
         try:
             full_paths, raw_uuids = self.download_instrument(
                 include_pattern=r"\.(lwp|iwv)$",
@@ -722,7 +722,7 @@ class ProcessMwr(ProcessInstrument):
 
 
 class ProcessDisdrometer(ProcessInstrument):
-    def process_parsivel(self):
+    def process_parsivel(self) -> None:
         try:
             full_paths, self.uuid.raw = self.download_instrument(largest_only=True)
             data = self._get_payload_for_nc_file_augmenter(full_paths)
@@ -769,7 +769,7 @@ class ProcessDisdrometer(ProcessInstrument):
                         f.writelines(lines)
             self.uuid.product = parsivel2nc(full_paths, *self._args, **kwargs)
 
-    def process_thies_lnm(self):
+    def process_thies_lnm(self) -> None:
         full_paths, self.uuid.raw = self.download_instrument()
         full_paths.sort()
         full_paths = _unzip_gz_files(full_paths)
@@ -796,23 +796,23 @@ class ProcessDisdrometer(ProcessInstrument):
 
 
 class ProcessRainGauge(ProcessInstrument):
-    def process_pluvio(self):
+    def process_pluvio(self) -> None:
         full_path, self.uuid.raw = self.download_instrument(largest_only=True)
         data = self._get_payload_for_nc_file_augmenter(full_path)
         self.uuid.product = harmonizer.harmonize_pluvio_nc(data)
 
-    def process_thies_precipitation_transmitter(self):
+    def process_thies_precipitation_transmitter(self) -> None:
         full_path, self.uuid.raw = self.download_instrument(largest_only=True)
         data = self._get_payload_for_nc_file_augmenter(full_path)
         self.uuid.product = harmonizer.harmonize_thies_pt_nc(data)
 
-    def process_rain_e_h3(self):
+    def process_rain_e_h3(self) -> None:
         full_path, self.uuid.raw = self.download_instrument(largest_only=True)
         self.uuid.product = rain_e_h32nc(full_path[0], *self._args, **self._kwargs)
 
 
 class ProcessWeatherStation(ProcessInstrument):
-    def process_weather_station(self):
+    def process_weather_station(self) -> None:
         supported_sites = (
             "palaiseau",
             "lindenberg",
@@ -855,13 +855,13 @@ class ProcessWeatherStation(ProcessInstrument):
                     [str(path) for path in full_paths], *self._args, **self._kwargs
                 )
 
-    def process_fd12(self):
+    def process_fd12(self) -> None:
         full_path, self.uuid.raw = self.download_instrument(largest_only=True)
         self.uuid.product = fd12p2nc(full_path[0], *self._args, **self._kwargs)
 
 
 class ProcessRainRadar(ProcessInstrument):
-    def process_mrr_pro(self):
+    def process_mrr_pro(self) -> None:
         full_paths, self.uuid.raw = self.download_instrument()
         full_paths = _unzip_gz_files(full_paths)
         self.uuid.product = mrr2nc(full_paths, *self._args, **self._kwargs)
@@ -1221,8 +1221,8 @@ def _count_lines(filename: Path) -> int:
     return n_lines
 
 
-def _check_chm_version(filename: str, identifier: str):
-    def print_warning(expected: str):
+def _check_chm_version(filename: str, identifier: str) -> None:
+    def print_warning(expected: str) -> None:
         logging.warning(
             f"{expected} data submitted with incorrect identifier {identifier}"
         )

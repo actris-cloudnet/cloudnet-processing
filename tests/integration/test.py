@@ -7,6 +7,7 @@ import pytest
 import requests
 from cloudnet_api_client import APIClient
 from cloudnet_api_client.containers import Instrument
+
 from processing import utils
 from processing.config import Config
 from processing.dvas import Dvas
@@ -21,7 +22,7 @@ CONFIG = Config()
 
 
 @pytest.fixture(scope="session")
-def processor():
+def processor() -> Processor:
     session = utils.make_session()
     md_api = MetadataApi(CONFIG, session)
     storage_api = StorageApi(CONFIG, session)
@@ -59,7 +60,9 @@ meta_list = [
 
 
 @pytest.mark.parametrize("meta", meta_list)
-def test_instrument_processing(processor: Processor, meta: Meta, tmp_path):
+def test_instrument_processing(
+    processor: Processor, meta: Meta, tmp_path: Path
+) -> None:
     instrument = processor.client.instrument(meta.uuid)
     _submit_file(meta, instrument)
     date = datetime.date.fromisoformat(meta.date)
