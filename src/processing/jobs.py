@@ -89,7 +89,8 @@ def freeze(processor: Processor, params: ProcessParams, directory: Path) -> None
         processor.storage_api.delete_volatile_product(s3key)
     metadata = processor.client.file(file_uuid)
     if processor.md_api.config.is_production:
-        processor.dvas.upload(metadata)
+        ext_metadata = processor.client.file(metadata.uuid)
+        processor.dvas.upload(ext_metadata)
 
 
 def upload_to_dvas(processor: Processor, params: ProcessParams) -> None:
@@ -98,7 +99,8 @@ def upload_to_dvas(processor: Processor, params: ProcessParams) -> None:
         raise utils.SkipTaskError("Product not found")
     if metadata.dvas_id:
         raise utils.SkipTaskError("Already uploaded to DVAS")
-    processor.dvas.upload(metadata)
+    ext_metadata = processor.client.file(metadata.uuid)
+    processor.dvas.upload(ext_metadata)
     logging.info("Uploaded to DVAS")
 
 
