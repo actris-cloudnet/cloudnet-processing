@@ -548,3 +548,61 @@ def test_compare_masks(n_masked: int, expected: NCDiff, tmp_path: Path) -> None:
         var1[:] = array1
         var2[:] = array2
     assert netcdf_comparer.nc_difference(temp1, temp2) == expected
+
+
+@pytest.mark.parametrize(
+    "data1, dims1, data2, dims2, expected",
+    [
+        (np.array([1, 2, 3]), ("time",), np.array([1, 2, 3]), ("time",), NCDiff.NONE),
+        (np.array([1, 2, 3]), ("time",), np.array([3, 2, 1]), ("time",), NCDiff.MAJOR),
+        (np.array([1, 2, 3]), ("time",), np.array([1, 2, 3]), ("range",), NCDiff.MAJOR),
+        (
+            np.array([1]),
+            (),
+            np.array([1, 1, 1]),
+            ("time",),
+            NCDiff.MINOR,
+        ),
+        (np.array([1, 1, 1]), ("time",), np.array([1]), (), NCDiff.MINOR),
+        (
+            np.array([1]),
+            (),
+            np.array([2, 2, 2]),
+            ("time",),
+            NCDiff.MAJOR,
+        ),
+        (
+            np.array([2]),
+            (),
+            np.array([1, 1, 1]),
+            ("time",),
+            NCDiff.MAJOR,
+        ),
+        (np.array([1, 1, 1]), ("time",), np.array([2]), (), NCDiff.MAJOR),
+        (np.array([2, 2, 2]), ("time",), np.array([1]), (), NCDiff.MAJOR),
+        (
+            np.array([1]),
+            (),
+            np.array([[1, 1], [1, 1], [1, 1]]),
+            ("time", "range"),
+            NCDiff.MINOR,
+        ),
+    ],
+)
+def test_different_dimensions(
+    data1: npt.NDArray,
+    dims1: tuple[str, ...],
+    data2: npt.NDArray,
+    dims2: tuple[str, ...],
+    expected: NCDiff,
+    tmp_path: Path,
+) -> None:
+    fname1 = tmp_path / "old.nc"
+    fname2 = tmp_path / "new.nc"
+    for fname, data, dims in zip((fname1, fname2), (data1, data2), (dims1, dims2)):
+        with netCDF4.Dataset(fname, "w") as nc:
+            nc.createDimension("time")
+            nc.createDimension("range")
+            var = nc.createVariable("data", "f4", dims)
+            var[:] = data
+    assert netcdf_comparer.nc_difference(fname1, fname2) == expected
