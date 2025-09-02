@@ -14,6 +14,7 @@ from cloudnet_api_client import APIClient
 from cloudnet_api_client.containers import ExtendedProduct, Product, Site
 from cloudnet_api_client.utils import md5sum
 
+PRODUCTION_URL = "https://cloudnet.fmi.fi"
 DATAPORTAL_URL = os.environ["DATAPORTAL_URL"].rstrip("/")
 DATAPORTAL_AUTH = ("admin", "admin")
 STORAGE_SERVICE_URL = os.environ["STORAGE_SERVICE_URL"].rstrip("/")
@@ -37,18 +38,18 @@ else:
 
 
 class Fetcher:
-    api_url = "https://cloudnet.fmi.fi/api"
-
     def __init__(
         self,
         product: Product | ExtendedProduct,
         site: Site,
         date: datetime.date,
         args: Namespace,
+        api_url: str,
     ) -> None:
         self.product = product
         self.args = args
         self.payload = {"site": site.id, "date": date.isoformat()}
+        self.api_url = api_url + "/api"
 
     def get_raw_instrument_metadata(self) -> list:
         url = f"{self.api_url}/raw-files"
@@ -113,6 +114,50 @@ class Fetcher:
         return res.json()
 
 
+class DiffFetcher:
+    def __init__(
+        self,
+        product: Product | ExtendedProduct,
+        site: Site,
+        date: datetime.date,
+        args: Namespace,
+    ) -> None:
+        self.prod_fetcher = Fetcher(product, site, date, args, PRODUCTION_URL)
+        self.dev_fetcher = Fetcher(product, site, date, args, DATAPORTAL_URL)
+
+    def get_raw_instrument_metadata(self) -> list:
+        return self._call_and_diff("get_raw_instrument_metadata")
+
+    def get_raw_model_metadata(self) -> list:
+        return self._call_and_diff("get_raw_model_metadata")
+
+    def get_product_metadata(self) -> list:
+        return self._call_and_diff("get_product_metadata")
+
+    def get_model_metadata(self) -> list:
+        return self._call_and_diff("get_model_metadata")
+
+    def _call_and_diff(self, method: str) -> list:
+        prod_meta = getattr(self.prod_fetcher, method)()
+        if not prod_meta:
+            print(f"{YELLOW}No files found.{RESET}")
+            return []
+        dev_meta = getattr(self.dev_fetcher, method)()
+        existing_checksums = {row["checksum"] for row in dev_meta}
+        existing_files = []
+        missing_files = []
+        for row in prod_meta:
+            if row["checksum"] in existing_checksums:
+                existing_files.append(row)
+            else:
+                missing_files.append(row)
+        if existing_files:
+            n_exist = len(existing_files)
+            n_total = len(prod_meta)
+            print(f"{GREEN}{n_exist}/{n_total} files already fetched.{RESET}")
+        return missing_files
+
+
 def fetch(
     product: Product,
     site: Site,
@@ -130,33 +175,25 @@ def fetch(
     else:
         args.instrument_pids = None
 
-    fetcher = Fetcher(product, site, date, args)
+    fetcher = DiffFetcher(product, site, date, args)
 
     if args.raw:
         if "instrument" in product.type:
             print(f"\n{BOLD}Raw instrument files for {date}:{RESET}\n")
             meta = fetcher.get_raw_instrument_metadata()
-            if not meta:
-                print(f"{YELLOW}No files found.{RESET}")
             _process_metadata(_submit_upload, meta)
             _fetch_calibration(meta)
         elif args.models:
             print(f"\n{BOLD}Raw model files for {date}:{RESET}\n")
             meta = fetcher.get_raw_model_metadata()
-            if not meta:
-                print(f"{YELLOW}No files found.{RESET}")
             _process_metadata(_submit_upload, meta)
         elif not (args.instruments or args.models):
             print(f"\n{BOLD}Raw instrument files for {date}:{RESET}\n")
             meta = fetcher.get_raw_instrument_metadata()
-            if not meta:
-                print(f"{YELLOW}No files found.{RESET}")
             _process_metadata(_submit_upload, meta)
             _fetch_calibration(meta)
             print(f"\n{BOLD}Raw model files for {date}:{RESET}\n")
             meta = fetcher.get_raw_model_metadata()
-            if not meta:
-                print(f"{YELLOW}No files found.{RESET}")
             _process_metadata(_submit_upload, meta)
     elif product.id == "model":
         meta = fetcher.get_model_metadata()
