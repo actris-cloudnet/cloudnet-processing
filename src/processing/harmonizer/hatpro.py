@@ -1,6 +1,7 @@
 import datetime
 import shutil
 from tempfile import NamedTemporaryFile
+from uuid import UUID
 
 import cloudnetpy.exceptions
 import cloudnetpy.utils
@@ -9,10 +10,10 @@ import numpy as np
 from cloudnetpy.instruments import instruments
 
 from processing.harmonizer import core
-from processing.utils import MiscError
+from processing.utils import MiscError, utctoday
 
 
-def harmonize_hatpro_file(data: dict) -> str:
+def harmonize_hatpro_file(data: dict) -> UUID:
     """Harmonizes calibrated HATPRO netCDF file."""
     if "output_path" not in data:
         temp_file = NamedTemporaryFile()
@@ -95,7 +96,7 @@ class HatproNc(core.Level1Nc):
         key = "time_reference"
         if key in self.nc_raw.variables:
             if self.nc_raw.variables[key][:] != 1:  # not UTC
-                raise ValueError
+                raise ValueError("Local time is not supported")
 
     def _get_valid_timestamps(self) -> list:
         time_stamps = self.nc_raw.variables["time"][:]
@@ -103,8 +104,8 @@ class HatproNc(core.Level1Nc):
         expected_date = self.data["date"].split("-")
         valid_ind = []
         for ind, t in enumerate(time_stamps):
-            if (0 < t < 24 and epoch == expected_date) or (
-                cloudnetpy.utils.seconds2date(t, epoch)[:3] == expected_date
+            if (0 < t < 24 and epoch.date() == expected_date) or (
+                cloudnetpy.utils.seconds2date(t, epoch).date() == expected_date
             ):
                 valid_ind.append(ind)
         if not valid_ind:
@@ -137,8 +138,8 @@ class HatproNc(core.Level1Nc):
         self._copy_global_attributes()
 
 
-def _get_epoch(units: str) -> tuple[int, int, int]:
-    fallback = 2001, 1, 1
+def _get_epoch(units: str) -> datetime.datetime:
+    fallback = datetime.datetime(2001, 1, 1, tzinfo=datetime.timezone.utc)
     try:
         date = units.split()[2]
     except IndexError:
@@ -152,7 +153,7 @@ def _get_epoch(units: str) -> tuple[int, int, int]:
         except ValueError:
             return fallback
     year, month, day = date_components
-    current_year = datetime.datetime.today().year
+    current_year = utctoday().year
     if (1900 < year <= current_year) and (0 < month < 13) and (0 < day < 32):
-        return year, month, day
+        return datetime.datetime(year, month, day, tzinfo=datetime.timezone.utc)
     return fallback

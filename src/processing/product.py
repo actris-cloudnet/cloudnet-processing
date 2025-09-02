@@ -2,11 +2,12 @@ import datetime
 import importlib
 import logging
 from pathlib import Path
+from typing import TypedDict, cast
 from uuid import UUID
 
 import netCDF4
 from cloudnet_api_client.containers import ProductMetadata
-from cloudnetpy.categorize import generate_categorize
+from cloudnetpy.categorize import CategorizeInput, generate_categorize
 from cloudnetpy.exceptions import CloudnetException, ModelDataError
 from cloudnetpy.model_evaluation.products import product_resampling
 from cloudnetpy.products import (
@@ -31,7 +32,7 @@ def process_product(
     pid_to_new_file = None
     if existing_product := processor.get_product(params):
         if existing_product.volatile:
-            uuid.volatile = str(existing_product.uuid)
+            uuid.volatile = existing_product.uuid
         filename = existing_product.filename
         existing_file = processor.storage_api.download_product(
             existing_product, directory
@@ -75,7 +76,7 @@ def process_product(
         if difference == NCDiff.NONE:
             upload = False
             new_file = existing_file
-            uuid.product = str(existing_product.uuid)
+            uuid.product = existing_product.uuid
         elif difference == NCDiff.MINOR:
             # Replace existing file
             patch = True
@@ -83,7 +84,7 @@ def process_product(
                 processor.pid_utils.add_pid_to_file(new_file, existing_product.pid)
             with netCDF4.Dataset(new_file, "r+") as nc:
                 nc.file_uuid = str(existing_product.uuid)
-            uuid.product = str(existing_product.uuid)
+            uuid.product = existing_product.uuid
 
     if upload:
         processor.upload_file(params, new_file, filename, volatile, patch)
@@ -95,7 +96,7 @@ def process_product(
             new_file,
             params.product.id,
             params.model.id,
-            UUID(uuid.product),
+            uuid.product,
             filename,
             directory,
         )
@@ -103,7 +104,7 @@ def process_product(
         processor.create_and_upload_images(
             new_file,
             params.product.id,
-            UUID(uuid.product),
+            uuid.product,
             filename,
             directory,
         )
@@ -112,7 +113,7 @@ def process_product(
     )
     utils.print_info(uuid, volatile, patch, upload, qc_result)
     if processor.md_api.config.is_production and isinstance(params, ProductParams):
-        _update_dvas_metadata(processor, UUID(uuid.product))
+        _update_dvas_metadata(processor, uuid.product)
 
 
 def _generate_filename(params: ProductParams | ModelParams) -> str:
@@ -157,13 +158,11 @@ def _process_mwrpy(
             if params.instrument.instrument_id == "lhumpro"
             else generate_mwr_single
         )
-        uuid.product = fun(str(l1c_file), str(output_file), uuid.volatile)
+        uuid.product = fun(l1c_file, output_file, uuid.volatile)
     else:
         if params.instrument.instrument_id == "lhumpro":
             raise utils.SkipTaskError("Cannot generate mwr-multi from LHUMPRO")
-        uuid.product = generate_mwr_multi(
-            str(l1c_file), str(output_file), uuid.volatile
-        )
+        uuid.product = generate_mwr_multi(l1c_file, output_file, uuid.volatile)
     return output_file
 
 
@@ -184,9 +183,13 @@ def _process_cpr_simulation(
     _check_response(metadata, "categorize")
     categorize_file = processor.storage_api.download_product(metadata[0], directory)
     output_file = directory / "output.nc"
-    uuid.product = orbital.simulate_cloudnet(
-        str(categorize_file), str(output_file), mean_wind=6, uuid=uuid.volatile
+    uuid_str = orbital.simulate_cloudnet(
+        str(categorize_file),
+        str(output_file),
+        mean_wind=6,
+        uuid=str(uuid.volatile) if uuid.volatile is not None else None,
     )
+    uuid.product = UUID(uuid_str)
     utils.add_global_attributes(output_file)
     return output_file
 
@@ -228,7 +231,7 @@ def _process_epsilon_from_lidar(
 
     output_file = directory / "output.nc"
     uuid.product = generate_epsilon_from_lidar(
-        file_lidar, file_wind, str(output_file), uuid.volatile
+        file_lidar, file_wind, output_file, uuid.volatile
     )
     return output_file
 
@@ -240,9 +243,7 @@ def _process_categorize(
     is_voodoo = params.product.id == "categorize-voodoo"
     meta_records = _get_level1b_metadata_for_categorize(processor, params, is_voodoo)
     paths = processor.storage_api.download_products(meta_records.values(), directory)
-    input_files: dict[str, str | list[str]] = {
-        product: str(path) for product, path in zip(meta_records.keys(), paths)
-    }
+    input_files = cast(CategorizeInput, dict(zip(meta_records.keys(), paths)))
     if is_voodoo:
         input_files["lv0_files"], lv0_uuid = _get_input_files_for_voodoo(
             processor, params, directory, meta_records["radar"]
@@ -252,19 +253,17 @@ def _process_categorize(
     output_path = directory / "output.nc"
     try:
         uuid.product = generate_categorize(
-            input_files, str(output_path), uuid=uuid.volatile, options=options
+            input_files, output_path, uuid=uuid.volatile, options=options
         )
         uuid.raw.extend(lv0_uuid)
     except ModelDataError as exc:
         gdas1_meta = processor.get_product(params, product_id="model", model_id="gdas1")
         if not gdas1_meta:
             raise SkipTaskError("Bad model data and no gdas1") from exc
-        input_files["model"] = str(
-            processor.storage_api.download_product(gdas1_meta, directory)
+        input_files["model"] = processor.storage_api.download_product(
+            gdas1_meta, directory
         )
-        uuid.product = generate_categorize(
-            input_files, str(output_path), uuid=uuid.volatile
-        )
+        uuid.product = generate_categorize(input_files, output_path, uuid=uuid.volatile)
     return output_path
 
 
@@ -304,9 +303,9 @@ def _process_l3(
     uuid.product = product_resampling.process_L3_day_product(
         params.model.id,
         l3_prod,
-        [str(model_file)],
-        str(product_file),
-        str(output_file),
+        [model_file],
+        product_file,
+        output_file,
         uuid=uuid.volatile,
         overwrite=True,
     )
@@ -339,7 +338,7 @@ def _process_level2(
     )
     output_file = directory / "output.nc"
     fun = getattr(module, f"generate_{prod}")
-    uuid.product = fun(categorize_file, str(output_file), uuid=uuid.volatile)
+    uuid.product = fun(categorize_file, output_file, uuid=uuid.volatile)
     return output_file
 
 
@@ -473,7 +472,7 @@ def _get_input_files_for_voodoo(
     params: ProductParams,
     directory: Path,
     metadata: ProductMetadata,
-) -> tuple[list[str], list[str]]:
+) -> tuple[list[Path], list[UUID]]:
     assert metadata.instrument is not None
     try:
         (
@@ -489,7 +488,7 @@ def _get_input_files_for_voodoo(
         )
     except RawDataMissingError:
         raise SkipTaskError("Missing rpg-fmcw-94 Level 0 data.")
-    return [str(path) for path in full_paths], uuids
+    return full_paths, uuids
 
 
 def _update_dvas_metadata(processor: Processor, uuid: UUID) -> None:

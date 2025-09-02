@@ -1,5 +1,6 @@
 import shutil
 from tempfile import NamedTemporaryFile
+from uuid import UUID
 
 import netCDF4
 import numpy as np
@@ -9,7 +10,7 @@ from processing.harmonizer import core
 from processing.utils import MiscError
 
 
-def harmonize_halo_calibrated_file(data: dict) -> str:
+def harmonize_halo_calibrated_file(data: dict) -> UUID:
     """Harmonizes calibrated HALO Doppler lidar netCDF file."""
     if "output_path" not in data:
         temp_file = NamedTemporaryFile()

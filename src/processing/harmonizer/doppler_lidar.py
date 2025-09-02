@@ -1,6 +1,7 @@
 import re
 import shutil
 from tempfile import NamedTemporaryFile
+from uuid import UUID
 
 import netCDF4
 import numpy as np
@@ -12,7 +13,7 @@ from processing.utils import MiscError
 
 def harmonize_doppler_lidar_wind_file(
     data: dict, instrument: instruments.Instrument
-) -> str:
+) -> UUID:
     """Harmonizes Doppler lidar wind netCDF file."""
     if "output_path" not in data:
         temp_file = NamedTemporaryFile()
@@ -43,7 +44,7 @@ def harmonize_doppler_lidar_wind_file(
 
 def harmonize_doppler_lidar_stare_file(
     data: dict, instrument: instruments.Instrument
-) -> str:
+) -> UUID:
     """Harmonizes Doppler lidar wind netCDF file."""
     if "output_path" not in data:
         temp_file = NamedTemporaryFile()

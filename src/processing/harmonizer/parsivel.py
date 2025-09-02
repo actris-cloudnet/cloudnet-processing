@@ -1,6 +1,7 @@
 import logging
 import shutil
 from tempfile import NamedTemporaryFile
+from uuid import UUID
 
 import netCDF4
 import numpy as np
@@ -92,7 +93,7 @@ DIAMETERS = [
 ]
 
 
-def harmonize_parsivel_file(data: dict) -> str:
+def harmonize_parsivel_file(data: dict) -> UUID:
     if "output_path" not in data:
         temp_file = NamedTemporaryFile()
     with (

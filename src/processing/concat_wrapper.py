@@ -1,5 +1,6 @@
 """Module containing helper functions for CH15k concatenation."""
 
+import datetime
 import shutil
 from pathlib import Path
 
@@ -10,7 +11,7 @@ from cloudnetpy.utils import get_epoch, seconds2date
 
 def concat_netcdf_files(
     files: list[Path],
-    date: str,
+    date: datetime.date,
     output_file: Path,
     concat_dimension: str = "time",
     variables: list | None = None,
@@ -33,26 +34,28 @@ def concat_netcdf_files(
             continue
         epoch = get_epoch(time_units)
         for timestamp in time_array:
-            if seconds2date(timestamp, epoch)[:3] == date.split("-"):
+            if seconds2date(timestamp, epoch).date() == date:
                 valid_files.append(file)
                 break
 
     clib.concatenate_files(
         valid_files,
-        str(output_file),
+        output_file,
         concat_dimension=concat_dimension,
         variables=variables,
     )
     return valid_files
 
 
-def concat_chm15k_files(files: list, date: str, output_file: str) -> list:
+def concat_chm15k_files(
+    files: list[Path], date: datetime.date, output_file: Path
+) -> list:
     """Concatenate several small chm15k files into a daily file.
 
     Args:
-        files (list): list of file to be concatenated.
-        date (str): Measurement date 'YYYY-MM-DD'.
-        output_file (str): Output file name, e.g., 20201012_bucharest_chm15k.nc.
+        files: list of file to be concatenated.
+        date: Measurement date.
+        output_file: Output file name, e.g., 20201012_bucharest_chm15k.nc.
 
     Returns:
         list: list of files that were valid and actually used in the concatenation.
@@ -73,19 +76,17 @@ def concat_chm15k_files(files: list, date: str, output_file: str) -> list:
     return valid_files
 
 
-def _remove_files_with_wrong_date(files: list, date_str: str) -> list:
+def _remove_files_with_wrong_date(files: list, date: datetime.date) -> list:
     """Remove files that contain wrong date."""
-    date = date_str.split("-")
-    date_as_ints = [int(x) for x in date]
     valid_files = []
     for file in files:
         with netCDF4.Dataset(file) as nc:
-            if _validate_date_attributes(nc, date_as_ints):
+            if _validate_date_attributes(nc, (date.year, date.month, date.day)):
                 valid_files.append(file)
     return valid_files
 
 
-def _validate_date_attributes(obj: netCDF4.Dataset, date: list) -> bool:
+def _validate_date_attributes(obj: netCDF4.Dataset, date: tuple[int, int, int]) -> bool:
     for ind, attr in enumerate(("year", "month", "day")):
         if getattr(obj, attr) != date[ind]:
             return False

@@ -1,5 +1,6 @@
 import logging
 import re
+from uuid import UUID
 
 import cftime
 import cloudnetpy.exceptions
@@ -123,10 +124,10 @@ class Level1Nc:
         self.nc.title = cloudnetpy.output.get_l1b_title(instrument, location)
         self.nc.references = cloudnetpy.output.get_references()
 
-    def add_uuid(self) -> str:
+    def add_uuid(self) -> UUID:
         """Adds UUID."""
-        uuid = self.data["uuid"] or cloudnetpy.utils.get_uuid()
-        self.nc.file_uuid = uuid
+        uuid = cloudnetpy.utils.get_uuid(self.data.get("uuid"))
+        self.nc.file_uuid = str(uuid)
         return uuid
 
     def add_history(self, product: str, source: str = "history") -> None:
@@ -142,7 +143,9 @@ class Level1Nc:
 
     def add_date(self) -> None:
         """Adds date attributes."""
-        self.nc.year, self.nc.month, self.nc.day = self.data["date"].split("-")
+        self.nc.year = str(self.data["date"].year)
+        self.nc.month = str(self.data["date"].month).zfill(2)
+        self.nc.day = str(self.data["date"].day).zfill(2)
 
     def harmonize_attribute(self, attribute: str, keys: tuple | None = None) -> None:
         """Harmonizes variable attributes."""

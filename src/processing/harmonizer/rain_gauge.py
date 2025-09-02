@@ -2,6 +2,7 @@ import logging
 import shutil
 from tempfile import NamedTemporaryFile
 from typing import Final
+from uuid import UUID
 
 import netCDF4
 from cloudnetpy.instruments import Instrument, instruments
@@ -30,15 +31,15 @@ VALID_KEYS = (
 )
 
 
-def harmonize_thies_pt_nc(data: dict) -> str:
+def harmonize_thies_pt_nc(data: dict) -> UUID:
     return _harmonize(data, instruments.THIES_PT)
 
 
-def harmonize_pluvio_nc(data: dict) -> str:
+def harmonize_pluvio_nc(data: dict) -> UUID:
     return _harmonize(data, instruments.PLUVIO2)
 
 
-def _harmonize(data: dict, instrument: Instrument) -> str:
+def _harmonize(data: dict, instrument: Instrument) -> UUID:
     if "output_path" not in data:
         temp_file = NamedTemporaryFile()
     with (

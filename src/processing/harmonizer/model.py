@@ -1,5 +1,6 @@
 import shutil
 from tempfile import NamedTemporaryFile
+from uuid import UUID
 
 import netCDF4
 
@@ -7,7 +8,7 @@ from processing.harmonizer import core
 from processing.utils import MiscError
 
 
-def harmonize_model_file(data: dict) -> str:
+def harmonize_model_file(data: dict) -> UUID:
     """Harmonizes model netCDF file."""
     if "output_path" not in data:
         temp_file = NamedTemporaryFile()

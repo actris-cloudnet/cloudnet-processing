@@ -8,6 +8,7 @@ import re
 import threading
 from pathlib import Path
 from typing import Iterable
+from uuid import UUID
 
 import requests
 from cloudnet_api_client.containers import (
@@ -46,12 +47,12 @@ class StorageApi:
         self,
         metadata: list[RawMetadata] | list[RawModelMetadata],
         dir_name: Path,
-    ) -> tuple[list[Path], list[str]]:
+    ) -> tuple[list[Path], list[UUID]]:
         """Download raw instrument or model files."""
         full_paths = self._download_parallel(
             metadata, checksum_algorithm="md5", output_directory=dir_name
         )
-        uuids = [str(row.uuid) for row in metadata]
+        uuids = [row.uuid for row in metadata]
         return full_paths, uuids
 
     def download_product(self, metadata: ProductMetadata, dir_name: Path) -> Path:
@@ -59,7 +60,7 @@ class StorageApi:
         full_path = dir_name / metadata.filename
         _download_url(
             url=self._get_download_url(metadata),
-            size=int(metadata.size),
+            size=metadata.size,
             checksum=metadata.checksum,
             checksum_algorithm="sha256",
             output_path=full_path,

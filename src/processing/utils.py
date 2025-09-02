@@ -24,9 +24,9 @@ class Uuid:
     __slots__ = ["raw", "product", "volatile"]
 
     def __init__(self) -> None:
-        self.raw: list[str] = []
-        self.product: str = ""
-        self.volatile: str | None = None
+        self.raw: list[UUID] = []
+        self.product: UUID
+        self.volatile: UUID | None = None
 
 
 class MiscError(Exception):

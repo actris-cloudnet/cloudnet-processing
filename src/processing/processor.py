@@ -159,7 +159,7 @@ class Processor:
         filename_prefix: str | None = None,
         filename_suffix: str | None = None,
         time_offset: datetime.timedelta | None = None,
-    ) -> tuple[list[Path], list[str]]:
+    ) -> tuple[list[Path], list[UUID]]:
         """Download raw files matching the given parameters."""
         if isinstance(date, datetime.date):
             start_date = date
@@ -217,7 +217,7 @@ class Processor:
 
         if time_offset is not None:
             uuids = [
-                str(meta.uuid)
+                meta.uuid
                 for meta in upload_metadata
                 if start_date <= meta.measurement_date <= end_date
             ]
@@ -247,9 +247,9 @@ class Processor:
             payload["instrument"] = params.instrument.instrument_id
         self.md_api.put("files", s3key, payload)
 
-    def update_statuses(self, raw_uuids: list[str], status: str) -> None:
+    def update_statuses(self, raw_uuids: list[UUID], status: str) -> None:
         for raw_uuid in raw_uuids:
-            payload = {"uuid": raw_uuid, "status": status}
+            payload = {"uuid": str(raw_uuid), "status": status}
             self.md_api.post("upload-metadata", payload)
 
     def create_and_upload_images(

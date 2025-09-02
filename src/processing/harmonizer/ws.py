@@ -1,6 +1,7 @@
 import logging
 import shutil
 from tempfile import NamedTemporaryFile
+from uuid import UUID
 
 import netCDF4
 import numpy as np
@@ -44,7 +45,7 @@ VARIABLE_MAP = {
 }
 
 
-def harmonize_ws_file(data: dict) -> str:
+def harmonize_ws_file(data: dict) -> UUID:
     """Harmonizes weather station netCDF file."""
     if "output_path" not in data:
         temp_file = NamedTemporaryFile()
