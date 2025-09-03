@@ -152,6 +152,16 @@ class NetCDFComparator:
 
             old_var = self.old.variables[var]
             new_var = self.new.variables[var]
+
+            if (
+                old_var.dimensions == new_var.dimensions
+                and old_var.shape != new_var.shape
+            ):
+                logging.info(
+                    f"Variable '{var}' shapes differ: {old_var.shape} vs {new_var.shape}"
+                )
+                return NCDiff.MAJOR
+
             smaller_var, larger_var = sorted(
                 [old_var, new_var], key=lambda variable: len(variable.shape)
             )
