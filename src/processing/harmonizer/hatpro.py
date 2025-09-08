@@ -101,7 +101,7 @@ class HatproNc(core.Level1Nc):
     def _get_valid_timestamps(self) -> list:
         time_stamps = self.nc_raw.variables["time"][:]
         epoch = _get_epoch(self.nc_raw.variables["time"].units)
-        expected_date = self.data["date"].split("-")
+        expected_date = self.data["date"]
         valid_ind = []
         for ind, t in enumerate(time_stamps):
             if (0 < t < 24 and epoch.date() == expected_date) or (
