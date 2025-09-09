@@ -2,6 +2,7 @@ import datetime
 import logging
 from dataclasses import asdict, dataclass
 from pathlib import Path
+from urllib.error import HTTPError
 from uuid import UUID
 
 import numpy as np
@@ -142,6 +143,82 @@ class Processor:
             status=["uploaded", "processed"],
         )
         return [row for row in rows if row.size > MIN_MODEL_FILESIZE]
+
+    def find_instrument_product(
+        self,
+        params: ProcessParams,
+        product_id: str,
+        fallback: list[str] = [],
+        require: list[str] = [],
+        exclude: list[str] = [],
+    ) -> ProductMetadata | None:
+        """
+        Retrieve the most suitable instrument product based on specified parameters.
+
+        Args:
+            processor: Processor object used to interact with the metadata API.
+            params: Parameters containing site and date information for the query.
+            product_id: Identifier for the instrument product.
+            fallback: Prioritize instrument types in the specified order if multiple
+                products are available.
+            require: Same as `fallback` but instrument type must one of the
+                explicitly specified ones.
+            exclude: Never choose products with these instrument types.
+
+        Returns:
+            The metadata of the most suitable instrument product, or `None` if no
+            matching metadata is found.
+        """
+        if require and fallback:
+            raise ValueError("Use either require or fallback")
+        if require:
+            fallback = require
+
+        def file_key(file: ProductMetadata) -> int:
+            if (
+                nominal_instrument_pid
+                and file.instrument is not None
+                and file.instrument.pid == nominal_instrument_pid
+            ):
+                return -1
+            try:
+                if file.instrument is None or file.instrument.instrument_id is None:
+                    return 999
+                return fallback.index(file.instrument.instrument_id)
+            except ValueError:
+                return 999
+
+        metadata = self.client.files(
+            site_id=params.site.id,
+            date=params.date,
+            product_id=product_id,
+            instrument_id=require,
+        )
+        metadata = [
+            file
+            for file in metadata
+            if file.instrument and file.instrument.instrument_id not in exclude
+        ]
+        if not metadata:
+            return None
+        nominal_instrument_pid = self._get_nominal_instrument_pid(params, product_id)
+        return min(metadata, key=file_key)
+
+    def _get_nominal_instrument_pid(
+        self, params: ProcessParams, product_id: str
+    ) -> dict | None:
+        payload = {
+            "site": params.site.id,
+            "product": product_id,
+            "date": params.date.isoformat(),
+        }
+        try:
+            metadata = self.md_api.get("api/nominal-instrument", payload)
+            return metadata["nominalInstrument"]["pid"]
+        except HTTPError as err:
+            if err.response.status_code == 404:
+                return None
+            raise
 
     def download_instrument(
         self,
