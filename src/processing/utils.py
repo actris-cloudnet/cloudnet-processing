@@ -271,8 +271,8 @@ def _get_datetime(nc: netCDF4.Dataset, ind: int) -> datetime.datetime:
     try:
         fraction_hour = float(nc.variables["time"][:][ind])
     except IndexError:
-        msg = "Time vector not an array"
-        raise SkipTaskError(msg)
+        msg = "Abort PUT to data portal: time vector not an array"
+        raise MiscError(msg)
     return base + datetime.timedelta(hours=fraction_hour)
 
 
