@@ -650,6 +650,7 @@ class ProcessMwrL1c(ProcessInstrument):
             output_filename,
             site_meta,
             instrument_type=instrument_type,
+            lidar_file=self._get_lidar_file(),
             **self._kwargs,
         )
 
@@ -669,6 +670,14 @@ class ProcessMwrL1c(ProcessInstrument):
         if "time_offset" in data:
             data["time_offset"] = datetime.timedelta(minutes=data["time_offset"])
         return data
+
+    def _get_lidar_file(self) -> Path | None:
+        lidar_file = self.processor.find_instrument_product(self.params, "lidar")
+        if lidar_file:
+            return self.processor.client.download(
+                [lidar_file], self.raw_dir, progress=False
+            )[0]
+        return None
 
 
 class ProcessMwr(ProcessInstrument):
