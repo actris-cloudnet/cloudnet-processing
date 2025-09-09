@@ -16,6 +16,7 @@ from cloudnetpy.products import (
     generate_mwr_single,
 )
 from cloudnetpy.products.epsilon import generate_epsilon_from_lidar
+from numpy import ma
 from orbital_radar import Suborbital
 from requests import HTTPError
 
@@ -158,12 +159,38 @@ def _process_mwrpy(
             if params.instrument.instrument_id == "lhumpro"
             else generate_mwr_single
         )
-        uuid.product = fun(l1c_file, output_file, uuid.volatile)
+        offset_previous_date = _get_lwp_offset(processor, params, date_diff=-1)[-1]
+        offset_next_date = _get_lwp_offset(processor, params, date_diff=1)[0]
+        lwp_offset = (offset_previous_date, offset_next_date)
+        uuid.product = fun(l1c_file, output_file, uuid.volatile, lwp_offset=lwp_offset)
+        with netCDF4.Dataset(output_file, "r") as nc:
+            offset = nc.variables["lwp_offset"][:]
+            body = {"lwpOffset": [float(offset[0]), float(offset[-1])]}
+            processor.md_api.put_calibration(params.instrument.pid, params.date, body)
     else:
         if params.instrument.instrument_id == "lhumpro":
             raise utils.SkipTaskError("Cannot generate mwr-multi from LHUMPRO")
         uuid.product = generate_mwr_multi(l1c_file, output_file, uuid.volatile)
     return output_file
+
+
+def _get_lwp_offset(
+    processor: Processor, params: ProductParams, date_diff: int
+) -> tuple[float | None, float | None]:
+    if params.instrument is None:
+        return (None, None)
+    payload = {
+        "date": params.date + datetime.timedelta(days=date_diff),
+        "instrumentPid": params.instrument.pid,
+    }
+    try:
+        res = processor.md_api.get("api/calibration", payload)
+        offset = res.get("data", {}).get("lwpOffset")
+        if offset is not None:
+            return offset
+        return (None, None)
+    except HTTPError as e:
+        return (None, None)
 
 
 def _process_cpr_simulation(
