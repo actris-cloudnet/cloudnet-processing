@@ -2,6 +2,7 @@ import datetime
 import logging
 from dataclasses import asdict, dataclass
 from pathlib import Path
+from platform import processor
 from uuid import UUID
 
 import numpy as np
@@ -203,6 +204,13 @@ class Processor:
             return None
         nominal_instrument_pid = self._get_nominal_instrument_pid(params, product_id)
         return min(metadata, key=file_key)
+
+    def find_optimal_lidar(self, params: ProcessParams) -> ProductMetadata | None:
+        return self.find_instrument_product(
+            params,
+            "lidar",
+            fallback=["chm15k", "chm15kx", "cl61d", "cl51", "cl31"],
+        ) or self.find_instrument_product(params, "doppler-lidar")
 
     def _get_nominal_instrument_pid(
         self, params: ProcessParams, product_id: str

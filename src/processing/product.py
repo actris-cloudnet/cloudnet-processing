@@ -393,14 +393,7 @@ def _get_level1b_metadata_for_categorize(
                 exclude=["mira-10"],
             )
         ),
-        "lidar": (
-            processor.find_instrument_product(
-                params,
-                "lidar",
-                fallback=["chm15k", "chm15kx", "cl61d", "cl51", "cl31"],
-            )
-            or processor.find_instrument_product(params, "doppler-lidar")
-        ),
+        "lidar": processor.find_optimal_lidar(params),
         "disdrometer": processor.find_instrument_product(
             params, "disdrometer", fallback=["thies-lnm", "parsivel"]
         ),
