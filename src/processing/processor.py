@@ -2,7 +2,6 @@ import datetime
 import logging
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from urllib.error import HTTPError
 from uuid import UUID
 
 import numpy as np
@@ -18,6 +17,7 @@ from cloudnetpy.model_evaluation.plotting.plotting import generate_L3_day_plots
 from cloudnetpy.plotting import Dimensions, PlotParameters, generate_figure
 from cloudnetpy_qc import quality
 from cloudnetpy_qc.quality import ErrorLevel
+from requests.exceptions import HTTPError
 
 import housekeeping
 from processing import utils
