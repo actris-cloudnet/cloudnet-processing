@@ -645,14 +645,20 @@ class ProcessMwrL1c(ProcessInstrument):
             coeff_paths.append(full_path)
         site_meta["coefficientFiles"] = coeff_paths
 
+        lidar_file, lidar_uuid = self._get_lidar_file()
+
         self.uuid.product = hatpro2l1c(
             self.raw_dir,
             output_filename,
             site_meta,
             instrument_type=instrument_type,
-            lidar_file=self._get_lidar_file(),
+            lidar_file=lidar_file,
             **self._kwargs,
         )
+
+        if lidar_file is not None:
+            with netCDF4.Dataset(output_filename, "r+") as nc:
+                nc.setncattr("source_file_uuids", str(lidar_uuid))
 
     def _get_calibration_data(self) -> dict:
         payload = {
@@ -671,13 +677,13 @@ class ProcessMwrL1c(ProcessInstrument):
             data["time_offset"] = datetime.timedelta(minutes=data["time_offset"])
         return data
 
-    def _get_lidar_file(self) -> Path | None:
+    def _get_lidar_file(self) -> tuple[Path | None, UUID | None]:
         lidar_file = self.processor.find_instrument_product(self.params, "lidar")
         if lidar_file:
             return self.processor.client.download(
                 [lidar_file], self.raw_dir, progress=False
-            )[0]
-        return None
+            )[0], lidar_file.uuid
+        return None, None
 
 
 class ProcessMwr(ProcessInstrument):
