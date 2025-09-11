@@ -14,7 +14,12 @@ from types import FrameType
 
 import torch
 from cloudnet_api_client import APIClient
-from cloudnet_api_client.containers import ExtendedInstrument, ExtendedProduct, Site
+from cloudnet_api_client.containers import (
+    ExtendedInstrument,
+    ExtendedProduct,
+    Instrument,
+    Site,
+)
 
 from processing import utils
 from processing.config import Config
@@ -243,8 +248,15 @@ class Worker:
                 self.publish_followup_task(derived_product, params, instrument=None)
             elif product.id == "lidar" and derived_product.id == "mwr-l1c":
                 # there can be multiple MWRs, process all
-                for instrument in self._fetch_mwrpy_instruments(params):
-                    self.publish_followup_task(derived_product, params, instrument)
+                for instrument in self._fetch_mwrpy_instruments(
+                    params, derived_product
+                ):
+                    self.publish_followup_task(
+                        derived_product,
+                        params,
+                        instrument,
+                        delay=datetime.timedelta(minutes=5),
+                    )
             else:
                 assert isinstance(params, (InstrumentParams, ProductParams))
                 self.publish_followup_task(derived_product, params, params.instrument)
@@ -254,6 +266,7 @@ class Worker:
         derived_product: ExtendedProduct,
         params: ProcessParams,
         instrument: ExtendedInstrument | None,
+        delay: datetime.timedelta | None = None,
     ) -> None:
         metadata = self.client.files(
             site_id=params.site.id,
@@ -264,6 +277,8 @@ class Worker:
         is_freezed = len(metadata) == 1 and not metadata[0].volatile
         if is_freezed:
             delay = datetime.timedelta(hours=1)
+        elif delay is not None:
+            delay = delay
         elif len(derived_product.source_product_ids) > 1:
             delay = datetime.timedelta(minutes=15)
         else:
@@ -290,15 +305,14 @@ class Worker:
         res.raise_for_status()
 
     def _fetch_mwrpy_instruments(
-        self, params: ProcessParams
-    ) -> list[ExtendedInstrument]:
-        metadata = self.client.files(
+        self, params: ProcessParams, derived_product: ExtendedProduct
+    ) -> set[Instrument]:
+        metadata = self.client.raw_files(
             site_id=params.site.id,
             date=params.date,
-            product_id="mwr-l1c",
+            instrument_id=derived_product.source_instrument_ids,
         )
-        instrument_ids = {m.instrument.instrument_id for m in metadata if m.instrument}
-        return [self.client.instrument(id) for id in instrument_ids]
+        return {m.instrument for m in metadata}
 
 
 def _should_skip_derived_product(product: ExtendedProduct) -> bool:
