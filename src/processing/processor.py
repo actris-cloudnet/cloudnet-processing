@@ -2,7 +2,6 @@ import datetime
 import logging
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from platform import processor
 from uuid import UUID
 
 import numpy as np

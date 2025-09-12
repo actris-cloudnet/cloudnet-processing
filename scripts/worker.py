@@ -15,7 +15,6 @@ from types import FrameType
 import torch
 from cloudnet_api_client import APIClient
 from cloudnet_api_client.containers import (
-    ExtendedInstrument,
     ExtendedProduct,
     Instrument,
     Site,
@@ -265,7 +264,7 @@ class Worker:
         self,
         derived_product: ExtendedProduct,
         params: ProcessParams,
-        instrument: ExtendedInstrument | None,
+        instrument: Instrument | None,
         delay: datetime.timedelta | None = None,
     ) -> None:
         metadata = self.client.files(
@@ -310,7 +309,7 @@ class Worker:
         metadata = self.client.raw_files(
             site_id=params.site.id,
             date=params.date,
-            instrument_id=derived_product.source_instrument_ids,
+            instrument_id=list(derived_product.source_instrument_ids),
         )
         return {m.instrument for m in metadata}
 
