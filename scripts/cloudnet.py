@@ -362,11 +362,7 @@ def _process_file(
                 date=date,
                 product_id=mapping.get(product.id),
             )
-            instruments = {
-                processor.client.instrument(meta.instrument.uuid)
-                for meta in product_metadata
-                if meta.instrument
-            }
+            instruments = {m.instrument for m in product_metadata if m.instrument}
         for instrument in instruments:
             product_params = ProductParams(
                 site=site,
