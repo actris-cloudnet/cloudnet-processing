@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 
+import argparse
 import datetime
 import logging
 import signal
 import traceback
+from argparse import Namespace
 from io import StringIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -62,7 +64,7 @@ class MemoryLogger:
 
 
 class Worker:
-    def __init__(self, config: Config) -> None:
+    def __init__(self, config: Config, queue: str | None) -> None:
         self.config = config
         self.dataportal_url = config.dataportal_url
         self.session = utils.make_session()
@@ -74,15 +76,17 @@ class Worker:
         self.processor = Processor(md_api, storage_api, pid_utils, dvas, self.client)
         self.logger = MemoryLogger()
         self.n_processed_tasks = 0
+        self.queue = queue
 
     def process_task(self) -> bool:
         """Get task from queue and process it. Returns True if a task was
         processed, or False if there's was no task to process."""
-        res = self.session.post(f"{self.dataportal_url}/queue/receive")
-        if res.status_code == 204:
+        if self.queue:
+            task = self.get_task(self.queue) or self.get_task()
+        else:
+            task = self.get_task()
+        if task is None:
             return False
-        res.raise_for_status()
-        task = res.json()
         self.logger.clear_memory()
         logging.info(f"Processing task: {task}")
         try:
@@ -216,6 +220,14 @@ class Worker:
         self.n_processed_tasks += 1
         return True
 
+    def get_task(self, queue: str | None = None) -> dict | None:
+        params = {"queue": queue} if queue is not None else None
+        res = self.session.post(f"{self.dataportal_url}/queue/receive", params=params)
+        if res.status_code == 204:
+            return None
+        res.raise_for_status()
+        return res.json()
+
     def publish_followup_tasks(
         self, site: Site, product: ExtendedProduct, params: ProcessParams
     ) -> None:
@@ -278,9 +290,23 @@ class Worker:
         res.raise_for_status()
 
 
+def _parse_args() -> Namespace:
+    parser = argparse.ArgumentParser(
+        description="Cloudnet processing worker.",
+        epilog="Enjoy the program! :)",
+    )
+    parser.add_argument(
+        "--queue",
+        help="Process tasks from this queue, or from default queue if the specified queue is empty",
+    )
+    args = parser.parse_args()
+    return args
+
+
 def main() -> None:
     config = Config()
-    worker = Worker(config)
+    args = _parse_args()
+    worker = Worker(config, args.queue)
     exit = Event()
 
     def signal_handler(sig: int, frame: FrameType | None) -> None:

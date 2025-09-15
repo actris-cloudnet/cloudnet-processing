@@ -106,6 +106,12 @@ Options:
 
 Launch a worker with `./scripts/worker.py` to process incoming _tasks_. Used mainly in production to process data in real-time.
 
+Options:
+
+| Short | Long       | Description                                                                           |
+| :---- | :--------- | :------------------------------------------------------------------------------------ |
+|       | `--queue ` | Process tasks from this queue, or from default queue if the specified queue is empty. |
+
 ## Licence
 
 MIT
