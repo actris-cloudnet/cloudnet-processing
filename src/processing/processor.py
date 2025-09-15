@@ -31,8 +31,8 @@ TIMEDELTA_ZERO = datetime.timedelta(0)
 
 
 from cloudnet_api_client.containers import (
-    ExtendedInstrument,
     ExtendedProduct,
+    Instrument,
     Model,
     Site,
 )
@@ -59,12 +59,12 @@ class ModelParams(ProcessParams):
 
 @dataclass(frozen=True)
 class InstrumentParams(ProcessParams):
-    instrument: ExtendedInstrument
+    instrument: Instrument
 
 
 @dataclass(frozen=True)
 class ProductParams(ProcessParams):
-    instrument: ExtendedInstrument | None
+    instrument: Instrument | None
 
 
 class Processor:

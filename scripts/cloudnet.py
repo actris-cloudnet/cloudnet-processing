@@ -20,6 +20,7 @@ from uuid import UUID
 from cloudnet_api_client import APIClient
 from cloudnet_api_client.containers import (
     ExtendedProduct,
+    Instrument,
     ProductMetadata,
     RawMetadata,
     Site,
@@ -300,30 +301,31 @@ def _process_file(
                 else:
                     process_model(processor, model_params, directory)
     elif product.source_instrument_ids:
+        # Instrument products
         if args.cmd == "dvas":
             raise SkipTaskError("DVAS not supported for instrument products")
         if args.uuids:
-            instruments = {processor.client.instrument(uuid) for uuid in args.uuids}
+            instruments = _get_instruments_for_product(processor.client, product, args)
         else:
+            valid_instruments = list(
+                (set(args.instruments) & product.source_instrument_ids)
+                if args.instruments
+                else product.source_instrument_ids
+            )
             file_meta: list[ProductMetadata] | list[RawMetadata]
             file_meta = processor.client.raw_files(
                 site_id=site.id,
                 date=date,
-                instrument_id=args.instruments or list(product.source_instrument_ids),
+                instrument_id=valid_instruments,
             )
             if not file_meta:
                 # No raw data, but we can still have fetched products
                 file_meta = processor.client.files(
                     site_id=site.id,
                     date=date,
-                    instrument_id=args.instruments
-                    or list(product.source_instrument_ids),
+                    instrument_id=valid_instruments,
                 )
-            instruments = {
-                processor.client.instrument(meta.instrument.uuid)
-                for meta in file_meta
-                if meta.instrument
-            }
+            instruments = {m.instrument for m in file_meta if m.instrument}
         for instrument in instruments:
             instru_params = InstrumentParams(
                 site=site, date=date, product=product, instrument=instrument
@@ -348,7 +350,7 @@ def _process_file(
         if args.cmd in ("dvas", "hkd"):
             raise SkipTaskError(f"{args.cmd.upper()} not supported for {product.id}")
         if args.uuids:
-            instruments = {processor.client.instrument(uuid) for uuid in args.uuids}
+            instruments = _get_instruments_for_product(processor.client, product, args)
         else:
             mapping = {
                 "mwr-single": "mwr-l1c",
@@ -425,6 +427,13 @@ def _process_file(
                 raise SkipTaskError("HKD not supported for geophysical products")
             else:
                 process_product(processor, product_params, directory)
+
+
+def _get_instruments_for_product(
+    client: APIClient, product: ExtendedProduct, args: Namespace
+) -> set[Instrument]:
+    instruments = {client.instrument(uuid) for uuid in args.uuids}
+    return {i for i in instruments if i.instrument_id in product.source_instrument_ids}
 
 
 def _validate_types(types: str, client: APIClient) -> list[str]:
