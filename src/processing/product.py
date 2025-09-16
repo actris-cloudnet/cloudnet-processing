@@ -159,9 +159,9 @@ def _process_mwrpy(
             if params.instrument.instrument_id == "lhumpro"
             else generate_mwr_single
         )
-        offset_previous_date = _get_lwp_offset(processor, params, date_diff=-1)[-1]
-        offset_next_date = _get_lwp_offset(processor, params, date_diff=1)[0]
-        lwp_offset = (offset_previous_date, offset_next_date)
+        offsets_previous_date = _get_lwp_offset(processor, params, date_diff=-1)
+        offsets_next_date = _get_lwp_offset(processor, params, date_diff=1)
+        lwp_offset = (offsets_previous_date[-1], offsets_next_date[0])
         uuid.product = fun(l1c_file, output_file, uuid.volatile, lwp_offset=lwp_offset)
         with netCDF4.Dataset(output_file, "r") as nc:
             offset = nc.variables["lwp_offset"][:]
@@ -182,12 +182,13 @@ def _get_lwp_offset(
     payload = {
         "date": params.date + datetime.timedelta(days=date_diff),
         "instrumentPid": params.instrument.pid,
+        "strictDate": True,
     }
     try:
         res = processor.md_api.get("api/calibration", payload)
-        offset = res.get("data", {}).get("lwpOffset")
-        if offset is not None:
-            return offset
+        offsets = res.get("data", {}).get("lwpOffset")
+        if offsets is not None:
+            return offsets
         return (None, None)
     except HTTPError as e:
         return (None, None)
