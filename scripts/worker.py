@@ -309,7 +309,7 @@ class Worker:
         metadata = self.client.raw_files(
             site_id=params.site.id,
             date=params.date,
-            instrument_id=list(derived_product.source_instrument_ids),
+            instrument_id=derived_product.source_instrument_ids,
         )
         return {m.instrument for m in metadata}
 
