@@ -14,7 +14,11 @@ from types import FrameType
 
 import torch
 from cloudnet_api_client import APIClient
-from cloudnet_api_client.containers import ExtendedProduct, Site
+from cloudnet_api_client.containers import (
+    ExtendedProduct,
+    Instrument,
+    Site,
+)
 
 from processing import utils
 from processing.config import Config
@@ -236,46 +240,55 @@ class Worker:
             logging.info("Site is model / hidden, will not publish followup tasks")
             return
         for product_id in product.derived_product_ids:
-            self.publish_followup_task(product_id, params)
+            derived_product = self.client.product(product_id)
+            if _should_skip_derived_product(product, derived_product):
+                continue
+            elif "instrument" not in derived_product.type:
+                self.publish_followup_task(derived_product, params, instrument=None)
+            elif product.id == "lidar" and derived_product.id == "mwr-l1c":
+                # there can be multiple MWRs, process all
+                for instrument in self._fetch_mwrpy_instruments(
+                    params, derived_product
+                ):
+                    self.publish_followup_task(
+                        derived_product,
+                        params,
+                        instrument,
+                        delay=datetime.timedelta(minutes=5),
+                    )
+            else:
+                assert isinstance(params, (InstrumentParams, ProductParams))
+                self.publish_followup_task(derived_product, params, params.instrument)
 
-    def publish_followup_task(self, product_id: str, params: ProcessParams) -> None:
-        product = self.client.product(product_id)
-        if product.experimental and product.id not in (
-            "cpr-simulation",
-            "epsilon-lidar",
-        ):
-            logging.info(
-                f"Will not publish task for experimental product: {product.id}"
-            )
-            return
-
-        if "instrument" in product.type:
-            assert isinstance(params, InstrumentParams | ProductParams)
-            instrument = params.instrument
-        else:
-            instrument = None
-
+    def publish_followup_task(
+        self,
+        derived_product: ExtendedProduct,
+        params: ProcessParams,
+        instrument: Instrument | None,
+        delay: datetime.timedelta | None = None,
+    ) -> None:
         metadata = self.client.files(
             site_id=params.site.id,
-            date=params.date.isoformat(),
-            product_id=product.id,
+            date=params.date,
+            product_id=derived_product.id,
             instrument_pid=instrument.pid if instrument else None,
         )
         is_freezed = len(metadata) == 1 and not metadata[0].volatile
         if is_freezed:
             delay = datetime.timedelta(hours=1)
-        elif len(product.source_product_ids) > 1:
+        elif delay is not None:
+            delay = delay
+        elif len(derived_product.source_product_ids) > 1:
             delay = datetime.timedelta(minutes=15)
         else:
             delay = datetime.timedelta(seconds=0)
         scheduled_at = utcnow() + delay
         diff_days = abs((utctoday() - params.date) / datetime.timedelta(days=1))
         priority = min(diff_days, 10)
-
         task = {
             "type": "process",
             "siteId": params.site.id,
-            "productId": product.id,
+            "productId": derived_product.id,
             "measurementDate": params.date.isoformat(),
             "scheduledAt": scheduled_at.isoformat(),
             "priority": priority,
@@ -289,6 +302,29 @@ class Worker:
             auth=self.config.data_submission_auth,
         )
         res.raise_for_status()
+
+    def _fetch_mwrpy_instruments(
+        self, params: ProcessParams, derived_product: ExtendedProduct
+    ) -> set[Instrument]:
+        metadata = self.client.raw_files(
+            site_id=params.site.id,
+            date=params.date,
+            instrument_id=derived_product.source_instrument_ids,
+        )
+        return {m.instrument for m in metadata}
+
+
+def _should_skip_derived_product(
+    product: ExtendedProduct, derived_product: ExtendedProduct
+) -> bool:
+    if derived_product.id == "cpr-simulation":
+        return False
+    if not product.experimental and derived_product.experimental:
+        logging.info(
+            f"Will not publish task for experimental product {derived_product.id} from stable product {product.id}"
+        )
+        return True
+    return False
 
 
 def _parse_args() -> Namespace:

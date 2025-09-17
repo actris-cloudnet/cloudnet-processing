@@ -46,6 +46,19 @@ class MetadataApi:
         res.raise_for_status()
         return res
 
+    def put_calibration(
+        self, instrument_pid: str, date: datetime.date, data: dict
+    ) -> requests.Response:
+        url = f"{self._url}/api/calibration"
+        res = self.session.put(
+            url,
+            json=data,
+            params={"instrumentPid": instrument_pid, "date": date.isoformat()},
+            auth=self._auth,
+        )
+        res.raise_for_status()
+        return res
+
     def delete(self, end_point: str, params: dict | None = None) -> requests.Response:
         """Delete Cloudnet metadata."""
         url = f"{self._url}/{end_point}"

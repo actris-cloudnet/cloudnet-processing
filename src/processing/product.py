@@ -2,7 +2,7 @@ import datetime
 import importlib
 import logging
 from pathlib import Path
-from typing import TypedDict, cast
+from typing import cast
 from uuid import UUID
 
 import netCDF4
@@ -16,6 +16,7 @@ from cloudnetpy.products import (
     generate_mwr_single,
 )
 from cloudnetpy.products.epsilon import generate_epsilon_from_lidar
+from numpy import ma
 from orbital_radar import Suborbital
 from requests import HTTPError
 
@@ -158,12 +159,39 @@ def _process_mwrpy(
             if params.instrument.instrument_id == "lhumpro"
             else generate_mwr_single
         )
-        uuid.product = fun(l1c_file, output_file, uuid.volatile)
+        offsets_previous_date = _get_lwp_offset(processor, params, date_diff=-1)
+        offsets_next_date = _get_lwp_offset(processor, params, date_diff=1)
+        lwp_offset = (offsets_previous_date[-1], offsets_next_date[0])
+        uuid.product = fun(l1c_file, output_file, uuid.volatile, lwp_offset=lwp_offset)
+        with netCDF4.Dataset(output_file, "r") as nc:
+            offset = nc.variables["lwp_offset"][:]
+            body = {"lwpOffset": [float(offset[0]), float(offset[-1])]}
+            processor.md_api.put_calibration(params.instrument.pid, params.date, body)
     else:
         if params.instrument.instrument_id == "lhumpro":
             raise utils.SkipTaskError("Cannot generate mwr-multi from LHUMPRO")
         uuid.product = generate_mwr_multi(l1c_file, output_file, uuid.volatile)
     return output_file
+
+
+def _get_lwp_offset(
+    processor: Processor, params: ProductParams, date_diff: int
+) -> tuple[float | None, float | None]:
+    if params.instrument is None:
+        return (None, None)
+    payload = {
+        "date": params.date + datetime.timedelta(days=date_diff),
+        "instrumentPid": params.instrument.pid,
+        "strictDate": True,
+    }
+    try:
+        res = processor.md_api.get("api/calibration", payload)
+        offsets = res.get("data", {}).get("lwpOffset")
+        if offsets is not None:
+            return offsets
+        return (None, None)
+    except HTTPError as e:
+        return (None, None)
 
 
 def _process_cpr_simulation(
@@ -348,38 +376,27 @@ def _get_level1b_metadata_for_categorize(
     meta_records = {
         "model": processor.get_product(params, product_id="model"),
         "mwr": (
-            _find_instrument_product(processor, params, "mwr-single")
-            or _find_instrument_product(
-                processor, params, "mwr", fallback=["hatpro", "radiometrics"]
+            processor.find_instrument_product(params, "mwr-single")
+            or processor.find_instrument_product(
+                params, "mwr", fallback=["hatpro", "radiometrics"]
             )
-            or _find_instrument_product(
-                processor, params, "radar", require=["rpg-fmcw-35", "rpg-fmcw-94"]
+            or processor.find_instrument_product(
+                params, "radar", require=["rpg-fmcw-35", "rpg-fmcw-94"]
             )
         ),
         "radar": (
-            _find_instrument_product(
-                processor, params, "radar", require=["rpg-fmcw-94"]
-            )
+            processor.find_instrument_product(params, "radar", require=["rpg-fmcw-94"])
             if is_voodoo
-            else _find_instrument_product(
-                processor,
+            else processor.find_instrument_product(
                 params,
                 "radar",
                 fallback=["mira-35", "rpg-fmcw-35", "rpg-fmcw-94", "copernicus"],
                 exclude=["mira-10"],
             )
         ),
-        "lidar": (
-            _find_instrument_product(
-                processor,
-                params,
-                "lidar",
-                fallback=["chm15k", "chm15kx", "cl61d", "cl51", "cl31"],
-            )
-            or _find_instrument_product(processor, params, "doppler-lidar")
-        ),
-        "disdrometer": _find_instrument_product(
-            processor, params, "disdrometer", fallback=["thies-lnm", "parsivel"]
+        "lidar": processor.find_optimal_lidar(params),
+        "disdrometer": processor.find_instrument_product(
+            params, "disdrometer", fallback=["thies-lnm", "parsivel"]
         ),
     }
     optional_products = ["disdrometer", "mwr"]
@@ -387,84 +404,6 @@ def _get_level1b_metadata_for_categorize(
         if product not in optional_products and metadata is None:
             raise SkipTaskError(f"Missing required input product: {product}")
     return {key: value for key, value in meta_records.items() if value is not None}
-
-
-def _find_instrument_product(
-    processor: Processor,
-    params: ProductParams,
-    product_id: str,
-    fallback: list[str] = [],
-    require: list[str] = [],
-    exclude: list[str] = [],
-) -> ProductMetadata | None:
-    """
-    Retrieve the most suitable instrument product based on specified parameters.
-
-    Args:
-        processor: Processor object used to interact with the metadata API.
-        params: Parameters containing site and date information for the query.
-        product_id: Identifier for the instrument product.
-        fallback: Prioritize instrument types in the specified order if multiple
-            products are available.
-        require: Same as `fallback` but instrument type must one of the
-            explicitly specified ones.
-        exclude: Never choose products with these instrument types.
-
-    Returns:
-        The metadata of the most suitable instrument product, or `None` if no
-        matching metadata is found.
-    """
-    if require and fallback:
-        raise ValueError("Use either require or fallback")
-    if require:
-        fallback = require
-
-    def file_key(file: ProductMetadata) -> int:
-        if (
-            nominal_instrument_pid
-            and file.instrument is not None
-            and file.instrument.pid == nominal_instrument_pid
-        ):
-            return -1
-        try:
-            if file.instrument is None or file.instrument.instrument_id is None:
-                return 999
-            return fallback.index(file.instrument.instrument_id)
-        except ValueError:
-            return 999
-
-    metadata = processor.client.files(
-        site_id=params.site.id,
-        date=params.date,
-        product_id=product_id,
-        instrument_id=require,
-    )
-    metadata = [
-        file
-        for file in metadata
-        if file.instrument and file.instrument.instrument_id not in exclude
-    ]
-    if not metadata:
-        return None
-    nominal_instrument_pid = _get_nominal_instrument_pid(processor, params, product_id)
-    return min(metadata, key=file_key)
-
-
-def _get_nominal_instrument_pid(
-    processor: Processor, params: ProductParams, product_id: str
-) -> dict | None:
-    payload = {
-        "site": params.site.id,
-        "product": product_id,
-        "date": params.date.isoformat(),
-    }
-    try:
-        metadata = processor.md_api.get("api/nominal-instrument", payload)
-        return metadata["nominalInstrument"]["pid"]
-    except HTTPError as err:
-        if err.response.status_code == 404:
-            return None
-        raise
 
 
 def _get_input_files_for_voodoo(
