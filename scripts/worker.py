@@ -241,7 +241,7 @@ class Worker:
             return
         for product_id in product.derived_product_ids:
             derived_product = self.client.product(product_id)
-            if _should_skip_derived_product(derived_product):
+            if _should_skip_derived_product(product, derived_product):
                 continue
             elif "instrument" not in derived_product.type:
                 self.publish_followup_task(derived_product, params, instrument=None)
@@ -314,12 +314,15 @@ class Worker:
         return {m.instrument for m in metadata}
 
 
-def _should_skip_derived_product(product: ExtendedProduct) -> bool:
-    if product.experimental and product.id not in (
-        "cpr-simulation",
-        "epsilon-lidar",
-    ):
-        logging.info(f"Will not publish task for experimental product: {product.id}")
+def _should_skip_derived_product(
+    product: ExtendedProduct, derived_product: ExtendedProduct
+) -> bool:
+    if derived_product.id == "cpr-simulation":
+        return False
+    if not product.experimental and derived_product.experimental:
+        logging.info(
+            f"Will not publish task for experimental product {derived_product.id} from stable product {product.id}"
+        )
         return True
     return False
 
