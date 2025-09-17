@@ -12,6 +12,7 @@ from tempfile import TemporaryDirectory
 from threading import Event
 from types import FrameType
 
+import torch
 from cloudnet_api_client import APIClient
 from cloudnet_api_client.containers import ExtendedProduct, Site
 
@@ -308,6 +309,11 @@ def main() -> None:
     args = _parse_args()
     worker = Worker(config, args.queue)
     exit = Event()
+
+    # Limit number of threads for VOODOO. In production, the numbers are set too
+    # high by default.
+    torch.set_num_threads(2)
+    torch.set_num_interop_threads(2)
 
     def signal_handler(sig: int, frame: FrameType | None) -> None:
         logging.info("Received termination signal")
