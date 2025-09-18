@@ -165,7 +165,11 @@ def _process_mwrpy(
         uuid.product = fun(l1c_file, output_file, uuid.volatile, lwp_offset=lwp_offset)
         with netCDF4.Dataset(output_file, "r") as nc:
             offset = nc.variables["lwp_offset"][:]
-            body = {"lwpOffset": [float(offset[0]), float(offset[-1])]}
+            valid = offset[~ma.getmaskarray(offset)]
+            values: list[float | None] = (
+                [None, None] if valid.size == 0 else [float(valid[0]), float(valid[-1])]
+            )
+            body = {"lwpOffset": values}
             processor.md_api.put_calibration(params.instrument.pid, params.date, body)
     else:
         if params.instrument.instrument_id == "lhumpro":
