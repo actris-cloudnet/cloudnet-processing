@@ -103,11 +103,11 @@ class HatproNc(core.Level1Nc):
         epoch = _get_epoch(self.nc_raw.variables["time"].units)
         expected_date = self.data["date"]
         valid_ind = []
-        for ind, t in enumerate(time_stamps):
+        for t_ind, t in enumerate(time_stamps):
             if (0 < t < 24 and epoch.date() == expected_date) or (
                 cloudnetpy.utils.seconds2date(t, epoch).date() == expected_date
             ):
-                valid_ind.append(ind)
+                valid_ind.append(t_ind)
         if not valid_ind:
             raise cloudnetpy.exceptions.ValidTimeStampError
         _, ind = np.unique(time_stamps[valid_ind], return_index=True)
