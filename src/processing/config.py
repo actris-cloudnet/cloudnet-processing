@@ -27,3 +27,13 @@ class Config:
         self.dvas_password = environ["DVAS_PASSWORD"]
         self.dvas_provider_id = "11"  # CLU
         self.housekeeping_retention = datetime.timedelta(days=30)
+        self.cpu_limit = (
+            _parse_cpu_limit(environ["CPU_LIMIT"]) if "CPU_LIMIT" in environ else None
+        )
+
+
+def _parse_cpu_limit(value: str) -> float:
+    # Kubernetes "millicpu"
+    if value.endswith("m"):
+        return int(value[:-1]) / 1000
+    return float(value)

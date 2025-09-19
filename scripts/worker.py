@@ -3,6 +3,7 @@
 import argparse
 import datetime
 import logging
+import math
 import signal
 import traceback
 from argparse import Namespace
@@ -350,8 +351,11 @@ def main() -> None:
 
     # Limit number of threads for VOODOO. In production, the numbers are set too
     # high by default.
-    torch.set_num_threads(2)
-    torch.set_num_interop_threads(2)
+    if config.cpu_limit is not None:
+        n_threads = math.ceil(config.cpu_limit)
+        logging.info("Limit number of pytorch threads to %d", n_threads)
+        torch.set_num_threads(n_threads)
+        torch.set_num_interop_threads(n_threads)
 
     def signal_handler(sig: int, frame: FrameType | None) -> None:
         logging.info("Received termination signal")
