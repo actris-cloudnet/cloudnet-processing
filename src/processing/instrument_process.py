@@ -517,6 +517,9 @@ class ProcessLidar(ProcessInstrument):
     def process_ld40(self) -> NoReturn:
         raise NotImplementedError()
 
+    def process_da10(self) -> NoReturn:
+        raise NotImplementedError()
+
     def process_cl31(self) -> None:
         full_paths, self.uuid.raw = self.download_instrument()
         full_paths.sort()
