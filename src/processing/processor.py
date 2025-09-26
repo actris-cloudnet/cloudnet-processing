@@ -384,6 +384,10 @@ class Processor:
     def _get_fields_for_plot(self, product_id: str) -> tuple[list, int]:
         variables = self.md_api.get(f"api/products/{product_id}/variables")
         variable_ids = [var["id"] for var in variables]
+        # Deprecated variables can not be easily removed from the database
+        # so we filter them out here manually:
+        if product_id == "classification":
+            variable_ids = [v for v in variable_ids if v != "detection_status"]
         match product_id:
             case "lwc" | "der" | "mwr" | "mwr-single" | "mwr-multi":
                 max_alt = 6
