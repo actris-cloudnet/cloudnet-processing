@@ -21,7 +21,7 @@ dependencies = [
   "ceilopyter",
   "cftime",
   "cloudnet-api-client>=0.12.4",
-  "cloudnetpy[extras]>=1.81.0",
+  "cloudnetpy[extras]>=1.83.1",
   "cloudnetpy_qc>=1.26.3",
   "doppy>=0.5.5",
   "influxdb-client",
