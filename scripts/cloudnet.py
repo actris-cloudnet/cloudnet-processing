@@ -441,6 +441,8 @@ def _validate_types(types: str, client: APIClient) -> list[str]:
 
 
 def _validate_sites(sites: str, client: APIClient) -> list[str]:
+    if sites == "cloudnet":
+        return [s.id for s in client.sites() if "cloudnet" in s.type]
     input_sites = sites.split(",")
     valid_sites = {s.id for s in client.sites()}
     if invalid_sites := set(input_sites) - valid_sites:
