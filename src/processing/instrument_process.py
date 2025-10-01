@@ -517,9 +517,6 @@ class ProcessLidar(ProcessInstrument):
     def process_ld40(self) -> NoReturn:
         raise NotImplementedError()
 
-    def process_da10(self) -> NoReturn:
-        raise NotImplementedError()
-
     def process_cl31(self) -> None:
         full_paths, self.uuid.raw = self.download_instrument()
         full_paths.sort()
@@ -572,6 +569,18 @@ class ProcessLidar(ProcessInstrument):
         if not valid_full_paths:
             raise RawDataMissingError()
         self._call_ceilo2nc("cl61d")
+        self.uuid.raw = _get_valid_uuids(raw_uuids, full_paths, valid_full_paths)
+
+    def process_da10(self) -> None:
+        full_paths, raw_uuids = self.download_instrument()
+        valid_full_paths = concat_wrapper.concat_netcdf_files(
+            full_paths,
+            self.params.date,
+            self.daily_path,
+        )
+        if not valid_full_paths:
+            raise RawDataMissingError()
+        self._call_ceilo2nc("da10")
         self.uuid.raw = _get_valid_uuids(raw_uuids, full_paths, valid_full_paths)
 
     def _call_ceilo2nc(self, model: str) -> None:
