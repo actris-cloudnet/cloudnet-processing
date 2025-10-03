@@ -213,7 +213,7 @@ class ParsivelNc(core.Level1Nc):
 
         if key in ("time", "Meas_Time"):
             dtype = "f8"
-        elif key in ("diameter_bnds", "T_Sensor"):
+        elif key in ("diameter_bnds", "T_Sensor", "rr", "v"):
             dtype = "f4"
         elif key in ("data_raw", "M", "Data_Raw"):
             dtype = "i2"

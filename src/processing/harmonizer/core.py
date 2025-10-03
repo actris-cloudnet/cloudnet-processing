@@ -254,7 +254,7 @@ class Level1Nc:
                     f"Variable '{variable}' has unsupported units: {units}"
                 )
         if factor:
-            self.nc.variables[variable][:] *= factor
+            self.nc.variables[variable][:] = self.nc.variables[variable][:] * factor
             logging.info(f"Converting {variable} from {units} to {target_unit}.")
         self.nc.variables[variable].units = target_unit
 
