@@ -241,7 +241,7 @@ class ParsivelNc(core.Level1Nc):
         self, variable: netCDF4.Variable, dtype: str
     ) -> int | float | str | None:
         bad_values = self._find_bad_values(variable)
-        if isinstance(variable, ma.MaskedArray) or bad_values.any():
+        if isinstance(variable[:], ma.MaskedArray) or bad_values.any():
             return netCDF4.default_fillvals[dtype]
         return None
 
