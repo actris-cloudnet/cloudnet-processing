@@ -240,8 +240,8 @@ class Processor:
         include_tag_subset: set[str] | None = None,
         exclude_tag_subset: set[str] | None = None,
         allow_empty: bool = False,
-        filename_prefix: str | None = None,
-        filename_suffix: str | None = None,
+        filename_prefix: set[str] | str | None = None,
+        filename_suffix: set[str] | str | None = None,
         time_offset: datetime.timedelta | None = None,
     ) -> tuple[list[Path], list[UUID]]:
         """Download raw files matching the given parameters."""

@@ -95,8 +95,8 @@ class ProcessInstrument:
         exclude_tag_subset: set[str] | None = None,
         date: datetime.date | tuple[datetime.date, datetime.date] | None = None,
         allow_empty: bool = False,
-        filename_prefix: str | None = None,
-        filename_suffix: str | None = None,
+        filename_prefix: set[str] | str | None = None,
+        filename_suffix: set[str] | str | None = None,
         subdir: str | None = None,
         time_offset: datetime.timedelta | None = None,
     ) -> tuple[list[Path], list[UUID]]:
@@ -159,7 +159,11 @@ class ProcessRadar(ProcessInstrument):
         )
 
     def process_mira_35(self) -> None:
-        full_paths, self.uuid.raw = self.download_instrument()
+        full_paths, self.uuid.raw = self.download_instrument(
+            filename_suffix=".znc", allow_empty=True, exclude_pattern="_[a-z_]+.znc"
+        )
+        if not full_paths:
+            full_paths, self.uuid.raw = self.download_instrument()
         full_paths = _unzip_gz_files(full_paths)
         full_paths = self._fix_suffices(full_paths, ".mmclx")
         for key in ("azimuth_offset", "zenith_offset", "snr_limit"):
