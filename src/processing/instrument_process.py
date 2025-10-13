@@ -146,7 +146,6 @@ class ProcessRadar(ProcessInstrument):
     def process_mira_10(self) -> None:
         full_paths, self.uuid.raw = self.download_instrument()
         full_paths = _unzip_gz_files(full_paths)
-        full_paths = self._fix_suffices(full_paths, ".znc")
         for key in ("azimuth_offset", "zenith_offset", "snr_limit"):
             self._add_calibration(key)
         output_filename, site_meta = self._args
@@ -160,12 +159,11 @@ class ProcessRadar(ProcessInstrument):
 
     def process_mira_35(self) -> None:
         full_paths, self.uuid.raw = self.download_instrument(
-            filename_suffix=".znc", allow_empty=True, exclude_pattern="_[a-z_]+.znc"
+            filename_suffix=".znc", allow_empty=True, exclude_pattern=r"_[a-z_]+\.znc"
         )
         if not full_paths:
             full_paths, self.uuid.raw = self.download_instrument()
         full_paths = _unzip_gz_files(full_paths)
-        full_paths = self._fix_suffices(full_paths, ".mmclx")
         for key in ("azimuth_offset", "zenith_offset", "snr_limit"):
             self._add_calibration(key)
         output_filename, site_meta = self._args
@@ -192,18 +190,6 @@ class ProcessRadar(ProcessInstrument):
     def process_galileo(self) -> None:
         full_paths, self.uuid.raw = self.download_instrument()
         self.uuid.product = galileo2nc(self.raw_dir, *self._args, **self._kwargs)
-
-    @staticmethod
-    def _fix_suffices(full_paths: list[Path], suffix: str) -> list[Path]:
-        """Fixes filenames that have incorrect suffix."""
-        out_paths = []
-        for filename in full_paths:
-            if filename.suffix != suffix:
-                filename = filename.rename(
-                    filename.with_name(f"{filename.name}{suffix}")
-                )
-            out_paths.append(filename)
-        return out_paths
 
     def _add_calibration(
         self,
