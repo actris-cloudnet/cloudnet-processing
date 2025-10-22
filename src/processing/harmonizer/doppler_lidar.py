@@ -207,7 +207,8 @@ class DopplerLidarStareNc(core.Level1Nc):
 def _harmonise_doppler_lidar_serial_number(serial_number: str) -> str:
     if match_ := re.match(r"wls\d+s?-(\d+)", serial_number, re.IGNORECASE):
         return match_.group(1)
-    elif match_ := re.match(r"wcs0*(\d+)", serial_number, re.IGNORECASE):
+    if match_ := re.match(r"wcs0*(\d+)", serial_number, re.IGNORECASE):
         return match_.group(1)
-    else:
-        return serial_number
+    # Remove leading zero from HALO serial number. In Jülich 2025-09-26 the
+    # serial number changed from 17 to 017.
+    return serial_number.lstrip("0")
