@@ -185,6 +185,7 @@ class ProcessRadar(ProcessInstrument):
     def process_copernicus(self) -> None:
         full_paths, self.uuid.raw = self.download_instrument()
         self._add_calibration("range_offset", 0)
+        self._add_calibration("Zh_offset", 0)
         self.uuid.product = copernicus2nc(self.raw_dir, *self._args, **self._kwargs)
 
     def process_galileo(self) -> None:
