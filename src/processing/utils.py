@@ -128,25 +128,60 @@ def send_slack_alert(
 
     timestamp = datetime.datetime.now(datetime.timezone.utc)
     msg += f"*Time:* {timestamp:%Y-%m-%d %H:%M:%S}\n\n"
-    msg += f"*Error:* {exception}"
+    msg += f"*{exception.__class__.__name__}"
+    if error := str(exception):
+        msg += f":* {error}"
+    else:
+        msg += "*"
 
-    payload = {
-        "content": log or "(empty log)",
-        "channels": config.slack_channel_id,
-        "title": "Full log",
-        "initial_comment": msg,
-    }
+    try:
+        _post_message(config.slack_api_token, config.slack_channel_id, msg, log)
+    except:
+        logging.exception("Failed to send Slack notification")
 
-    session = make_session()
-    r = session.post(
-        "https://slack.com/api/files.upload",
-        data=payload,
-        headers={"Authorization": f"Bearer {config.slack_api_token}"},
-    )
-    r.raise_for_status()
-    body = r.json()
-    if not body["ok"]:
-        logging.fatal(f"Failed to send Slack notification: {body.text}")
+
+def _post_message(
+    token: str, channel_id: str, msg: str, log: str | None = None
+) -> None:
+    headers = {"Authorization": f"Bearer {token}"}
+    if log:
+        log_bytes = log.encode()
+        r = requests.post(
+            "https://slack.com/api/files.getUploadURLExternal",
+            data={"length": len(log_bytes), "filename": "log.txt"},
+            headers=headers,
+        )
+        r.raise_for_status()
+        body = r.json()
+        if not body["ok"]:
+            raise RuntimeError(r.text)
+        upload_url = body["upload_url"]
+        file_id = body["file_id"]
+        r = requests.post(upload_url, data=log_bytes)
+        r.raise_for_status()
+        r = requests.post(
+            "https://slack.com/api/files.completeUploadExternal",
+            json={
+                "files": [{"id": file_id, "title": "Full log"}],
+                "channel_id": channel_id,
+                "initial_comment": msg,
+            },
+            headers=headers,
+        )
+        r.raise_for_status()
+        body = r.json()
+        if not body["ok"]:
+            raise RuntimeError(r.text)
+    else:
+        r = requests.post(
+            "https://slack.com/api/chat.postMessage",
+            json={"channel": channel_id, "text": msg},
+            headers=headers,
+        )
+        r.raise_for_status()
+        body = r.json()
+        if not body["ok"]:
+            raise RuntimeError(r.text)
 
 
 def add_global_attributes(full_path: Path, instrument_pid: str | None = None) -> None:
