@@ -163,6 +163,16 @@ class ProcessRadar(ProcessInstrument):
         )
         if not full_paths:
             full_paths, self.uuid.raw = self.download_instrument()
+            if self.params.site.id == "chilbolton":
+                # 2021-2022 30 min of data in previous day
+                previous_date = self.params.date - datetime.timedelta(days=1)
+                prefix = f"{previous_date.strftime('%Y%m%d')}_23"
+                paths_previous, uuids_previous = self.download_instrument(
+                    date=previous_date, filename_prefix=prefix, allow_empty=True
+                )
+                full_paths.extend(paths_previous)
+                self.uuid.raw.extend(uuids_previous)
+
         full_paths = _unzip_gz_files(full_paths)
         for key in ("azimuth_offset", "zenith_offset", "snr_limit"):
             self._add_calibration(key)
