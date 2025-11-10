@@ -49,4 +49,4 @@ services:
       - "dataportal-backend"
       - "storage-service"
     env_file:
-      - ../dev.env
+      - ../dev.env.template
