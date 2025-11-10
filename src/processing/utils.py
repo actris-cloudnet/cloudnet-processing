@@ -275,6 +275,8 @@ def create_product_put_payload(
             payload["software"]["model-munger"] = version
         if version := getattr(nc, "ceilopyter_version", None):
             payload["software"]["ceilopyter"] = version
+        if version := getattr(nc, "earthcare_downloader_version", None):
+            payload["software"]["earthcare-downloader"] = version
     return payload
 
 

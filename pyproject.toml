@@ -24,6 +24,7 @@ dependencies = [
   "cloudnetpy[extras]>=1.85.0",
   "cloudnetpy_qc>=1.27.3",
   "doppy>=0.5.5",
+  "earthcare-downloader",
   "influxdb-client",
   "model-munger",
   "orbital-radar @ git+https://github.com/actris-cloudnet/orbital-radar.git@v0.0.4",

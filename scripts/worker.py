@@ -317,6 +317,7 @@ class Worker:
 
 def _should_skip_derived_product(derived_product: ExtendedProduct) -> bool:
     if derived_product.id in (
+        "cpr-validation",
         "cpr-simulation",
         "epsilon-lidar",
         "classification-voodoo",

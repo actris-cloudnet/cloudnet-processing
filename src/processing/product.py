@@ -20,6 +20,7 @@ from numpy import ma
 from orbital_radar import Suborbital
 from requests import HTTPError
 
+from earthcare.ec import MissingEarthCAREDataError, cloudnet_earthcare
 from processing import utils
 from processing.netcdf_comparer import NCDiff, nc_difference
 from processing.processor import ModelParams, Processor, ProductParams
@@ -53,6 +54,8 @@ def process_product(
             new_file = _process_categorize(processor, params, uuid, directory)
         elif params.product.id == "cpr-simulation":
             new_file = _process_cpr_simulation(processor, params, uuid, directory)
+        elif params.product.id == "cpr-validation":
+            new_file = _process_cpr_validation(processor, params, uuid, directory)
         elif params.product.id == "epsilon-lidar":
             new_file = _process_epsilon_from_lidar(processor, params, uuid, directory)
         else:
@@ -201,11 +204,7 @@ def _get_lwp_offset(
 def _process_cpr_simulation(
     processor: Processor, params: ProductParams, uuid: Uuid, directory: Path
 ) -> Path:
-    earthcare_launch_date = datetime.date(2024, 5, 28)
-    if params.date < earthcare_launch_date:
-        raise SkipTaskError(
-            "CPR simulation is only feasible for dates before 2024-05-28"
-        )
+    _check_cpr_date(params)
     orbital = Suborbital()
     metadata = processor.client.files(
         site_id=params.site.id,
@@ -224,6 +223,43 @@ def _process_cpr_simulation(
     uuid.product = UUID(uuid_str)
     utils.add_global_attributes(output_file)
     return output_file
+
+
+def _process_cpr_validation(
+    processor: Processor, params: ProductParams, uuid: Uuid, directory: Path
+) -> Path:
+    _check_cpr_date(params)
+    cpr_simu_metadata = processor.client.files(
+        site_id=params.site.id,
+        date=params.date,
+        product_id="cpr-simulation",
+    )
+    _check_response(cpr_simu_metadata, "cpr-simulation")
+    cpr_simu_file = processor.storage_api.download_product(
+        cpr_simu_metadata[0], directory
+    )
+    output_file = directory / "output.nc"
+    try:
+        uuid_str = cloudnet_earthcare(
+            params.site.id,
+            cpr_simu_file,
+            output_file,
+            cache_dir=directory
+            if processor.md_api.config.is_production
+            else Path("/tmp"),
+            uuid=uuid.volatile if uuid.volatile is not None else None,
+        )
+    except MissingEarthCAREDataError:
+        raise SkipTaskError("Missing EarthCARE data")
+    uuid.product = UUID(uuid_str)
+    utils.add_global_attributes(output_file)
+    return output_file
+
+
+def _check_cpr_date(params: ProductParams) -> None:
+    earthcare_launch_date = datetime.date(2024, 5, 28)
+    if params.date < earthcare_launch_date:
+        raise SkipTaskError("CPR products only feasible for dates before 2024-05-28")
 
 
 def _process_epsilon_from_lidar(

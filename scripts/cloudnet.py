@@ -478,7 +478,7 @@ def _validate_products(products: str, client: APIClient) -> list[str]:
                 product_types = ["doppler-lidar", "doppler-lidar-wind", "epsilon-lidar"]
                 accepted_products.extend(product_types)
             case "cpr":
-                accepted_products.extend(["cpr-simulation"])
+                accepted_products.extend(["cpr-simulation", "cpr-validation"])
             case prod if prod in valid_products:
                 accepted_products.append(prod)
             case prod:
