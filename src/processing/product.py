@@ -16,6 +16,7 @@ from cloudnetpy.products import (
     generate_mwr_single,
 )
 from cloudnetpy.products.epsilon import generate_epsilon_from_lidar
+from earthcare_downloader import search
 from numpy import ma
 from orbital_radar import Suborbital
 from requests import HTTPError
@@ -205,15 +206,16 @@ def _process_cpr_simulation(
     processor: Processor, params: ProductParams, uuid: Uuid, directory: Path
 ) -> Path:
     _check_cpr_date(params)
-    orbital = Suborbital()
     metadata = processor.client.files(
         site_id=params.site.id,
         date=params.date,
         product_id="categorize",
     )
     _check_response(metadata, "categorize")
+    _check_is_overpass(params)
     categorize_file = processor.storage_api.download_product(metadata[0], directory)
     output_file = directory / "output.nc"
+    orbital = Suborbital()
     uuid_str = orbital.simulate_cloudnet(
         str(categorize_file),
         str(output_file),
@@ -260,6 +262,19 @@ def _check_cpr_date(params: ProductParams) -> None:
     earthcare_launch_date = datetime.date(2024, 5, 28)
     if params.date < earthcare_launch_date:
         raise SkipTaskError("CPR products only feasible for dates before 2024-05-28")
+
+
+def _check_is_overpass(params: ProductParams) -> None:
+    distance_km = 200
+    files = search(
+        product="CPR_NOM_1B",
+        date=params.date,
+        lat=params.site.latitude,
+        lon=params.site.longitude,
+        radius=distance_km,
+    )
+    if not files:
+        raise SkipTaskError("No EarthCARE CPR overpass found.")
 
 
 def _process_epsilon_from_lidar(
