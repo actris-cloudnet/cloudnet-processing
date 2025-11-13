@@ -8,6 +8,10 @@ from cloudnet_api_client.containers import Site
 from cloudnetpy.utils import interpolate_2D_along_y
 
 
+class MissingEarthCAREDataError(Exception):
+    pass
+
+
 def calc_distances(
     latitudes: npt.NDArray, longitudes: npt.NDArray, site: Site
 ) -> np.ndarray:
@@ -48,7 +52,8 @@ class Data:
         target_height = np.linspace(-1, 12, 200)
         for attr in ("echo", "velocity"):
             data = getattr(self, attr)
-
+            if data.mask.all():
+                raise MissingEarthCAREDataError("All data is masked.")
             if self.height.ndim == 2:
                 interpolated_data = ma.masked_all((data.shape[0], len(target_height)))
                 for i in range(data.shape[0]):

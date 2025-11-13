@@ -18,16 +18,12 @@ from numpy import ma
 from processing.utils import utcnow
 
 from . import utils
-from .utils import BasicData, Data
+from .utils import BasicData, Data, MissingEarthCAREDataError
 
 FILE_PATH = Path(__file__).resolve().parent
 
 
 warnings.filterwarnings("ignore", message=".*valid_range not used*")
-
-
-class MissingEarthCAREDataError(Exception):
-    pass
 
 
 @dataclass
