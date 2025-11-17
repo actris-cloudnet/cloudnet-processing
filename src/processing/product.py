@@ -21,7 +21,9 @@ from numpy import ma
 from orbital_radar import Suborbital
 from requests import HTTPError
 
-from earthcare.ec import MissingEarthCAREDataError, cloudnet_earthcare
+from earthcare.classification import cloudnet_vs_ec_classification
+from earthcare.cpr_l1b import cloudnet_vs_cpr_l1b
+from earthcare.utils import MissingEarthCAREDataError
 from processing import utils
 from processing.netcdf_comparer import NCDiff, nc_difference
 from processing.processor import ModelParams, Processor, ProductParams
@@ -57,6 +59,8 @@ def process_product(
             new_file = _process_cpr_simulation(processor, params, uuid, directory)
         elif params.product.id == "cpr-validation":
             new_file = _process_cpr_validation(processor, params, uuid, directory)
+        elif params.product.id == "cpr-tc-validation":
+            new_file = _process_cpr_tc_validation(processor, params, uuid, directory)
         elif params.product.id == "epsilon-lidar":
             new_file = _process_epsilon_from_lidar(processor, params, uuid, directory)
         else:
@@ -242,9 +246,40 @@ def _process_cpr_validation(
     )
     output_file = directory / "output.nc"
     try:
-        uuid_str = cloudnet_earthcare(
+        uuid_str = cloudnet_vs_cpr_l1b(
             params.site.id,
             cpr_simu_file,
+            output_file,
+            cache_dir=directory
+            if processor.md_api.config.is_production
+            else Path("/tmp"),
+            uuid=uuid.volatile if uuid.volatile is not None else None,
+        )
+    except MissingEarthCAREDataError:
+        raise SkipTaskError("Missing EarthCARE data")
+    uuid.product = UUID(uuid_str)
+    utils.add_global_attributes(output_file)
+    return output_file
+
+
+def _process_cpr_tc_validation(
+    processor: Processor, params: ProductParams, uuid: Uuid, directory: Path
+) -> Path:
+    _check_cpr_date(params)
+    metadata = processor.client.files(
+        site_id=params.site.id,
+        date=params.date,
+        product_id="classification",
+    )
+    _check_response(metadata, "classification")
+    _check_is_overpass(params)
+
+    classification_file = processor.storage_api.download_product(metadata[0], directory)
+    output_file = directory / "output.nc"
+    try:
+        uuid_str = cloudnet_vs_ec_classification(
+            params.site.id,
+            classification_file,
             output_file,
             cache_dir=directory
             if processor.md_api.config.is_production
