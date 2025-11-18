@@ -606,3 +606,17 @@ def test_different_dimensions(
             var = nc.createVariable("data", "f4", dims)
             var[:] = data
     assert netcdf_comparer.nc_difference(fname1, fname2) == expected
+
+
+def test_compression(tmp_path: Path) -> None:
+    old_file = tmp_path / "file1.nc"
+    new_file = tmp_path / "file2.nc"
+    with (
+        netCDF4.Dataset(old_file, "w", format="NETCDF4_CLASSIC") as nc1,
+        netCDF4.Dataset(new_file, "w", format="NETCDF4_CLASSIC") as nc2,
+    ):
+        nc1.createDimension("time", 3)
+        nc2.createDimension("time", 3)
+        nc1.createVariable("time", "f8", ("time",), zlib=False)
+        nc2.createVariable("time", "f8", ("time",), zlib=True)
+    assert netcdf_comparer.nc_difference(old_file, new_file) == NCDiff.MINOR

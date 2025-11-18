@@ -59,6 +59,7 @@ class NetCDFComparator:
                 self._compare_global_attributes,
                 self._compare_variable_attributes,
                 self._compare_variable_dtypes,
+                self._compare_variable_filters,
                 self._check_for_new_variables,
                 self._check_for_new_global_attributes,
             ]
@@ -299,6 +300,17 @@ class NetCDFComparator:
                             f"Variable '{var}' attribute '{attr}' values differ: {val_old} vs {val_new}"
                         )
                         return False
+        return True
+
+    def _compare_variable_filters(self) -> bool:
+        for var in self.old.variables:
+            filters_old = self.old.variables[var].filters()
+            filters_new = self.new.variables[var].filters()
+            if filters_old != filters_new:
+                logging.info(
+                    f"Variable '{var}' filters differ: {filters_old} vs {filters_new}"
+                )
+                return False
         return True
 
 
