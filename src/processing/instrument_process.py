@@ -647,17 +647,6 @@ class ProcessMwrL1c(ProcessInstrument):
         output_filename, site_meta = self._args
 
         site_meta = {**site_meta, **calibration}
-        coeff_paths = []
-        for link in calibration["coefficientLinks"]:
-            filename = link.split("/")[-1]
-            full_path = self.raw_dir / filename
-            with open(full_path, "wb") as f:
-                res = self.processor.md_api.session.get(link)
-                res.raise_for_status()
-                f.write(res.content)
-            coeff_paths.append(full_path)
-        site_meta["coefficientFiles"] = coeff_paths
-
         lidar_file, lidar_uuid = self._get_lidar_file()
 
         self.uuid.product = hatpro2l1c(
@@ -684,11 +673,32 @@ class ProcessMwrL1c(ProcessInstrument):
             if e.response.status_code == 404:
                 raise RawDataMissingError("Skipping due to missing calibration")
         data = res["data"]
-        if not data.get("coefficientLinks"):
-            raise RawDataMissingError("Skipping due to missing retrieval coefficients")
+        data["coefficientLinks"], data["coefficientFiles"] = self._get_coefficients(
+            data
+        )
         if "time_offset" in data:
             data["time_offset"] = datetime.timedelta(minutes=data["time_offset"])
         return data
+
+    def _get_coefficients(self, calibration: dict) -> tuple[list[str], list[Path]]:
+        if "retrieval_coefficients" not in calibration:
+            raise RawDataMissingError("No retrieval coefficients specified")
+        for item in calibration["retrieval_coefficients"]:
+            if self.params.site.id not in item["sites"]:
+                continue
+            coeff_links = item["links"]
+            coeff_paths = []
+            for link in coeff_links:
+                filename = link.split("/")[-1]
+                full_path = self.raw_dir / filename
+                with open(full_path, "wb") as f:
+                    res = self.processor.md_api.session.get(link)
+                    res.raise_for_status()
+                    f.write(res.content)
+                coeff_paths.append(full_path)
+            return coeff_links, coeff_paths
+        msg = f"No retrieval coefficients found for site {self.params.site.id}"
+        raise RawDataMissingError(msg)
 
     def _get_lidar_file(self) -> tuple[Path | None, UUID | None]:
         lidar_file = self.processor.find_optimal_lidar(self.params)
