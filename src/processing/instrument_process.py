@@ -159,10 +159,14 @@ class ProcessRadar(ProcessInstrument):
 
     def process_mira_35(self) -> None:
         full_paths, self.uuid.raw = self.download_instrument(
-            filename_suffix=".znc", allow_empty=True, exclude_pattern=r"_[a-z_]+\.znc"
+            filename_suffix={".znc", ".znc.gz"},
+            allow_empty=True,
+            exclude_pattern=r"[a-z]+\.znc",
         )
         if not full_paths:
-            full_paths, self.uuid.raw = self.download_instrument()
+            full_paths, self.uuid.raw = self.download_instrument(
+                exclude_pattern=r"\.znc"
+            )
             if self.params.site.id == "chilbolton":
                 # 2021-2022 30 min of data in previous day
                 previous_date = self.params.date - datetime.timedelta(days=1)
