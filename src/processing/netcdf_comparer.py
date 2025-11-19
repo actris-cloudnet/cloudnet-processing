@@ -1,7 +1,7 @@
 import logging
 from enum import Enum
 from pathlib import Path
-from typing import Tuple
+from typing import Tuple, cast
 
 import netCDF4
 import numpy as np
@@ -304,11 +304,21 @@ class NetCDFComparator:
 
     def _compare_variable_filters(self) -> bool:
         for var in self.old.variables:
-            filters_old = self.old.variables[var].filters()
-            filters_new = self.new.variables[var].filters()
+            filters_old = cast(dict, self.old.variables[var].filters())
+            filters_new = cast(dict, self.new.variables[var].filters())
             if filters_old != filters_new:
+                diff_old = {
+                    key: filters_old[key]
+                    for key in filters_old
+                    if key not in filters_new or filters_old[key] != filters_new[key]
+                }
+                diff_new = {
+                    key: filters_new[key]
+                    for key in filters_new
+                    if key not in filters_old or filters_new[key] != filters_old[key]
+                }
                 logging.info(
-                    f"Variable '{var}' filters differ: {filters_old} vs {filters_new}"
+                    f"Variable '{var}' filters differ: {diff_old} vs {diff_new}"
                 )
                 return False
         return True
