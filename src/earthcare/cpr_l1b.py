@@ -112,24 +112,32 @@ def _save_results(
 
         # Variables
         fill_value = netCDF4.default_fillvals["f4"]
-        nc.createVariable("time_cpr", "f8", ("cpr",))
-        nc.createVariable("time", "f4", ("time",))
-        nc.createVariable("height", "f4", ("height",))
-        nc.createVariable("echo_cpr", "f4", ("cpr", "height"), fill_value=fill_value)
-        nc.createVariable("ze_sat", "f4", ("time", "height"), fill_value=fill_value)
-        nc.createVariable("v_cpr", "f4", ("cpr", "height"), fill_value=fill_value)
+        nc.createVariable("time_cpr", "f8", ("cpr",), zlib=True)
+        nc.createVariable("time", "f4", ("time",), zlib=True)
+        nc.createVariable("height", "f4", ("height",), zlib=True)
         nc.createVariable(
-            "vm_sat_folded", "f4", ("time", "height"), fill_value=fill_value
+            "echo_cpr", "f4", ("cpr", "height"), fill_value=fill_value, zlib=True
         )
-        nc.createVariable("latitude", "f4", ("time",))
-        nc.createVariable("longitude", "f4", ("time",))
-        nc.createVariable("latitude_cpr", "f4", ("cpr",))
-        nc.createVariable("longitude_cpr", "f4", ("cpr",))
-        nc.createVariable("distance", "f4", ("cpr",))
-        nc.createVariable("altitude", "f4", ("time",))
-        nc.createVariable("latitude_msi", "f4", ("msi",))
-        nc.createVariable("longitude_msi", "f4", ("msi",))
-        nc.createVariable("cloud_top_height", "f4", ("msi",), fill_value=fill_value)
+        nc.createVariable(
+            "ze_sat", "f4", ("time", "height"), fill_value=fill_value, zlib=True
+        )
+        nc.createVariable(
+            "v_cpr", "f4", ("cpr", "height"), fill_value=fill_value, zlib=True
+        )
+        nc.createVariable(
+            "vm_sat_folded", "f4", ("time", "height"), fill_value=fill_value, zlib=True
+        )
+        nc.createVariable("latitude", "f4", ("time",), zlib=True)
+        nc.createVariable("longitude", "f4", ("time",), zlib=True)
+        nc.createVariable("latitude_cpr", "f4", ("cpr",), zlib=True)
+        nc.createVariable("longitude_cpr", "f4", ("cpr",), zlib=True)
+        nc.createVariable("distance", "f4", ("cpr",), zlib=True)
+        nc.createVariable("altitude", "f4", ("time",), zlib=True)
+        nc.createVariable("latitude_msi", "f4", ("msi",), zlib=True)
+        nc.createVariable("longitude_msi", "f4", ("msi",), zlib=True)
+        nc.createVariable(
+            "cloud_top_height", "f4", ("msi",), fill_value=fill_value, zlib=True
+        )
 
         time_units = f"hours since {fetcher.date.strftime('%Y-%m-%d')} 00:00:00 +00:00"
 
