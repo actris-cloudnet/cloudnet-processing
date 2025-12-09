@@ -165,7 +165,7 @@ class ProcessRadar(ProcessInstrument):
         )
         if not full_paths:
             full_paths, self.uuid.raw = self.download_instrument(
-                exclude_pattern=r"\.znc"
+                include_pattern=r"\.mmclx(\.\d+)?(\.gz)?$"
             )
             if self.params.site.id == "chilbolton":
                 # 2021-2022 30 min of data in previous day
