@@ -162,6 +162,10 @@ def _parse_args(client: APIClient) -> Namespace:
         action="store_true",
         help="Fetch ALL raw data including .LV0. Only applicable if the command is 'fetch --raw'.",
     )
+    group.add_argument(
+        "--include-pattern",
+        help="Regex pattern to filter raw files in the fetch command",
+    )
 
     args = parser.parse_args()
 
