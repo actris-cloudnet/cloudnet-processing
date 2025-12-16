@@ -7,6 +7,7 @@ import numpy as np
 from cloudnet_api_client import APIClient
 from cloudnet_api_client.containers import Instrument, Site
 from doppy.raw import HaloBg, HaloHpl, HaloSysParams
+from numpy.typing import NDArray
 
 from monitoring.monitoring_file import (
     Dimensions,
@@ -119,9 +120,7 @@ def plot_housekeeping_variable(
     format_time_axis(ax)
     pretty_ax(ax, grid="y")
     fig_ = save_fig(fig)
-    return MonitoringVisualization(
-        fig_.bytes, variable, Dimensions(fig_.width, fig_.height)
-    )
+    return MonitoringVisualization(fig_.bytes, variable, Dimensions(fig, [ax]))
 
 
 def monitor_background(
@@ -212,9 +211,7 @@ def plot_background_profile(
     format_time_axis(ax)
     pretty_ax_2d(ax)
     fig_ = save_fig(fig)
-    return MonitoringVisualization(
-        fig_.bytes, variable, Dimensions(fig_.width, fig_.height)
-    )
+    return MonitoringVisualization(fig_.bytes, variable, Dimensions(fig, [ax]))
 
 
 def plot_background_variance(
@@ -227,9 +224,7 @@ def plot_background_variance(
     format_time_axis(ax)
     pretty_ax(ax, grid="y")
     fig_ = save_fig(fig)
-    return MonitoringVisualization(
-        fig_.bytes, variable, Dimensions(fig_.width, fig_.height)
-    )
+    return MonitoringVisualization(fig_.bytes, variable, Dimensions(fig, [ax]))
 
 
 def plot_time_averaged_background_profile(
@@ -249,9 +244,7 @@ def plot_time_averaged_background_profile(
 
     pretty_ax(ax, grid="y")
     fig_ = save_fig(fig)
-    return MonitoringVisualization(
-        fig_.bytes, variable, Dimensions(fig_.width, fig_.height)
-    )
+    return MonitoringVisualization(fig_.bytes, variable, Dimensions(fig, [ax]))
 
 
 def monitor_signal(
@@ -346,15 +339,27 @@ def plot_radial_velocity_histogram(
     raw: HaloHpl, _: Period, variable: MonitoringVariable
 ) -> MonitoringVisualization:
     fig, ax = plt.subplots()
-    ax.hist(raw.radial_velocity.ravel(), bins=400)
+    bins = _compute_radial_velocity_bins(raw)
+    ax.hist(raw.radial_velocity.ravel(), bins=bins)
     ax.ticklabel_format(style="scientific", axis="y", scilimits=(0, 0))
     ax.set_xlabel("Radial velocity")
     ax.set_ylabel("Count")
     pretty_ax(ax, grid="both")
     fig_ = save_fig(fig)
-    return MonitoringVisualization(
-        fig_.bytes, variable, Dimensions(fig_.width, fig_.height)
-    )
+    return MonitoringVisualization(fig_.bytes, variable, Dimensions(fig, [ax]))
+
+
+def _compute_radial_velocity_bins(raw: HaloHpl) -> list[float] | int:
+    v_uniq = np.unique(np.round(raw.radial_velocity.ravel(), decimals=5))
+    if len(v_uniq) < 100 or len(v_uniq) > 3000:
+        return 100
+    midpoints = (v_uniq[:-1] + v_uniq[1:]) / 2
+    left_gap = v_uniq[1] - v_uniq[0]
+    right_gap = v_uniq[-1] - v_uniq[-2]
+    left_edge = v_uniq[0] - left_gap / 2
+    right_edge = v_uniq[-1] + right_gap / 2
+    bins = np.concatenate(([left_edge], midpoints, [right_edge]))
+    return bins.tolist()
 
 
 def plot_signal_radial_velocity(
@@ -370,6 +375,4 @@ def plot_signal_radial_velocity(
     ax.set_ylabel("Radial velocity")
     pretty_ax(ax)
     fig_ = save_fig(fig)
-    return MonitoringVisualization(
-        fig_.bytes, variable, Dimensions(fig_.width, fig_.height)
-    )
+    return MonitoringVisualization(fig_.bytes, variable, Dimensions(fig, [ax]))

@@ -2,8 +2,10 @@ from dataclasses import dataclass
 from json import JSONDecodeError
 from pathlib import Path
 from tempfile import NamedTemporaryFile
+from typing import Any
 
 from cloudnet_api_client.containers import Instrument, Site
+from cloudnetpy.plotting.plotting import Dimensions
 
 from monitoring.period import AllPeriod, Period, PeriodWithRange
 from monitoring.product import MonitoringProduct, MonitoringVariable
@@ -11,30 +13,21 @@ from monitoring.utils import get_apis
 
 
 @dataclass
-class Dimensions:
-    width: int
-    height: int
-    margin_top: int | None = None
-    margin_right: int | None = None
-    margin_bottom: int | None = None
-    margin_left: int | None = None
-
-    def as_payload_dict(self) -> dict[str, int | None]:
-        return {
-            "width": self.width,
-            "height": self.height,
-            "marginTop": self.margin_top,
-            "marginRight": self.margin_right,
-            "marginBottom": self.margin_bottom,
-            "marginLeft": self.margin_left,
-        }
-
-
-@dataclass
 class MonitoringVisualization:
     fig: bytes
     variable: MonitoringVariable
     dimensions: Dimensions
+
+
+def _dimensions_as_payload(dim: Dimensions) -> dict[str, int]:
+    return {
+        "width": dim.width,
+        "height": dim.height,
+        "marginTop": dim.margin_top,
+        "marginRight": dim.margin_right,
+        "marginBottom": dim.margin_bottom,
+        "marginLeft": dim.margin_left,
+    }
 
 
 @dataclass
@@ -77,14 +70,15 @@ class MonitoringFile:
             with NamedTemporaryFile() as tempfile:
                 tempfile.write(vis.fig)
                 storage_api.upload_image(full_path=Path(tempfile.name), s3key=s3key)
-            payload = {
+            payload_vis: dict[str, str | int] = {
                 "s3key": s3key,
                 "sourceFileUuid": file_uuid,
                 "variableId": vis.variable.id,
+                **_dimensions_as_payload(vis.dimensions),
             }
-            res = md_api.post("monitoring-visualizations", payload=payload)
+            res = md_api.post("monitoring-visualizations", payload=payload_vis)
             if not res.ok:
-                raise RuntimeError(f"Could not post visualisation: {payload}")
+                raise RuntimeError(f"Could not post visualisation: {payload_vis}")
 
 
 def generate_s3_key(
@@ -101,8 +95,8 @@ def generate_s3_key(
 
 def _period_for_s3key(p: Period) -> str:
     if isinstance(p, AllPeriod):
-        return "All"
-    period_str = p.period.capitalize()
+        return "all"
+    period_str = p.period
     match p.period:
         case "year":
             date_str = p.start_date.strftime("%Y")
