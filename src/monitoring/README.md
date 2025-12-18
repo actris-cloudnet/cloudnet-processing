@@ -2,14 +2,28 @@
 
 ## Usage
 
-Check available products from `/api/monitoring-products`
+```bash
+# Monitor current period by default
+./scripts/monitor {day,week,month,year,all}
 
-Run monitoring:
+# Common options
+# start and stop arguments have format YYYY-MM-DD, YYYY-VV, YYYY-MM or YYYY
+# depending on the subcommand
+--start START               Monitor periods starting from START
+--stop STOP                 Monitor periods until STOP
+--product [PRODUCT ...]     Monitor only these products
+--site [SITE ...]           Monitor only these sites
 
-```
-python -m monitoring INSTRUMENT_UUID SITE all PRODUCT_ID
-python -m monitoring INSTRUMENT_UUID SITE year:DATE PRODUCT_ID
-python -m monitoring INSTRUMENT_UUID SITE month:DATE PRODUCT_ID
-python -m monitoring INSTRUMENT_UUID SITE week:DATE PRODUCT_ID
-python -m monitoring INSTRUMENT_UUID SITE day:DATE PRODUCT_ID
+# Subcommand specific options
+## day
+--day [YYYY-MM-DD ...]
+
+## week
+--week [YYYY-VV ...]
+
+## month
+--month [YYYY-MM ...]
+
+## year
+--year [YYYY ...]
 ```

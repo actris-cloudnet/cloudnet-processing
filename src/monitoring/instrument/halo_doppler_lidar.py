@@ -1,20 +1,18 @@
 import datetime
 from collections import Counter
+from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import matplotlib.pyplot as plt
 import numpy as np
-from cloudnet_api_client import APIClient
-from cloudnet_api_client.containers import Instrument, Site
-from doppy.raw import HaloBg, HaloHpl, HaloSysParams
-from numpy.typing import NDArray
+from cloudnet_api_client.client import APIClient
+from cloudnetpy.plotting.plotting import Dimensions
+from doppy.raw import HaloSysParams
+from doppy.raw.halo_bg import HaloBg
+from doppy.raw.halo_hpl import HaloHpl
 
-from monitoring.monitoring_file import (
-    Dimensions,
-    MonitoringFile,
-    MonitoringVisualization,
-)
-from monitoring.period import Period, PeriodWithRange
+from monitoring.monitoring_file import MonitoringFile, MonitoringVisualization
+from monitoring.period import All, PeriodType
 from monitoring.plot_utils import (
     SCATTER_OPTS,
     add_colorbar,
@@ -26,71 +24,85 @@ from monitoring.plot_utils import (
     set_xlim_for_period,
 )
 from monitoring.product import MonitoringProduct, MonitoringVariable
-from monitoring.utils import range_from_period
+from monitoring.utils import (
+    RawFilesDatePayload,
+    get_storage_api,
+    instrument_uuid_to_pid,
+)
+from processing.storage_api import StorageApi
 
 
 def monitor(
-    client: APIClient,
-    site: Site,
-    instrument: Instrument,
-    period: Period,
+    period: PeriodType,
     product: MonitoringProduct,
+    site: str,
+    instrument_uuid: str,
+    api_client: APIClient,
+    storage_api: StorageApi,
 ) -> None:
     match product.id:
         case "halo-doppler-lidar_housekeeping":
-            monitor_housekeeping(client, site, instrument, period, product)
+            monitor_housekeeping(
+                period, product, site, instrument_uuid, api_client, storage_api
+            )
         case "halo-doppler-lidar_background":
-            monitor_background(client, site, instrument, period, product)
+            monitor_background(
+                period, product, site, instrument_uuid, api_client, storage_api
+            )
         case "halo-doppler-lidar_signal":
-            monitor_signal(client, site, instrument, period, product)
-
-        case _:
-            raise NotImplementedError(
-                f"Monitoring product '{product.id}' not implemented for '{instrument.instrument_id}'"
+            monitor_signal(
+                period, product, site, instrument_uuid, api_client, storage_api
             )
 
 
 def monitor_housekeeping(
-    client: APIClient,
-    site: Site,
-    instrument: Instrument,
-    period: Period,
+    period: PeriodType,
     product: MonitoringProduct,
+    site: str,
+    instrument_uuid: str,
+    api_client: APIClient,
+    storage_api: StorageApi,
 ) -> None:
-    start, end = range_from_period(period)
+    pid = instrument_uuid_to_pid(api_client, instrument_uuid)
+    date_opts: RawFilesDatePayload = {}
+    if not isinstance(period, All):
+        start, stop = period.to_interval_padded(days=31)
+        date_opts = {"date_from": start, "date_to": stop}
 
-    start -= datetime.timedelta(days=32)
-    end += datetime.timedelta(days=32)
-    raw_files = client.raw_files(
-        site_id=site.id,
-        instrument_pid=instrument.pid,
-        date_from=start,
-        date_to=end,
+    records = api_client.raw_files(
+        site_id=site,
+        instrument_pid=pid,
         filename_prefix="system_parameters_",
         filename_suffix=".txt",
+        **date_opts,
     )
-    if not raw_files:
+    if not records:
         raise ValueError(
-            f"Not raw files found for {period} {instrument.name} {product.id}"
+            f"No raw files for monitoring period {period} {product.id} {site} {pid}"
         )
+
     with TemporaryDirectory() as tempdir:
-        paths = client.download(raw_files, tempdir, progress=False)
+        (paths, _uuids) = storage_api.download_raw_data(records, Path(tempdir))
         sys_params_list = [HaloSysParams.from_src(p) for p in paths]
     sys_params = (
         HaloSysParams.merge(sys_params_list)
         .sorted_by_time()
         .non_strictly_increasing_timesteps_removed()
     )
-    if isinstance(period, PeriodWithRange):
-        start_time = np.datetime64(period.start_date).astype(sys_params.time.dtype)
-        end_time = np.datetime64(period.end_date + datetime.timedelta(days=1)).astype(
-            sys_params.time.dtype
-        )
-        select = (start_time <= sys_params.time) & (sys_params.time < end_time)
+    if not isinstance(period, All):
+        start, stop = period.to_interval()
+        dtype = sys_params.time.dtype
+        start_time = np.datetime64(start).astype(dtype)
+        stop_time = np.datetime64(stop + datetime.timedelta(days=1)).astype(dtype)
+        select = (start_time <= sys_params.time) & (sys_params.time < stop_time)
         sys_params = sys_params[select]
+    if len(sys_params.time) == 0:
+        raise ValueError(
+            f"No timestamps for monitoring period {period} {product.id} {site} {pid}"
+        )
 
     monitoring_file = MonitoringFile(
-        instrument,
+        instrument_uuid,
         site,
         period,
         product,
@@ -100,7 +112,7 @@ def monitor_housekeeping(
 
 
 def monitor_housekeeping_plots(
-    sys_params: HaloSysParams, period: Period, product: MonitoringProduct
+    sys_params: HaloSysParams, period: PeriodType, product: MonitoringProduct
 ) -> list[MonitoringVisualization]:
     plots = []
     for variable in product.variables:
@@ -110,7 +122,7 @@ def monitor_housekeeping_plots(
 
 def plot_housekeeping_variable(
     sys_params: HaloSysParams,
-    period: Period,
+    period: PeriodType,
     variable: MonitoringVariable,
 ) -> MonitoringVisualization:
     fig, ax = plt.subplots()
@@ -120,50 +132,59 @@ def plot_housekeeping_variable(
     format_time_axis(ax)
     pretty_ax(ax, grid="y")
     fig_ = save_fig(fig)
-    return MonitoringVisualization(fig_.bytes, variable, Dimensions(fig, [ax]))
+    vis = MonitoringVisualization(fig_.bytes, variable, Dimensions(fig, [ax]))
+    plt.close(fig)
+    return vis
 
 
 def monitor_background(
-    client: APIClient,
-    site: Site,
-    instrument: Instrument,
-    period: Period,
+    period: PeriodType,
     product: MonitoringProduct,
+    site: str,
+    instrument_uuid: str,
+    api_client: APIClient,
+    storage_api: StorageApi,
 ) -> None:
-    start, end = range_from_period(period)
-    start -= datetime.timedelta(days=1)
-    end += datetime.timedelta(days=1)
-    raw_files = client.raw_files(
-        site_id=site.id,
-        instrument_pid=instrument.pid,
-        date_from=start,
-        date_to=end,
+    storage_api = get_storage_api()
+    pid = instrument_uuid_to_pid(api_client, instrument_uuid)
+
+    date_opts: RawFilesDatePayload = {}
+    if not isinstance(period, All):
+        start, stop = period.to_interval_padded(days=1)
+        date_opts = {"date_from": start, "date_to": stop}
+
+    records = api_client.raw_files(
+        site_id=site,
+        instrument_pid=pid,
         filename_prefix="Background_",
         filename_suffix=".txt",
+        **date_opts,
     )
-    raw_files = [r for r in raw_files if "cross" not in r.tags]
-    if not raw_files:
+    if not records:
         raise ValueError(
-            f"Not raw files found for {period} {instrument.name} {product.id}"
+            f"No raw files for monitoring period {period} {product.id} {site} {pid}"
         )
+
     with TemporaryDirectory() as tempdir:
-        paths = client.download(raw_files, tempdir, progress=False)
+        (paths, _uuids) = storage_api.download_raw_data(records, Path(tempdir))
         bgs = HaloBg.from_srcs(paths)
     counter = Counter((bg.signal.shape[1] for bg in bgs))
     most_common_ngates = counter.most_common()[0][0]
     bgs = [bg for bg in bgs if bg.signal.shape[1] == most_common_ngates]
     bg = HaloBg.merge(bgs).sorted_by_time().non_strictly_increasing_timesteps_removed()
-
-    if isinstance(period, PeriodWithRange):
-        start_time = np.datetime64(period.start_date).astype(bg.time.dtype)
-        end_time = np.datetime64(period.end_date + datetime.timedelta(days=1)).astype(
-            bg.time.dtype
-        )
-        select = (start_time <= bg.time) & (bg.time < end_time)
+    if not isinstance(period, All):
+        start, stop = period.to_interval()
+        dtype = bg.time.dtype
+        start_time = np.datetime64(start).astype(dtype)
+        stop_time = np.datetime64(stop + datetime.timedelta(days=1)).astype(dtype)
+        select = (start_time <= bg.time) & (bg.time < stop_time)
         bg = bg[select]
-
+    if len(bg.time) == 0:
+        raise ValueError(
+            f"No timestamps for monitoring period {period} {product.id} {site} {pid}"
+        )
     monitoring_file = MonitoringFile(
-        instrument,
+        instrument_uuid,
         site,
         period,
         product,
@@ -173,7 +194,7 @@ def monitor_background(
 
 
 def monitor_background_plots(
-    bg: HaloBg, period: Period, product: MonitoringProduct
+    bg: HaloBg, period: PeriodType, product: MonitoringProduct
 ) -> list[MonitoringVisualization]:
     plots = []
     for variable in product.variables:
@@ -182,7 +203,7 @@ def monitor_background_plots(
 
 
 def plot_background_variable(
-    bg: HaloBg, period: Period, variable: MonitoringVariable
+    bg: HaloBg, period: PeriodType, variable: MonitoringVariable
 ) -> MonitoringVisualization:
     match variable.id:
         case "background-profile":
@@ -198,7 +219,7 @@ def plot_background_variable(
 
 
 def plot_background_profile(
-    bg: HaloBg, period: Period, variable: MonitoringVariable
+    bg: HaloBg, period: PeriodType, variable: MonitoringVariable
 ) -> MonitoringVisualization:
     fig, ax = plt.subplots()
     vmin, vmax = np.percentile(bg.signal.ravel(), [5, 95])
@@ -211,11 +232,13 @@ def plot_background_profile(
     format_time_axis(ax)
     pretty_ax_2d(ax)
     fig_ = save_fig(fig)
-    return MonitoringVisualization(fig_.bytes, variable, Dimensions(fig, [ax]))
+    vis = MonitoringVisualization(fig_.bytes, variable, Dimensions(fig, [ax]))
+    plt.close(fig)
+    return vis
 
 
 def plot_background_variance(
-    bg: HaloBg, period: Period, variable: MonitoringVariable
+    bg: HaloBg, period: PeriodType, variable: MonitoringVariable
 ) -> MonitoringVisualization:
     fig, ax = plt.subplots()
     var = bg.signal.var(axis=1)
@@ -224,11 +247,13 @@ def plot_background_variance(
     format_time_axis(ax)
     pretty_ax(ax, grid="y")
     fig_ = save_fig(fig)
-    return MonitoringVisualization(fig_.bytes, variable, Dimensions(fig, [ax]))
+    vis = MonitoringVisualization(fig_.bytes, variable, Dimensions(fig, [ax]))
+    plt.close(fig)
+    return vis
 
 
 def plot_time_averaged_background_profile(
-    bg: HaloBg, _: Period, variable: MonitoringVariable
+    bg: HaloBg, _: PeriodType, variable: MonitoringVariable
 ) -> MonitoringVisualization:
     fig, ax = plt.subplots()
     mean = bg.signal.mean(axis=0)
@@ -244,34 +269,41 @@ def plot_time_averaged_background_profile(
 
     pretty_ax(ax, grid="y")
     fig_ = save_fig(fig)
-    return MonitoringVisualization(fig_.bytes, variable, Dimensions(fig, [ax]))
+    vis = MonitoringVisualization(fig_.bytes, variable, Dimensions(fig, [ax]))
+    plt.close(fig)
+    return vis
 
 
 def monitor_signal(
-    client: APIClient,
-    site: Site,
-    instrument: Instrument,
-    period: Period,
+    period: PeriodType,
     product: MonitoringProduct,
+    site: str,
+    instrument_uuid: str,
+    api_client: APIClient,
+    storage_api: StorageApi,
 ) -> None:
-    start, end = range_from_period(period)
+    pid = instrument_uuid_to_pid(api_client, instrument_uuid)
 
-    start -= datetime.timedelta(days=1)
-    end += datetime.timedelta(days=1)
-    raw_files = client.raw_files(
-        site_id=site.id,
-        instrument_pid=instrument.pid,
-        date_from=start,
-        date_to=end,
+    date_opts: RawFilesDatePayload = {}
+    if not isinstance(period, All):
+        start, stop = period.to_interval()
+        date_opts = {"date_from": start, "date_to": stop}
+
+    records = api_client.raw_files(
+        site_id=site,
+        instrument_pid=pid,
         filename_suffix=".hpl",
+        **date_opts,
     )
-    raw_files = [r for r in raw_files if "cross" not in r.tags]
-    if not raw_files:
+
+    records = [r for r in records if "cross" not in r.tags]
+    if not records:
         raise ValueError(
-            f"No raw files found for {period} {instrument.name} {product.id}"
+            f"No raw files for monitoring period {period} {product.id} {site} {pid}"
         )
+
     with TemporaryDirectory() as tempdir:
-        paths = client.download(raw_files, tempdir, progress=False)
+        (paths, _uuids) = storage_api.download_raw_data(records, Path(tempdir))
         raws = HaloHpl.from_srcs(paths)
 
     def is_stare(raw: HaloHpl) -> bool:
@@ -286,7 +318,7 @@ def monitor_signal(
     raws = [r for r in raws if is_stare(r)]
     if not raws:
         raise ValueError(
-            f"No raw stare files found for {period} {instrument.name} {product.id}"
+            f"No raw stare files found for {period} {instrument_uuid} {product.id}"
         )
     counter = Counter((raw.intensity.shape[1] for raw in raws))
     most_common_ngates = counter.most_common()[0][0]
@@ -294,16 +326,21 @@ def monitor_signal(
     raw = (
         HaloHpl.merge(raws).sorted_by_time().non_strictly_increasing_timesteps_removed()
     )
-    if isinstance(period, PeriodWithRange):
-        start_time = np.datetime64(period.start_date).astype(raw.time.dtype)
-        end_time = np.datetime64(period.end_date + datetime.timedelta(days=1)).astype(
-            raw.time.dtype
-        )
-        select = (start_time <= raw.time) & (raw.time < end_time)
+    if not isinstance(period, All):
+        start, stop = period.to_interval()
+        dtype = raw.time.dtype
+        start_time = np.datetime64(start).astype(dtype)
+        stop_time = np.datetime64(stop + datetime.timedelta(days=1)).astype(dtype)
+        select = (start_time <= raw.time) & (raw.time < stop_time)
         raw = raw[select]
 
+    if len(raw.time) == 0:
+        raise ValueError(
+            f"No timestamps for monitoring period {period} {product.id} {site} {pid}"
+        )
+
     monitoring_file = MonitoringFile(
-        instrument,
+        instrument_uuid,
         site,
         period,
         product,
@@ -313,7 +350,7 @@ def monitor_signal(
 
 
 def monitor_signal_plots(
-    raw: HaloHpl, period: Period, product: MonitoringProduct
+    raw: HaloHpl, period: PeriodType, product: MonitoringProduct
 ) -> list[MonitoringVisualization]:
     plots = []
     for variable in product.variables:
@@ -322,7 +359,7 @@ def monitor_signal_plots(
 
 
 def plot_signal_variable(
-    raw: HaloHpl, period: Period, variable: MonitoringVariable
+    raw: HaloHpl, period: PeriodType, variable: MonitoringVariable
 ) -> MonitoringVisualization:
     match variable.id:
         case "radial-velocity-histogram":
@@ -336,7 +373,7 @@ def plot_signal_variable(
 
 
 def plot_radial_velocity_histogram(
-    raw: HaloHpl, _: Period, variable: MonitoringVariable
+    raw: HaloHpl, _: PeriodType, variable: MonitoringVariable
 ) -> MonitoringVisualization:
     fig, ax = plt.subplots()
     bins = _compute_radial_velocity_bins(raw)
@@ -346,7 +383,9 @@ def plot_radial_velocity_histogram(
     ax.set_ylabel("Count")
     pretty_ax(ax, grid="both")
     fig_ = save_fig(fig)
-    return MonitoringVisualization(fig_.bytes, variable, Dimensions(fig, [ax]))
+    vis = MonitoringVisualization(fig_.bytes, variable, Dimensions(fig, [ax]))
+    plt.close(fig)
+    return vis
 
 
 def _compute_radial_velocity_bins(raw: HaloHpl) -> list[float] | int:
@@ -363,7 +402,7 @@ def _compute_radial_velocity_bins(raw: HaloHpl) -> list[float] | int:
 
 
 def plot_signal_radial_velocity(
-    raw: HaloHpl, _: Period, variable: MonitoringVariable
+    raw: HaloHpl, _: PeriodType, variable: MonitoringVariable
 ) -> MonitoringVisualization:
     fig, ax = plt.subplots()
     vmin, vmax = np.percentile(raw.intensity.ravel(), [2, 95])
@@ -375,4 +414,6 @@ def plot_signal_radial_velocity(
     ax.set_ylabel("Radial velocity")
     pretty_ax(ax)
     fig_ = save_fig(fig)
-    return MonitoringVisualization(fig_.bytes, variable, Dimensions(fig, [ax]))
+    vis = MonitoringVisualization(fig_.bytes, variable, Dimensions(fig, [ax]))
+    plt.close(fig)
+    return vis
