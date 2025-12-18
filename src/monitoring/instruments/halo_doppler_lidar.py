@@ -7,7 +7,6 @@ import numpy as np
 from cloudnet_api_client import APIClient
 from cloudnet_api_client.containers import Instrument, Site
 from doppy.raw import HaloBg, HaloHpl, HaloSysParams
-from numpy.typing import NDArray
 
 from monitoring.monitoring_file import (
     Dimensions,

@@ -8,6 +8,7 @@ from monitoring.monitor import monitor
 from monitoring.period import Period, period_from_str
 from monitoring.product import MonitoringProduct
 from processing.config import Config
+from monitoring.core import main as new_main
 
 
 def main() -> None:
@@ -93,4 +94,4 @@ def _print_instruments(instruments: list[Instrument]) -> None:
 
 
 if __name__ == "__main__":
-    main()
+    new_main()
