@@ -1,5 +1,3 @@
-from pprint import pprint
-from monitoring.period import PeriodWithRangeType
 from monitoring.period import All
 from monitoring.period import Year
 from monitoring.period import Day
@@ -9,10 +7,10 @@ from argparse import ArgumentParser, Namespace
 from typing import Callable, Iterable, TypeVar
 
 from monitoring.config import CONFIG
-from monitoring.period import Month, Week
+from monitoring.period import Month, Week, PeriodProtocol
 from monitoring.monitor import monitor
 
-T = TypeVar("T")
+T = TypeVar("T", bound=PeriodProtocol)
 
 
 def main() -> None:
@@ -32,10 +30,10 @@ def main() -> None:
 
 def _monitor(
     args: Namespace,
-    period_cls: PeriodWithRangeType,
+    period_cls: type[T],
     explicit_periods: list[T] | None,
-    period_key,
-):
+    period_key: str,
+) -> None:
     periods = _resolve_periods(
         args.start, args.stop, explicit_periods, period_cls.now, period_cls.range
     )
@@ -50,43 +48,6 @@ def _monitor_all(
     products = _resolve_products("all", args.product, args.instrument)
     for instrument, product in products:
         monitor(All(), instrument, product)
-
-
-def _monitor_day(args: Namespace) -> None:
-    periods = _resolve_periods(args.start, args.stop, args.date, Day.now, Day.range)
-    products = _resolve_products("day", args.product, args.instrument)
-    for period, (instrument, product) in itertools.product(periods, products):
-        monitor(period, instrument, product)
-
-
-def _monitor_week(args: Namespace) -> None:
-    periods = _resolve_periods(args.start, args.stop, args.week, Week.now, Week.range)
-    products = _resolve_products("week", args.product, args.instrument)
-    for period, (instrument, product) in itertools.product(periods, products):
-        monitor(period, instrument, product)
-
-
-def _monitor_month(args: Namespace) -> None:
-    periods = _resolve_periods(
-        args.start, args.stop, args.month, Month.now, Month.range
-    )
-    products = _resolve_products("month", args.product, args.instrument)
-    for period, (instrument, product) in itertools.product(periods, products):
-        monitor(period, instrument, product)
-
-
-def _monitor_year(args: Namespace) -> None:
-    periods = _resolve_periods(args.start, args.stop, args.year, Year.now, Year.range)
-    products = _resolve_products("month", args.product, args.instrument)
-    for period, (instrument, product) in itertools.product(periods, products):
-        monitor(period, instrument, product)
-
-
-def _monitor_all(args: Namespace) -> None:
-    periods = [All()]
-    products = _resolve_products("month", args.product, args.instrument)
-    for period, (instrument, product) in itertools.product(periods, products):
-        monitor(period, instrument, product)
 
 
 def _resolve_products(
@@ -206,7 +167,7 @@ def _resolve_periods(
     if not start and not stop and not explicit:
         return [default_factory()]
     if not start and not stop and explicit is not None:
-        return sorted(list(set(explicit)))
+        return sorted(list(set(explicit)))  # type: ignore[type-var]
     if start is None:
         raise ValueError
     if stop is None:
@@ -215,7 +176,7 @@ def _resolve_periods(
     combined = set(range_)
     if explicit:
         combined.update(explicit)
-    return sorted(list(combined))
+    return sorted(list(combined))  # type: ignore[type-var]
 
 
 if __name__ == "__main__":

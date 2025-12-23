@@ -1,5 +1,18 @@
+from typing import Self
+from typing import Iterable
 import datetime
 from dataclasses import dataclass
+from typing import Protocol
+
+
+class PeriodProtocol(Protocol):
+    @classmethod
+    def now(cls) -> Self: ...
+
+    @classmethod
+    def range(
+        cls, start: Self, stop: Self
+    ) -> Iterable[Self]: ...
 
 
 @dataclass(order=True, frozen=True)
@@ -97,4 +110,4 @@ class All:
 
 
 PeriodWithRangeType = Day | Week | Month | Year
-PeriodType = PeriodWithRangeType | All
+PeriodType = PeriodProtocol | All
