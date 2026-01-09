@@ -5,12 +5,12 @@ from tempfile import TemporaryDirectory
 
 import matplotlib.pyplot as plt
 import numpy as np
-from cloudnet_api_client.client import APIClient
 from cloudnetpy.plotting.plotting import Dimensions
 from doppy.raw import HaloSysParams
 from doppy.raw.halo_bg import HaloBg
 from doppy.raw.halo_hpl import HaloHpl
 
+from monitoring.monitor_options import MonitorOptions
 from monitoring.monitoring_file import MonitoringFile, MonitoringVisualization
 from monitoring.period import All, PeriodType
 from monitoring.plot_utils import (
@@ -26,51 +26,29 @@ from monitoring.plot_utils import (
 from monitoring.product import MonitoringProduct, MonitoringVariable
 from monitoring.utils import (
     RawFilesDatePayload,
-    get_storage_api,
     instrument_uuid_to_pid,
 )
-from processing.storage_api import StorageApi
 
 
-def monitor(
-    period: PeriodType,
-    product: MonitoringProduct,
-    site: str,
-    instrument_uuid: str,
-    api_client: APIClient,
-    storage_api: StorageApi,
-) -> None:
-    match product.id:
+def monitor(opts: MonitorOptions) -> None:
+    match opts.product.id:
         case "halo-doppler-lidar_housekeeping":
-            monitor_housekeeping(
-                period, product, site, instrument_uuid, api_client, storage_api
-            )
+            monitor_housekeeping(opts)
         case "halo-doppler-lidar_background":
-            monitor_background(
-                period, product, site, instrument_uuid, api_client, storage_api
-            )
+            monitor_background(opts)
         case "halo-doppler-lidar_signal":
-            monitor_signal(
-                period, product, site, instrument_uuid, api_client, storage_api
-            )
+            monitor_signal(opts)
 
 
-def monitor_housekeeping(
-    period: PeriodType,
-    product: MonitoringProduct,
-    site: str,
-    instrument_uuid: str,
-    api_client: APIClient,
-    storage_api: StorageApi,
-) -> None:
-    pid = instrument_uuid_to_pid(api_client, instrument_uuid)
+def monitor_housekeeping(opts: MonitorOptions) -> None:
+    pid = instrument_uuid_to_pid(opts.api_client, opts.instrument_uuid)
     date_opts: RawFilesDatePayload = {}
-    if not isinstance(period, All):
-        start, stop = period.to_interval_padded(days=31)
+    if not isinstance(opts.period, All):
+        start, stop = opts.period.to_interval_padded(days=31)
         date_opts = {"date_from": start, "date_to": stop}
 
-    records = api_client.raw_files(
-        site_id=site,
+    records = opts.api_client.raw_files(
+        site_id=opts.site,
         instrument_pid=pid,
         filename_prefix="system_parameters_",
         filename_suffix=".txt",
@@ -78,19 +56,19 @@ def monitor_housekeeping(
     )
     if not records:
         raise ValueError(
-            f"No raw files for monitoring period {period} {product.id} {site} {pid}"
+            f"No raw files for monitoring period {opts.period} {opts.product.id} {opts.site} {pid}"
         )
 
     with TemporaryDirectory() as tempdir:
-        (paths, _uuids) = storage_api.download_raw_data(records, Path(tempdir))
+        (paths, _uuids) = opts.storage_api.download_raw_data(records, Path(tempdir))
         sys_params_list = [HaloSysParams.from_src(p) for p in paths]
     sys_params = (
         HaloSysParams.merge(sys_params_list)
         .sorted_by_time()
         .non_strictly_increasing_timesteps_removed()
     )
-    if not isinstance(period, All):
-        start, stop = period.to_interval()
+    if not isinstance(opts.period, All):
+        start, stop = opts.period.to_interval()
         dtype = sys_params.time.dtype
         start_time = np.datetime64(start).astype(dtype)
         stop_time = np.datetime64(stop + datetime.timedelta(days=1)).astype(dtype)
@@ -98,15 +76,17 @@ def monitor_housekeeping(
         sys_params = sys_params[select]
     if len(sys_params.time) == 0:
         raise ValueError(
-            f"No timestamps for monitoring period {period} {product.id} {site} {pid}"
+            f"No timestamps for monitoring period {opts.period} {opts.product.id} {opts.site} {pid}"
         )
 
     monitoring_file = MonitoringFile(
-        instrument_uuid,
-        site,
-        period,
-        product,
-        monitor_housekeeping_plots(sys_params, period, product),
+        opts.instrument_uuid,
+        opts.site,
+        opts.period,
+        opts.product,
+        monitor_housekeeping_plots(sys_params, opts.period, opts.product),
+        opts.md_api,
+        opts.storage_api,
     )
     monitoring_file.upload()
 
@@ -137,24 +117,16 @@ def plot_housekeeping_variable(
     return vis
 
 
-def monitor_background(
-    period: PeriodType,
-    product: MonitoringProduct,
-    site: str,
-    instrument_uuid: str,
-    api_client: APIClient,
-    storage_api: StorageApi,
-) -> None:
-    storage_api = get_storage_api()
-    pid = instrument_uuid_to_pid(api_client, instrument_uuid)
+def monitor_background(opts: MonitorOptions) -> None:
+    pid = instrument_uuid_to_pid(opts.api_client, opts.instrument_uuid)
 
     date_opts: RawFilesDatePayload = {}
-    if not isinstance(period, All):
-        start, stop = period.to_interval_padded(days=1)
+    if not isinstance(opts.period, All):
+        start, stop = opts.period.to_interval_padded(days=1)
         date_opts = {"date_from": start, "date_to": stop}
 
-    records = api_client.raw_files(
-        site_id=site,
+    records = opts.api_client.raw_files(
+        site_id=opts.site,
         instrument_pid=pid,
         filename_prefix="Background_",
         filename_suffix=".txt",
@@ -162,18 +134,18 @@ def monitor_background(
     )
     if not records:
         raise ValueError(
-            f"No raw files for monitoring period {period} {product.id} {site} {pid}"
+            f"No raw files for monitoring period {opts.period} {opts.product.id} {opts.site} {pid}"
         )
 
     with TemporaryDirectory() as tempdir:
-        (paths, _uuids) = storage_api.download_raw_data(records, Path(tempdir))
+        (paths, _uuids) = opts.storage_api.download_raw_data(records, Path(tempdir))
         bgs = HaloBg.from_srcs(paths)
     counter = Counter((bg.signal.shape[1] for bg in bgs))
     most_common_ngates = counter.most_common()[0][0]
     bgs = [bg for bg in bgs if bg.signal.shape[1] == most_common_ngates]
     bg = HaloBg.merge(bgs).sorted_by_time().non_strictly_increasing_timesteps_removed()
-    if not isinstance(period, All):
-        start, stop = period.to_interval()
+    if not isinstance(opts.period, All):
+        start, stop = opts.period.to_interval()
         dtype = bg.time.dtype
         start_time = np.datetime64(start).astype(dtype)
         stop_time = np.datetime64(stop + datetime.timedelta(days=1)).astype(dtype)
@@ -181,14 +153,16 @@ def monitor_background(
         bg = bg[select]
     if len(bg.time) == 0:
         raise ValueError(
-            f"No timestamps for monitoring period {period} {product.id} {site} {pid}"
+            f"No timestamps for monitoring period {opts.period} {opts.product.id} {opts.site} {pid}"
         )
     monitoring_file = MonitoringFile(
-        instrument_uuid,
-        site,
-        period,
-        product,
-        [p for p in monitor_background_plots(bg, period, product) if p],
+        opts.instrument_uuid,
+        opts.site,
+        opts.period,
+        opts.product,
+        [p for p in monitor_background_plots(bg, opts.period, opts.product) if p],
+        opts.md_api,
+        opts.storage_api,
     )
     monitoring_file.upload()
 
@@ -274,23 +248,16 @@ def plot_time_averaged_background_profile(
     return vis
 
 
-def monitor_signal(
-    period: PeriodType,
-    product: MonitoringProduct,
-    site: str,
-    instrument_uuid: str,
-    api_client: APIClient,
-    storage_api: StorageApi,
-) -> None:
-    pid = instrument_uuid_to_pid(api_client, instrument_uuid)
+def monitor_signal(opts: MonitorOptions) -> None:
+    pid = instrument_uuid_to_pid(opts.api_client, opts.instrument_uuid)
 
     date_opts: RawFilesDatePayload = {}
-    if not isinstance(period, All):
-        start, stop = period.to_interval()
+    if not isinstance(opts.period, All):
+        start, stop = opts.period.to_interval()
         date_opts = {"date_from": start, "date_to": stop}
 
-    records = api_client.raw_files(
-        site_id=site,
+    records = opts.api_client.raw_files(
+        site_id=opts.site,
         instrument_pid=pid,
         filename_suffix=".hpl",
         **date_opts,
@@ -299,11 +266,11 @@ def monitor_signal(
     records = [r for r in records if "cross" not in r.tags]
     if not records:
         raise ValueError(
-            f"No raw files for monitoring period {period} {product.id} {site} {pid}"
+            f"No raw files for monitoring period {opts.period} {opts.product.id} {opts.site} {pid}"
         )
 
     with TemporaryDirectory() as tempdir:
-        (paths, _uuids) = storage_api.download_raw_data(records, Path(tempdir))
+        (paths, _uuids) = opts.storage_api.download_raw_data(records, Path(tempdir))
         raws = HaloHpl.from_srcs(paths)
 
     def is_stare(raw: HaloHpl) -> bool:
@@ -318,7 +285,7 @@ def monitor_signal(
     raws = [r for r in raws if is_stare(r)]
     if not raws:
         raise ValueError(
-            f"No raw stare files found for {period} {instrument_uuid} {product.id}"
+            f"No raw stare files found for {opts.period} {opts.instrument_uuid} {opts.product.id}"
         )
     counter = Counter((raw.intensity.shape[1] for raw in raws))
     most_common_ngates = counter.most_common()[0][0]
@@ -326,8 +293,8 @@ def monitor_signal(
     raw = (
         HaloHpl.merge(raws).sorted_by_time().non_strictly_increasing_timesteps_removed()
     )
-    if not isinstance(period, All):
-        start, stop = period.to_interval()
+    if not isinstance(opts.period, All):
+        start, stop = opts.period.to_interval()
         dtype = raw.time.dtype
         start_time = np.datetime64(start).astype(dtype)
         stop_time = np.datetime64(stop + datetime.timedelta(days=1)).astype(dtype)
@@ -336,15 +303,17 @@ def monitor_signal(
 
     if len(raw.time) == 0:
         raise ValueError(
-            f"No timestamps for monitoring period {period} {product.id} {site} {pid}"
+            f"No timestamps for monitoring period {opts.period} {opts.product.id} {opts.site} {pid}"
         )
 
     monitoring_file = MonitoringFile(
-        instrument_uuid,
-        site,
-        period,
-        product,
-        monitor_signal_plots(raw, period, product),
+        opts.instrument_uuid,
+        opts.site,
+        opts.period,
+        opts.product,
+        monitor_signal_plots(raw, opts.period, opts.product),
+        opts.md_api,
+        opts.storage_api,
     )
     monitoring_file.upload()
 

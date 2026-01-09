@@ -3,18 +3,12 @@ import logging
 from monitoring.instrument.halo_doppler_lidar import (
     monitor as monitor_halo,
 )
-from monitoring.period import PeriodType
-from monitoring.product import MonitoringProduct
-from monitoring.utils import get_api_client, get_storage_api
+from monitoring.monitor_options import MonitorOptions
 
 
-def monitor(
-    period: PeriodType, product: MonitoringProduct, site: str, instrument_uuid: str
-) -> None:
-    api_client = get_api_client()
-    storage_api = get_storage_api()
-    if product.id.startswith("halo-doppler-lidar"):
-        monitor_halo(period, product, site, instrument_uuid, api_client, storage_api)
-        logging.info(f"Monitored {period!r} {product} {site}")
+def monitor(opts: MonitorOptions) -> None:
+    if opts.product.id.startswith("halo-doppler-lidar"):
+        monitor_halo(opts)
+        logging.info(f"Monitored {opts.period!r} {opts.product} {opts.site}")
     else:
-        raise ValueError(f"Unexpected product: '{product}'")
+        raise ValueError(f"Unexpected product: '{opts.product}'")

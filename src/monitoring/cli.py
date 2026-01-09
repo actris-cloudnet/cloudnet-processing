@@ -4,9 +4,12 @@ import logging
 from argparse import ArgumentParser, Namespace
 from typing import Callable, Iterable, TypeVar
 
+from cloudnet_api_client import APIClient
+
 import monitoring.period as period_module
 from monitoring.config import CONFIG
 from monitoring.monitor import monitor
+from monitoring.monitor_options import MonitorOptions
 from monitoring.period import (
     All,
     Day,
@@ -19,23 +22,29 @@ from monitoring.period import (
     period_str_from_cls,
 )
 from monitoring.product import MonitoringProduct
-from monitoring.utils import RawFilesPayload, get_api_client, get_md_api
+from monitoring.utils import RawFilesPayload
+from processing.config import Config
+from processing.metadata_api import MetadataApi
+from processing.storage_api import StorageApi
+from processing.utils import make_session
 
 T = TypeVar("T", bound=PeriodProtocol)
 PeriodList = list[All] | list[Day] | list[Month] | list[Week] | list[Year]
 
 
 def main() -> None:
+    api_client, md_api, storage_api = build_clients()
+
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     args = _get_args()
     period_cls = period_cls_from_str(args.cmd)
     periods = build_periods(period_cls, args)
     periods_with_products = build_products(period_cls, periods, args.product)
     periods_with_products_sites_and_instruments = build_instruments(
-        periods_with_products, args.site
+        api_client, periods_with_products, args.site
     )
     validated_periods_with_products_sites_and_instruments = validate_products(
-        periods_with_products_sites_and_instruments
+        md_api, periods_with_products_sites_and_instruments
     )
 
     for (
@@ -45,9 +54,29 @@ def main() -> None:
         instrument_uuid,
     ) in validated_periods_with_products_sites_and_instruments:
         try:
-            monitor(period, product, site, instrument_uuid)
+            monitor(
+                MonitorOptions(
+                    period,
+                    product,
+                    site,
+                    instrument_uuid,
+                    api_client,
+                    storage_api,
+                    md_api,
+                )
+            )
         except ValueError as err:
             logging.warning(err)
+
+
+def build_clients() -> tuple[APIClient, MetadataApi, StorageApi]:
+    config = Config()
+    session = make_session()
+    return (
+        APIClient(base_url=f"{config.dataportal_url}/api"),
+        MetadataApi(config, session),
+        StorageApi(config, session),
+    )
 
 
 def build_periods(period_cls: type[PeriodType], args: Namespace) -> PeriodList:
@@ -89,11 +118,15 @@ def build_products(
 
 
 def build_instruments(
-    product_list: list[tuple[PeriodType, str]], sites: list[str] | None
+    client: APIClient,
+    product_list: list[tuple[PeriodType, str]],
+    sites: list[str] | None,
 ) -> list[tuple[PeriodType, str, str, str]]:
     list_with_sites_and_instruments = []
     for period, product in product_list:
-        for site, instrument_uuid in get_available_instruments(period, product, sites):
+        for site, instrument_uuid in get_available_instruments(
+            client, period, product, sites
+        ):
             list_with_sites_and_instruments.append(
                 (period, product, site, instrument_uuid)
             )
@@ -101,9 +134,10 @@ def build_instruments(
 
 
 def validate_products(
+    api: MetadataApi,
     product_list: list[tuple[PeriodType, str, str, str]],
 ) -> list[tuple[PeriodType, MonitoringProduct, str, str]]:
-    available_products = get_available_products()
+    available_products = get_available_products(api)
     validated = []
     for period, product_str, site, instrument_uuid in product_list:
         if not product_str in available_products:
@@ -114,16 +148,14 @@ def validate_products(
     return validated
 
 
-def get_available_products() -> dict[str, MonitoringProduct]:
-    api = get_md_api()
+def get_available_products(api: MetadataApi) -> dict[str, MonitoringProduct]:
     data = api.get("api/monitoring-products/variables")
     return {entry["id"]: MonitoringProduct.from_dict(entry) for entry in data}
 
 
 def get_available_instruments(
-    period: PeriodType, product: str, sites: list[str] | None
+    client: APIClient, period: PeriodType, product: str, sites: list[str] | None
 ) -> list[tuple[str, str]]:
-    client = get_api_client()
     payload: RawFilesPayload
 
     match product:

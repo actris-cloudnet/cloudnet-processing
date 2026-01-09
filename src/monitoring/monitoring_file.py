@@ -7,7 +7,8 @@ from cloudnetpy.plotting.plotting import Dimensions
 
 from monitoring.period import All, PeriodProtocol, PeriodType
 from monitoring.product import MonitoringProduct, MonitoringVariable
-from monitoring.utils import get_md_api, get_storage_api
+from processing.metadata_api import MetadataApi
+from processing.storage_api import StorageApi
 
 
 @dataclass
@@ -35,14 +36,14 @@ class MonitoringFile:
     period: PeriodType
     product: MonitoringProduct
     visualisations: list[MonitoringVisualization]
+    md_api: MetadataApi
+    storage_api: StorageApi
 
     def upload(self) -> None:
         if not self.visualisations:
             raise ValueError(
                 f"No visualisations for product {self.product.id}, {self.site}, {self.instrument_uuid}, {self.period}"
             )
-        md_api = get_md_api()
-        storage_api = get_storage_api()
         payload = {
             "periodType": self.period.to_str(),
             "siteId": self.site,
@@ -51,7 +52,7 @@ class MonitoringFile:
         }
         if isinstance(self.period, PeriodProtocol):
             payload["startDate"] = str(self.period.start())
-        res = md_api.post("monitoring-files", payload=payload)
+        res = self.md_api.post("monitoring-files", payload=payload)
         if not res.ok:
             raise RuntimeError(f"Could not post file: {payload}")
         try:
@@ -68,14 +69,16 @@ class MonitoringFile:
             )
             with NamedTemporaryFile() as tempfile:
                 tempfile.write(vis.fig)
-                storage_api.upload_image(full_path=Path(tempfile.name), s3key=s3key)
+                self.storage_api.upload_image(
+                    full_path=Path(tempfile.name), s3key=s3key
+                )
             payload_vis: dict[str, str | int] = {
                 "s3key": s3key,
                 "sourceFileUuid": file_uuid,
                 "variableId": vis.variable.id,
                 **_dimensions_as_payload(vis.dimensions),
             }
-            res = md_api.post("monitoring-visualizations", payload=payload_vis)
+            res = self.md_api.post("monitoring-visualizations", payload=payload_vis)
             if not res.ok:
                 raise RuntimeError(f"Could not post visualisation: {payload_vis}")
 
