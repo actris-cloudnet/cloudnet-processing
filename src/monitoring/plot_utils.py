@@ -12,7 +12,7 @@ from matplotlib.colorbar import Colorbar
 from matplotlib.figure import Figure
 from numpy.typing import NDArray
 
-from monitoring.period import Period, PeriodWithRange
+from monitoring.period import PeriodProtocol, PeriodType
 
 FONT_SIZE = 30
 DPI = 400
@@ -110,13 +110,12 @@ def pretty_ax_2d(ax: Axes) -> None:
 
 
 def set_xlim_for_period(
-    ax: Axes, period: Period, time: NDArray[np.datetime64], pad: float = 0
+    ax: Axes, period: PeriodType, time: NDArray[np.datetime64], pad: float = 0
 ) -> None:
-    if isinstance(period, PeriodWithRange):
-        start_lim = np.datetime64(period.start_date).astype(time.dtype)
-        end_lim = np.datetime64(period.end_date + datetime.timedelta(days=1)).astype(
-            time.dtype
-        )
+    if isinstance(period, PeriodProtocol):
+        start, stop = period.to_interval()
+        start_lim = np.datetime64(start).astype(time.dtype)
+        end_lim = np.datetime64(stop + datetime.timedelta(days=1)).astype(time.dtype)
         delta = (end_lim - start_lim) * pad
         ax.set_xlim(start_lim - delta, end_lim + delta)  # type: ignore[arg-type]
 
