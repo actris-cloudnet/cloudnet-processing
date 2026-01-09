@@ -25,7 +25,7 @@ from monitoring.product import MonitoringProduct
 from monitoring.utils import RawFilesPayload
 from processing.config import Config
 from processing.metadata_api import MetadataApi
-from processing.storage_api import StorageApi
+from processing.storage_api import StorageApi, StorageApiError
 from processing.utils import make_session
 
 T = TypeVar("T", bound=PeriodProtocol)
@@ -35,7 +35,9 @@ PeriodList = list[All] | list[Day] | list[Month] | list[Week] | list[Year]
 def main() -> None:
     api_client, md_api, storage_api = build_clients()
 
-    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+    logging.basicConfig(
+        level=logging.INFO, format="Monitoring:%(levelname)s: %(message)s"
+    )
     args = _get_args()
     period_cls = period_cls_from_str(args.cmd)
     periods = build_periods(period_cls, args)
@@ -65,8 +67,10 @@ def main() -> None:
                     md_api,
                 )
             )
-        except ValueError as err:
-            logging.warning(err)
+        except (ValueError, StorageApiError) as err:
+            logging.warning(f"{period!r} {product} {site}: {err}")
+        except StorageApiError as err:
+            logging.error(f"{period!r} {product} {site}: {err}")
 
 
 def build_clients() -> tuple[APIClient, MetadataApi, StorageApi]:
