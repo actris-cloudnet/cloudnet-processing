@@ -86,18 +86,38 @@ def build_clients() -> tuple[APIClient, MetadataApi, StorageApi]:
 def build_periods(period_cls: type[PeriodType], args: Namespace) -> PeriodList:
     match period_cls:
         case period_module.Day:
-            return _resolve_periods(args.start, args.stop, args.day, Day.now, Day.range)
+            return _resolve_periods(
+                args.start, args.stop, args.day, args.last, Day.now, Day.range, Day.last
+            )
         case period_module.Week:
             return _resolve_periods(
-                args.start, args.stop, args.week, Week.now, Week.range
+                args.start,
+                args.stop,
+                args.week,
+                args.last,
+                Week.now,
+                Week.range,
+                Week.last,
             )
         case period_module.Month:
             return _resolve_periods(
-                args.start, args.stop, args.month, Month.now, Month.range
+                args.start,
+                args.stop,
+                args.month,
+                args.last,
+                Month.now,
+                Month.range,
+                Month.last,
             )
         case period_module.Year:
             return _resolve_periods(
-                args.start, args.stop, args.year, Year.now, Year.range
+                args.start,
+                args.stop,
+                args.year,
+                args.last,
+                Year.now,
+                Year.range,
+                Year.last,
             )
         case period_module.All:
             return [All()]
@@ -209,22 +229,35 @@ def _resolve_periods(
     start: T | None,
     stop: T | None,
     explicit: list[T] | None,
+    last: bool,
     default_factory: Callable[[], T],
     range_func: Callable[[T, T], Iterable[T]],
+    last_func: Callable[[], T],
 ) -> list[T]:
-    if not start and not stop and not explicit:
+    if not start and not stop and not explicit and not last:
         return [default_factory()]
-    if not start and not stop and explicit is not None:
-        return sorted(list(set(explicit)))  # type: ignore[type-var]
-    if start is None:
-        raise ValueError
-    if stop is None:
-        stop = default_factory()
-    range_ = list(range_func(start, stop))
+    range_ = _resolve_start_stop(start, stop, default_factory, range_func)
     combined = set(range_)
     if explicit:
         combined.update(explicit)
+    if last:
+        combined.add(last_func())
     return sorted(list(combined))  # type: ignore[type-var]
+
+
+def _resolve_start_stop(
+    start: T | None,
+    stop: T | None,
+    default_factory: Callable[[], T],
+    range_func: Callable[[T, T], Iterable[T]],
+) -> list[T]:
+    if start is None and stop is None:
+        return []
+    if start is None:
+        raise ValueError("start is missing")
+    if stop is None:
+        stop = default_factory()
+    return list(range_func(start, stop))
 
 
 def _get_args() -> Namespace:
@@ -242,6 +275,7 @@ def _build_day_args(parser: ArgumentParser) -> None:
     parser.add_argument("--start", type=_parse_day)
     parser.add_argument("--stop", type=_parse_day)
     parser.add_argument("--day", type=_parse_day, nargs="*")
+    parser.add_argument("--last", action="store_true")
     _common(parser)
 
 
@@ -249,6 +283,7 @@ def _build_week_args(parser: ArgumentParser) -> None:
     parser.add_argument("--start", type=_parse_week)
     parser.add_argument("--stop", type=_parse_week)
     parser.add_argument("--week", type=_parse_week, nargs="*")
+    parser.add_argument("--last", action="store_true")
     _common(parser)
 
 
@@ -256,6 +291,7 @@ def _build_month_args(parser: ArgumentParser) -> None:
     parser.add_argument("--start", type=_parse_month)
     parser.add_argument("--stop", type=_parse_month)
     parser.add_argument("--month", type=_parse_month, nargs="*")
+    parser.add_argument("--last", action="store_true")
     _common(parser)
 
 
@@ -263,6 +299,7 @@ def _build_year_args(parser: ArgumentParser) -> None:
     parser.add_argument("--start", type=_parse_year)
     parser.add_argument("--stop", type=_parse_year)
     parser.add_argument("--year", type=_parse_year, nargs="*")
+    parser.add_argument("--last", action="store_true")
     _common(parser)
 
 

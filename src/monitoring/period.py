@@ -14,6 +14,9 @@ class PeriodProtocol(Protocol):
     def now(cls) -> Self: ...
 
     @classmethod
+    def last(cls) -> Self: ...
+
+    @classmethod
     def range(cls, start: Self, stop: Self) -> Iterable[Self]: ...
 
     @classmethod
@@ -47,6 +50,10 @@ class Day:
     @classmethod
     def now(cls) -> Day:
         return cls(datetime.date.today())
+
+    @classmethod
+    def last(cls) -> Day:
+        return cls(datetime.date.today() - datetime.timedelta(days=1))
 
     def start(self) -> datetime.date:
         return self.date
@@ -91,6 +98,12 @@ class Week:
         cal = today.isocalendar()
         return cls(cal.year, cal.week)
 
+    @classmethod
+    def last(cls) -> Week:
+        prev_week_date = datetime.date.today() - datetime.timedelta(weeks=1)
+        cal = prev_week_date.isocalendar()
+        return cls(cal.year, cal.week)
+
     def start(self) -> datetime.date:
         return datetime.date.fromisocalendar(self.year, self.week, 1)
 
@@ -133,6 +146,12 @@ class Month:
         today = datetime.date.today()
         return cls(today.year, today.month)
 
+    @classmethod
+    def last(cls) -> Month:
+        today = datetime.date.today()
+        prev_month_end = today.replace(day=1) - datetime.timedelta(days=1)
+        return cls(prev_month_end.year, prev_month_end.month)
+
     def start(self) -> datetime.date:
         return datetime.date(self.year, self.month, 1)
 
@@ -164,12 +183,16 @@ class Year:
 
     @classmethod
     def range(cls, start: Year, stop: Year) -> Generator[Year, None, None]:
-        for year in range(start.year, stop.year):
+        for year in range(start.year, stop.year + 1):
             yield cls(year)
 
     @classmethod
     def now(cls) -> Year:
         return cls(datetime.date.today().year)
+
+    @classmethod
+    def last(cls) -> Year:
+        return cls(datetime.date.today().year - 1)
 
     def start(self) -> datetime.date:
         return datetime.date(self.year, 1, 1)
