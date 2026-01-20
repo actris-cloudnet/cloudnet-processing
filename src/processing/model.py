@@ -15,7 +15,7 @@ from processing.netcdf_comparer import NCDiff, nc_difference
 from processing.processor import ModelParams, Processor
 from processing.utils import MiscError, SkipTaskError
 
-SKIP_MODELS = ()
+SKIP_MODELS = ("arome",)
 MODEL_READERS = {
     "arpege": read_arpege,
     "ecmwf-open": read_ecmwf_open,
