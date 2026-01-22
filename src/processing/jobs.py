@@ -53,7 +53,6 @@ def freeze(processor: Processor, params: ProcessParams, directory: Path) -> None
     if params.product.experimental:
         raise utils.SkipTaskError("Product is experimental")
     logging.info(f"Freezing product: {metadata.uuid}")
-    s3key = f"legacy/{metadata.filename}" if metadata.legacy else metadata.filename
     if metadata.pid:
         existing_pid = metadata.pid
         volatile = False
@@ -64,7 +63,7 @@ def freeze(processor: Processor, params: ProcessParams, directory: Path) -> None
         full_path, pid=existing_pid
     )
     if uuid.UUID(file_uuid) != metadata.uuid:
-        msg = f"File {s3key} UUID mismatch (DB: {metadata.uuid}, File: {file_uuid})"
+        msg = f"File {metadata.filename} UUID mismatch (DB: {metadata.uuid}, File: {file_uuid})"
         raise ValueError(msg)
     if metadata.volatile and metadata.pid:
         msg = f"Removing volatile status of {url}"
@@ -75,18 +74,17 @@ def freeze(processor: Processor, params: ProcessParams, directory: Path) -> None
     logging.info(msg)
 
     response_data = processor.storage_api.upload_product(
-        full_path, s3key, volatile=volatile
+        full_path, metadata.uuid, metadata.filename
     )
     payload = {
         "uuid": file_uuid,
         "checksum": sha256sum(full_path),
         "volatile": volatile,
         "pid": pid,
+        "newBucket": True,
         **response_data,
     }
     processor.md_api.post("files", payload)
-    if volatile is False:
-        processor.storage_api.delete_volatile_product(s3key)
     metadata = processor.client.file(file_uuid)
     if processor.md_api.config.is_production:
         ext_metadata = processor.client.file(metadata.uuid)

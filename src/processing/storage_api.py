@@ -35,11 +35,11 @@ class StorageApi:
         self._url = config.storage_service_url
         self._auth = config.storage_service_auth
 
-    def upload_product(self, full_path: Path, s3key: str, volatile: bool) -> dict:
+    def upload_product(self, full_path: Path, uuid: UUID, filename: str) -> dict:
         """Upload a processed Cloudnet file."""
-        bucket = _get_product_bucket(volatile)
+        bucket = "cloudnet-product-new"
         headers = self._get_headers(full_path)
-        url = f"{self._url}/{bucket}/{s3key}"
+        url = f"{self._url}/{bucket}/{uuid}/{filename}"
         res = self._put(url, full_path, headers).json()
         return {"version": res.get("version", ""), "size": int(res["size"])}
 
@@ -75,13 +75,6 @@ class StorageApi:
         return self._download_parallel(
             meta_records, checksum_algorithm="sha256", output_directory=dir_name
         )
-
-    def delete_volatile_product(self, s3key: str) -> requests.Response:
-        """Delete a volatile product."""
-        bucket = _get_product_bucket(volatile=True)
-        url = f"{self._url}/{bucket}/{s3key}"
-        res = self.session.delete(url, auth=self._auth)
-        return res
 
     def upload_image(self, full_path: Path, s3key: str) -> None:
         url = f"{self._url}/cloudnet-img/{s3key}"
@@ -146,10 +139,6 @@ class StorageApi:
             self.config.dataportal_url + "/api/download/",
             metadata.download_url,
         )
-
-
-def _get_product_bucket(volatile: bool = False) -> str:
-    return "cloudnet-product-volatile" if volatile else "cloudnet-product"
 
 
 thread_local = threading.local()

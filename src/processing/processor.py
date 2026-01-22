@@ -311,11 +311,12 @@ class Processor:
         self,
         params: ProcessParams,
         full_path: Path,
-        s3key: str,
+        filename: str,
         volatile: bool,
         patch: bool,
+        uuid: UUID,
     ) -> None:
-        file_info = self.storage_api.upload_product(full_path, s3key, volatile)
+        file_info = self.storage_api.upload_product(full_path, uuid, filename)
         payload = utils.create_product_put_payload(
             full_path,
             file_info,
@@ -329,7 +330,7 @@ class Processor:
             isinstance(params, (InstrumentParams, ProductParams)) and params.instrument
         ):
             payload["instrument"] = params.instrument.instrument_id
-        self.md_api.put("files", s3key, payload)
+        self.md_api.put("files", filename, payload)
 
     def update_statuses(self, raw_uuids: list[UUID], status: str) -> None:
         for raw_uuid in raw_uuids:

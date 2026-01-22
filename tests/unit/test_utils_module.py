@@ -9,14 +9,8 @@ from numpy import ma
 
 from processing import netcdf_comparer
 from processing.netcdf_comparer import NCDiff
-from processing.storage_api import _get_product_bucket
 
 test_file_path = Path(__file__).parent.absolute()
-
-
-def test_get_product_bucket() -> None:
-    assert _get_product_bucket(True) == "cloudnet-product-volatile"
-    assert _get_product_bucket(False) == "cloudnet-product"
 
 
 class TestHash:

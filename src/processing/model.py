@@ -91,7 +91,9 @@ def process_model(processor: Processor, params: ModelParams, directory: Path) ->
                 new_file = existing_file
 
         if upload:
-            processor.upload_file(params, new_file, filename, volatile, patch=True)
+            processor.upload_file(
+                params, new_file, filename, volatile, patch=True, uuid=product_uuid
+            )
         else:
             logging.info("Skipping PUT to data portal, file has not changed")
         if "hidden" in params.site.type:

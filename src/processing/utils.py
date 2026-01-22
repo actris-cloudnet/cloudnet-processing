@@ -255,6 +255,7 @@ def create_product_put_payload(
             "software": {"cloudnet-processing": cloudnet_processing_version},
             "startTime": start_time,
             "stopTime": stop_time,
+            "newBucket": True,
             **storage_service_response,
         }
         if instrument_pid := getattr(nc, "instrument_pid", None):

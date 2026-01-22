@@ -64,7 +64,7 @@ def process_instrument(
             uuid.product = existing_product.uuid
 
     if upload:
-        processor.upload_file(params, new_file, filename, volatile, patch)
+        processor.upload_file(params, new_file, filename, volatile, patch, uuid.product)
     else:
         logging.info("Skipping PUT to data portal, file has not changed")
     processor.create_and_upload_images(
