@@ -7,7 +7,7 @@ from pathlib import Path
 import netCDF4
 from model_munger.merge import merge_models
 from model_munger.model import Location
-from model_munger.readers import read_arpege, read_ecmwf_open, read_gdas1
+from model_munger.readers import read_arome, read_arpege, read_ecmwf_open, read_gdas1
 
 from processing import utils
 from processing.harmonizer.model import harmonize_model_file
@@ -15,9 +15,10 @@ from processing.netcdf_comparer import NCDiff, nc_difference
 from processing.processor import ModelParams, Processor
 from processing.utils import MiscError, SkipTaskError
 
-SKIP_MODELS = ("arome",)
+SKIP_MODELS = ()
 MODEL_READERS = {
     "arpege": read_arpege,
+    "arome": read_arome,
     "ecmwf-open": read_ecmwf_open,
     "gdas1": read_gdas1,
 }
