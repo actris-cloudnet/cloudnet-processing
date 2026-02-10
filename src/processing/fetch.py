@@ -316,6 +316,7 @@ def _submit_file(filename: Path, row: dict) -> str:
     dp_body = {
         **row,
         "sourceFileIds": [],
+        "version": "",
         "newBucket": True,
     }
     if row.get("instrument") is not None:
