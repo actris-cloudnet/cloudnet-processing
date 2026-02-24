@@ -3234,6 +3234,32 @@ Remaining flash memory
 <tr>
 <td>
 
+`gps_latitude`
+
+</td>
+<td>degree</td>
+<td>
+
+GPS latitude
+
+</td>
+</tr>
+<tr>
+<td>
+
+`gps_longitude`
+
+</td>
+<td>degree</td>
+<td>
+
+GPS longitude
+
+</td>
+</tr>
+<tr>
+<td>
+
 `hpc_quality_level`
 
 </td>
