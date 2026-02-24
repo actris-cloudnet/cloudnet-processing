@@ -15,7 +15,7 @@ services:
       [
         "sh",
         "-c",
-        "node build/fixtures.js /backend-fixtures/backend/fixtures TRUNCATE && node build/fixtures.js /dataportal-fixtures APPEND && npm run start",
+        "node build/app/src/fixtures.js /backend-fixtures/backend/fixtures TRUNCATE && node build/app/src/fixtures.js /dataportal-fixtures APPEND && node build/app/src/server.js",
       ]
   db:
     image: "postgres:16"
