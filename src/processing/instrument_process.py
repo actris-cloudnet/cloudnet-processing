@@ -724,8 +724,13 @@ class ProcessMwr(ProcessInstrument):
         self._process_rpg("lhumpro_u90")
 
     def process_radiometrics(self) -> None:
-        full_paths, self.uuid.raw = self.download_instrument()
-        _unzip_gz_files(full_paths)
+        full_paths, self.uuid.raw = self.download_instrument(
+            filename_suffix=".gz", allow_empty=True
+        )
+        if full_paths:
+            _unzip_gz_files(full_paths)
+        else:
+            full_paths, self.uuid.raw = self.download_instrument()
         self.uuid.product = radiometrics2nc(self.raw_dir, *self._args, **self._kwargs)
 
     def _process_rpg(
