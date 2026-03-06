@@ -10,8 +10,9 @@ from typing import Callable, Iterable
 import numpy as np
 import numpy.typing as npt
 import toml
-from cloudnet_api_client import APIClient
+from cloudnet_api_client import APIClient, CloudnetAPIError
 from cloudnet_api_client.containers import RawMetadata
+from cloudnetpy.disdronator import read_lpm, read_parsivel
 from influxdb_client import InfluxDBClient, Point, WritePrecision
 from influxdb_client.client.write_api import SYNCHRONOUS
 from netCDF4 import Dataset
@@ -37,6 +38,12 @@ class ValidDateRange(Enum):
 
 def process_record(record: RawMetadata, client: APIClient, db: Database) -> None:
     try:
+        try:
+            calibration = client.calibration(
+                record.instrument.pid, date=record.measurement_date
+            )["data"]
+        except CloudnetAPIError as err:
+            calibration = {}
         reader = get_reader(record)
         if reader is None:
             logging.debug(f"Skipping: {record.filename}")
@@ -45,7 +52,7 @@ def process_record(record: RawMetadata, client: APIClient, db: Database) -> None
         with tempfile.TemporaryDirectory() as tmpdir:
             filepath = client.download([record], tmpdir, progress=False)[0]
             filepath = unzip_gz_file(filepath)
-            points = reader(filepath, record)
+            points = reader(filepath, record, calibration)
             db.write(points)
     except UnsupportedFile as err:
         logging.warning(f"Unable to process file: {err}")
@@ -55,7 +62,9 @@ def process_record(record: RawMetadata, client: APIClient, db: Database) -> None
         raise HousekeepingException from err
 
 
-def _handle_hatpro_hkd(filepath: Path, metadata: RawMetadata) -> list[Point]:
+def _handle_hatpro_hkd(
+    filepath: Path, metadata: RawMetadata, calibration: dict
+) -> list[Point]:
     hkd = HatproHkd(filepath)
     time = hkd.data["T"]
     return _make_points(
@@ -63,7 +72,9 @@ def _handle_hatpro_hkd(filepath: Path, metadata: RawMetadata) -> list[Point]:
     )
 
 
-def _handle_hatpro_nc(filepath: Path, metadata: RawMetadata) -> list[Point]:
+def _handle_hatpro_nc(
+    filepath: Path, metadata: RawMetadata, calibration: dict
+) -> list[Point]:
     hkd = HatproHkdNc(filepath)
     return _make_points(
         hkd.data["time"],
@@ -74,7 +85,9 @@ def _handle_hatpro_nc(filepath: Path, metadata: RawMetadata) -> list[Point]:
     )
 
 
-def _handle_rpg_lv1(filepath: Path, metadata: RawMetadata) -> list[Point]:
+def _handle_rpg_lv1(
+    filepath: Path, metadata: RawMetadata, calibration: dict
+) -> list[Point]:
     _, data = read_rpg(filepath)
     time = rpg_seconds2datetime64(data["Time"])
     data |= decode_rpg_status_flags(data["Status"])._asdict()
@@ -83,7 +96,9 @@ def _handle_rpg_lv1(filepath: Path, metadata: RawMetadata) -> list[Point]:
     )
 
 
-def _handle_chm15k_nc(filepath: Path, metadata: RawMetadata) -> list[Point]:
+def _handle_chm15k_nc(
+    filepath: Path, metadata: RawMetadata, calibration: dict
+) -> list[Point]:
     with Dataset(filepath) as nc:
         measurements = read_chm15k(nc)
         return _make_points(
@@ -95,7 +110,9 @@ def _handle_chm15k_nc(filepath: Path, metadata: RawMetadata) -> list[Point]:
         )
 
 
-def _handle_basta_nc(filepath: Path, metadata: RawMetadata) -> list[Point]:
+def _handle_basta_nc(
+    filepath: Path, metadata: RawMetadata, calibration: dict
+) -> list[Point]:
     with Dataset(filepath) as nc:
         measurements = read_basta(nc)
     return _make_points(
@@ -107,7 +124,9 @@ def _handle_basta_nc(filepath: Path, metadata: RawMetadata) -> list[Point]:
     )
 
 
-def _handle_cs135(filepath: Path, metadata: RawMetadata) -> list[Point]:
+def _handle_cs135(
+    filepath: Path, metadata: RawMetadata, calibration: dict
+) -> list[Point]:
     measurements = read_cs135(filepath)
     return _make_points(
         measurements["time"],
@@ -118,7 +137,9 @@ def _handle_cs135(filepath: Path, metadata: RawMetadata) -> list[Point]:
     )
 
 
-def _handle_ct25k(filepath: Path, metadata: RawMetadata) -> list[Point]:
+def _handle_ct25k(
+    filepath: Path, metadata: RawMetadata, calibration: dict
+) -> list[Point]:
     measurements = read_ct25k(filepath)
     return _make_points(
         measurements["time"],
@@ -129,7 +150,9 @@ def _handle_ct25k(filepath: Path, metadata: RawMetadata) -> list[Point]:
     )
 
 
-def _handle_cl31_cl51(filepath: Path, metadata: RawMetadata) -> list[Point]:
+def _handle_cl31_cl51(
+    filepath: Path, metadata: RawMetadata, calibration: dict
+) -> list[Point]:
     measurements = read_cl31_cl51(filepath)
     return _make_points(
         measurements["time"],
@@ -140,7 +163,9 @@ def _handle_cl31_cl51(filepath: Path, metadata: RawMetadata) -> list[Point]:
     )
 
 
-def _handle_cl61_nc(filepath: Path, metadata: RawMetadata) -> list[Point]:
+def _handle_cl61_nc(
+    filepath: Path, metadata: RawMetadata, calibration: dict
+) -> list[Point]:
     with Dataset(filepath) as nc:
         measurements = read_cl61(nc)
         return _make_points(
@@ -152,7 +177,9 @@ def _handle_cl61_nc(filepath: Path, metadata: RawMetadata) -> list[Point]:
         )
 
 
-def _handle_halo_doppler_lidar(filepath: Path, metadata: RawMetadata) -> list[Point]:
+def _handle_halo_doppler_lidar(
+    filepath: Path, metadata: RawMetadata, calibration: dict
+) -> list[Point]:
     measurements = read_halo_doppler_lidar(filepath)
     return _make_points(
         measurements["time"],
@@ -163,9 +190,45 @@ def _handle_halo_doppler_lidar(filepath: Path, metadata: RawMetadata) -> list[Po
     )
 
 
+def _handle_parsivel(
+    filepath: Path, metadata: RawMetadata, calibration: dict
+) -> list[Point]:
+    time, data = read_parsivel(
+        filepath,
+        telegram=calibration.get("telegram2"),
+        decimal_separator=calibration.get("decimal_separator", "."),
+    )
+    measurements = {f"field{key}": np.array(value) for key, value in data.items()}
+    return _make_points(
+        np.array(time),
+        measurements,
+        get_config("parsivel_log"),
+        metadata,
+        ValidDateRange.DAY,
+    )
+
+
+def _handle_thies_lnm(
+    filepath: Path, metadata: RawMetadata, calibration: dict
+) -> list[Point]:
+    time, data = read_lpm(filepath)
+    if len(time) == 0:
+        return []
+    data[40] = data[40] / 100  # 1/100 mA => mA
+    data[43] = data[43] / 10  # 1/10 V => V
+    data[47] = data[47] / 10  # 1/10 V => V
+    return _make_points(
+        np.array(time),
+        {f"field{key}": value for key, value in data.items()},
+        get_config("thies-lnm_log"),
+        metadata,
+        ValidDateRange.DAY,
+    )
+
+
 def get_reader(
     metadata: RawMetadata,
-) -> Callable[[Path, RawMetadata], list[Point]] | None:
+) -> Callable[[Path, RawMetadata, dict], list[Point]] | None:
     instrument_id = metadata.instrument.instrument_id
     filename = metadata.filename.lower()
 
@@ -202,6 +265,12 @@ def get_reader(
         "system_parameters"
     ):
         return _handle_halo_doppler_lidar
+
+    if instrument_id == "parsivel":
+        return _handle_parsivel
+
+    if instrument_id == "thies-lnm":
+        return _handle_thies_lnm
 
     return None
 
