@@ -12,6 +12,7 @@ import numpy.typing as npt
 import toml
 from cloudnet_api_client import APIClient
 from cloudnet_api_client.containers import RawMetadata
+from cloudnetpy.disdronator import read_lpm, read_parsivel
 from influxdb_client import InfluxDBClient, Point, WritePrecision
 from influxdb_client.client.write_api import SYNCHRONOUS
 from netCDF4 import Dataset
@@ -163,6 +164,31 @@ def _handle_halo_doppler_lidar(filepath: Path, metadata: RawMetadata) -> list[Po
     )
 
 
+def _handle_parsivel(filepath: Path, metadata: RawMetadata) -> list[Point]:
+    # TODO: telegram
+    time, data = read_parsivel(filepath)
+    measurements = {f"field{key}": np.array(value) for key, value in data.items()}
+    return _make_points(
+        np.array(time),
+        measurements,
+        get_config("parsivel_log"),
+        metadata,
+        ValidDateRange.DAY,
+    )
+
+
+def _handle_thies_lnm(filepath: Path, metadata: RawMetadata) -> list[Point]:
+    time, data = read_lpm(filepath)
+    measurements = {f"field{key}": np.array(value) for key, value in data.items()}
+    return _make_points(
+        np.array(time),
+        measurements,
+        get_config("thies-lnm_log"),
+        metadata,
+        ValidDateRange.DAY,
+    )
+
+
 def get_reader(
     metadata: RawMetadata,
 ) -> Callable[[Path, RawMetadata], list[Point]] | None:
@@ -202,6 +228,12 @@ def get_reader(
         "system_parameters"
     ):
         return _handle_halo_doppler_lidar
+
+    if instrument_id == "parsivel":
+        return _handle_parsivel
+
+    if instrument_id == "thies-lnm":
+        return _handle_thies_lnm
 
     return None
 
