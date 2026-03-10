@@ -25,6 +25,8 @@ class Config:
         self.dvas_access_token = environ["DVAS_ACCESS_TOKEN"]
         self.dvas_username = environ["DVAS_USERNAME"]
         self.dvas_password = environ["DVAS_PASSWORD"]
+        self.dvas_client_id = environ.get("DVAS_CLIENT_ID")
+        self.dvas_client_secret = environ.get("DVAS_CLIENT_SECRET")
         self.dvas_provider_id = "11"  # CLU
         self.housekeeping_retention = datetime.timedelta(days=30)
         self.cpu_limit = (

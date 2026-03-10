@@ -29,7 +29,7 @@ from requests import Session
 
 from processing import utils
 from processing.config import Config
-from processing.dvas import Dvas
+from processing.dvas import DvasNew
 from processing.fetch import fetch
 from processing.instrument import process_instrument
 from processing.jobs import freeze, update_plots, update_qc, upload_to_dvas
@@ -199,7 +199,7 @@ def process_main(
     md_api = MetadataApi(config, session)
     storage_api = StorageApi(config, session)
     pid_utils = PidUtils(config, session)
-    dvas = Dvas(config, md_api, client)
+    dvas = DvasNew(config, md_api, client)
     processor = Processor(md_api, storage_api, pid_utils, dvas, client)
 
     if args.cmd == "fetch":

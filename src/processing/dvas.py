@@ -123,6 +123,97 @@ class Dvas:
         return s
 
 
+class DvasNew:
+    """Class for managing Cloudnet file metadata operations in the DVAS API."""
+
+    def __init__(self, config: Config, md_api: MetadataApi, client: APIClient) -> None:
+        self.config = config
+        self.md_api = md_api
+        self.session = utils.make_session()
+        self.token_expires = None
+        self.client = client
+
+    def upload(self, file: ExtendedProductMetadata) -> None:
+        """Upload Cloudnet file metadata to DVAS API and update Cloudnet data portal"""
+        landing_page_url = utils.build_file_landing_page_url(file.uuid)
+        logging.info(f"Uploading {landing_page_url} metadata to DVAS")
+        if not file.pid:
+            logging.error("Skipping - volatile file")
+            return
+        if "geophysical" not in file.product.type:
+            logging.error("Skipping - only geophysical products supported for now")
+            return
+        if "categorize" in file.product.id:
+            logging.error("Skipping - categorize file")
+            return
+        if not file.site.dvas_id:
+            logging.error("Skipping - not DVAS site")
+            return
+        try:
+            dvas_metadata = NewDvasMetadata(file, self.md_api, self.client)
+            dvas_timestamp = datetime.datetime.now(datetime.timezone.utc)
+            dvas_json = dvas_metadata.create_dvas_json(dvas_timestamp)
+            if not dvas_json["variables"]:
+                logging.error("Skipping - no ACTRIS variables")
+                return
+            # self._delete_old_versions(file)
+            dvas_id = self._post([dvas_json])
+            self.md_api.update_dvas_info(file.uuid, dvas_timestamp, dvas_id)
+        except DvasError:
+            logging.exception(f"Failed to upload {file.filename} to DVAS")
+
+    def delete(self, file: VersionMetadata) -> None:
+        """Delete Cloudnet file metadata from DVAS API"""
+        # logging.warning(
+        #     f"Deleting Cloudnet file {file.uuid} with dvasId {file.dvas_id} from DVAS"
+        # )
+        # url = f"{self.config.dvas_portal_url}/metadata/delete/pid/{file.pid}"
+        # self._delete(url)
+        pass
+
+    def _delete(self, dvas_ids: list[str]):
+        # res = self._request("DELETE", "/api/metadata/add", json=dvas_ids)
+        # print(res.content)
+        pass
+
+    def _post(self, metadata: list[dict]):
+        import json
+
+        print(json.dumps(metadata, indent="  "))
+        res = self._request("POST", "/api/provider/metadata/add", json=metadata)
+        print(res.content)
+
+    def _request(self, method, endpoint, *args, **kwargs) -> requests.Response:
+        if self.token_expires is None or self.token_expires < datetime.datetime.now():
+            self._refresh_access_token()
+        url = self.config.dvas_portal_url + endpoint
+        res = self.session.request(method, url, *args, **kwargs)
+        # Retry once if unauthorized.
+        if res.status_code == 401:
+            self._refresh_access_token()
+            res = self.session.request(method, url, *args, **kwargs)
+        breakpoint()
+        res.raise_for_status()
+
+    def _refresh_access_token(self):
+        res = self.session.post(
+            f"{self.config.dvas_portal_url}/api/auth/token",
+            json={
+                "username": self.config.dvas_client_id,
+                "password": self.config.dvas_client_secret,
+            },
+        )
+        res.raise_for_status()
+        token = res.json()
+        print(token)
+        self.token_expires = datetime.datetime.now() + datetime.timedelta(
+            seconds=token["expires_in"] * 0.9
+        )
+        self.session.headers.update(
+            {"Authorization": f"Bearer {token['access_token']}"}
+        )
+
+
 class DvasMetadata:
     """Create metadata for DVAS API from Cloudnet file metadata"""
 
@@ -404,21 +495,21 @@ class NewDvasMetadata:
             "facility": {
                 "identifier": self.file.site.dvas_id,
             },
-            "spatial_extent": {
-                "type": "LineString",
-                "coordinates": [
-                    [
-                        self.file.site.longitude,
-                        self.file.site.latitude,
-                        self.file.site.altitude,
-                    ],
-                    [
-                        self.file.site.longitude,
-                        self.file.site.latitude,
-                        self.file.site.altitude + 12_000,
-                    ],
-                ],
-            },
+            # "spatial_extent": {
+            #     "type": "LineString",
+            #     "coordinates": [
+            #         [
+            #             self.file.site.longitude,
+            #             self.file.site.latitude,
+            #             self.file.site.altitude,
+            #         ],
+            #         [
+            #             self.file.site.longitude,
+            #             self.file.site.latitude,
+            #             self.file.site.altitude + 12_000,
+            #         ],
+            #     ],
+            # },
             "temporal_extent": {
                 "time_period_begin": time_begin.isoformat(),
                 "time_period_end": time_end.isoformat(),
@@ -427,26 +518,26 @@ class NewDvasMetadata:
                 {
                     "variable_name": variable_name,
                     "variable_matrix": "cloud phase",
-                    "variable_geometry": "atmospheric vertical profile",
-                    "timeliness": timeliness,
-                    "instrument": [
-                        {
-                            "instrument_pid": instrument.pid,
-                            "instrument_type": instrument.type,
-                            "instrument_name": instrument.name,
-                        }
-                        for instrument in instruments
-                    ],
-                    "data_quality_control": [
-                        {
-                            "compliance": compliance,
-                            "quality_control_extent": "full quality control applied",
-                            "quality_control_mechanism": "automatic quality control",
-                            "quality_control_outcome": qc_outcome,
-                        }
-                    ],
-                    "framework": [{"framework": framework} for framework in frameworks],
-                    "temporal_resolution": "P30S",
+                    # "variable_geometry": "atmospheric vertical profile",
+                    # "timeliness": timeliness,
+                    # "instrument": [
+                    #     {
+                    #         "instrument_pid": instrument.pid,
+                    #         "instrument_type": instrument.type,
+                    #         "instrument_name": instrument.name,
+                    #     }
+                    #     for instrument in instruments
+                    # ],
+                    # "data_quality_control": [
+                    #     {
+                    #         "compliance": compliance,
+                    #         "quality_control_extent": "full quality control applied",
+                    #         "quality_control_mechanism": "automatic quality control",
+                    #         "quality_control_outcome": qc_outcome,
+                    #     }
+                    # ],
+                    # "framework": [{"framework": framework} for framework in frameworks],
+                    # "temporal_resolution": "P30S",
                 }
                 for variable_name in self._parse_variable_names()
             ],

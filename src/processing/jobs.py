@@ -95,8 +95,8 @@ def upload_to_dvas(processor: Processor, params: ProcessParams) -> None:
     metadata = processor.get_product(params)
     if not metadata:
         raise utils.SkipTaskError("Product not found")
-    if metadata.dvas_id:
-        raise utils.SkipTaskError("Already uploaded to DVAS")
+    # if metadata.dvas_id:
+    #     raise utils.SkipTaskError("Already uploaded to DVAS")
     ext_metadata = processor.client.file(metadata.uuid)
     processor.dvas.upload(ext_metadata)
     logging.info("Uploaded to DVAS")
