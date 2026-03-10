@@ -22,10 +22,14 @@ class Config:
         self.slack_api_token = environ.get("SLACK_API_TOKEN")
         self.slack_channel_id = environ.get("SLACK_CHANNEL_ID")
         self.dvas_portal_url = environ["DVAS_PORTAL_URL"].rstrip("/")
+        # DVAS v2
         self.dvas_access_token = environ["DVAS_ACCESS_TOKEN"]
         self.dvas_username = environ["DVAS_USERNAME"]
         self.dvas_password = environ["DVAS_PASSWORD"]
         self.dvas_provider_id = "11"  # CLU
+        # DVAS v3
+        self.dvas_client_id = environ.get("DVAS_CLIENT_ID")
+        self.dvas_client_secret = environ.get("DVAS_CLIENT_SECRET")
         self.housekeeping_retention = datetime.timedelta(days=30)
         self.cpu_limit = (
             _parse_cpu_limit(environ["CPU_LIMIT"]) if "CPU_LIMIT" in environ else None

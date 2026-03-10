@@ -76,7 +76,7 @@ class MetadataApi:
             self.put("visualizations", data["s3key"], payload)
 
     def update_dvas_info(
-        self, uuid: uuid.UUID, timestamp: datetime.datetime, dvas_id: str
+        self, uuid: uuid.UUID, timestamp: datetime.datetime, dvas_id: str | None = None
     ) -> None:
         payload = {
             "uuid": str(uuid),

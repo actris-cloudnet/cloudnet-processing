@@ -8,7 +8,7 @@ from uuid import UUID
 from cloudnet_api_client import APIClient
 
 from processing.config import Config
-from processing.dvas import DvasMetadata, NewDvasMetadata
+from processing.dvas import DvasMetadataV2, DvasMetadataV3
 from processing.metadata_api import MetadataApi
 
 if __name__ == "__main__":
@@ -23,9 +23,9 @@ if __name__ == "__main__":
     client = APIClient(config.dataportal_url + "/api")
     file = client.file(args.file_uuid)
     dvas_metadata = (
-        NewDvasMetadata(file, md_api, client)
+        DvasMetadataV3(file, md_api, client)
         if args.new
-        else DvasMetadata(file, md_api, client)
+        else DvasMetadataV2(file, md_api, client)
     )
     dvas_timestamp = datetime.datetime.now(datetime.timezone.utc)
     dvas_json = dvas_metadata.create_dvas_json(dvas_timestamp)

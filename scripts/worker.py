@@ -23,7 +23,7 @@ from cloudnet_api_client.containers import (
 
 from processing import utils
 from processing.config import Config
-from processing.dvas import Dvas
+from processing.dvas import DvasV2
 from processing.instrument import process_instrument
 from processing.jobs import freeze, update_plots, update_qc, upload_to_dvas
 from processing.metadata_api import MetadataApi
@@ -78,7 +78,7 @@ class Worker:
         md_api = MetadataApi(config, self.session)
         storage_api = StorageApi(config, self.session)
         pid_utils = PidUtils(config, self.session)
-        dvas = Dvas(config, md_api, self.client)
+        dvas = DvasV2(config, md_api, self.client)
         self.processor = Processor(md_api, storage_api, pid_utils, dvas, self.client)
         self.logger = MemoryLogger()
         self.n_processed_tasks = 0

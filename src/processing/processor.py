@@ -21,7 +21,7 @@ from requests.exceptions import HTTPError
 
 import housekeeping
 from processing import utils
-from processing.dvas import Dvas
+from processing.dvas import DvasV2
 from processing.metadata_api import MetadataApi
 from processing.pid_utils import PidUtils
 from processing.storage_api import StorageApi
@@ -73,7 +73,7 @@ class Processor:
         md_api: MetadataApi,
         storage_api: StorageApi,
         pid_utils: PidUtils,
-        dvas: Dvas,
+        dvas: DvasV2,
         client: APIClient,
     ) -> None:
         self.md_api = md_api

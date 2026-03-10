@@ -10,7 +10,7 @@ from cloudnet_api_client.containers import Instrument
 
 from processing import utils
 from processing.config import Config
-from processing.dvas import Dvas
+from processing.dvas import DvasV2
 from processing.instrument import process_instrument
 from processing.metadata_api import MetadataApi
 from processing.pid_utils import PidUtils
@@ -28,7 +28,7 @@ def processor() -> Processor:
     storage_api = StorageApi(CONFIG, session)
     pid_utils = PidUtils(CONFIG, session)
     client = APIClient(base_url=f"{CONFIG.dataportal_url}/api/", session=session)
-    dvas = Dvas(CONFIG, md_api, client)
+    dvas = DvasV2(CONFIG, md_api, client)
     return Processor(md_api, storage_api, pid_utils, dvas, client)
 
 

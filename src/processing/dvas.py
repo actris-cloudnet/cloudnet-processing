@@ -1,7 +1,7 @@
 import base64
 import datetime
 import logging
-from typing import Literal
+from typing import Any, Literal
 from uuid import UUID
 
 import requests
@@ -21,7 +21,7 @@ class DvasError(Exception):
     pass
 
 
-class Dvas:
+class DvasV2:
     """Class for managing Cloudnet file metadata operations in the DVAS API."""
 
     def __init__(self, config: Config, md_api: MetadataApi, client: APIClient) -> None:
@@ -47,15 +47,14 @@ class Dvas:
             logging.error("Skipping - not DVAS site")
             return
         try:
-            dvas_metadata = DvasMetadata(file, self.md_api, self.client)
+            dvas_metadata = DvasMetadataV2(file, self.md_api, self.client)
             dvas_timestamp = datetime.datetime.now(datetime.timezone.utc)
             dvas_json = dvas_metadata.create_dvas_json(dvas_timestamp)
             if (
-                isinstance(dvas_metadata, DvasMetadata)
+                isinstance(dvas_metadata, DvasMetadataV2)
                 and not dvas_json["md_content_information"]["attribute_descriptions"]
             ) or (
-                isinstance(dvas_metadata, NewDvasMetadata)
-                and not dvas_json["variables"]
+                isinstance(dvas_metadata, DvasMetadataV3) and not dvas_json["variables"]
             ):
                 logging.error("Skipping - no ACTRIS variables")
                 return
@@ -123,7 +122,103 @@ class Dvas:
         return s
 
 
-class DvasMetadata:
+class DvasV3:
+    """Class for managing Cloudnet file metadata operations in the DVAS API."""
+
+    def __init__(self, config: Config, md_api: MetadataApi, client: APIClient) -> None:
+        self.config = config
+        self.md_api = md_api
+        self.session = utils.make_session()
+        self.token_expires: datetime.datetime | None = None
+        self.client = client
+
+    def upload(self, file: ExtendedProductMetadata) -> None:
+        """Upload Cloudnet file metadata to DVAS API and update Cloudnet data portal"""
+        landing_page_url = utils.build_file_landing_page_url(file.uuid)
+        logging.info("Uploading %s metadata to DVAS", landing_page_url)
+        if not file.pid:
+            logging.error("Skipping - volatile file")
+            return
+        if "geophysical" not in file.product.type:
+            logging.error("Skipping - only geophysical products supported for now")
+            return
+        if "categorize" in file.product.id:
+            logging.error("Skipping - categorize file")
+            return
+        if not file.site.dvas_id:
+            logging.error("Skipping - not DVAS site")
+            return
+        try:
+            dvas_metadata = DvasMetadataV3(file, self.md_api, self.client)
+            dvas_timestamp = datetime.datetime.now(datetime.timezone.utc)
+            dvas_json = dvas_metadata.create_dvas_json(dvas_timestamp)
+            if not dvas_json["variables"]:
+                logging.error("Skipping - no ACTRIS variables")
+                return
+            self._delete_old_versions(file)
+            self._post_metadata([dvas_json])
+            self.md_api.update_dvas_info(file.uuid, dvas_timestamp)
+        except DvasError:
+            logging.exception("Failed to upload %s to DVAS", file.filename)
+
+    def _delete_old_versions(self, file: ExtendedProductMetadata) -> None:
+        """Delete all versions of the given file from DVAS API. To be used before posting new version."""
+        versions = self.client.versions(file.uuid)
+        for version in versions:
+            if version.uuid == file.uuid:
+                continue
+            logging.debug("Deleting version %s of %s", version.uuid, file.filename)
+            try:
+                self._delete_metadata(version)
+                self.md_api.clean_dvas_info(version.uuid)
+            except DvasError as err:
+                logging.error("Failed to delete %s from DVAS", version.pid)
+                logging.debug(err)
+
+    def _delete_metadata(self, file: VersionMetadata) -> None:
+        """Delete Cloudnet file metadata from DVAS API"""
+        logging.warning("Deleting Cloudnet file %s from DVAS", file.uuid)
+        self._request("POST", "/api/provider/metadata/delete", json=[file.pid])
+
+    def _post_metadata(self, metadata: list[dict]) -> None:
+        self._request("POST", "/api/provider/metadata/add", json=metadata)
+
+    def _request(
+        self,
+        method: str,
+        endpoint: str,
+        *args: Any,  # noqa: ANN401
+        **kwargs: Any,  # noqa: ANN401
+    ) -> None:
+        if self.token_expires is None or self.token_expires < datetime.datetime.now():
+            self._refresh_access_token()
+        url = self.config.dvas_portal_url + endpoint
+        res = self.session.request(method, url, *args, **kwargs)
+        # Retry once if unauthorized.
+        if res.status_code == 401:
+            self._refresh_access_token()
+            res = self.session.request(method, url, *args, **kwargs)
+        res.raise_for_status()
+
+    def _refresh_access_token(self) -> None:
+        res = self.session.post(
+            f"{self.config.dvas_portal_url}/api/auth/token",
+            json={
+                "username": self.config.dvas_client_id,
+                "password": self.config.dvas_client_secret,
+            },
+        )
+        res.raise_for_status()
+        token = res.json()
+        self.token_expires = datetime.datetime.now() + datetime.timedelta(
+            seconds=token["expires_in"] * 0.9
+        )
+        self.session.headers.update(
+            {"Authorization": f"Bearer {token['access_token']}"}
+        )
+
+
+class DvasMetadataV2:
     """Create metadata for DVAS API from Cloudnet file metadata"""
 
     def __init__(
@@ -328,7 +423,7 @@ class DvasMetadata:
         return response.text
 
 
-class NewDvasMetadata:
+class DvasMetadataV3:
     """Create metadata for DVAS API from Cloudnet file metadata"""
 
     def __init__(
@@ -455,9 +550,7 @@ class NewDvasMetadata:
                     "data_format": self._parse_netcdf_version(),
                     "dataset_url": self.file.download_url,
                     "protocol": "HTTP",
-                    "access_restriction": {
-                        "restricted": False,
-                    },
+                    "access_restriction": {"restricted": False},
                     "transfersize": {"size": self.file.size, "unit": "B"},
                 }
             ],
@@ -471,11 +564,12 @@ class NewDvasMetadata:
         }
 
     def _parse_variable_names(self) -> list[str]:
-        # https://prod-actris-md.nilu.no/Vocabulary/ContentAttribute
+        # https://vocabulary.actris.nilu.no/actris_vocab/variable
         file_vars = self.md_api.get(f"api/products/{self.file.product.id}/variables")
         return [v["actrisName"] for v in file_vars if v["actrisName"] is not None]
 
     def _parse_frameworks(self) -> list[str]:
+        # https://vocabulary.actris.nilu.no/actris_controlled_lists/framework
         affiliation = ["CLOUDNET"]
         if "arm" in self.file.site.type:
             affiliation.append("ARM")
@@ -484,7 +578,7 @@ class NewDvasMetadata:
         return affiliation
 
     def _parse_timeliness(self) -> str:
-        # https://prod-actris-md.nilu.no/vocabulary/observationtimeliness
+        # https://vocabulary.actris.nilu.no/actris_vocab/timeliness
         clu_to_dvas_map = {
             "nrt": "near real-time",
             "rrt": "real real-time",
@@ -493,6 +587,7 @@ class NewDvasMetadata:
         return clu_to_dvas_map[self.file.timeliness]
 
     def _parse_compliance(self) -> str:
+        # https://vocabulary.actris.nilu.no/actris_vocab/compliance
         return (
             "ACTRIS legacy"
             if self.file.measurement_date < datetime.date(2023, 4, 25)
@@ -500,6 +595,7 @@ class NewDvasMetadata:
         )
 
     def _parse_qc_outcome(self) -> str:
+        # https://vocabulary.actris.nilu.no/actris_vocab/qualitycontroloutcome
         outcome_map = {
             "pass": "1 - Good",
             "info": "3 - Questionable/suspect",
