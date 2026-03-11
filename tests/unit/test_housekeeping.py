@@ -92,9 +92,10 @@ def test_something(filename: str, instrument_id: str, measurement_date: str) -> 
         uuid=uuid.uuid4(),
         size=233,
     )
+    calibration: dict = {}
     reader = get_reader(metadata)
     assert reader is not None
-    points = reader(path, metadata)
+    points = reader(path, metadata, calibration)
     assert len(points) > 0
 
 

@@ -30,6 +30,7 @@ from cloudnetpy.instruments import (
     pollyxt2nc,
     radiometrics2nc,
     rain_e_h32nc,
+    rd802nc,
     rpg2nc,
     thies2nc,
     ws2nc,
@@ -819,6 +820,11 @@ class ProcessDisdrometer(ProcessInstrument):
         self.uuid.product = thies2nc(
             self.daily_path, self.output_path, site_meta, **self._kwargs
         )
+
+    def process_rd_80(self) -> None:
+        campina_offset = datetime.timedelta(seconds=-1)
+        full_paths, self.uuid.raw = self.download_instrument(time_offset=campina_offset)
+        self.uuid.product = rd802nc(full_paths, *self._args, **self._kwargs)
 
     def _fetch_parsivel_calibration(self) -> dict:
         output: dict = {"telegram": None, "missing_timestamps": False}
