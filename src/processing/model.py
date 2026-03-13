@@ -6,8 +6,14 @@ from pathlib import Path
 
 import netCDF4
 from model_munger.merge import merge_models
-from model_munger.model import Location
-from model_munger.readers import read_arome, read_arpege, read_ecmwf_open, read_gdas1
+from model_munger.model import Location, Model
+from model_munger.readers import (
+    read_arome,
+    read_arpege,
+    read_ecmwf_open,
+    read_gdas1,
+    read_icon_d2,
+)
 
 from processing import utils
 from processing.harmonizer.model import harmonize_model_file
@@ -15,12 +21,32 @@ from processing.netcdf_comparer import NCDiff, nc_difference
 from processing.processor import ModelParams, Processor
 from processing.utils import MiscError, SkipTaskError
 
+CLOUDNET_TO_ICON_D2 = {
+    "lindenberg": "Lindenberg_Obs",
+    "falkenberg": "Falkenberg",
+    "hohenpeissenberg": "Hohenpeissenberg",
+    "juelich": "FZ_Juelich",
+    "cabauw": "Cabauw",
+    "schneefernerhaus": "Schneefernerhaus",
+    "hamburg": "Hamburg",
+    "payerne": "Payerne",
+    "chilbolton": "Chilbolton-UK",
+    "palaiseau": "Palaiseau-FR",
+    "san-pietro-capofiume": "San_Pietro_Capofiume",
+}
+
+
+def _process_icon_d2(path: Path, location: Location) -> Model:
+    return read_icon_d2(path, CLOUDNET_TO_ICON_D2[location.id], location)
+
+
 SKIP_MODELS = ()
 MODEL_READERS = {
     "arpege": read_arpege,
     "arome": read_arome,
     "ecmwf-open": read_ecmwf_open,
     "gdas1": read_gdas1,
+    "icon-d2": _process_icon_d2,
 }
 
 
@@ -151,13 +177,13 @@ def _process_model(
     for path in input_paths:
         model = reader(path, location)
         model.screen_time(params.date)
-        if (
-            params.model.forecast_start is not None
-            and params.model.forecast_end is not None
-        ):
-            model.screen_forecast_time(
-                params.model.forecast_start, params.model.forecast_end
-            )
+        # if (
+        #     params.model.forecast_start is not None
+        #     and params.model.forecast_end is not None
+        # ):
+        #     model.screen_forecast_time(
+        #         params.model.forecast_start, params.model.forecast_end
+        #     )
         if len(model.data["time"]) > 0:
             models.append(model)
     if len(models) == 0:

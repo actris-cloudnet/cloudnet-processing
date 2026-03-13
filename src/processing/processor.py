@@ -135,8 +135,11 @@ class Processor:
     def get_raw_model_files(
         self, params: ModelParams, start_date: datetime.date, end_date: datetime.date
     ) -> list[RawModelMetadata]:
+        site_id = (
+            params.site.id if params.model.source_model_id != "icon-d2" else "icon-d2"
+        )
         rows = self.client.raw_model_files(
-            site_id=params.site.id,
+            site_id=site_id,
             model_id=params.model.source_model_id or params.model.id,
             date_from=start_date,
             date_to=end_date,
