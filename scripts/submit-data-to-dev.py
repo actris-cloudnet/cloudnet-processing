@@ -17,10 +17,18 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("filename", type=Path)
     parser.add_argument("-s", "--site", required=True)
-    parser.add_argument("-i", "--instrument", required=True)
+    parser.add_argument("-i", "--instrument")
+    parser.add_argument("--pid")
+    parser.add_argument("-m", "--model")
     parser.add_argument("-d", "--date", required=True, type=datetime.date.fromisoformat)
-    parser.add_argument("--pid", required=True)
     args = parser.parse_args()
+
+    if not args.model and not (args.instrument or args.pid):
+        parser.error("specify --model or --instrument and --pid")
+    if (args.instrument or args.pid) and not (args.instrument and args.pid):
+        parser.error("both --instrument and --pid are required")
+    if args.model and args.instrument:
+        parser.error("specify either --model or --instrument")
 
     md5_hash = hashlib.md5()
     with open(args.filename, "rb") as f:
@@ -33,14 +41,19 @@ def main() -> None:
         "filename": args.filename.name,
         "checksum": checksum,
         "measurementDate": args.date.isoformat(),
-        "instrument": args.instrument,
-        "instrumentPid": args.pid,
         "site": args.site,
     }
+    if args.instrument:
+        metadata["instrument"] = args.instrument
+        metadata["instrumentPid"] = args.pid
+        endpoint = "upload"
+    else:
+        metadata["model"] = args.model
+        endpoint = "model-upload"
 
     print(f"Uploading {args.filename.name}", end="\t")
     res = requests.post(
-        f"{BACKEND_URL}/upload/metadata/", json=metadata, auth=(USERNAME, PASSWORD)
+        f"{BACKEND_URL}/{endpoint}/metadata/", json=metadata, auth=(USERNAME, PASSWORD)
     )
 
     if res.status_code != 200:
@@ -49,7 +62,9 @@ def main() -> None:
 
     with open(args.filename, "rb") as f:
         res = requests.put(
-            f"{BACKEND_URL}/upload/data/{checksum}", data=f, auth=(USERNAME, PASSWORD)
+            f"{BACKEND_URL}/{endpoint}/data/{checksum}",
+            data=f,
+            auth=(USERNAME, PASSWORD),
         )
     print(res.text)
     if not res.ok:
