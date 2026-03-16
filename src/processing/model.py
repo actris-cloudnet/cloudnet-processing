@@ -182,7 +182,8 @@ def _process_model(
             and params.model.forecast_end is not None
         ):
             model.screen_forecast_time(
-                params.model.forecast_start, params.model.forecast_end
+                params.model.forecast_start,
+                params.model.forecast_end + 0.99,  # type: ignore[arg-type]
             )
         if len(model.data["time"]) > 0:
             models.append(model)

@@ -84,7 +84,7 @@ class Processor:
 
     def get_site(self, site_id: str, date: datetime.date) -> Site | ExtendedSite:
         site = self.client.site(site_id)
-        if site.latitude is None and site.longitude is None:
+        if site.latitude is None and site.longitude is None and site_id != "icon-d2":
             return self._create_extended_site(site, date)
         return site
 
