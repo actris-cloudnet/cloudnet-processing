@@ -3,6 +3,7 @@ from tempfile import NamedTemporaryFile
 from uuid import UUID
 
 import netCDF4
+import numpy as np
 
 from processing.harmonizer import core
 from processing.utils import MiscError
@@ -55,5 +56,5 @@ class ModelNc(core.Level1Nc):
 
     def harmonize_longitude_range(self) -> None:
         """Harmonize longitude from range [0, 360] to [-180, 180]."""
-        lon = self.nc["longitude"]
-        lon[lon[:] > 180] -= 360
+        lon = self.nc["longitude"][:]
+        self.nc["longitude"][:] = np.where(lon > 180, lon - 360, lon)
