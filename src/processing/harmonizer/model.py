@@ -23,6 +23,7 @@ def harmonize_model_file(data: dict) -> UUID:
         model = ModelNc(nc_raw, nc, data)
         model.copy_file_contents()
         model.harmonize_attribute("units", ("latitude", "longitude", "altitude"))
+        model.harmonize_longitude_range()
         uuid = model.add_uuid()
         model.add_global_model_attributes()
         model.check_time_dimension()
@@ -51,3 +52,8 @@ class ModelNc(core.Level1Nc):
         """Adds required global attributes."""
         self.nc.cloudnet_file_type = "model"
         self.nc.Conventions = "CF-1.8"
+
+    def harmonize_longitude_range(self) -> None:
+        """Harmonize longitude from range [0, 360] to [-180, 180]."""
+        lon = self.nc["longitude"]
+        lon[lon[:] > 180] -= 360
