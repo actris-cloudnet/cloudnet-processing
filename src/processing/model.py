@@ -14,6 +14,7 @@ from model_munger.readers import (
     read_gdas1,
     read_icon_d2,
 )
+from model_munger.readers.icon_d2 import StationMissingError
 
 from processing import utils
 from processing.harmonizer.model import harmonize_model_file
@@ -37,7 +38,10 @@ CLOUDNET_TO_ICON_D2 = {
 
 
 def _process_icon_d2(path: Path, location: Location) -> Model:
-    return read_icon_d2(path, CLOUDNET_TO_ICON_D2[location.id], location)
+    try:
+        return read_icon_d2(path, CLOUDNET_TO_ICON_D2[location.id], location)
+    except StationMissingError as err:
+        raise SkipTaskError(str(err))
 
 
 SKIP_MODELS = ()
@@ -182,8 +186,7 @@ def _process_model(
             and params.model.forecast_end is not None
         ):
             model.screen_forecast_time(
-                params.model.forecast_start,
-                params.model.forecast_end + 0.99,  # type: ignore[arg-type]
+                params.model.forecast_start, params.model.forecast_end + 1
             )
         if len(model.data["time"]) > 0:
             models.append(model)
