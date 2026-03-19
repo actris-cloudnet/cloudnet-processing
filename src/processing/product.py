@@ -113,6 +113,7 @@ def process_product(
         processor.create_and_upload_images(
             new_file,
             params.product.id,
+            params.site.id,
             uuid.product,
             filename,
             directory,

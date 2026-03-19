@@ -28,6 +28,7 @@ def update_plots(processor: Processor, params: ProcessParams, directory: Path) -
         processor.create_and_upload_images(
             full_path,
             params.product.id,
+            params.site.id,
             file_uuid,
             metadata.filename,
             directory,

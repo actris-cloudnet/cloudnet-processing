@@ -68,7 +68,7 @@ def process_instrument(
     else:
         logging.info("Skipping PUT to data portal, file has not changed")
     processor.create_and_upload_images(
-        new_file, params.product.id, uuid.product, filename, directory
+        new_file, params.product.id, params.site.id, uuid.product, filename, directory
     )
     qc_result = processor.upload_quality_report(
         new_file, uuid.product, params.site, params.product.id

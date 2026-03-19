@@ -344,6 +344,7 @@ class Processor:
         self,
         filepath: Path,
         product_id: str,
+        site_id: str,
         uuid: UUID,
         s3key: str,
         directory: Path,
@@ -353,7 +354,7 @@ class Processor:
         visualizations = []
         s3key = f"legacy/{s3key}" if legacy is True else s3key
         try:
-            fields, max_alt = self._get_fields_for_plot(product_id)
+            fields, max_alt = self._get_fields_for_plot(product_id, site_id)
         except NotImplementedError:
             logging.warning(f"Plotting for {product_id} not implemented")
             return
@@ -385,13 +386,14 @@ class Processor:
         self.md_api.put_images(visualizations, uuid)
         self._delete_obsolete_images(uuid, product_id, valid_images)
 
-    def _get_fields_for_plot(self, product_id: str) -> tuple[list, int]:
+    def _get_fields_for_plot(self, product_id: str, site_id: str) -> tuple[list, int]:
         variables = self.md_api.get(f"api/products/{product_id}/variables")
         variable_ids = [var["id"] for var in variables]
         # Deprecated variables can not be easily removed from the database
         # so we filter them out here manually:
         if product_id == "classification":
             variable_ids = [v for v in variable_ids if v != "detection_status"]
+        is_tropical = site_id in ("campina", "rv-meteor")
         match product_id:
             case "lwc" | "der" | "mwr" | "mwr-single" | "mwr-multi":
                 max_alt = 6
@@ -400,7 +402,7 @@ class Processor:
             case "rain-radar":
                 max_alt = 3
             case _:
-                max_alt = 12
+                max_alt = 16 if is_tropical else 12
         return variable_ids, max_alt
 
     def create_and_upload_l3_images(

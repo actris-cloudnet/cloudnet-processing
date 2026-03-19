@@ -131,7 +131,7 @@ def process_model(processor: Processor, params: ModelParams, directory: Path) ->
             logging.info("Skipping plotting for hidden site")
         else:
             processor.create_and_upload_images(
-                new_file, "model", product_uuid, filename, directory
+                new_file, "model", params.site.id, product_uuid, filename, directory
             )
         qc_result = processor.upload_quality_report(new_file, product_uuid, params.site)
         _print_info(product_uuid, qc_result)
