@@ -388,8 +388,6 @@ def _process_categorize(
 
 def _get_categorize_options(params: ProductParams) -> dict | None:
     key = "temperature_offset"
-    if params.site.id == "schneefernerhaus":
-        return {key: -7}
     if params.site.id == "granada":
         return {key: 3}
     return None
