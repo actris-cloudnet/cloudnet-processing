@@ -179,7 +179,7 @@ class ProcessRadar(ProcessInstrument):
                 self.uuid.raw.extend(uuids_previous)
 
         full_paths = _unzip_gz_files(full_paths)
-        for key in ("azimuth_offset", "zenith_offset", "snr_limit"):
+        for key in ("azimuth_offset", "zenith_offset", "snr_limit", "range_correction_factor"):
             self._add_calibration(key)
         output_filename, site_meta = self._args
         site_meta["model"] = "mira-35"
