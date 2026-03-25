@@ -49,6 +49,7 @@ class HatproNc(core.Level1Nc):
     def copy_file(self, all_keys: bool = False) -> None:
         """Copies essential fields only."""
         valid_ind = self._get_valid_timestamps()
+        valid_ind = self._filter_zenith_observations(valid_ind)
         if all_keys is True:
             possible_keys = None
         else:
@@ -98,6 +99,20 @@ class HatproNc(core.Level1Nc):
             if self.nc_raw.variables[key][:] != 1:  # not UTC
                 raise ValueError("Local time is not supported")
 
+    def _filter_zenith_observations(self, time_ind: list) -> list:
+        """Keeps only timestamps where elevation angle is close to 90°."""
+        key = _find_elevation_angle_key(self.nc_raw)
+        if key is None:
+            return time_ind
+        elevation = self.nc_raw.variables[key][time_ind]
+        tolerance = 5.0
+        mask = np.abs(elevation - 90.0) < tolerance
+        filtered = np.array(time_ind)[mask].tolist()
+        if not filtered:
+            msg = "No valid timestamps with zenith observations found, check the elevation angle data"
+            raise cloudnetpy.exceptions.ValidTimeStampError(msg)
+        return filtered
+
     def _get_valid_timestamps(self) -> list:
         time_stamps = self.nc_raw.variables["time"][:]
         epoch = _get_epoch(self.nc_raw.variables["time"].units)
@@ -109,7 +124,8 @@ class HatproNc(core.Level1Nc):
             ):
                 valid_ind.append(t_ind)
         if not valid_ind:
-            raise cloudnetpy.exceptions.ValidTimeStampError
+            msg = "No valid timestamps found, check the time data"
+            raise cloudnetpy.exceptions.ValidTimeStampError(msg)
         _, ind = np.unique(time_stamps[valid_ind], return_index=True)
         return list(np.array(valid_ind)[ind])
 
@@ -136,6 +152,13 @@ class HatproNc(core.Level1Nc):
                 variable[time_ind] if "time" in variable.dimensions else variable[:]
             )
         self._copy_global_attributes()
+
+
+def _find_elevation_angle_key(nc: netCDF4.Dataset) -> str | None:
+    for key in ("elevation_angle", "ElAng", "ele"):
+        if key in nc.variables:
+            return key
+    return None
 
 
 def _get_epoch(units: str) -> datetime.datetime:
