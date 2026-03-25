@@ -2,6 +2,8 @@ import datetime
 import gzip
 import logging
 import shutil
+import tarfile
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Literal
 from uuid import UUID
@@ -220,16 +222,25 @@ def build_file_landing_page_url(uuid: str | UUID) -> str:
     return f"{base}/file/{uuid}"
 
 
-def unzip_gz_file(path_in: Path) -> Path:
+def unzip_gz_file(path_in: Path) -> Iterable[Path]:
     if path_in.suffix != ".gz":
-        return path_in
+        yield path_in
+        return
     path_out = path_in.parent / path_in.stem
     logging.debug(f"Decompressing {path_in} to {path_out}")
     with gzip.open(path_in, "rb") as file_in:
-        with open(path_out, "wb") as file_out:
-            shutil.copyfileobj(file_in, file_out)
+        if path_out.suffix == ".tar":
+            with tarfile.TarFile(fileobj=file_in) as tar:
+                for tarinfo in tar:
+                    info_out = path_in.parent / tarinfo.name
+                    logging.debug("Extracting to %s", info_out)
+                    tar.extract(tarinfo, path_in.parent, filter="data")
+                    yield info_out
+        else:
+            with open(path_out, "wb") as file_out:
+                shutil.copyfileobj(file_in, file_out)
+            yield path_out
     path_in.unlink()
-    return path_out
 
 
 def create_product_put_payload(

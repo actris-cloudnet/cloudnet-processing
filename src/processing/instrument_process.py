@@ -5,6 +5,7 @@ import itertools
 import logging
 import re
 import shutil
+import tarfile
 from collections import defaultdict
 from pathlib import Path
 from typing import Literal, NoReturn
@@ -160,7 +161,7 @@ class ProcessRadar(ProcessInstrument):
 
     def process_mira_35(self) -> None:
         full_paths, self.uuid.raw = self.download_instrument(
-            filename_suffix={".znc", ".znc.gz"},
+            filename_suffix={".znc", ".znc.gz", ".znc.tar.gz"},
             allow_empty=True,
             exclude_pattern=r"[a-z]+\.znc",
         )
@@ -925,11 +926,11 @@ def _get_valid_uuids(
 
 
 def _unzip_gz_files(full_paths: list[Path]) -> list[Path]:
-    paths_out = []
+    paths_out: list[Path] = []
     for path_in in full_paths:
         try:
-            paths_out.append(unzip_gz_file(path_in))
-        except (EOFError, gzip.BadGzipFile) as err:
+            paths_out.extend(unzip_gz_file(path_in))
+        except (EOFError, gzip.BadGzipFile, tarfile.TarError) as err:
             logging.warning("Cannot unzip gz file %s: %s", path_in, err)
     return paths_out
 

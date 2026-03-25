@@ -1,3 +1,7 @@
+import gzip
+import shutil
+import tarfile
+from io import BytesIO
 from pathlib import Path
 
 import netCDF4
@@ -9,6 +13,7 @@ from numpy import ma
 
 from processing import netcdf_comparer
 from processing.netcdf_comparer import NCDiff
+from processing.utils import unzip_gz_file
 
 test_file_path = Path(__file__).parent.absolute()
 
@@ -614,3 +619,42 @@ def test_compression(tmp_path: Path) -> None:
         nc1.createVariable("time", "f8", ("time",), zlib=False)
         nc2.createVariable("time", "f8", ("time",), zlib=True)
     assert netcdf_comparer.nc_difference(old_file, new_file) == NCDiff.MINOR
+
+
+def test_unzip_regular_gz_file(tmp_path: Path) -> None:
+    regular_file = tmp_path / "test.txt"
+    regular_file.write_text("This is a test file.")
+    gz_file = tmp_path / "test.txt.gz"
+    with open(regular_file, "rb") as f_in:
+        with gzip.open(gz_file, "wb") as f_out:
+            shutil.copyfileobj(f_in, f_out)
+
+    result = list(unzip_gz_file(gz_file))
+    assert len(result) == 1
+    assert result[0].name == "test.txt"
+    assert result[0].read_text() == "This is a test file."
+    assert not gz_file.exists()  # Ensure the .gz file is deleted
+
+
+def test_unzip_tar_gz_file(tmp_path: Path) -> None:
+    tar_gz_file = tmp_path / "test.tar.gz"
+    with tarfile.open(tar_gz_file, "w:gz") as tar:
+        info = tarfile.TarInfo("subdir/test.txt")
+        info.size = len(b"This is a test file inside a tar.")
+        tar.addfile(info, fileobj=BytesIO(b"This is a test file inside a tar."))
+
+    result = list(unzip_gz_file(tar_gz_file))
+    assert len(result) == 1
+    assert result[0].name == "test.txt"
+    assert result[0].read_text() == "This is a test file inside a tar."
+    assert not tar_gz_file.exists()  # Ensure the .tar.gz file is deleted
+
+
+def test_unzip_non_gz_file(tmp_path: Path) -> None:
+    non_gz_file = tmp_path / "test.txt"
+    non_gz_file.write_text("This is a non-gz file.")
+
+    result = list(unzip_gz_file(non_gz_file))
+    assert len(result) == 1
+    assert result[0].name == "test.txt"
+    assert result[0].read_text() == "This is a non-gz file."
