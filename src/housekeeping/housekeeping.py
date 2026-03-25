@@ -51,9 +51,10 @@ def process_record(record: RawMetadata, client: APIClient, db: Database) -> None
         logging.debug(f"Processing housekeeping data: {record.filename}")
         with tempfile.TemporaryDirectory() as tmpdir:
             filepath = client.download([record], tmpdir, progress=False)[0]
-            filepath = unzip_gz_file(filepath)
-            points = reader(filepath, record, calibration)
-            db.write(points)
+            filepaths = unzip_gz_file(filepath)
+            for fp in filepaths:
+                points = reader(fp, record, calibration)
+                db.write(points)
     except UnsupportedFile as err:
         logging.warning(f"Unable to process file: {err}")
     except KeyboardInterrupt as err:
