@@ -23,7 +23,7 @@ dependencies = [
   "cloudnet-api-client>=0.12.4",
   "cloudnetpy[extras]>=1.88.3",
   "cloudnetpy_qc>=1.27.3",
-  "doppy>=0.5.5",
+  "doppy==0.5.10",
   "earthcare-downloader",
   "influxdb-client",
   "model-munger>=0.3.7",
