@@ -3,6 +3,7 @@ import datetime
 import gzip
 import itertools
 import logging
+import math
 import re
 import shutil
 import tarfile
@@ -123,6 +124,19 @@ class ProcessInstrument:
             time_offset=time_offset,
         )
 
+    def _get_time_offset(
+        self, date: datetime.date | None = None
+    ) -> datetime.timedelta | None:
+        try:
+            calibration = self.processor.client.calibration(
+                self.params.instrument.pid, date or self.params.date
+            )
+            if "time_offset" in calibration["data"]:
+                return datetime.timedelta(minutes=calibration["data"]["time_offset"])
+        except CloudnetAPIError:
+            pass
+        return None
+
 
 class ProcessRadar(ProcessInstrument):
     def process_rpg_fmcw_94(self) -> None:
@@ -231,18 +245,7 @@ class ProcessRadar(ProcessInstrument):
 
 class ProcessDopplerLidarWind(ProcessInstrument):
     def process_halo_doppler_lidar(self) -> None:
-        try:
-            calibration = self.processor.client.calibration(
-                self.params.instrument.pid, self.params.date
-            )
-            time_offset = (
-                datetime.timedelta(minutes=calibration["data"]["time_offset"])
-                if "time_offset" in calibration["data"]
-                else None
-            )
-        except CloudnetAPIError:
-            time_offset = None
-
+        time_offset = self._get_time_offset()
         full_paths, self.uuid.raw = self.download_instrument(
             include_pattern=r".*\.hpl",
             exclude_pattern=r"Stare.*",
@@ -351,17 +354,7 @@ class ProcessDopplerLidarWind(ProcessInstrument):
 
 class ProcessDopplerLidar(ProcessInstrument):
     def process_halo_doppler_lidar(self) -> None:
-        try:
-            calibration = self.processor.client.calibration(
-                self.params.instrument.pid, self.params.date
-            )
-            time_offset = (
-                datetime.timedelta(minutes=calibration["data"]["time_offset"])
-                if calibration is not None and "time_offset" in calibration["data"]
-                else None
-            )
-        except CloudnetAPIError:
-            time_offset = None
+        time_offset = self._get_time_offset()
         # Co files either have "co" tag or no tags at all.
         full_paths_co, raw_uuids_co = self.download_instrument(
             filename_prefix="Stare",
@@ -536,17 +529,7 @@ class ProcessLidar(ProcessInstrument):
         self._call_ceilo2nc("cl31")
 
     def process_cl51(self) -> None:
-        try:
-            calibration = self.processor.client.calibration(
-                self.params.instrument.pid, self.params.date
-            )
-            time_offset = (
-                datetime.timedelta(minutes=calibration["data"]["time_offset"])
-                if "time_offset" in calibration["data"]
-                else None
-            )
-        except CloudnetAPIError:
-            time_offset = None
+        time_offset = self._get_time_offset()
         full_paths, self.uuid.raw = self.download_instrument(time_offset=time_offset)
         full_paths.sort()
         _concatenate_text_files(full_paths, self.daily_path)
@@ -559,9 +542,35 @@ class ProcessLidar(ProcessInstrument):
         self._call_ceilo2nc("cl51")
 
     def process_cl61d(self) -> None:
+        current_offset = self._get_time_offset(self.params.date)
         full_paths, raw_uuids = self.download_instrument(
             exclude_pattern="clu-generated"
         )
+        _apply_cl61d_time_offset(full_paths, current_offset)
+        previous_date = self.params.date - datetime.timedelta(days=1)
+        previous_offset = self._get_time_offset(previous_date)
+        n_hours_previous = _cl61d_boundary_hours(
+            current_offset, previous_offset, direction="previous"
+        )
+        if n_hours_previous > 0:
+            paths_previous, uuids_previous = self._download_cl61d_boundary(
+                previous_date, n_hours_previous, direction="previous"
+            )
+            _apply_cl61d_time_offset(paths_previous, previous_offset)
+            full_paths.extend(paths_previous)
+            raw_uuids.extend(uuids_previous)
+        next_date = self.params.date + datetime.timedelta(days=1)
+        next_offset = self._get_time_offset(next_date)
+        n_hours_next = _cl61d_boundary_hours(
+            current_offset, next_offset, direction="next"
+        )
+        if n_hours_next > 0:
+            paths_next, uuids_next = self._download_cl61d_boundary(
+                next_date, n_hours_next, direction="next"
+            )
+            _apply_cl61d_time_offset(paths_next, next_offset)
+            full_paths.extend(paths_next)
+            raw_uuids.extend(uuids_next)
         variables = ["x_pol", "p_pol", "beta_att", "time", "tilt_angle"]
         try:
             valid_full_paths = concat_wrapper.concat_netcdf_files(
@@ -582,6 +591,31 @@ class ProcessLidar(ProcessInstrument):
             raise RawDataMissingError()
         self._call_ceilo2nc("cl61d")
         self.uuid.raw = _get_valid_uuids(raw_uuids, full_paths, valid_full_paths)
+
+    def _download_cl61d_boundary(
+        self,
+        date: datetime.date,
+        n_hours: int,
+        direction: Literal["previous", "next"],
+    ) -> tuple[list[Path], list[UUID]]:
+        if direction == "previous":
+            hour_pattern = "|".join(f"{23 - i:02d}" for i in range(n_hours))
+        else:
+            hour_pattern = "|".join(f"{i:02d}" for i in range(n_hours))
+        paths, uuids = self.download_instrument(
+            date=date,
+            include_pattern=f"_{date.strftime('%Y%m%d')}_({hour_pattern})",
+            exclude_pattern="clu-generated",
+            allow_empty=True,
+        )
+        if paths:
+            return paths, uuids
+        # Fallback for files without hour in filename (e.g. daily files)
+        return self.download_instrument(
+            date=date,
+            exclude_pattern="clu-generated",
+            allow_empty=True,
+        )
 
     def process_da10(self) -> None:
         full_paths, raw_uuids = self.download_instrument()
@@ -882,14 +916,8 @@ class ProcessWeatherStation(ProcessInstrument):
         )
         if self.params.site.id not in supported_sites:
             raise NotImplementedError("Weather station not implemented for this site")
-        try:
-            calibration = self.processor.client.calibration(
-                self.params.instrument.pid, self.params.date
-            )
-        except CloudnetAPIError:
-            calibration = None
-        if calibration and calibration.get("data", {}).get("time_offset"):
-            time_offset = datetime.timedelta(minutes=calibration["data"]["time_offset"])
+        time_offset = self._get_time_offset()
+        if time_offset is not None:
             full_paths, self.uuid.raw = self.download_instrument(
                 time_offset=time_offset
             )
@@ -945,6 +973,54 @@ def _fix_cl51_timestamps(filename: Path, offset: datetime.timedelta) -> None:
             lines[ind] = f"-{date_time_utc}\n"
     with open(filename, "w") as file:
         file.writelines(lines)
+
+
+def _apply_cl61d_time_offset(
+    paths: list[Path], time_offset: datetime.timedelta | None
+) -> None:
+    if not paths or time_offset is None:
+        return
+    logging.info(
+        "Shifting timestamps to UTC by %d minutes",
+        time_offset / datetime.timedelta(minutes=1),
+    )
+    for path in paths:
+        _fix_cl61d_timestamps(path, time_offset)
+
+
+def _fix_cl61d_timestamps(filename: Path, offset: datetime.timedelta) -> None:
+    offset_seconds = offset / datetime.timedelta(seconds=1)
+    with netCDF4.Dataset(filename, "a") as nc:
+        nc.variables["time"][:] -= offset_seconds
+
+
+def _cl61d_boundary_hours(
+    current_offset: datetime.timedelta | None,
+    adjacent_offset: datetime.timedelta | None,
+    direction: Literal["previous", "next"],
+) -> int:
+    """Calculate how many boundary hours to fetch from an adjacent day.
+
+    Always returns at least 1 to handle cross-midnight data.
+    Scales up when time offsets shift more data across the day boundary.
+    """
+    zero = datetime.timedelta(0)
+    hours = 1
+    if direction == "previous":
+        if adjacent_offset is not None and adjacent_offset < zero:
+            hours = max(
+                hours, math.ceil(abs(adjacent_offset / datetime.timedelta(hours=1)))
+            )
+        if current_offset is not None and current_offset > zero:
+            hours = max(hours, math.ceil(current_offset / datetime.timedelta(hours=1)))
+    else:
+        if adjacent_offset is not None and adjacent_offset > zero:
+            hours = max(hours, math.ceil(adjacent_offset / datetime.timedelta(hours=1)))
+        if current_offset is not None and current_offset < zero:
+            hours = max(
+                hours, math.ceil(abs(current_offset / datetime.timedelta(hours=1)))
+            )
+    return hours
 
 
 def _doppy_stare_to_nc(
