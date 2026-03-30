@@ -393,7 +393,7 @@ class Processor:
         # so we filter them out here manually:
         if product_id == "classification":
             variable_ids = [v for v in variable_ids if v != "detection_status"]
-        is_tropical = site_id in ("campina",)
+        is_tropical = site_id in ("campina", "mindelo")
         match product_id:
             case "lwc" | "der" | "mwr" | "mwr-single" | "mwr-multi":
                 max_alt = 6
