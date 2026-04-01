@@ -15,7 +15,7 @@ PASSWORD = "admin"
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("filename", type=Path)
+    parser.add_argument("filename", type=Path, nargs="+")
     parser.add_argument("-s", "--site", required=True)
     parser.add_argument("-i", "--instrument")
     parser.add_argument("--pid")
@@ -30,45 +30,48 @@ def main() -> None:
     if args.model and args.instrument:
         parser.error("specify either --model or --instrument")
 
-    md5_hash = hashlib.md5()
-    with open(args.filename, "rb") as f:
-        for byte_block in iter(lambda: f.read(4096), b""):
-            md5_hash.update(byte_block)
+    for filename in args.filename:
+        md5_hash = hashlib.md5()
+        with open(filename, "rb") as f:
+            for byte_block in iter(lambda: f.read(4096), b""):
+                md5_hash.update(byte_block)
 
-    checksum = md5_hash.hexdigest()
+        checksum = md5_hash.hexdigest()
 
-    metadata = {
-        "filename": args.filename.name,
-        "checksum": checksum,
-        "measurementDate": args.date.isoformat(),
-        "site": args.site,
-    }
-    if args.instrument:
-        metadata["instrument"] = args.instrument
-        metadata["instrumentPid"] = args.pid
-        endpoint = "upload"
-    else:
-        metadata["model"] = args.model
-        endpoint = "model-upload"
+        metadata = {
+            "filename": filename.name,
+            "checksum": checksum,
+            "measurementDate": args.date.isoformat(),
+            "site": args.site,
+        }
+        if args.instrument:
+            metadata["instrument"] = args.instrument
+            metadata["instrumentPid"] = args.pid
+            endpoint = "upload"
+        else:
+            metadata["model"] = args.model
+            endpoint = "model-upload"
 
-    print(f"Uploading {args.filename.name}", end="\t")
-    res = requests.post(
-        f"{BACKEND_URL}/{endpoint}/metadata/", json=metadata, auth=(USERNAME, PASSWORD)
-    )
-
-    if res.status_code != 200:
-        print(res.text)
-        sys.exit(1)
-
-    with open(args.filename, "rb") as f:
-        res = requests.put(
-            f"{BACKEND_URL}/{endpoint}/data/{checksum}",
-            data=f,
+        print(f"Uploading {filename.name}", end="\t")
+        res = requests.post(
+            f"{BACKEND_URL}/{endpoint}/metadata/",
+            json=metadata,
             auth=(USERNAME, PASSWORD),
         )
-    print(res.text)
-    if not res.ok:
-        sys.exit(1)
+
+        if res.status_code != 200:
+            print(res.text)
+            sys.exit(1)
+
+        with open(filename, "rb") as f:
+            res = requests.put(
+                f"{BACKEND_URL}/{endpoint}/data/{checksum}",
+                data=f,
+                auth=(USERNAME, PASSWORD),
+            )
+        print(res.text)
+        if not res.ok:
+            sys.exit(1)
 
 
 if __name__ == "__main__":
