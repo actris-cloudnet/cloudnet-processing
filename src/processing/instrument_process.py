@@ -35,6 +35,7 @@ from cloudnetpy.instruments import (
     rd802nc,
     rpg2nc,
     thies2nc,
+    wr2nc,
     ws2nc,
 )
 from cloudnetpy.utils import is_timestamp
@@ -942,6 +943,12 @@ class ProcessRainRadar(ProcessInstrument):
         full_paths, self.uuid.raw = self.download_instrument()
         full_paths = _unzip_gz_files(full_paths)
         self.uuid.product = mrr2nc(full_paths, *self._args, **self._kwargs)
+
+
+class ProcessWeatherRadar(ProcessInstrument):
+    def process_wrm200(self) -> None:
+        full_paths, self.uuid.raw = self.download_instrument()
+        self.uuid.product = wr2nc(full_paths, *self._args, **self._kwargs)
 
 
 def _get_valid_uuids(
