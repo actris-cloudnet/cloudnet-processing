@@ -151,7 +151,7 @@ class Fetcher:
             identifier = ec_file[0].filename.split(".")[0]
             if identifier in local_file_path.name:
                 return local_file_path, baseline
-        paths = download(ec_file, output_path=directory, unzip=True)
+        paths = download(ec_file, output_path=directory)
         for path in paths:
             if path.suffix == ".h5":
                 return path, baseline
