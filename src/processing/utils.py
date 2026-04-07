@@ -19,7 +19,7 @@ from urllib3.util.retry import Retry
 from processing.config import Config
 from processing.version import __version__ as cloudnet_processing_version
 
-ErrorSource = Literal["data", "worker", "freeze-cronjob", "qc-cronjob"]
+ErrorSource = Literal["data", "worker", "freeze-cronjob", "qc-cronjob", "ec-cronjob"]
 
 
 class Uuid:
@@ -116,6 +116,8 @@ def send_slack_alert(
             label = ":cold_face: Freeze cronjob"
         case "qc-cronjob":
             label = ":first_place_medal: Yesterday's QC cronjob"
+        case "ec-cronjob":
+            label = ":satellite: EarthCARE validation cronjob"
         case unknown_source:
             label = f":interrobang: Unknown error source ({unknown_source})"
 
