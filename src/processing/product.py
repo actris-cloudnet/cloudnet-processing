@@ -358,7 +358,6 @@ def _process_epsilon_from_lidar(
 def _process_categorize(
     processor: Processor, params: ProductParams, uuid: Uuid, directory: Path
 ) -> Path:
-    options = _get_categorize_options(params)
     is_voodoo = params.product.id == "categorize-voodoo"
     meta_records = _get_level1b_metadata_for_categorize(processor, params, is_voodoo)
     paths = processor.storage_api.download_products(meta_records.values(), directory)
@@ -371,9 +370,7 @@ def _process_categorize(
         lv0_uuid = []
     output_path = directory / "output.nc"
     try:
-        uuid.product = generate_categorize(
-            input_files, output_path, uuid=uuid.volatile, options=options
-        )
+        uuid.product = generate_categorize(input_files, output_path, uuid=uuid.volatile)
         uuid.raw.extend(lv0_uuid)
     except ModelDataError as exc:
         gdas1_meta = processor.get_product(params, product_id="model", model_id="gdas1")
@@ -384,13 +381,6 @@ def _process_categorize(
         )
         uuid.product = generate_categorize(input_files, output_path, uuid=uuid.volatile)
     return output_path
-
-
-def _get_categorize_options(params: ProductParams) -> dict | None:
-    key = "temperature_offset"
-    if params.site.id == "granada":
-        return {key: 3}
-    return None
 
 
 def _process_l3(
