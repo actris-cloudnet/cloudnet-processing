@@ -260,6 +260,7 @@ def _process_cpr_validation(
         raise SkipTaskError("Missing EarthCARE data")
     uuid.product = UUID(uuid_str)
     utils.add_global_attributes(output_file)
+    _propagate_source_instrument_pids(cpr_simu_file, output_file)
     return output_file
 
 
@@ -291,7 +292,16 @@ def _process_cpr_tc_validation(
         raise SkipTaskError("Missing EarthCARE data")
     uuid.product = UUID(uuid_str)
     utils.add_global_attributes(output_file)
+    _propagate_source_instrument_pids(classification_file, output_file)
     return output_file
+
+
+def _propagate_source_instrument_pids(source_file: Path, output_file: Path) -> None:
+    with netCDF4.Dataset(source_file, "r") as src:
+        pids = getattr(src, "source_instrument_pids", None)
+    if pids:
+        with netCDF4.Dataset(output_file, "r+") as dst:
+            dst.source_instrument_pids = pids
 
 
 def _check_cpr_date(params: ProductParams) -> None:
