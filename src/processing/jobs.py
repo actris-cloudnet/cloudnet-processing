@@ -63,6 +63,8 @@ def freeze(processor: Processor, params: ProcessParams, directory: Path) -> None
     file_uuid, pid, url = processor.pid_utils.add_pid_to_file(
         full_path, pid=existing_pid
     )
+    if pid is None:
+        raise utils.SkipTaskError("PID service unavailable")
     if uuid.UUID(file_uuid) != metadata.uuid:
         msg = f"File {metadata.filename} UUID mismatch (DB: {metadata.uuid}, File: {file_uuid})"
         raise ValueError(msg)
