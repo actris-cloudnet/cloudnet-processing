@@ -21,7 +21,7 @@ def process_instrument(
     if existing_product := processor.get_product(params):
         if existing_product.volatile:
             uuid.volatile = existing_product.uuid
-            pid_to_new_file = existing_product.pid
+            pid_to_new_file = existing_product.pid or None
         filename = existing_product.filename
         existing_file = processor.storage_api.download_product(
             existing_product, directory
