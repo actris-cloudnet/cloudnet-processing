@@ -387,18 +387,19 @@ class ProcessDopplerLidar(ProcessInstrument):
         )
         self.uuid.raw = raw_uuids_co + raw_uuids_cross
 
+        noise_mask_method = self._noise_mask_method()
         stare: doppy.product.Stare | doppy.product.StareDepol
         try:
             stare = doppy.product.Stare.from_halo_data(
                 data=full_paths_co,
                 data_bg=full_paths_bg,
-                bg_correction_method=doppy.options.BgCorrectionMethod.FIT,
+                noise_mask_method=noise_mask_method,
             )
             if full_paths_cross:
                 stare_cross = doppy.product.Stare.from_halo_data(
                     data=full_paths_cross,
                     data_bg=full_paths_bg,
-                    bg_correction_method=doppy.options.BgCorrectionMethod.FIT,
+                    noise_mask_method=noise_mask_method,
                 )
                 stare = doppy.product.StareDepol(stare, stare_cross)
         except doppy.exceptions.NoDataError as err:
@@ -466,6 +467,23 @@ class ProcessDopplerLidar(ProcessInstrument):
         self.uuid.product = harmonizer.harmonize_doppler_lidar_stare_file(
             data, instrument
         )
+
+    def _noise_mask_method(self) -> doppy.options.NoiseMaskMethod:
+        default = doppy.options.NoiseMaskMethod.INTENSITY_AND_VELOCITY
+        try:
+            calibration = self.processor.client.calibration(
+                self.params.instrument.pid, self.params.date
+            )
+        except CloudnetAPIError:
+            return default
+        value = (
+            calibration.get("data", {}).get("noise_mask_method")
+            if calibration
+            else None
+        )
+        if value is None:
+            return default
+        return doppy.options.NoiseMaskMethod(value)
 
 
 class ProcessLidar(ProcessInstrument):
