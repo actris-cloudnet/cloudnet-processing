@@ -98,10 +98,12 @@ def process_model(processor: Processor, params: ModelParams, directory: Path) ->
             volatile = False
         product_uuid = existing_meta.uuid
         filename = existing_meta.filename
+        s3key = existing_meta.s3key
         existing_file = processor.storage_api.download_product(existing_meta, directory)
     else:
         product_uuid = _generate_uuid()
         filename = _generate_filename(params)
+        s3key = None
 
     try:
         tmp_path = _process_model(params, full_paths, directory / "temp.nc")
@@ -123,7 +125,13 @@ def process_model(processor: Processor, params: ModelParams, directory: Path) ->
 
         if upload:
             processor.upload_file(
-                params, new_file, filename, volatile, patch=True, uuid=product_uuid
+                params,
+                new_file,
+                filename,
+                volatile,
+                patch=True,
+                uuid=product_uuid,
+                s3key=s3key,
             )
         else:
             logging.info("Skipping PUT to data portal, file has not changed")

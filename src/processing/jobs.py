@@ -76,16 +76,16 @@ def freeze(processor: Processor, params: ProcessParams, directory: Path) -> None
         msg = f"Minting PID {pid} to URL {url}"
     logging.info(msg)
 
-    response_data = processor.storage_api.upload_product(
-        full_path, metadata.uuid, metadata.filename
-    )
+    s3key = metadata.s3key or metadata.filename
+    file_info = processor.storage_api.upload_product(full_path, metadata.uuid, s3key)
     payload = {
         "uuid": file_uuid,
         "checksum": sha256sum(full_path),
         "volatile": volatile,
         "pid": pid,
         "newBucket": True,
-        **response_data,
+        "version": file_info.version,
+        "size": file_info.size,
     }
     processor.md_api.post("files", payload)
     metadata = processor.client.file(file_uuid)

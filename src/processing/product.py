@@ -39,11 +39,13 @@ def process_product(
         if existing_product.volatile:
             uuid.volatile = existing_product.uuid
         filename = existing_product.filename
+        s3key = existing_product.s3key
         existing_file = processor.storage_api.download_product(
             existing_product, directory
         )
     else:
         filename = _generate_filename(params)
+        s3key = None
         existing_file = None
 
     volatile = not existing_file or uuid.volatile is not None
@@ -96,7 +98,9 @@ def process_product(
             uuid.product = existing_product.uuid
 
     if upload:
-        processor.upload_file(params, new_file, filename, volatile, patch, uuid.product)
+        processor.upload_file(
+            params, new_file, filename, volatile, patch, uuid.product, s3key
+        )
     else:
         logging.info("Skipping PUT to data portal, file has not changed")
 

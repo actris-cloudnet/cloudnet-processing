@@ -23,12 +23,14 @@ def process_instrument(
             uuid.volatile = existing_product.uuid
             pid_to_new_file = existing_product.pid or None
         filename = existing_product.filename
+        s3key = existing_product.s3key
         existing_file = processor.storage_api.download_product(
             existing_product, directory
         )
     else:
         filename = _generate_filename(params)
         existing_file = None
+        s3key = None
 
     volatile = not existing_file or uuid.volatile is not None
 
@@ -64,7 +66,9 @@ def process_instrument(
             uuid.product = existing_product.uuid
 
     if upload:
-        processor.upload_file(params, new_file, filename, volatile, patch, uuid.product)
+        processor.upload_file(
+            params, new_file, filename, volatile, patch, uuid.product, s3key
+        )
     else:
         logging.info("Skipping PUT to data portal, file has not changed")
     processor.create_and_upload_images(

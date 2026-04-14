@@ -318,14 +318,16 @@ class Processor:
         volatile: bool,
         patch: bool,
         uuid: UUID,
+        s3key: str | None,
     ) -> None:
-        file_info = self.storage_api.upload_product(full_path, uuid, filename)
+        file_info = self.storage_api.upload_product(full_path, uuid, s3key or filename)
         payload = utils.create_product_put_payload(
             full_path,
             file_info,
             params.site.id,
             volatile,
             patch,
+            s3key,
         )
         if isinstance(params, ModelParams) and "evaluation" not in params.product.type:
             payload["model"] = params.model.id

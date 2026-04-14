@@ -6,6 +6,7 @@ import hashlib
 import logging
 import re
 import threading
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 from uuid import UUID
@@ -26,6 +27,12 @@ class StorageApiError(Exception):
     pass
 
 
+@dataclass
+class StorageApiFileInfo:
+    version: str
+    size: int
+
+
 class StorageApi:
     """Class for uploading and downloading files from the Cloudnet S3 data archive."""
 
@@ -35,13 +42,15 @@ class StorageApi:
         self._url = config.storage_service_url
         self._auth = config.storage_service_auth
 
-    def upload_product(self, full_path: Path, uuid: UUID, filename: str) -> dict:
+    def upload_product(
+        self, full_path: Path, uuid: UUID, s3key: str
+    ) -> StorageApiFileInfo:
         """Upload a processed Cloudnet file."""
         bucket = "cloudnet-product-new"
         headers = self._get_headers(full_path)
-        url = f"{self._url}/{bucket}/{uuid}/{filename}"
+        url = f"{self._url}/{bucket}/{uuid}/{s3key}"
         res = self._put(url, full_path, headers).json()
-        return {"version": res.get("version", ""), "size": int(res["size"])}
+        return StorageApiFileInfo(version=res.get("version", ""), size=int(res["size"]))
 
     def download_raw_data(
         self,

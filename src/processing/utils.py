@@ -17,6 +17,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 from processing.config import Config
+from processing.storage_api import StorageApiFileInfo
 from processing.version import __version__ as cloudnet_processing_version
 
 ErrorSource = Literal["data", "worker", "freeze-cronjob", "qc-cronjob", "ec-cronjob"]
@@ -247,10 +248,11 @@ def unzip_gz_file(path_in: Path) -> Iterable[Path]:
 
 def create_product_put_payload(
     full_path: Path,
-    storage_service_response: dict,
+    file_info: StorageApiFileInfo,
     site: str,
     volatile: bool,
     patch: bool,
+    s3key: str | None,
 ) -> dict:
     """Creates put payload for data portal."""
     with netCDF4.Dataset(full_path, "r") as nc:
@@ -269,7 +271,9 @@ def create_product_put_payload(
             "startTime": start_time,
             "stopTime": stop_time,
             "newBucket": True,
-            **storage_service_response,
+            "s3key": s3key,
+            "version": file_info.version,
+            "size": file_info.size,
         }
         if instrument_pid := getattr(nc, "instrument_pid", None):
             payload["instrumentPid"] = instrument_pid
