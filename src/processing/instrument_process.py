@@ -637,7 +637,7 @@ class ProcessLidar(ProcessInstrument):
         )
 
     def process_da10(self) -> None:
-        full_paths, raw_uuids = self.download_instrument()
+        full_paths, raw_uuids = self.download_instrument(include_pattern="ABS")
         valid_full_paths = concat_wrapper.concat_netcdf_files(
             full_paths,
             self.params.date,
