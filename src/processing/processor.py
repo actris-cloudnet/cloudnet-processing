@@ -393,8 +393,12 @@ class Processor:
         variable_ids = [var["id"] for var in variables]
         # Deprecated variables can not be easily removed from the database
         # so we filter them out here manually:
-        if product_id == "classification":
-            variable_ids = [v for v in variable_ids if v != "detection_status"]
+        product_deprecated_variables: dict[str, list[str]] = {
+            "classification": ["detection_status"],
+            "model": ["q", "pressure"],
+        }
+        deprecated_variables = product_deprecated_variables.get(product_id, ())
+        variable_ids = [v for v in variable_ids if v not in deprecated_variables]
         is_tropical = site_id in ("campina", "mindelo")
         match product_id:
             case "lwc" | "der" | "mwr" | "mwr-single" | "mwr-multi":
