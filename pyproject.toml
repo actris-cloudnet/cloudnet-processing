@@ -14,6 +14,7 @@ classifiers = [
   "Intended Audience :: Science/Research",
   "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
+  "Private :: Do Not Upload",
   "Programming Language :: Python :: 3.12",
   "Topic :: Scientific/Engineering",
 ]
