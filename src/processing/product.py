@@ -16,6 +16,7 @@ from cloudnetpy.products import (
     generate_mwr_single,
 )
 from cloudnetpy.products.epsilon import generate_epsilon_from_lidar
+from cloudnetpy.products.epsilon_radar import generate_epsilon_from_radar
 from earthcare_downloader import search
 from numpy import ma
 from orbital_radar import Suborbital
@@ -65,6 +66,8 @@ def process_product(
             new_file = _process_cpr_tc_validation(processor, params, uuid, directory)
         elif params.product.id == "epsilon-lidar":
             new_file = _process_epsilon_from_lidar(processor, params, uuid, directory)
+        elif params.product.id == "epsilon-radar":
+            new_file = _process_epsilon_from_radar(processor, params, uuid, directory)
         else:
             new_file = _process_level2(processor, params, uuid, directory)
     except CloudnetException as err:
@@ -73,12 +76,12 @@ def process_product(
     if not params.product.experimental:
         processor.pid_utils.add_pid_to_file(new_file, pid_to_new_file)
 
-    utils.add_global_attributes(
-        new_file,
+    instrument_pid = (
         params.instrument.pid
         if isinstance(params, ProductParams) and params.instrument
-        else None,
+        else None
     )
+    utils.add_global_attributes(new_file, instrument_pid)
 
     upload = True
     patch = False
@@ -365,6 +368,35 @@ def _process_epsilon_from_lidar(
     output_file = directory / "output.nc"
     uuid.product = generate_epsilon_from_lidar(
         file_lidar, file_wind, output_file, uuid.volatile
+    )
+    return output_file
+
+
+def _process_epsilon_from_radar(
+    processor: Processor, params: ProductParams, uuid: Uuid, directory: Path
+) -> Path:
+    if params.instrument is None:
+        raise RuntimeError("Instrument is None")
+
+    metadata_radar = processor.client.files(
+        site_id=params.site.id,
+        date=params.date,
+        product_id="radar",
+        instrument_pid=params.instrument.pid,
+    )
+    _check_response(metadata_radar, "radar")
+
+    metadata_model = processor.get_product(params, product_id="model")
+    if metadata_model is None:
+        raise SkipTaskError("Missing required input product: model")
+
+    file_radar, file_model = processor.storage_api.download_products(
+        [metadata_radar[0], metadata_model], directory
+    )
+
+    output_file = directory / "output.nc"
+    uuid.product = generate_epsilon_from_radar(
+        file_radar, file_model, output_file, uuid.volatile
     )
     return output_file
 

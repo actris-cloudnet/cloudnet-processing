@@ -335,6 +335,7 @@ class Processor:
             isinstance(params, (InstrumentParams, ProductParams)) and params.instrument
         ):
             payload["instrument"] = params.instrument.instrument_id
+            payload["instrumentPid"] = params.instrument.pid
         self.md_api.put("files", filename, payload)
 
     def update_statuses(self, raw_uuids: list[UUID], status: str) -> None:

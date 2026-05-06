@@ -350,7 +350,7 @@ def _process_file(
                         process_instrument(processor, instru_params, directory)
                     except SkipTaskError as err:
                         logging.warning("Skipped task: %s", err)
-    elif product.id in ("mwr-single", "mwr-multi", "epsilon-lidar"):
+    elif product.id in ("mwr-single", "mwr-multi", "epsilon-lidar", "epsilon-radar"):
         if args.cmd in ("dvas", "hkd"):
             raise SkipTaskError(f"{args.cmd.upper()} not supported for {product.id}")
         if args.uuids:
@@ -360,6 +360,7 @@ def _process_file(
                 "mwr-single": "mwr-l1c",
                 "mwr-multi": "mwr-l1c",
                 "epsilon-lidar": "doppler-lidar",
+                "epsilon-radar": "radar",
             }
             product_metadata = processor.client.files(
                 site_id=site.id,
