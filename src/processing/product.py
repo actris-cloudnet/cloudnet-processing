@@ -15,7 +15,7 @@ from cloudnetpy.products import (
     generate_mwr_multi,
     generate_mwr_single,
 )
-from cloudnetpy.products.epsilon import generate_epsilon_from_lidar
+from cloudnetpy.products.epsilon_lidar import generate_epsilon_from_lidar
 from cloudnetpy.products.epsilon_radar import generate_epsilon_from_radar
 from earthcare_downloader import search
 from numpy import ma
