@@ -257,6 +257,14 @@ class Worker:
                         instrument,
                         delay=datetime.timedelta(minutes=5),
                     )
+            elif product.id == "model" and derived_product.id == "epsilon-radar":
+                radars = self.client.files(
+                    site_id=params.site.id, date=params.date, product_id="radar"
+                )
+                for radar in radars:
+                    self.publish_followup_task(
+                        derived_product, params, radar.instrument
+                    )
             else:
                 assert isinstance(params, (InstrumentParams, ProductParams))
                 self.publish_followup_task(derived_product, params, params.instrument)
