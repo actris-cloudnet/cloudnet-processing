@@ -9,6 +9,7 @@ from model_munger.merge import merge_models
 from model_munger.model import Location, Model
 from model_munger.readers import (
     read_arome,
+    read_arome_arctic,
     read_arpege,
     read_ecmwf_open,
     read_gdas1,
@@ -183,11 +184,9 @@ def _process_model(
         if n_files := len(input_paths) != 1:
             raise ValueError(f"Expected a single file but found {n_files} files")
         return input_paths[0]
-    reader = MODEL_READERS[params.model.source_model_id]
     location = Location(id=params.site.id, name=params.site.human_readable_name)
     models = []
-    for path in input_paths:
-        model = reader(path, location)
+    for model in _read_files(input_paths, params.model.source_model_id, location):
         model.screen_time(params.date)
         if (
             params.model.forecast_start is not None
@@ -203,6 +202,29 @@ def _process_model(
     merged = merge_models(models)
     merged.write_netcdf(output_path)
     return output_path
+
+
+def _read_files(input_paths: list[Path], source_model_id: str, location: Location):
+    if source_model_id == "arome-arctic":
+        grouped = {}
+        for path in input_paths:
+            i = path.name.rfind("_")
+            prefix = path.name[:i]
+            suffix = path.name[i:]
+            if prefix not in grouped:
+                grouped[prefix] = [None, None]
+            if suffix == "_sfc.nc":
+                grouped[prefix][0] = path
+            elif suffix == "_ml.nc":
+                grouped[prefix][1] = path
+        for sfc_path, ml_path in grouped.values():
+            if sfc_path is None or ml_path is None:
+                continue
+            yield read_arome_arctic(sfc_path, ml_path, location)
+    else:
+        reader = MODEL_READERS[source_model_id]
+        for path in input_paths:
+            yield reader(path, location)
 
 
 def _harmonize_model(
