@@ -933,6 +933,7 @@ class ProcessWeatherStation(ProcessInstrument):
             "maido",
             "cluj",
             "falkenberg",
+            "potenza",
         )
         if self.params.site.id not in supported_sites:
             raise NotImplementedError("Weather station not implemented for this site")
