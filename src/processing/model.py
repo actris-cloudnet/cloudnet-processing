@@ -3,6 +3,7 @@ import logging
 import math
 import uuid
 from pathlib import Path
+from typing import Iterator
 
 import netCDF4
 from model_munger.merge import merge_models
@@ -204,9 +205,11 @@ def _process_model(
     return output_path
 
 
-def _read_files(input_paths: list[Path], source_model_id: str, location: Location):
+def _read_files(
+    input_paths: list[Path], source_model_id: str, location: Location
+) -> Iterator[Model]:
     if source_model_id == "arome-arctic":
-        grouped = {}
+        grouped: dict[str, list[Path | None]] = {}
         for path in input_paths:
             i = path.name.rfind("_")
             prefix = path.name[:i]
