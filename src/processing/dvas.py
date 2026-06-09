@@ -129,6 +129,7 @@ class DvasV3:
         self.config = config
         self.md_api = md_api
         self.session = utils.make_session()
+        self.token: str | None = None
         self.token_expires: datetime.datetime | None = None
         self.client = client
 
@@ -187,17 +188,23 @@ class DvasV3:
         self,
         method: str,
         endpoint: str,
-        *args: Any,  # noqa: ANN401
-        **kwargs: Any,  # noqa: ANN401
+        json: Any | None = None,  # noqa: ANN401
     ) -> None:
         if self.token_expires is None or self.token_expires < datetime.datetime.now():
             self._refresh_access_token()
         url = self.config.dvas_portal_url + endpoint
-        res = self.session.request(method, url, *args, **kwargs)
+        res = self.session.request(
+            method, url, json=json, headers={"Authorization": f"Bearer {self.token}"}
+        )
         # Retry once if unauthorized.
         if res.status_code == 401:
             self._refresh_access_token()
-            res = self.session.request(method, url, *args, **kwargs)
+            res = self.session.request(
+                method,
+                url,
+                json=json,
+                headers={"Authorization": f"Bearer {self.token}"},
+            )
         res.raise_for_status()
 
     def _refresh_access_token(self) -> None:
@@ -210,11 +217,9 @@ class DvasV3:
         )
         res.raise_for_status()
         token = res.json()
+        self.token = token["access_token"]
         self.token_expires = datetime.datetime.now() + datetime.timedelta(
             seconds=token["expires_in"] * 0.9
-        )
-        self.session.headers.update(
-            {"Authorization": f"Bearer {token['access_token']}"}
         )
 
 
