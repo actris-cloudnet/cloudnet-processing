@@ -113,6 +113,8 @@ class Fetcher:
         }
         if self.args.models:
             payload["model"] = self.args.models
+        else:
+            payload["allModels"] = "true"
         res = requests.get(url=url, params=payload)
         res.raise_for_status()
         return res.json()
@@ -315,7 +317,10 @@ def _submit_file(filename: Path, row: dict) -> str:
 
     dp_body = {
         **row,
+        "site": row["site"]["id"],
+        "product": row["product"]["id"],
         "sourceFileIds": [],
+        "s3key": None,
         "version": "",
         "newBucket": True,
     }

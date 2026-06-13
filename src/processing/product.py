@@ -111,7 +111,6 @@ def process_product(
         processor.create_and_upload_l3_images(
             new_file,
             params.product.id,
-            params.model.id,
             uuid.product,
             filename,
             directory,
@@ -456,7 +455,7 @@ def _process_l3(
     uuid.product = product_resampling.process_L3_day_product(
         params.model.id,
         l3_prod,
-        [model_file],
+        model_file,
         product_file,
         output_file,
         uuid=uuid.volatile,

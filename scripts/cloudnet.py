@@ -294,16 +294,21 @@ def _process_file(
                 model=processor.client.model(model_id),
             )
             _print_header(model_params, args)
-            with TemporaryDirectory() as temp_dir:
-                directory = Path(temp_dir)
-                if args.cmd == "plot":
-                    update_plots(processor, model_params, directory)
-                elif args.cmd == "qc":
-                    update_qc(processor, model_params, directory)
-                elif args.cmd == "freeze":
-                    freeze(processor, model_params, directory)
-                else:
-                    process_model(processor, model_params, directory)
+            try:
+                with TemporaryDirectory() as temp_dir:
+                    directory = Path(temp_dir)
+                    if args.cmd == "plot":
+                        update_plots(processor, model_params, directory)
+                    elif args.cmd == "qc":
+                        update_qc(processor, model_params, directory)
+                    elif args.cmd == "freeze":
+                        freeze(processor, model_params, directory)
+                    else:
+                        process_model(processor, model_params, directory)
+            except SkipTaskError as err:
+                logging.warning("Skipped task: %s", err)
+            except Exception:
+                logging.exception("Failed to process task")
     elif product.source_instrument_ids:
         # Instrument products
         if args.cmd == "dvas":
@@ -387,25 +392,41 @@ def _process_file(
                 else:
                     process_product(processor, product_params, directory)
     elif product.id in ("l3-cf", "l3-iwc", "l3-lwc"):
-        params = ModelParams(
-            site=site,
-            date=date,
-            product=product,
-            model=processor.client.model("ecmwf"),  # Hard coded for now.
-        )
-        _print_header(params, args)
-        with TemporaryDirectory() as temp_dir:
-            directory = Path(temp_dir)
-            if args.cmd == "plot":
-                update_plots(processor, params, directory)
-            elif args.cmd == "qc":
-                update_qc(processor, params, directory)
-            elif args.cmd == "freeze":
-                freeze(processor, params, directory)
-            elif args.cmd in ("dvas", "hkd"):
-                raise SkipTaskError(f"{args.cmd.upper()} not supported for L3 products")
-            else:
-                process_product(processor, params, directory)
+        if args.cmd in ("dvas", "hkd"):
+            raise SkipTaskError(f"{args.cmd.upper()} not supported for L3 products")
+        if args.models:
+            model_ids = set(args.models)
+        else:
+            model_meta = processor.client.files(
+                site_id=site.id,
+                date=date,
+                product_id="model",
+                model_id=[m.id for m in processor.client.models()],
+            )
+            model_ids = {m.model.id for m in model_meta if m.model}
+        for model_id in model_ids:
+            params = ModelParams(
+                site=site,
+                date=date,
+                product=product,
+                model=processor.client.model(model_id),
+            )
+            _print_header(params, args)
+            try:
+                with TemporaryDirectory() as temp_dir:
+                    directory = Path(temp_dir)
+                    if args.cmd == "plot":
+                        update_plots(processor, params, directory)
+                    elif args.cmd == "qc":
+                        update_qc(processor, params, directory)
+                    elif args.cmd == "freeze":
+                        freeze(processor, params, directory)
+                    else:
+                        process_product(processor, params, directory)
+            except SkipTaskError as err:
+                logging.warning("Skipped task: %s", err)
+            except Exception:
+                logging.exception("Failed to process task")
     else:
         product_params = ProductParams(
             site=site,

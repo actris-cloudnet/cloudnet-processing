@@ -329,7 +329,7 @@ class Processor:
             patch,
             s3key,
         )
-        if isinstance(params, ModelParams) and "evaluation" not in params.product.type:
+        if isinstance(params, ModelParams):
             payload["model"] = params.model.id
         elif (
             isinstance(params, (InstrumentParams, ProductParams)) and params.instrument
@@ -416,26 +416,25 @@ class Processor:
         self,
         filepath: Path,
         product_id: str,
-        model_id: str,
         uuid: UUID,
         s3key: str,
         directory: Path,
     ) -> None:
         img_path = directory / "plot.png"
         visualizations = []
-        fields = _get_fields_for_l3_plot(product_id, model_id)
+        fields = _get_fields_for_l3_plot(product_id)
         l3_product = product_id.split("-")[1]
         valid_images = []
-        for stat in ("area", "error"):
+        for stat in ("area",):
             dimensions = generate_L3_day_plots(
                 str(filepath),
                 l3_product,
-                model_id,
                 var_list=fields,
                 image_name=str(img_path),
                 fig_type="statistic",
                 stats=(stat,),
                 title=False,
+                include_advection=False,
             )
             if len(dimensions) > 1:
                 raise ValueError(f"More than one dimension in the plot: {dimensions}")
@@ -448,11 +447,11 @@ class Processor:
             dimensions = generate_L3_day_plots(
                 str(filepath),
                 l3_product,
-                model_id,
                 var_list=[field],
                 image_name=str(img_path),
-                fig_type="single",
+                fig_type="group",
                 title=False,
+                include_advection=False,
             )
             if len(dimensions) > 1:
                 raise ValueError(f"More than one dimension in the plot: {dimensions}")
@@ -599,14 +598,14 @@ def _select_halo_doppler_lidar_hkd_records(
     ]
 
 
-def _get_fields_for_l3_plot(product: str, model: str) -> list:
+def _get_fields_for_l3_plot(product: str) -> list:
     match product:
         case "l3-iwc":
-            return [f"{model}_iwc", f"iwc_{model}"]
+            return ["model_iwc", "iwc"]
         case "l3-lwc":
-            return [f"{model}_lwc", f"lwc_{model}"]
+            return ["model_lwc", "lwc"]
         case "l3-cf":
-            return [f"{model}_cf", f"cf_V_{model}"]
+            return ["model_cf", "cf_V"]
         case unknown_product:
             raise NotImplementedError(f"Unknown product: {unknown_product}")
 
