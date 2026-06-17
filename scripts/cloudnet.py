@@ -41,6 +41,7 @@ from processing.processor import (
     InstrumentParams,
     ModelParams,
     Processor,
+    ProcessParams,
     ProductParams,
 )
 from processing.product import process_product
@@ -269,6 +270,39 @@ def _update_instrument_list(args: Namespace, processor: Processor) -> list[str]:
     ]
 
 
+def _run_task(
+    processor: Processor,
+    params: ProcessParams,
+    args: Namespace,
+    directory: Path,
+    process: Callable[..., None],
+) -> None:
+    """Run a single task, isolating failures so other tasks in the loop continue.
+
+    The caller owns `directory` so it can be shared across tasks (e.g. L3
+    products of the same site/date reusing a downloaded source file).
+    """
+    _print_header(params, args)
+    try:
+        if args.cmd == "plot":
+            update_plots(processor, params, directory)
+        elif args.cmd == "qc":
+            update_qc(processor, params, directory)
+        elif args.cmd == "freeze":
+            freeze(processor, params, directory)
+        elif args.cmd == "dvas":
+            upload_to_dvas(processor, params)
+        elif args.cmd == "hkd":
+            assert isinstance(params, InstrumentParams)
+            processor.process_housekeeping(params)
+        else:
+            process(processor, params, directory)
+    except SkipTaskError as err:
+        logging.warning("Skipped task: %s", err)
+    except Exception:
+        logging.exception("Failed to process task")
+
+
 def _process_file(
     processor: Processor,
     product: ExtendedProduct,
@@ -293,22 +327,8 @@ def _process_file(
                 product=product,
                 model=processor.client.model(model_id),
             )
-            _print_header(model_params, args)
-            try:
-                with TemporaryDirectory() as temp_dir:
-                    directory = Path(temp_dir)
-                    if args.cmd == "plot":
-                        update_plots(processor, model_params, directory)
-                    elif args.cmd == "qc":
-                        update_qc(processor, model_params, directory)
-                    elif args.cmd == "freeze":
-                        freeze(processor, model_params, directory)
-                    else:
-                        process_model(processor, model_params, directory)
-            except SkipTaskError as err:
-                logging.warning("Skipped task: %s", err)
-            except Exception:
-                logging.exception("Failed to process task")
+            with TemporaryDirectory() as temp_dir:
+                _run_task(processor, model_params, args, Path(temp_dir), process_model)
     elif product.source_instrument_ids:
         # Instrument products
         if args.cmd == "dvas":
@@ -339,22 +359,10 @@ def _process_file(
             instru_params = InstrumentParams(
                 site=site, date=date, product=product, instrument=instrument
             )
-            _print_header(instru_params, args)
             with TemporaryDirectory() as temp_dir:
-                directory = Path(temp_dir)
-                if args.cmd == "plot":
-                    update_plots(processor, instru_params, directory)
-                elif args.cmd == "qc":
-                    update_qc(processor, instru_params, directory)
-                elif args.cmd == "freeze":
-                    freeze(processor, instru_params, directory)
-                elif args.cmd == "hkd":
-                    processor.process_housekeeping(instru_params)
-                else:
-                    try:
-                        process_instrument(processor, instru_params, directory)
-                    except SkipTaskError as err:
-                        logging.warning("Skipped task: %s", err)
+                _run_task(
+                    processor, instru_params, args, Path(temp_dir), process_instrument
+                )
     elif product.id in ("mwr-single", "mwr-multi", "epsilon-lidar", "epsilon-radar"):
         if args.cmd in ("dvas", "hkd"):
             raise SkipTaskError(f"{args.cmd.upper()} not supported for {product.id}")
@@ -380,27 +388,23 @@ def _process_file(
                 product=product,
                 instrument=instrument,
             )
-            _print_header(product_params, args)
             with TemporaryDirectory() as temp_dir:
-                directory = Path(temp_dir)
-                if args.cmd == "plot":
-                    update_plots(processor, product_params, directory)
-                elif args.cmd == "qc":
-                    update_qc(processor, product_params, directory)
-                elif args.cmd == "freeze":
-                    freeze(processor, product_params, directory)
-                else:
-                    process_product(processor, product_params, directory)
+                _run_task(
+                    processor, product_params, args, Path(temp_dir), process_product
+                )
     elif product.id in ("l3-cf", "l3-iwc", "l3-lwc"):
         if args.cmd in ("dvas", "hkd"):
             raise SkipTaskError(f"{args.cmd.upper()} not supported for L3 products")
         if args.models:
             model_ids = set(args.models)
         else:
+            # Passing the explicit model list returns files for *all* models;
+            # without it the API returns only the single optimal model.
             model_meta = processor.client.files(
                 site_id=site.id,
                 date=date,
                 product_id="model",
+                model_id=[m.id for m in processor.client.models()],
             )
             model_ids = {m.model.id for m in model_meta if m.model}
         # Share one directory across models so the common source file
@@ -414,42 +418,18 @@ def _process_file(
                     product=product,
                     model=processor.client.model(model_id),
                 )
-                _print_header(params, args)
-                try:
-                    if args.cmd == "plot":
-                        update_plots(processor, params, directory)
-                    elif args.cmd == "qc":
-                        update_qc(processor, params, directory)
-                    elif args.cmd == "freeze":
-                        freeze(processor, params, directory)
-                    else:
-                        process_product(processor, params, directory)
-                except SkipTaskError as err:
-                    logging.warning("Skipped task: %s", err)
-                except Exception:
-                    logging.exception("Failed to process task")
+                _run_task(processor, params, args, directory, process_product)
     else:
+        if args.cmd == "hkd":
+            raise SkipTaskError("HKD not supported for geophysical products")
         product_params = ProductParams(
             site=site,
             date=date,
             product=product,
             instrument=None,
         )
-        _print_header(product_params, args)
         with TemporaryDirectory() as temp_dir:
-            directory = Path(temp_dir)
-            if args.cmd == "plot":
-                update_plots(processor, product_params, directory)
-            elif args.cmd == "qc":
-                update_qc(processor, product_params, directory)
-            elif args.cmd == "freeze":
-                freeze(processor, product_params, directory)
-            elif args.cmd == "dvas":
-                upload_to_dvas(processor, product_params)
-            elif args.cmd == "hkd":
-                raise SkipTaskError("HKD not supported for geophysical products")
-            else:
-                process_product(processor, product_params, directory)
+            _run_task(processor, product_params, args, Path(temp_dir), process_product)
 
 
 def _get_instruments_for_product(
@@ -547,9 +527,7 @@ def _parse_date(value: str) -> tuple[datetime.date, datetime.date]:
             raise ValueError(f"Invalid date: {invalid}")
 
 
-def _print_header(
-    params: ModelParams | InstrumentParams | ProductParams, args: Namespace
-) -> None:
+def _print_header(params: ProcessParams, args: Namespace) -> None:
     the_dict = asdict(params)
     parts = [f"{BOLD}Task:{RESET} {GREEN}{args.cmd}{RESET}"]
     parts.extend(
