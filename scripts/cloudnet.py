@@ -401,20 +401,21 @@ def _process_file(
                 site_id=site.id,
                 date=date,
                 product_id="model",
-                model_id=[m.id for m in processor.client.models()],
             )
             model_ids = {m.model.id for m in model_meta if m.model}
-        for model_id in model_ids:
-            params = ModelParams(
-                site=site,
-                date=date,
-                product=product,
-                model=processor.client.model(model_id),
-            )
-            _print_header(params, args)
-            try:
-                with TemporaryDirectory() as temp_dir:
-                    directory = Path(temp_dir)
+        # Share one directory across models so the common source file
+        # (categorize/iwc/lwc) is downloaded only once for all models.
+        with TemporaryDirectory() as temp_dir:
+            directory = Path(temp_dir)
+            for model_id in model_ids:
+                params = ModelParams(
+                    site=site,
+                    date=date,
+                    product=product,
+                    model=processor.client.model(model_id),
+                )
+                _print_header(params, args)
+                try:
                     if args.cmd == "plot":
                         update_plots(processor, params, directory)
                     elif args.cmd == "qc":
@@ -423,10 +424,10 @@ def _process_file(
                         freeze(processor, params, directory)
                     else:
                         process_product(processor, params, directory)
-            except SkipTaskError as err:
-                logging.warning("Skipped task: %s", err)
-            except Exception:
-                logging.exception("Failed to process task")
+                except SkipTaskError as err:
+                    logging.warning("Skipped task: %s", err)
+                except Exception:
+                    logging.exception("Failed to process task")
     else:
         product_params = ProductParams(
             site=site,

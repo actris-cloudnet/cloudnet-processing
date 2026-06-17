@@ -18,7 +18,7 @@ from cloudnet_api_client.containers import (
     RawMetadata,
     RawModelMetadata,
 )
-from cloudnet_api_client.utils import md5sum
+from cloudnet_api_client.utils import md5sum, sha256sum
 
 from processing.config import Config
 
@@ -67,6 +67,10 @@ class StorageApi:
     def download_product(self, metadata: ProductMetadata, dir_name: Path) -> Path:
         """Download a product."""
         full_path = dir_name / metadata.filename
+        if full_path.exists() and sha256sum(full_path) == metadata.checksum:
+            # Already downloaded into this directory (e.g. a model source file
+            # reused across several L3 products) - skip the network round-trip.
+            return full_path
         _download_url(
             url=self._get_download_url(metadata),
             size=metadata.size,
