@@ -130,7 +130,7 @@ class Worker:
                         site=site,
                         date=date,
                         product=product,
-                        model=self.client.model("ecmwf"),  # hard coded for now
+                        model=self.client.model(task["modelId"]),
                     )
                     if task["type"] == "plot":
                         update_plots(self.processor, params, directory)
