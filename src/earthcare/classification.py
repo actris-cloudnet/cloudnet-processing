@@ -77,7 +77,7 @@ def cloudnet_vs_ec_classification(
 def _read_ec_data(fname: Path) -> ma.MaskedArray:
     with netCDF4.Dataset(fname, "r") as nc:
         classification = nc["ScienceData"]["hydrometeor_classification"][:]
-        return ma.masked_array(np.flip(classification, axis=1))
+        return ma.array(np.flip(classification, axis=1))
 
 
 def _save_results(

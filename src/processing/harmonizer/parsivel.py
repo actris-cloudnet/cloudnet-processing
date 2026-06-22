@@ -396,4 +396,4 @@ class ParsivelNc(core.Level1Nc):
     def _mask_bad_values(self) -> None:
         for variable in self.nc.variables.values():
             mask = self._find_bad_values(variable)
-            variable[:] = ma.masked_array(variable[:], mask=mask)
+            variable[:] = ma.array(variable[:], mask=mask)

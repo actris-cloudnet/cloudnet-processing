@@ -248,7 +248,7 @@ def _interpolate_masked_1d(
         raise ValueError("method must be 'linear' or 'nearest'")
 
     mask = (x_new < x_valid.min()) | (x_new > x_valid.max()) | np.isnan(y_interp)
-    return ma.MaskedArray(y_interp, mask=mask)
+    return ma.array(y_interp, mask=mask)
 
 
 def time_to_fraction_hour(time: npt.NDArray) -> npt.NDArray:

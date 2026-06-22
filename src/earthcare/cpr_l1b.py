@@ -82,9 +82,7 @@ def _read_ec_data(fname: Path) -> tuple[ma.MaskedArray, ma.MaskedArray]:
     with netCDF4.Dataset(fname, "r") as nc:
         velocity = nc["ScienceData"]["Data"]["dopplerVelocity"][:]
         echo = lin2db(nc["ScienceData"]["Data"]["radarReflectivityFactor"][:])
-    return ma.masked_array(np.flip(velocity, axis=1)), ma.masked_array(
-        np.flip(echo, axis=1)
-    )
+    return ma.array(np.flip(velocity, axis=1)), ma.array(np.flip(echo, axis=1))
 
 
 def _save_results(
