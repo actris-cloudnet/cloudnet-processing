@@ -203,7 +203,15 @@ class ProcessRadar(ProcessInstrument):
         ):
             self._add_calibration(key)
         output_filename, site_meta = self._args
-        site_meta["model"] = "mira-35"
+        if self.params.instrument.model == "METEK MIRA-35":
+            site_meta["model"] = "mira-35"
+        elif self.params.instrument.model == "METEK MIRA-35S":
+            site_meta["model"] = "mira-35s"
+        elif self.params.instrument.model == "METEK MIRA-35C":
+            site_meta["model"] = "mira-35c"
+        else:
+            msg = f"Invalid model: {self.params.instrument.model}"
+            raise ValueError(msg)
         self.uuid.product = mira2nc(
             full_paths,
             output_filename,
