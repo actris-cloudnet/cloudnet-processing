@@ -10,9 +10,10 @@
 - [ct25k](#ct25k)
 - [halo-doppler-lidar](#halo-doppler-lidar)
 - [hatpro](#hatpro)
-- [rpg-fmcw-94](#rpg-fmcw-94)
-- [thies-lmn](#thies-lmn)
 - [parsivel](#parsivel)
+- [rpg-fmcw-94](#rpg-fmcw-94)
+- [thies-lnm](#thies-lnm)
+- [wls](#wls)
 
 ## basta
 
@@ -109,7 +110,7 @@ Peltier FET temperature
 `peltier_output`
 
 </td>
-<td>percent</td>
+<td>%</td>
 <td>
 
 </td>
@@ -267,7 +268,7 @@ Peltier FET temperature
 `radar_relative_humidity`
 
 </td>
-<td>percent</td>
+<td>%</td>
 <td>
 
 </td>
@@ -399,7 +400,7 @@ Unspecified code
 `detector_quality`
 
 </td>
-<td>percent</td>
+<td>%</td>
 <td>
 
 Quality of detector signal
@@ -610,7 +611,7 @@ number of laser pulses
 `laser_quality`
 
 </td>
-<td>percent</td>
+<td>%</td>
 <td>
 
 Laser quality index
@@ -727,7 +728,7 @@ Laser quality index
 `optical_quality`
 
 </td>
-<td>percent</td>
+<td>%</td>
 <td>
 
 Optical quality index
@@ -1127,7 +1128,7 @@ Background light
 `laser_pulse_energy`
 
 </td>
-<td>percent</td>
+<td>%</td>
 <td>
 
 Laser pulse energy
@@ -1361,7 +1362,7 @@ Laser temperature
 `window_transmission`
 
 </td>
-<td>percent</td>
+<td>%</td>
 <td>
 
 Window transmission
@@ -1510,7 +1511,7 @@ on/off (1/0)
 `internal_relative_humidity`
 
 </td>
-<td>percent</td>
+<td>%</td>
 <td>
 
 </td>
@@ -1532,7 +1533,7 @@ on/off (1/0)
 `laser_power`
 
 </td>
-<td>percent</td>
+<td>%</td>
 <td>
 
 </td>
@@ -1968,7 +1969,7 @@ on/off (1/0)
 `window_condition`
 
 </td>
-<td>percent</td>
+<td>%</td>
 <td>
 
 100 for a clean, 0 for a totally dirty window
@@ -2264,7 +2265,7 @@ Background light
 `laser_pulse_energy`
 
 </td>
-<td>percent</td>
+<td>%</td>
 <td>
 
 Laser pulse energy
@@ -2615,7 +2616,7 @@ Laser temperature
 `window_transmission`
 
 </td>
-<td>percent</td>
+<td>%</td>
 <td>
 
 Window transmission
@@ -3025,7 +3026,7 @@ Acquisition card temperature
 `internal_relative_humidity`
 
 </td>
-<td>percent</td>
+<td>%</td>
 <td>
 
 </td>
@@ -3870,6 +3871,137 @@ When a bit is set ‘1’, the corresponding channel is ok, otherwise the channe
 </tr>
 </table>
 
+## parsivel
+
+<table>
+<tr>
+<th>Variable</th>
+<th>Unit</th>
+<th>Description</th>
+</tr>
+<tr>
+<td>
+
+`error_code`
+
+</td>
+<td></td>
+<td>
+
+Unknown
+
+</td>
+</tr>
+<tr>
+<td>
+
+`laser_strip_signal_amplitude`
+
+</td>
+<td>1</td>
+<td>
+
+</td>
+</tr>
+<tr>
+<td>
+
+`left_sensor_head_temperature`
+
+</td>
+<td>°C</td>
+<td>
+
+–99 … 100
+
+</td>
+</tr>
+<tr>
+<td>
+
+`pcb_temperature`
+
+</td>
+<td>°C</td>
+<td>
+
+–99 … 100
+
+</td>
+</tr>
+<tr>
+<td>
+
+`power_supply_voltage`
+
+</td>
+<td>V</td>
+<td>
+
+0.0 … 30.0
+
+</td>
+</tr>
+<tr>
+<td>
+
+`right_sensor_head_temperature`
+
+</td>
+<td>°C</td>
+<td>
+
+–99 … 100
+
+</td>
+</tr>
+<tr>
+<td>
+
+`sensor_head_heating_current`
+
+</td>
+<td>A</td>
+<td>
+
+0.00 … 4.00
+
+</td>
+</tr>
+<tr>
+<td>
+
+`sensor_housing_temperature`
+
+</td>
+<td>°C</td>
+<td>
+
+–99 … 100
+
+</td>
+</tr>
+<tr>
+<td>
+
+`sensor_status`
+
+</td>
+<td></td>
+<td>
+
+0 = Everything OK.
+
+1 = Screens are dirty, but measurements are still possible.
+
+2 = Screens are dirty, partially covered. No further usable measurements are possible.
+
+3 = Laser damaged.
+
+</td>
+</tr>
+</table>
+
 ## rpg-fmcw-94
 
 <table>
@@ -4010,7 +4142,7 @@ Transmitter temperature of current sample
 </tr>
 </table>
 
-## thies-lmn
+## thies-lnm
 
 <table>
 <tr>
@@ -4370,7 +4502,7 @@ OK:0, warning:1
 </tr>
 </table>
 
-## parsivel
+## wls
 
 <table>
 <tr>
@@ -4381,23 +4513,10 @@ OK:0, warning:1
 <tr>
 <td>
 
-`error_code`
+`dew_point_temperature`
 
 </td>
-<td></td>
-<td>
-
-Unknown
-
-</td>
-</tr>
-<tr>
-<td>
-
-`laser_strip_signal_amplitude`
-
-</td>
-<td>1</td>
+<td>K</td>
 <td>
 
 </td>
@@ -4405,97 +4524,66 @@ Unknown
 <tr>
 <td>
 
-`left_sensor_head_temperature`
+`disk_occupation`
 
 </td>
-<td>°C</td>
+<td>%</td>
 <td>
-
-–99 … 100
 
 </td>
 </tr>
 <tr>
 <td>
 
-`pcb_temperature`
+`external_pressure`
 
 </td>
-<td>°C</td>
+<td>Pa</td>
 <td>
-
-–99 … 100
 
 </td>
 </tr>
 <tr>
 <td>
 
-`power_supply_voltage`
+`external_relative_humidity`
 
 </td>
-<td>V</td>
+<td>%</td>
 <td>
-
-0.0 … 30.0
 
 </td>
 </tr>
 <tr>
 <td>
 
-`right_sensor_head_temperature`
+`external_temperature`
 
 </td>
-<td>°C</td>
+<td>K</td>
 <td>
-
-–99 … 100
 
 </td>
 </tr>
 <tr>
 <td>
 
-`sensor_head_heating_current`
+`internal_relative_humidity`
 
 </td>
-<td>A</td>
+<td>%</td>
 <td>
-
-0.00 … 4.00
 
 </td>
 </tr>
 <tr>
 <td>
 
-`sensor_housing_temperature`
+`internal_temperature`
 
 </td>
-<td>°C</td>
+<td>K</td>
 <td>
-
-–99 … 100
-
-</td>
-</tr>
-<tr>
-<td>
-
-`sensor_status`
-
-</td>
-<td></td>
-<td>
-
-0 = Everything OK.
-
-1 = Screens are dirty, but measurements are still possible.
-
-2 = Screens are dirty, partially covered. No further usable measurements are possible.
-
-3 = Laser damaged.
 
 </td>
 </tr>

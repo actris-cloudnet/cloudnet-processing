@@ -21,6 +21,7 @@ from rpgpy import read_rpg
 from rpgpy.utils import decode_rpg_status_flags, rpg_seconds2datetime64
 
 from housekeeping.cl61 import read_cl61
+from housekeeping.wls import read_wls_environmental_data
 from processing.utils import unzip_gz_file
 
 from .basta import read_basta
@@ -191,6 +192,19 @@ def _handle_halo_doppler_lidar(
     )
 
 
+def _handle_wls(
+    filepath: Path, metadata: RawMetadata, calibration: dict
+) -> list[Point]:
+    measurements = read_wls_environmental_data(filepath)
+    return _make_points(
+        measurements["time"],
+        measurements,
+        get_config("wls_csv"),
+        metadata,
+        ValidDateRange.DAY,
+    )
+
+
 def _handle_parsivel(
     filepath: Path, metadata: RawMetadata, calibration: dict
 ) -> list[Point]:
@@ -272,6 +286,9 @@ def get_reader(
 
     if instrument_id == "thies-lnm":
         return _handle_thies_lnm
+
+    if instrument_id in ("wls100s", "wls200s", "wls400s"):
+        return _handle_wls
 
     return None
 
