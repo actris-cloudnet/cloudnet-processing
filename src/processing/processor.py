@@ -573,6 +573,13 @@ class Processor:
                 filename_prefix="system_parameters",
             )
             return _select_halo_doppler_lidar_hkd_records(records)
+        if params.instrument.instrument_id in ("wls100s", "wls200s", "wls400s"):
+            records = self.client.raw_files(
+                site_id=params.site.id,
+                date=params.date,
+                instrument_pid=params.instrument.pid,
+            )
+            return self.client.filter(records, include_pattern="environmental_data")
         return self.client.raw_files(
             site_id=params.site.id,
             date=params.date,
