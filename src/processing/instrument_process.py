@@ -830,51 +830,47 @@ class ProcessMwr(ProcessInstrument):
 
 class ProcessDisdrometer(ProcessInstrument):
     def process_parsivel(self) -> None:
-        try:
-            full_paths, self.uuid.raw = self.download_instrument(largest_only=True)
-            data = self._get_payload_for_nc_file_augmenter(full_paths)
-            self.uuid.product = harmonizer.harmonize_parsivel_file(data)
-        except OSError:
-            full_paths, self.uuid.raw = self.download_instrument()
-            calibration = self._fetch_parsivel_calibration()
-            kwargs = self._kwargs.copy()
-            kwargs["telegram"] = calibration["telegram"]
-            if calibration["missing_timestamps"] is True:
-                full_paths, timestamps = _deduce_parsivel_timestamps(full_paths)
-                kwargs["timestamps"] = timestamps
-            # Add missing semicolon between timestamp and serial number (450416)
-            if self.params.site.id == "norunda":
-                for path in full_paths:
-                    text = path.read_bytes()
-                    new_text = re.sub(
-                        rb"^(\d{14}\.\d{3})450416;",
-                        rb"\1;450416;",
-                        text,
-                        flags=re.MULTILINE,
-                    )
-                    path.write_bytes(new_text)
-            # Fix Jülich files.
-            if self.params.instrument.uuid == "27837d00-b6af-4e90-baa0-f670f31abcd0":
-                for path in full_paths:
-                    with open(path, "rb+") as f:
-                        lines = []
-                        for line in f:
-                            # Support timestamp within angle brackets.
-                            line = re.sub(rb"<(\d{14}\.\d{3})>", rb"\1;", line)
+        full_paths, self.uuid.raw = self.download_instrument()
+        calibration = self._fetch_parsivel_calibration()
+        kwargs = {
+            **self._kwargs,
+            "telegram": calibration.get("telegram2"),
+            "field_separator": calibration.get("field_separator", ";"),
+            "decimal_separator": calibration.get("decimal_separator", ","),
+        }
+        # Add missing semicolon between timestamp and serial number (450416)
+        if self.params.site.id == "norunda":
+            for path in full_paths:
+                text = path.read_bytes()
+                new_text = re.sub(
+                    rb"^(\d{14}\.\d{3})450416;",
+                    rb"\1;450416;",
+                    text,
+                    flags=re.MULTILINE,
+                )
+                path.write_bytes(new_text)
+        # Fix Jülich files.
+        if self.params.instrument.uuid == "27837d00-b6af-4e90-baa0-f670f31abcd0":
+            for path in full_paths:
+                with open(path, "rb+") as f:
+                    lines = []
+                    for line in f:
+                        # Support timestamp within angle brackets.
+                        line = re.sub(rb"<(\d{14}\.\d{3})>", rb"\1;", line)
 
-                            # Line starts with timestamp but also contains
-                            # another timestamp at random location.
-                            m = re.match(rb"\d{8}\d{6}\.\d{3};", line)
-                            if m is not None:
-                                line = line[:8] + re.sub(
-                                    line[:8] + rb"\d{6}\.\d{3};", b"", line[8:]
-                                )
-                            lines.append(line)
+                        # Line starts with timestamp but also contains
+                        # another timestamp at random location.
+                        m = re.match(rb"\d{8}\d{6}\.\d{3};", line)
+                        if m is not None:
+                            line = line[:8] + re.sub(
+                                line[:8] + rb"\d{6}\.\d{3};", b"", line[8:]
+                            )
+                        lines.append(line)
 
-                        f.seek(0)
-                        f.truncate()
-                        f.writelines(lines)
-            self.uuid.product = parsivel2nc(full_paths, *self._args, **kwargs)
+                    f.seek(0)
+                    f.truncate()
+                    f.writelines(lines)
+        self.uuid.product = parsivel2nc(full_paths, *self._args, **kwargs)
 
     def process_thies_lnm(self) -> None:
         full_paths, self.uuid.raw = self.download_instrument()
@@ -901,10 +897,7 @@ class ProcessDisdrometer(ProcessInstrument):
             )
         except CloudnetAPIError:
             return output
-        data = calibration["data"]
-        output["telegram"] = data.get("telegram", None)
-        output["missing_timestamps"] = data.get("missing_timestamps", False)
-        return output
+        return calibration["data"]
 
 
 class ProcessRainGauge(ProcessInstrument):
@@ -1337,46 +1330,6 @@ def _concatenate_text_files(filenames: list, output_filename: Path) -> None:
         for filename in filenames:
             with open(filename, "rb") as source:
                 shutil.copyfileobj(source, target)
-
-
-def _deduce_parsivel_timestamps(
-    file_paths: list[Path],
-) -> tuple[list[Path], list[datetime.datetime]]:
-    time_stamps, valid_files = [], []
-    min_measurements_per_hour = 55
-    for filename in sorted(file_paths):
-        date = _parse_datetime_from_filename(filename)
-        n_lines = _count_lines(filename)
-        if not date or n_lines < min_measurements_per_hour:
-            logging.info(
-                "Expected at least %d measurements but found only %d in %s",
-                min_measurements_per_hour,
-                n_lines,
-                filename.name,
-            )
-            continue
-        start_datetime = datetime.datetime(date[0], date[1], date[2], date[3])
-        time_interval = datetime.timedelta(minutes=60 / n_lines)
-        datetime_stamps = [start_datetime + time_interval * i for i in range(n_lines)]
-        time_stamps.extend(datetime_stamps)
-        valid_files.append(filename)
-    return valid_files, time_stamps
-
-
-def _parse_datetime_from_filename(filename: Path) -> list[int] | None:
-    pattern = r"(20\d{2})(\d{2})(\d{2})(\d{2})"
-    match = re.search(pattern, filename.name)
-    if not match:
-        return None
-    return [int(x) for x in match.groups()]
-
-
-def _count_lines(filename: Path) -> int:
-    with open(filename, "rb") as file:
-        n_lines = 0
-        for _ in file:
-            n_lines += 1
-    return n_lines
 
 
 def _check_chm_version(filename: Path, identifier: str) -> None:
