@@ -834,7 +834,7 @@ class ProcessDisdrometer(ProcessInstrument):
         calibration = self._fetch_parsivel_calibration()
         kwargs = {
             **self._kwargs,
-            "telegram": calibration.get("telegram2"),
+            "telegram": calibration.get("telegram"),
             "field_separator": calibration.get("field_separator", ";"),
             "decimal_separator": calibration.get("decimal_separator", ","),
         }

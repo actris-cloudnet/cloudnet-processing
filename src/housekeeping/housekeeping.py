@@ -210,7 +210,7 @@ def _handle_parsivel(
 ) -> list[Point]:
     time, data = read_parsivel(
         filepath,
-        telegram=calibration.get("telegram2"),
+        telegram=calibration.get("telegram"),
         decimal_separator=calibration.get("decimal_separator", "."),
     )
     measurements = {f"field{key}": np.array(value) for key, value in data.items()}
