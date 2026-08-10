@@ -92,10 +92,11 @@ class Processor:
         mean_location = self.client.moving_site_mean_location(site.id, date)
         prev_date = date - datetime.timedelta(days=1)
         next_date = date + datetime.timedelta(days=1)
-        loc1 = self.client.moving_site_locations(site.id, prev_date)
-        loc2 = self.client.moving_site_locations(site.id, date)
-        loc3 = self.client.moving_site_locations(site.id, next_date)
-        locations = [loc1[-1]] + loc2 + [loc3[0]]
+        locations = self.client.moving_site_locations(site.id, date)
+        if loc_prev := self.client.moving_site_locations(site.id, prev_date):
+            locations.insert(0, loc_prev[-1])
+        if loc_next := self.client.moving_site_locations(site.id, next_date):
+            locations.append(loc_next[0])
         site_dict = asdict(site)
         site_dict["latitude"] = mean_location.latitude
         site_dict["longitude"] = mean_location.longitude
