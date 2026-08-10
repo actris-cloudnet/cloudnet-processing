@@ -61,12 +61,13 @@ def process_model(processor: Processor, params: ModelParams, directory: Path) ->
         msg = f"Processing {params.model.id} not implemented yet"
         raise SkipTaskError(msg)
 
-    if params.model.source_model_id is None and params.model.id in MODEL_READERS:
+    if (
+        params.model.source_model_id is None
+        and params.model.id != params.model.source_model_id
+    ):
         msg = (
-            f"Model '{params.model.id}' should never be processed, "
-            "only used to upload model data! This check would be "
-            "redundant if 'model upload' and 'model product' types "
-            "were separated in the database."
+            'Only the "best model" product can be generated now, '
+            f"model products with limited forecast range, like {params.model.id}, are deprecated."
         )
         raise ValueError(msg)
 
