@@ -63,6 +63,8 @@ def process_model(processor: Processor, params: ModelParams, directory: Path) ->
 
     if (
         params.model.source_model_id is None
+        and params.model.forecast_start is not None
+        and params.model.forecast_end is not None
         and params.model.id != params.model.source_model_id
     ):
         msg = (
