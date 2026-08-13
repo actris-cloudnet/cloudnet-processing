@@ -240,6 +240,18 @@ class Worker:
         if "hidden" in site.type or "model" in site.type:
             logging.info("Site is model / hidden, will not publish followup tasks")
             return
+        if product.id == "model":
+            assert isinstance(params, ModelParams)
+            model_files = self.client.files(
+                site_id=params.site.id, date=params.date, product_id="model"
+            )
+            for file in model_files:
+                assert file.model is not None
+                if file.model.optimum_order < params.model.optimum_order:
+                    logging.info(
+                        "Not the optimum model, will not publish followup tasks"
+                    )
+                    return
         for product_id in product.derived_product_ids:
             derived_product = self.client.product(product_id)
             if _should_skip_derived_product(derived_product):
