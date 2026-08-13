@@ -19,7 +19,7 @@ from cloudnetpy.products.epsilon_lidar import generate_epsilon_from_lidar
 from cloudnetpy.products.epsilon_radar import generate_epsilon_from_radar
 from earthcare_downloader import search
 from numpy import ma
-from orbital_radar import Suborbital
+from orbital_radar import InsufficientDataError, Suborbital
 from requests import HTTPError
 
 from earthcare.classification import cloudnet_vs_ec_classification
@@ -227,12 +227,15 @@ def _process_cpr_simulation(
     categorize_file = processor.storage_api.download_product(metadata[0], directory)
     output_file = directory / "output.nc"
     orbital = Suborbital()
-    uuid_str = orbital.simulate_cloudnet(
-        str(categorize_file),
-        str(output_file),
-        mean_wind=6,
-        uuid=str(uuid.volatile) if uuid.volatile is not None else None,
-    )
+    try:
+        uuid_str = orbital.simulate_cloudnet(
+            str(categorize_file),
+            str(output_file),
+            mean_wind=6,
+            uuid=str(uuid.volatile) if uuid.volatile is not None else None,
+        )
+    except InsufficientDataError as err:
+        raise SkipTaskError(str(err)) from err
     uuid.product = UUID(uuid_str)
     utils.add_global_attributes(output_file)
     return output_file
