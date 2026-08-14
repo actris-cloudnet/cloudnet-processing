@@ -42,6 +42,7 @@ from cloudnetpy.utils import is_timestamp
 from requests.exceptions import HTTPError
 
 from processing import concat_wrapper, harmonizer
+from processing.harmonizer.rain_gauge import pluvio2nc
 from processing.processor import InstrumentParams, Processor
 from processing.utils import RawDataMissingError, Uuid, unzip_gz_file
 
@@ -902,7 +903,14 @@ class ProcessDisdrometer(ProcessInstrument):
 
 class ProcessRainGauge(ProcessInstrument):
     def process_pluvio(self) -> None:
-        full_path, self.uuid.raw = self.download_instrument(largest_only=True)
+        if self.params.site.id == "kappelrodeck":
+            raw_path, self.uuid.raw = self.download_instrument(
+                time_offset=datetime.timedelta(hours=6)
+            )
+            pluvio2nc(raw_path, self.daily_path, self.params.date)
+            full_path = [self.daily_path]
+        else:
+            full_path, self.uuid.raw = self.download_instrument(largest_only=True)
         data = self._get_payload_for_nc_file_augmenter(full_path)
         self.uuid.product = harmonizer.harmonize_pluvio_nc(data)
 

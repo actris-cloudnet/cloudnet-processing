@@ -1,10 +1,16 @@
+import csv
+import datetime
 import logging
 import shutil
+from collections import defaultdict
+from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Final
 from uuid import UUID
 
 import netCDF4
+import numpy as np
+from cftime import date2num
 from cloudnetpy.instruments import Instrument, instruments
 from numpy import ma
 
@@ -141,3 +147,45 @@ class RainGaugeNc(core.Level1Nc):
             data[i] += offset
         data -= data[0]
         self.nc.variables[AMOUNT][:] = data
+
+
+def pluvio2nc(inpath: list[Path], outpath: Path, expected_date: datetime.date) -> None:
+    raw_data: dict = defaultdict(list)
+    for path in inpath:
+        with open(path) as f:
+            reader = csv.reader(f)
+            _origin = next(reader)
+            headers = next(reader)
+            _units = next(reader)
+            _process = next(reader)
+            for line in reader:
+                for key, value in zip(headers, line, strict=True):
+                    if key == "TIMESTAMP":
+                        raw_data[key].append(
+                            datetime.datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
+                        )
+                    elif key == "RECORD":
+                        raw_data[key].append(int(value))
+                    else:
+                        raw_data[key].append(float(value))
+
+    time = np.array(raw_data["TIMESTAMP"])
+    is_valid = np.array([t.date() == expected_date for t in time])
+    time, time_ind = np.unique(time[is_valid], return_index=True)
+    rr = np.array(raw_data["Intensity"])[is_valid][time_ind]
+    ra = np.array(raw_data["AccumTotalNRT"])[is_valid][time_ind]
+
+    with netCDF4.Dataset(outpath, "w") as nc:
+        nc.createDimension("time")
+
+        time_var = nc.createVariable("time", "i4", "time")
+        time_var.units = "seconds since 1970-01-01 00:00:00 +00:00"
+        time_var[:] = date2num(time, time_var.units)
+
+        rr_var = nc.createVariable("rain_rate", "f4", "time")
+        rr_var.units = "mm h-1"
+        rr_var[:] = rr
+
+        ra_var = nc.createVariable("am_tot", "f4", "time")
+        ra_var.units = "mm"
+        ra_var[:] = ra
