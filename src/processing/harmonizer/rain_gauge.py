@@ -34,6 +34,9 @@ VALID_KEYS = (
     "rain_rate",
     "total_accum_NRT",
     "rain_intensity",
+    # Cabauw, pluvioDC
+    "Intensity_RT",
+    "Accu_total_NRT",
 )
 
 
@@ -126,6 +129,9 @@ class RainGaugeNc(core.Level1Nc):
             "rain_intensity": RATE,
             "total_accum_NRT": AMOUNT,
             "am_tot": AMOUNT,
+            # Cabauw, pluvioDC
+            "Intensity_RT": RATE,
+            "Accu_total_NRT": AMOUNT,
         }
         self.fix_name(keymap)
 
@@ -140,12 +146,14 @@ class RainGaugeNc(core.Level1Nc):
     def normalize_rainfall_amount(self) -> None:
         """Copied from Cloudnetpy."""
         data = self.nc.variables[AMOUNT][:]
+        # First value is masked in Cabauw
+        first_valid = np.nonzero(~ma.getmaskarray(data))[0][0]
         offset = 0
-        for i in range(1, len(data)):
+        for i in range(first_valid + 1, len(data)):
             if data[i] + offset < data[i - 1]:
                 offset += data[i - 1]
             data[i] += offset
-        data -= data[0]
+        data -= data[first_valid]
         self.nc.variables[AMOUNT][:] = data
 
 
