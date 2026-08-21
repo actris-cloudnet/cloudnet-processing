@@ -54,7 +54,6 @@ MODEL_READERS = {
     "ecmwf-open": read_ecmwf_open,
     "gdas1": read_gdas1,
     "icon-d2": _process_icon_d2,
-    "meps": read_meps,
 }
 
 
@@ -229,6 +228,22 @@ def _read_files(
             if sfc_path is None or ml_path is None:
                 continue
             yield read_arome_arctic(sfc_path, ml_path, location)
+    elif source_model_id == "meps":
+        grouped: dict[str, list[Path | None]] = {}
+        for path in input_paths:
+            i = path.name.rfind("_")
+            prefix = path.name[:i]
+            suffix = path.name[i:]
+            if prefix not in grouped:
+                grouped[prefix] = [None, None]
+            if suffix == "_sfc.nc":
+                grouped[prefix][0] = path
+            elif suffix == "_ml.nc":
+                grouped[prefix][1] = path
+        for sfc_path, ml_path in grouped.values():
+            if sfc_path is None or ml_path is None:
+                continue
+            yield read_meps(sfc_path, ml_path, location)
     else:
         reader = MODEL_READERS[source_model_id]
         for path in input_paths:
