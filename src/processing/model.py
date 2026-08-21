@@ -15,6 +15,7 @@ from model_munger.readers import (
     read_ecmwf_open,
     read_gdas1,
     read_icon_d2,
+    read_meps,
 )
 from model_munger.readers.icon_d2 import StationMissingError
 
@@ -53,6 +54,7 @@ MODEL_READERS = {
     "ecmwf-open": read_ecmwf_open,
     "gdas1": read_gdas1,
     "icon-d2": _process_icon_d2,
+    "meps": read_meps,
 }
 
 
