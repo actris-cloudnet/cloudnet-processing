@@ -27,7 +27,7 @@ dependencies = [
   "doppy>=0.5.14",
   "earthcare-downloader",
   "influxdb-client",
-  "model-munger>=0.4.0",
+  "model-munger>=0.5.0",
   "orbital-radar @ git+https://github.com/actris-cloudnet/orbital-radar.git@v0.0.11",
   "requests",
   "rpgpy>=0.15.12",

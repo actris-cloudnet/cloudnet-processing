@@ -15,6 +15,7 @@ from model_munger.readers import (
     read_ecmwf_open,
     read_gdas1,
     read_icon_d2,
+    read_meps,
 )
 from model_munger.readers.icon_d2 import StationMissingError
 
@@ -54,6 +55,7 @@ MODEL_READERS = {
     "gdas1": read_gdas1,
     "icon-d2": _process_icon_d2,
 }
+MODEL_READERS2 = {"arome-arctic": read_arome_arctic, "meps": read_meps}
 
 
 def process_model(processor: Processor, params: ModelParams, directory: Path) -> None:
@@ -211,7 +213,8 @@ def _process_model(
 def _read_files(
     input_paths: list[Path], source_model_id: str, location: Location
 ) -> Iterator[Model]:
-    if source_model_id == "arome-arctic":
+    if source_model_id in MODEL_READERS2:
+        reader2 = MODEL_READERS2[source_model_id]
         grouped: dict[str, list[Path | None]] = {}
         for path in input_paths:
             i = path.name.rfind("_")
@@ -226,7 +229,7 @@ def _read_files(
         for sfc_path, ml_path in grouped.values():
             if sfc_path is None or ml_path is None:
                 continue
-            yield read_arome_arctic(sfc_path, ml_path, location)
+            yield reader2(sfc_path, ml_path, location)
     else:
         reader = MODEL_READERS[source_model_id]
         for path in input_paths:
