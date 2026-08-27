@@ -7,6 +7,7 @@ from uuid import UUID
 
 import netCDF4
 from cloudnet_api_client.containers import ProductMetadata
+from cloudnetpy import arm
 from cloudnetpy.categorize import CategorizeInput, generate_categorize
 from cloudnetpy.exceptions import CloudnetException, ModelDataError
 from cloudnetpy.model_evaluation.products import product_resampling
@@ -407,15 +408,27 @@ def _process_categorize(
     processor: Processor, params: ProductParams, uuid: Uuid, directory: Path
 ) -> Path:
     is_voodoo = params.product.id == "categorize-voodoo"
-    meta_records = _get_level1b_metadata_for_categorize(processor, params, is_voodoo)
-    paths = processor.storage_api.download_products(meta_records.values(), directory)
-    input_files = cast(CategorizeInput, dict(zip(meta_records.keys(), paths)))
-    if is_voodoo:
-        input_files["lv0_files"], lv0_uuid = _get_input_files_for_voodoo(
-            processor, params, directory, meta_records["radar"]
+    is_arm = "arm" in params.site.type
+    lv0_uuid: list[UUID] = []
+    model_uuid: UUID | None = None
+    if is_arm:
+        if is_voodoo:
+            raise SkipTaskError("Voodoo not supported for ARM sites")
+        input_files, model_uuid = _get_arm_input_files_for_categorize(
+            processor, params, directory
         )
     else:
-        lv0_uuid = []
+        meta_records = _get_level1b_metadata_for_categorize(
+            processor, params, is_voodoo
+        )
+        paths = processor.storage_api.download_products(
+            meta_records.values(), directory
+        )
+        input_files = cast(CategorizeInput, dict(zip(meta_records.keys(), paths)))
+        if is_voodoo:
+            input_files["lv0_files"], lv0_uuid = _get_input_files_for_voodoo(
+                processor, params, directory, meta_records["radar"]
+            )
     output_path = directory / "output.nc"
     try:
         uuid.product = generate_categorize(input_files, output_path, uuid=uuid.volatile)
@@ -427,8 +440,17 @@ def _process_categorize(
         input_files["model"] = processor.storage_api.download_product(
             gdas1_meta, directory
         )
+        model_uuid = gdas1_meta.uuid
         uuid.product = generate_categorize(input_files, output_path, uuid=uuid.volatile)
+    if is_arm and model_uuid is not None:
+        _keep_portal_source_uuids(output_path, model_uuid)
     return output_path
+
+
+def _keep_portal_source_uuids(output_path: Path, model_uuid: UUID) -> None:
+    # Local ARM Level 1b files are not in the data portal: only link the model
+    with netCDF4.Dataset(output_path, "r+") as nc:
+        nc.source_file_uuids = str(model_uuid)
 
 
 def _process_l3(
@@ -531,6 +553,53 @@ def _get_level1b_metadata_for_categorize(
         if product not in optional_products and metadata is None:
             raise SkipTaskError(f"Missing required input product: {product}")
     return {key: value for key, value in meta_records.items() if value is not None}
+
+
+def _get_arm_input_files_for_categorize(
+    processor: Processor, params: ProductParams, directory: Path
+) -> tuple[CategorizeInput, UUID]:
+    """Fetches ARM raw files and converts them into local Level 1b files.
+
+    ARM Level 1b files are not uploaded to the data portal: only categorize
+    and the products derived from it are.
+    """
+    try:
+        # Fail the task instead of skipping it if credentials are not configured
+        arm.get_credentials()
+    except arm.ArmDataError as err:
+        raise utils.MiscError(str(err)) from err
+    model_meta = processor.get_product(params, product_id="model")
+    if model_meta is None:
+        raise SkipTaskError("Missing required input product: model")
+    raw_dir = directory / "arm-raw"
+    l1b_dir = directory / "arm-l1b"
+    l1b_dir.mkdir(exist_ok=True)
+    # Fetch radar first: without it there is no point downloading anything else
+    raw_files = arm.fetch_files(
+        params.site.id, params.date, raw_dir, products=("radar",)
+    )
+    if not raw_files.get("radar"):
+        raise SkipTaskError("Missing required input product: radar")
+    raw_files |= arm.fetch_files(
+        params.site.id, params.date, raw_dir, products=("lidar", "mwr", "disdrometer")
+    )
+    site_meta = {
+        "name": params.site.human_readable_name,
+        "latitude": params.site.latitude,
+        "longitude": params.site.longitude,
+        "altitude": params.site.altitude,
+    }
+    l1b_files = arm.convert_to_l1b(
+        params.site.id, params.date, raw_files, l1b_dir, site_meta
+    )
+    for product in ("radar", "lidar"):
+        if product not in l1b_files:
+            raise SkipTaskError(f"Missing required input product: {product}")
+    input_files: dict = {
+        "model": processor.storage_api.download_product(model_meta, directory),
+        **{key: Path(value) for key, value in l1b_files.items()},
+    }
+    return cast(CategorizeInput, input_files), model_meta.uuid
 
 
 def _get_input_files_for_voodoo(
