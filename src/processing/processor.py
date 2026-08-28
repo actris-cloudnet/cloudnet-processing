@@ -511,6 +511,7 @@ class Processor:
                 if isinstance(site, ExtendedSite)
                 else site.longitude,
                 "altitude": site.altitude,
+                "type": sorted(site.type),
             }
             quality_report = quality.run_tests(
                 filepath,
