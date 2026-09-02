@@ -363,7 +363,13 @@ def _process_file(
                 _run_task(
                     processor, instru_params, args, Path(temp_dir), process_instrument
                 )
-    elif product.id in ("mwr-single", "mwr-multi", "epsilon-lidar", "epsilon-radar"):
+    elif product.id in (
+        "mwr-single",
+        "mwr-multi",
+        "epsilon-lidar",
+        "epsilon-radar",
+        "iwc-weather-radar",
+    ):
         if args.cmd in ("dvas", "hkd"):
             raise SkipTaskError(f"{args.cmd.upper()} not supported for {product.id}")
         if args.uuids:
