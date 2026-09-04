@@ -72,6 +72,16 @@ def test_arm_input_files(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Non
     assert model_uuid == MODEL_UUID
     assert fetch.call_args.args[:2] == ("arm-sgp", datetime.date(2022, 6, 1))
     assert convert.call_args.args[4]["name"] == "ARM SGP"
+    assert convert.call_args.kwargs["calibration"] == {"radar": {"Zh_offset": None}}
+
+
+def test_arm_zh_offset(monkeypatch: pytest.MonkeyPatch) -> None:
+    table = {"x": {"2020-01-01": 1.0, "2021-01-01": 2.0}}
+    monkeypatch.setattr(product, "ARM_ZH_OFFSETS", table)
+    assert product._get_arm_zh_offset("x", datetime.date(2019, 12, 31)) is None
+    assert product._get_arm_zh_offset("x", datetime.date(2020, 1, 1)) == 1.0
+    assert product._get_arm_zh_offset("x", datetime.date(2021, 6, 1)) == 2.0
+    assert product._get_arm_zh_offset("y", datetime.date(2021, 6, 1)) is None
 
 
 def test_arm_missing_radar(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

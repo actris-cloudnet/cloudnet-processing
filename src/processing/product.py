@@ -589,6 +589,20 @@ def _get_level1b_metadata_for_categorize(
     return {key: value for key, value in meta_records.items() if value is not None}
 
 
+# Radar reflectivity calibration offsets (dB) of ARM sites from the given date
+# onwards, used for days where ARM's own calibrated (b1) radar files are not
+# available. Update from the offsets in the latest b1 files.
+ARM_ZH_OFFSETS = {
+    "arm-sgp": {"2025-09-01": 5.2},
+}
+
+
+def _get_arm_zh_offset(site_id: str, date: datetime.date) -> float | None:
+    offsets = ARM_ZH_OFFSETS.get(site_id, {})
+    valid = [start for start in offsets if start <= date.isoformat()]
+    return offsets[max(valid)] if valid else None
+
+
 def _get_arm_input_files_for_categorize(
     processor: Processor, params: ProductParams, directory: Path
 ) -> tuple[CategorizeInput, UUID]:
@@ -624,7 +638,14 @@ def _get_arm_input_files_for_categorize(
         "altitude": params.site.altitude,
     }
     l1b_files = arm.convert_to_l1b(
-        params.site.id, params.date, raw_files, l1b_dir, site_meta
+        params.site.id,
+        params.date,
+        raw_files,
+        l1b_dir,
+        site_meta,
+        calibration={
+            "radar": {"Zh_offset": _get_arm_zh_offset(params.site.id, params.date)}
+        },
     )
     for product in ("radar", "lidar"):
         if product not in l1b_files:
