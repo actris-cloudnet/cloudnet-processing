@@ -130,7 +130,7 @@ def _parse_args(client: APIClient) -> Namespace:
         "--start",
         type=lambda value: _parse_date(value)[0],
         metavar="YYYY-MM-DD",
-        help="Starting date. Default is five days ago.",
+        help="Starting date. Default is current day.",
     )
     group.add_argument(
         "--stop",
