@@ -277,6 +277,14 @@ class Worker:
                     self.publish_followup_task(
                         derived_product, params, radar.instrument
                     )
+            elif product.id == "model" and derived_product.id == "iwc-weather-radar":
+                weather_radars = self.client.files(
+                    site_id=params.site.id, date=params.date, product_id="weather-radar"
+                )
+                for weather_radar in weather_radars:
+                    self.publish_followup_task(
+                        derived_product, params, weather_radar.instrument
+                    )
             else:
                 assert isinstance(params, (InstrumentParams, ProductParams))
                 self.publish_followup_task(derived_product, params, params.instrument)
