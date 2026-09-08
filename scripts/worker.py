@@ -345,6 +345,7 @@ def _should_skip_derived_product(derived_product: ExtendedProduct) -> bool:
         "epsilon-lidar",
         "epsilon-radar",
         "classification-voodoo",
+        "iwc-weather-radar",
     ):
         return False
     if derived_product.experimental:
