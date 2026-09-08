@@ -316,6 +316,8 @@ class Worker:
         }
         if instrument:
             task["instrumentInfoUuid"] = str(instrument.uuid)
+        if "arm" in params.site.type and derived_product.id == "categorize":
+            task["queue"] = "tortoise"
         logging.info(f"Publish task: {task}")
         res = self.session.post(
             f"{self.dataportal_url}/api/queue/publish",
