@@ -84,7 +84,7 @@ class NetCDFComparator:
 
         if old_attrs.keys() != new_attrs.keys():
             logging.info(
-                f"Global attributes differ: {old_attrs.keys()} vs {new_attrs.keys()}"
+                f"Global attributes differ: old {old_attrs.keys()} vs new {new_attrs.keys()}"
             )
             return False
 
@@ -101,7 +101,7 @@ class NetCDFComparator:
             )
             if not val_equal:
                 logging.info(
-                    f"Global attribute '{attr}' differs: {val_old} vs {val_new}"
+                    f"Global attribute '{attr}' differs: old {val_old} vs new {val_new}"
                 )
                 return False
         return True
@@ -159,7 +159,7 @@ class NetCDFComparator:
                 and old_var.shape != new_var.shape
             ):
                 logging.info(
-                    f"Variable '{var}' shapes differ: {old_var.shape} vs {new_var.shape}"
+                    f"Variable '{var}' shapes differ: old {old_var.shape} vs new {new_var.shape}"
                 )
                 return NCDiff.MAJOR
 
@@ -175,7 +175,7 @@ class NetCDFComparator:
                 and smaller_var.dimensions != larger_var.dimensions
             ):
                 logging.info(
-                    f"Variable '{var}' has incompatible dimensions: {old_var.dimensions} vs {new_var.dimensions}"
+                    f"Variable '{var}' has incompatible dimensions: old {old_var.dimensions} vs new {new_var.dimensions}"
                 )
                 return NCDiff.MAJOR
 
@@ -258,7 +258,7 @@ class NetCDFComparator:
             units_new = getattr(self.new.variables[var], "units", None)
             if units_old != units_new:
                 logging.info(
-                    f"Variable '{var}' units differ: {units_old} vs {units_new}"
+                    f"Variable '{var}' units differ: old {units_old} vs new {units_new}"
                 )
                 return False
         return True
@@ -269,7 +269,7 @@ class NetCDFComparator:
             dtype_new = self.new.variables[var].dtype
             if dtype_old != dtype_new:
                 logging.info(
-                    f"Variable '{var}' data types differ: {dtype_old} vs {dtype_new}"
+                    f"Variable '{var}' data types differ: old {dtype_old} vs new {dtype_new}"
                 )
                 return False
         return True
@@ -280,7 +280,7 @@ class NetCDFComparator:
             attrs_new = set(self.new.variables[var].ncattrs())
             if attrs_old != attrs_new:
                 logging.info(
-                    f"Variable '{var}' attributes differ: {attrs_old} vs {attrs_new}"
+                    f"Variable '{var}' attributes differ: old {attrs_old} vs new {attrs_new}"
                 )
                 return False
             for attr in attrs_old:
@@ -297,7 +297,7 @@ class NetCDFComparator:
                 else:
                     if val_old != val_new:
                         logging.info(
-                            f"Variable '{var}' attribute '{attr}' values differ: {val_old} vs {val_new}"
+                            f"Variable '{var}' attribute '{attr}' values differ: old {val_old} vs new {val_new}"
                         )
                         return False
         return True
@@ -318,7 +318,7 @@ class NetCDFComparator:
                     if key not in filters_old or filters_new[key] != filters_old[key]
                 }
                 logging.info(
-                    f"Variable '{var}' filters differ: {diff_old} vs {diff_new}"
+                    f"Variable '{var}' filters differ: old {diff_old} vs new {diff_new}"
                 )
                 return False
         return True
