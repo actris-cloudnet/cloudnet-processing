@@ -38,7 +38,7 @@ from cloudnet_api_client.containers import (
 )
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class ExtendedSite(Site):
     raw_time: npt.NDArray[np.datetime64]
     raw_latitude: npt.NDArray[np.float64]
