@@ -9,6 +9,7 @@ from cloudnet_api_client import APIClient
 from cloudnet_api_client.containers import (
     ExtendedProductMetadata,
     ProductMetadata,
+    Site,
     VersionMetadata,
 )
 
@@ -19,6 +20,25 @@ from processing.metadata_api import MetadataApi
 
 class DvasError(Exception):
     pass
+
+
+ACTRIS_ERIC_START = datetime.date(2023, 4, 25)
+
+
+def parse_compliance(site: Site, measurement_date: datetime.date) -> str:
+    """Deduce ACTRIS compliance from the site labelling status.
+
+    Link: https://vocabulary.actris.nilu.no/actris_vocab/compliance
+    """
+    if measurement_date < ACTRIS_ERIC_START:
+        return "ACTRIS legacy"
+    match site.labelling_status:
+        case "labelled":
+            return "ACTRIS labelled"
+        case "initially-accepted":
+            return "ACTRIS compliant"
+        case _:
+            return "ACTRIS associated"
 
 
 class DvasV2:
@@ -388,11 +408,7 @@ class DvasMetadataV2:
         return f"{self._parse_timeliness()} data"
 
     def _parse_compliance(self) -> str:
-        return (
-            "ACTRIS legacy"
-            if self.file.measurement_date < datetime.date(2023, 4, 25)
-            else "ACTRIS associated"
-        )
+        return parse_compliance(self.file.site, self.file.measurement_date)
 
     def _parse_qc_outcome(self) -> str:
         outcome_map = {
@@ -592,12 +608,7 @@ class DvasMetadataV3:
         return clu_to_dvas_map[self.file.timeliness]
 
     def _parse_compliance(self) -> str:
-        # https://vocabulary.actris.nilu.no/actris_vocab/compliance
-        return (
-            "ACTRIS legacy"
-            if self.file.measurement_date < datetime.date(2023, 4, 25)
-            else "ACTRIS associated"
-        )
+        return parse_compliance(self.file.site, self.file.measurement_date)
 
     def _parse_qc_outcome(self) -> str:
         # https://vocabulary.actris.nilu.no/actris_vocab/qualitycontroloutcome
