@@ -37,6 +37,7 @@ from cloudnetpy.instruments import (
     thies2nc,
     wr2nc,
     ws2nc,
+    xpol2nc
 )
 from cloudnetpy.utils import is_timestamp
 from requests.exceptions import HTTPError
@@ -236,6 +237,10 @@ class ProcessRadar(ProcessInstrument):
     def process_galileo(self) -> None:
         full_paths, self.uuid.raw = self.download_instrument()
         self.uuid.product = galileo2nc(self.raw_dir, *self._args, **self._kwargs)
+
+    def process_xpol(self) -> None:
+        full_paths, self.uuid.raw = self.download_instrument(filename_suffix="_Zdr.nc")
+        self.uuid.product = xpol2nc(full_paths, *self._args, **self._kwargs)
 
     def _add_calibration(
         self,
