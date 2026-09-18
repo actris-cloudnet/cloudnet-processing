@@ -118,10 +118,6 @@ Options:
 | :---- | :--------- | :------------------------------------------------------------------------------------ |
 |       | `--queue ` | Process tasks from this queue, or from default queue if the specified queue is empty. |
 
-### `monitor`
-
-Data quality monitoring tool. See [monitoring README](src/monitoring/README.md) for usage.
-
 ### `cronjobs/`
 
 Scripts that are run periodically in production:
