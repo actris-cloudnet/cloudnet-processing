@@ -201,6 +201,7 @@ class ProcessRadar(ProcessInstrument):
             "zenith_offset",
             "snr_limit",
             "range_correction_factor",
+            "radar_constant",
         ):
             self._add_calibration(key)
         output_filename, site_meta = self._args
