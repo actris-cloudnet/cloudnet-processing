@@ -22,7 +22,7 @@ dependencies = [
   "ceilopyter",
   "cftime",
   "cloudnet-api-client>=0.12.12",
-  "cloudnetpy[extras]>=1.95.2",
+  "cloudnetpy[extras]>=1.96.7",
   "cloudnetpy_qc>=1.31.7",
   "doppy>=0.5.14",
   "earthcare-downloader",
