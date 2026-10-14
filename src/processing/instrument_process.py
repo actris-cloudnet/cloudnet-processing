@@ -553,8 +553,19 @@ class ProcessLidar(ProcessInstrument):
     def process_minimpl(self) -> NoReturn:
         raise NotImplementedError()
 
-    def process_ld40(self) -> NoReturn:
-        raise NotImplementedError()
+    def process_ld40(self) -> None:
+        full_paths, raw_uuids = self.download_instrument()
+        full_paths = _unzip_gz_files(full_paths)
+        calibration = self._fetch_ceilo_calibration()
+        site_meta = self.site_meta | calibration
+        site_meta["model"] = "ld40"
+        self.uuid.product = ceilo2nc(
+            full_paths,  # type: ignore[arg-type]
+            self.output_path,
+            site_meta=site_meta,
+            uuid=self.uuid.volatile,
+            date=self.params.date,
+        )
 
     def process_cl31(self) -> None:
         full_paths, self.uuid.raw = self.download_instrument()
