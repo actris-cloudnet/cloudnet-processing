@@ -564,7 +564,7 @@ class ProcessLidar(ProcessInstrument):
         raise NotImplementedError()
 
     def process_ld40(self) -> None:
-        full_paths, raw_uuids = self.download_instrument()
+        full_paths, self.uuid.raw = self.download_instrument()
         full_paths = _unzip_gz_files(full_paths)
         calibration = self._fetch_ceilo_calibration()
         site_meta = self.site_meta | calibration
