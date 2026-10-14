@@ -176,6 +176,16 @@ class ProcessRadar(ProcessInstrument):
         )
 
     def process_mira_35(self) -> None:
+        if self.params.site.id == "lindenberg" and self.params.date < datetime.date(
+            2007, 1, 1
+        ):
+            full_path, self.uuid.raw = self.download_instrument(
+                filename_suffix=".nc.gz", largest_only=True
+            )
+            full_path = _unzip_gz_files(full_path)
+            data = self._get_payload_for_nc_file_augmenter(full_path)
+            self.uuid.product = harmonizer.harmonize_mira_file(data)
+            return
         full_paths, self.uuid.raw = self.download_instrument(
             filename_suffix={".znc", ".znc.gz", ".znc.tar.gz"},
             allow_empty=True,

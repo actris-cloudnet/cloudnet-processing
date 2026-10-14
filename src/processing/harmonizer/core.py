@@ -217,7 +217,7 @@ class Level1Nc:
 
             raw_time_stamps = time_stamps.copy()
 
-            if "seconds" in time.units:
+            if "seconds" in time.units.lower():
                 time_stamps = np.array(cloudnetpy.utils.seconds2hours(time_stamps))
 
             max_time = 1440 if "minutes" in time.units else 24
