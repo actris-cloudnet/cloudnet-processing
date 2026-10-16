@@ -514,16 +514,7 @@ class ProcessLidar(ProcessInstrument):
         self._call_ceilo2nc("cs135")
 
     def process_chm15k(self) -> None:
-        self._process_chm_lidar("chm15k")
-
-    def process_chm15x(self) -> None:
-        self._process_chm_lidar("chm15x")
-
-    def process_chm15kx(self) -> None:
-        self._process_chm_lidar("chm15kx")
-
-    def _process_chm_lidar(self, model: str) -> None:
-        full_paths, raw_uuids = self.download_instrument()
+        full_paths, self.uuid.raw = self.download_instrument()
         full_paths = _unzip_gz_files(full_paths)
         calibration = self._fetch_ceilo_calibration()
         site_meta = self.site_meta | calibration
@@ -535,6 +526,9 @@ class ProcessLidar(ProcessInstrument):
             uuid=self.uuid.volatile,
             date=self.params.date,
         )
+
+    def process_chm15kx(self) -> None:
+        self.process_chm15k()
 
     def process_ct25k(self) -> None:
         full_paths, self.uuid.raw = self.download_instrument()
