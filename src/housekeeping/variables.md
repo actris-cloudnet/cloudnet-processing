@@ -3,6 +3,7 @@
 ## Table of contents
 
 - [basta](#basta)
+- [mira](#mira)
 - [chm15k](#chm15k)
 - [cl31-cl51](#cl31-cl51)
 - [cl61](#cl61)
@@ -355,6 +356,29 @@ Temperature limit of soft cutoff
 <td>
 
 Unspecified code
+
+</td>
+</tr>
+</table>
+
+## mira
+
+<table>
+<tr>
+<th>Variable</th>
+<th>Unit</th>
+<th>Description</th>
+</tr>
+<tr>
+<td>
+
+`transmitter_power`
+
+</td>
+<td>W</td>
+<td>
+
+Average Transmit Power (tpow)
 
 </td>
 </tr>
@@ -4120,7 +4144,7 @@ Receiver temperature of current sample
 `transmitter_power`
 
 </td>
-<td>K</td>
+<td>W</td>
 <td>
 
 Transmitter power of current sample

@@ -358,6 +358,9 @@ vars.power_failure_status = "power_failure_status"
 vars.ambient_target_stability_status = "ambient_target_stability_status"
 vars.noise_diode_status = "noise_diode_status"
 
+[format.mira_nc]
+vars.tpow = "transmitter_power"
+
 [format.parsivel_log]
 vars.field10 = "laser_strip_signal_amplitude"
 vars.field12 = "sensor_housing_temperature"
@@ -723,6 +726,10 @@ vars.rain_status.description = "‘1’ means raining, ‘0’ = no rain"
 vars.sky_tipping_calibration_status.description = "‘1’ = sky tipping calibration running, ‘0’ = not active"
 vars.temperature_profiler_noise_diode_status.description = "‘1’ = noise diode of temperature profiler ok, ‘0’ = noise diode not working"
 
+[metadata.mira]
+vars.transmitter_power.description = "Average Transmit Power (tpow)"
+vars.transmitter_power.unit = "W"
+
 [metadata.parsivel]
 vars.error_code.description = "Unknown"
 vars.laser_strip_signal_amplitude.unit = "1"
@@ -754,7 +761,7 @@ vars.pc_temperature.unit = "K"
 vars.receiver_temperature.description = "Receiver temperature of current sample"
 vars.receiver_temperature.unit = "K"
 vars.transmitter_power.description = "Transmitter power of current sample"
-vars.transmitter_power.unit = "K"
+vars.transmitter_power.unit = "W"
 vars.transmitter_temperature.description = "Transmitter temperature of current sample"
 vars.transmitter_temperature.unit = "K"
 

@@ -21,6 +21,7 @@ from rpgpy import read_rpg
 from rpgpy.utils import decode_rpg_status_flags, rpg_seconds2datetime64
 
 from housekeeping.cl61 import read_cl61
+from housekeeping.mira import read_mira
 from housekeeping.wls import read_wls_environmental_data
 from processing.utils import unzip_gz_file
 
@@ -121,6 +122,20 @@ def _handle_basta_nc(
         measurements["time"],
         measurements,
         get_config("basta_nc"),
+        metadata,
+        ValidDateRange.DAY,
+    )
+
+
+def _handle_mira_nc(
+    filepath: Path, metadata: RawMetadata, calibration: dict
+) -> list[Point]:
+    with Dataset(filepath) as nc:
+        measurements = read_mira(nc)
+    return _make_points(
+        measurements["time"],
+        measurements,
+        get_config("mira_nc"),
         metadata,
         ValidDateRange.DAY,
     )
@@ -275,6 +290,11 @@ def get_reader(
 
     if instrument_id == "basta" and filename.endswith(".nc"):
         return _handle_basta_nc
+
+    if instrument_id in ("mira-10", "mira-35") and filename.endswith(
+        (".mmclx", ".mmclx.gz", ".znc", ".znc.gz")
+    ):
+        return _handle_mira_nc
 
     if instrument_id == "halo-doppler-lidar" and filename.startswith(
         "system_parameters"
