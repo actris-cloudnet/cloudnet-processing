@@ -164,7 +164,7 @@ class ProcessRadar(ProcessInstrument):
     def process_mira_10(self) -> None:
         full_paths, self.uuid.raw = self.download_instrument()
         full_paths = _unzip_gz_files(full_paths)
-        for key in ("azimuth_offset", "zenith_offset", "snr_limit"):
+        for key in ("azimuth_offset", "zenith_angle", "zenith_offset", "snr_limit"):
             self._add_calibration(key)
         output_filename, site_meta = self._args
         site_meta["model"] = "mira-10"
@@ -208,6 +208,7 @@ class ProcessRadar(ProcessInstrument):
         full_paths = _unzip_gz_files(full_paths)
         for key in (
             "azimuth_offset",
+            "zenith_angle",
             "zenith_offset",
             "snr_limit",
             "range_correction_factor",
