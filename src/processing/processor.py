@@ -111,6 +111,8 @@ class Processor:
         product_id: str | None = None,
         model_id: str | None = None,
     ) -> ProductMetadata | None:
+        if product_id is None:
+            product_id = params.product.id
         if isinstance(params, (InstrumentParams, ProductParams)):
             instrument_pid = params.instrument.pid if params.instrument else None
             model = None
@@ -121,7 +123,7 @@ class Processor:
 
         metadata = self.client.files(
             site_id=params.site.id,
-            product_id=product_id or params.product.id,
+            product_id=product_id,
             date=params.date,
             show_legacy=True,
             instrument_pid=instrument_pid,
@@ -130,7 +132,7 @@ class Processor:
         if len(metadata) == 0:
             return None
         if len(metadata) > 1:
-            raise RuntimeError(f"Multiple {params.product.id} files found")
+            raise RuntimeError(f"Multiple {product_id} files found")
         return metadata[0]
 
     def get_raw_model_files(
