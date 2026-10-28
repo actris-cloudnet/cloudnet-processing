@@ -94,9 +94,8 @@ def process_model(processor: Processor, params: ModelParams, directory: Path) ->
 
     raw_dir = directory / "raw"
     raw_dir.mkdir()
-    full_paths, raw_uuids = processor.storage_api.download_raw_data(
-        upload_meta, raw_dir
-    )
+    full_paths = processor.client.download(upload_meta, raw_dir)
+    raw_uuids = [meta.uuid for meta in upload_meta]
 
     volatile = True
     if existing_meta := processor.get_product(params):
@@ -106,7 +105,7 @@ def process_model(processor: Processor, params: ModelParams, directory: Path) ->
         product_uuid = existing_meta.uuid
         filename = existing_meta.filename
         s3key = existing_meta.s3key
-        existing_file = processor.storage_api.download_product(existing_meta, directory)
+        existing_file = processor.client.download(existing_meta, directory)[0]
     else:
         product_uuid = _generate_uuid()
         filename = _generate_filename(params)

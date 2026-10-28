@@ -43,9 +43,7 @@ def process_product(
             uuid.volatile = existing_product.uuid
         filename = existing_product.filename
         s3key = existing_product.s3key
-        existing_file = processor.storage_api.download_product(
-            existing_product, directory
-        )
+        existing_file = processor.client.download(existing_product, directory)[0]
     else:
         filename = _generate_filename(params)
         s3key = None
@@ -171,7 +169,7 @@ def _process_mwrpy(
         instrument_pid=params.instrument.pid,
     )
     _check_response(metadata, "mwr-l1c")
-    l1c_file = processor.storage_api.download_product(metadata[0], directory)
+    l1c_file = processor.client.download(metadata[0], directory)[0]
 
     output_file = directory / "output.nc"
     if params.product.id == "mwr-single":
@@ -230,7 +228,7 @@ def _process_cpr_simulation(
     )
     _check_response(metadata, "categorize")
     _check_is_overpass(params)
-    categorize_file = processor.storage_api.download_product(metadata[0], directory)
+    categorize_file = processor.client.download(metadata[0], directory)[0]
     output_file = directory / "output.nc"
     orbital = Suborbital()
     try:
@@ -257,9 +255,7 @@ def _process_cpr_validation(
         product_id="cpr-simulation",
     )
     _check_response(cpr_simu_metadata, "cpr-simulation")
-    cpr_simu_file = processor.storage_api.download_product(
-        cpr_simu_metadata[0], directory
-    )
+    cpr_simu_file = processor.client.download(cpr_simu_metadata[0], directory)[0]
     output_file = directory / "output.nc"
     try:
         uuid_str = cloudnet_vs_cpr_l1b(
@@ -291,7 +287,7 @@ def _process_cpr_tc_validation(
     _check_response(metadata, "classification")
     _check_is_overpass(params)
 
-    classification_file = processor.storage_api.download_product(metadata[0], directory)
+    classification_file = processor.client.download(metadata[0], directory)[0]
     output_file = directory / "output.nc"
     try:
         uuid_str = cloudnet_vs_ec_classification(
@@ -369,7 +365,7 @@ def _process_epsilon_from_lidar(
         else 1,
     )
 
-    file_lidar, file_wind = processor.storage_api.download_products(
+    file_lidar, file_wind = processor.client.download(
         [metadata_stare[0], metadata_wind[0]], directory
     )
 
@@ -398,7 +394,7 @@ def _process_epsilon_from_radar(
     if metadata_model is None:
         raise SkipTaskError("Missing required input product: model")
 
-    file_radar, file_model = processor.storage_api.download_products(
+    file_radar, file_model = processor.client.download(
         [metadata_radar[0], metadata_model], directory
     )
 
@@ -427,7 +423,7 @@ def _process_iwc_from_weather_radar(
     if metadata_model is None:
         raise SkipTaskError("Missing required input product: model")
 
-    file_radar, file_model = processor.storage_api.download_products(
+    file_radar, file_model = processor.client.download(
         [metadata_radar[0], metadata_model], directory
     )
 
@@ -455,9 +451,7 @@ def _process_categorize(
         meta_records = _get_level1b_metadata_for_categorize(
             processor, params, is_voodoo
         )
-        paths = processor.storage_api.download_products(
-            meta_records.values(), directory
-        )
+        paths = processor.client.download(meta_records.values(), directory)
         input_files = cast(CategorizeInput, dict(zip(meta_records.keys(), paths)))
         if is_voodoo:
             input_files["lv0_files"], lv0_uuid = _get_input_files_for_voodoo(
@@ -471,9 +465,7 @@ def _process_categorize(
         gdas1_meta = processor.get_product(params, product_id="model", model_id="gdas1")
         if not gdas1_meta:
             raise SkipTaskError("Bad model data and no gdas1") from exc
-        input_files["model"] = processor.storage_api.download_product(
-            gdas1_meta, directory
-        )
+        input_files["model"] = processor.client.download(gdas1_meta, directory)[0]
         model_uuid = gdas1_meta.uuid
         uuid.product = generate_categorize(input_files, output_path, uuid=uuid.volatile)
     if is_arm and model_uuid is not None:
@@ -498,7 +490,7 @@ def _process_l3(
     )
     _check_response(model_meta, "model")
 
-    model_file = processor.storage_api.download_product(model_meta[0], directory)
+    model_file = processor.client.download(model_meta[0], directory)[0]
     l3_prod = params.product.id.split("-")[1]
     source = "categorize" if l3_prod == "cf" else l3_prod
 
@@ -509,7 +501,7 @@ def _process_l3(
     )
     _check_response(product_meta, source)
 
-    product_file = processor.storage_api.download_product(product_meta[0], directory)
+    product_file = processor.client.download(product_meta[0], directory)[0]
     output_file = directory / "output.nc"
     uuid.product = product_resampling.process_L3_day_product(
         params.model.id,
@@ -540,7 +532,7 @@ def _process_level2(
     )
     _check_response(metadata, cat_file)
 
-    categorize_file = processor.storage_api.download_product(metadata[0], directory)
+    categorize_file = processor.client.download(metadata[0], directory)[0]
     module = importlib.import_module(f"cloudnetpy.products.{module_name}")
     prod = (
         "classification"
@@ -651,7 +643,7 @@ def _get_arm_input_files_for_categorize(
         if product not in l1b_files:
             raise SkipTaskError(f"Missing required input product: {product}")
     input_files: dict = {
-        "model": processor.storage_api.download_product(model_meta, directory),
+        "model": processor.client.download(model_meta, directory)[0],
         **{key: Path(value) for key, value in l1b_files.items()},
     }
     return cast(CategorizeInput, input_files), model_meta.uuid

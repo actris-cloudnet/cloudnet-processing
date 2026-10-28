@@ -24,9 +24,7 @@ def process_instrument(
             pid_to_new_file = existing_product.pid or None
         filename = existing_product.filename
         s3key = existing_product.s3key
-        existing_file = processor.storage_api.download_product(
-            existing_product, directory
-        )
+        existing_file = processor.client.download(existing_product, directory)[0]
     else:
         filename = _generate_filename(params)
         existing_file = None

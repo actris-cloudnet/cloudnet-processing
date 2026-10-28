@@ -21,7 +21,7 @@ classifiers = [
 dependencies = [
   "ceilopyter",
   "cftime",
-  "cloudnet-api-client>=0.12.12",
+  "cloudnet-api-client>=0.12.13",
   "cloudnetpy[extras]>=1.96.7",
   "cloudnetpy_qc>=1.31.7",
   "doppy>=0.5.14",

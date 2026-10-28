@@ -301,9 +301,8 @@ class Processor:
         if largest_only:
             upload_metadata = [max(upload_metadata, key=lambda item: item.size)]
 
-        full_paths, uuids = self.storage_api.download_raw_data(
-            upload_metadata, directory
-        )
+        full_paths = self.client.download(upload_metadata, directory)
+        uuids = [meta.uuid for meta in upload_metadata]
 
         if time_offset is not None:
             uuids = [

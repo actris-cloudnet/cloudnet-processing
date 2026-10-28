@@ -44,7 +44,7 @@ def _processor(tmp_path: Path) -> MagicMock:
     model_meta = MagicMock()
     model_meta.uuid = MODEL_UUID
     processor.get_product.return_value = model_meta
-    processor.storage_api.download_product.return_value = tmp_path / "model.nc"
+    processor.client.download.return_value = [tmp_path / "model.nc"]
     return processor
 
 

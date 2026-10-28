@@ -110,5 +110,5 @@ def _fetch_data(
     metadata = processor.get_product(params)
     if not metadata:
         raise utils.SkipTaskError("Product not found")
-    full_path = processor.storage_api.download_product(metadata, directory)
+    full_path = processor.client.download(metadata, directory)[0]
     return metadata, full_path

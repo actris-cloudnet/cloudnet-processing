@@ -798,9 +798,9 @@ class ProcessMwrL1c(ProcessInstrument):
     def _get_lidar_file(self) -> tuple[Path | None, UUID | None]:
         lidar_file = self.processor.find_optimal_lidar(self.params)
         if lidar_file:
-            return self.processor.client.download(
-                [lidar_file], self.raw_dir, progress=False
-            )[0], lidar_file.uuid
+            return self.processor.client.download([lidar_file], self.raw_dir)[
+                0
+            ], lidar_file.uuid
         return None, None
 
 
