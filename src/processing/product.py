@@ -451,8 +451,13 @@ def _process_categorize(
         meta_records = _get_level1b_metadata_for_categorize(
             processor, params, is_voodoo
         )
-        paths = processor.client.download(meta_records.values(), directory)
-        input_files = cast(CategorizeInput, dict(zip(meta_records.keys(), paths)))
+        input_files = cast(
+            CategorizeInput,
+            {
+                key: processor.client.download(meta, directory)[0]
+                for key, meta in meta_records.items()
+            },
+        )
         if is_voodoo:
             input_files["lv0_files"], lv0_uuid = _get_input_files_for_voodoo(
                 processor, params, directory, meta_records["radar"]
