@@ -12,10 +12,25 @@ from cloudnet_api_client.containers import (
     Site,
     VersionMetadata,
 )
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 from processing import utils
 from processing.config import Config
 from processing.metadata_api import MetadataApi
+
+
+class DvasAdapter(HTTPAdapter):
+    def __init__(self) -> None:
+        retry_strategy = Retry(
+            total=10,
+            backoff_factor=0.1,
+            status_forcelist=[408, 429, 500, 502, 503, 504, 524],
+            # DVAS only uses POST but retry should be safe as id is always
+            # specified in the body.
+            allowed_methods=["POST"],
+        )
+        super().__init__(max_retries=retry_strategy)
 
 
 class DvasError(Exception):
@@ -148,7 +163,10 @@ class DvasV3:
     def __init__(self, config: Config, md_api: MetadataApi, client: APIClient) -> None:
         self.config = config
         self.md_api = md_api
-        self.session = utils.make_session()
+        self.session = requests.Session()
+        adapter = DvasAdapter()
+        self.session.mount("https://", adapter)
+        self.session.mount("http://", adapter)
         self.token: str | None = None
         self.token_expires: datetime.datetime | None = None
         self.client = client
@@ -214,7 +232,11 @@ class DvasV3:
             self._refresh_access_token()
         url = self.config.dvas_portal_url + endpoint
         res = self.session.request(
-            method, url, json=json, headers={"Authorization": f"Bearer {self.token}"}
+            method,
+            url,
+            json=json,
+            headers={"Authorization": f"Bearer {self.token}"},
+            timeout=10,
         )
         # Retry once if unauthorized.
         if res.status_code == 401:
@@ -224,6 +246,7 @@ class DvasV3:
                 url,
                 json=json,
                 headers={"Authorization": f"Bearer {self.token}"},
+                timeout=10,
             )
         res.raise_for_status()
 
@@ -234,6 +257,7 @@ class DvasV3:
                 "username": self.config.dvas_client_id,
                 "password": self.config.dvas_client_secret,
             },
+            timeout=10,
         )
         res.raise_for_status()
         token = res.json()
