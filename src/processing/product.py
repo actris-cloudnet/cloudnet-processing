@@ -41,6 +41,7 @@ def process_product(
     if existing_product := processor.get_product(params):
         if existing_product.volatile:
             uuid.volatile = existing_product.uuid
+            pid_to_new_file = existing_product.pid or None
         filename = existing_product.filename
         s3key = existing_product.s3key
         existing_file = processor.client.download(existing_product, directory)[0]
