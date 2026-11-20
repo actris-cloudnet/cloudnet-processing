@@ -13,7 +13,7 @@ RUN apt-get update \
 
 WORKDIR /app
 
-COPY pyproject.toml /app
+COPY pyproject.toml README.md LICENSE /app
 
 RUN pip3 install --upgrade pip \
     && pip3 install torch --extra-index-url https://download.pytorch.org/whl/cpu \
