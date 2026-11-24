@@ -152,6 +152,12 @@ class ProcessRadar(ProcessInstrument):
             full_paths, raw_uuids = self.download_instrument(
                 include_pattern=r"zen.*\.lv1(\.gz)?$"
             )
+            if self.params.site.id == "snaefellsnes":
+                paths_previous, uuids_previous = self._rpg_boundary_hours(
+                    self.params.date
+                )
+                full_paths.extend(paths_previous)
+                raw_uuids.extend(uuids_previous)
             full_paths = _unzip_gz_files(full_paths)
             self.uuid.product, valid_full_paths = rpg2nc(
                 self.raw_dir, *self._args, **self._kwargs
@@ -263,6 +269,14 @@ class ProcessRadar(ProcessInstrument):
             return
         data = calibration["data"]
         self.site_meta[key] = data.get(api_key or key, default_value)
+
+    def _rpg_boundary_hours(self, date: datetime.date) -> tuple[list[Path], list[UUID]]:
+        yesterday = date - datetime.timedelta(days=1)
+        return self.download_instrument(
+            date=yesterday,
+            include_pattern=rf"{yesterday:%y%m%d}_23\d{{4}}_.*zen.*\.lv1(\.gz)?$",
+            allow_empty=True,
+        )
 
 
 class ProcessDopplerLidarWind(ProcessInstrument):
