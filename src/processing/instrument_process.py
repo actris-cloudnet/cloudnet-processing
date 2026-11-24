@@ -753,6 +753,12 @@ class ProcessMwrL1c(ProcessInstrument):
             exclude_pattern=r"2DSCAN|elscan",
             time_offset=calibration.get("time_offset"),
         )
+        if self.params.site.id == "snaefellsnes":
+            paths_previous, uuids_previous = self._hatpro_boundary_hours(
+                self.params.date
+            )
+            full_paths.extend(paths_previous)
+            self.uuid.raw.extend(uuids_previous)
         output_filename, site_meta = self._args
 
         site_meta = {**site_meta, **calibration}
@@ -817,6 +823,17 @@ class ProcessMwrL1c(ProcessInstrument):
             ], lidar_file.uuid
         return None, None
 
+    def _hatpro_boundary_hours(
+        self, date: datetime.date
+    ) -> tuple[list[Path], list[UUID]]:
+        yesterday = date - datetime.timedelta(days=1)
+        return self.download_instrument(
+            date=yesterday,
+            include_pattern=rf"{yesterday:%y%m%d}_23\d{{4}}\.(brt|hkd|met|irt|blb|bls)$",
+            exclude_pattern=r"2DSCAN|elscan",
+            allow_empty=True,
+        )
+
 
 class ProcessMwr(ProcessInstrument):
     def process_hatpro(self) -> None:
@@ -846,6 +863,12 @@ class ProcessMwr(ProcessInstrument):
                 include_pattern=r"\.(lwp|iwv)$",
                 exclude_pattern=r"2DSCAN",
             )
+            if self.params.site.id == "snaefellsnes":
+                paths_previous, uuids_previous = self._hatpro_boundary_hours(
+                    self.params.date
+                )
+                full_paths.extend(paths_previous)
+                raw_uuids.extend(uuids_previous)
             kwargs = {**self._kwargs, "instrument_type": instrument_type}
             self.uuid.product, valid_full_paths = hatpro2nc(
                 self.raw_dir,
@@ -863,6 +886,17 @@ class ProcessMwr(ProcessInstrument):
             data = self._get_payload_for_nc_file_augmenter(self.daily_path)
             self.uuid.product = harmonizer.harmonize_hatpro_file(data)
         self.uuid.raw = _get_valid_uuids(raw_uuids, full_paths, valid_full_paths)
+
+    def _hatpro_boundary_hours(
+        self, date: datetime.date
+    ) -> tuple[list[Path], list[UUID]]:
+        yesterday = date - datetime.timedelta(days=1)
+        return self.download_instrument(
+            date=yesterday,
+            include_pattern=rf"{yesterday:%y%m%d}_23\d{{4}}\.(lwp|iwv)$",
+            exclude_pattern=r"2DSCAN",
+            allow_empty=True,
+        )
 
 
 class ProcessDisdrometer(ProcessInstrument):
